@@ -6,6 +6,7 @@ const auth = vi.hoisted(() => ({
   getSession: vi.fn(),
   onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
   signInWithOtp: vi.fn(),
+  verifyOtp: vi.fn(),
   signOut: vi.fn(),
 }))
 const rpc = vi.hoisted(() => vi.fn(() => Promise.resolve({ data: null, error: null })))
@@ -59,4 +60,28 @@ it('network failure while online shows the asleep card', async () => {
   ui()
   expect(await screen.findByText('the planner is asleep')).toBeVisible()
   expect(screen.getByRole('link', { name: 'open supabase' })).toHaveAttribute('href', 'https://supabase.com/dashboard')
+})
+
+it('the code from the email also signs in (for the home-screen app on iphone)', async () => {
+  auth.getSession.mockResolvedValue({ data: { session: null }, error: null })
+  auth.signInWithOtp.mockResolvedValue({ error: null })
+  auth.verifyOtp.mockResolvedValue({ data: { session }, error: null })
+  ui()
+  await userEvent.type(await screen.findByLabelText('email'), 'a@b.co')
+  await userEvent.click(screen.getByRole('button', { name: 'send link' }))
+  await userEvent.type(await screen.findByLabelText('code'), ' 123 456 ')
+  await userEvent.click(screen.getByRole('button', { name: 'sign in' }))
+  expect(auth.verifyOtp).toHaveBeenCalledWith({ email: 'a@b.co', token: '123456', type: 'email' })
+})
+
+it('a wrong code says so', async () => {
+  auth.getSession.mockResolvedValue({ data: { session: null }, error: null })
+  auth.signInWithOtp.mockResolvedValue({ error: null })
+  auth.verifyOtp.mockResolvedValue({ data: { session: null }, error: { message: 'Token has expired or is invalid' } })
+  ui()
+  await userEvent.type(await screen.findByLabelText('email'), 'a@b.co')
+  await userEvent.click(screen.getByRole('button', { name: 'send link' }))
+  await userEvent.type(await screen.findByLabelText('code'), '000000')
+  await userEvent.click(screen.getByRole('button', { name: 'sign in' }))
+  expect(await screen.findByText('that code didn\'t work')).toHaveClass('warn-line')
 })
