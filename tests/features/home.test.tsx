@@ -143,7 +143,7 @@ it('choosing a country with two trips opens a chooser', async () => {
     stop({ trip_id: 'sum', place: place({ country: 'FI' }) }),
   ] as Stop[]
   show()
-  await userEvent.click(screen.getByRole('button', { name: 'globe' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'globe' }))
   const sheet = screen.getByRole('dialog', { name: /finland/i })
   expect(within(sheet).getByText('lapland')).toBeInTheDocument()
   expect(within(sheet).getByText('summer')).toBeInTheDocument()
@@ -153,6 +153,6 @@ it('choosing a country with one trip opens it', async () => {
   db.trips = europe()
   db.stops = [stop({ trip_id: 'lap', place: place({ country: 'FI' }) })] as Stop[]
   show()
-  await userEvent.click(screen.getByRole('button', { name: 'globe' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'globe' }))
   expect(screen.getByText('opened trip')).toBeInTheDocument()
 })

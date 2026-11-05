@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStops, useTrips } from '../../lib/queries'
 import { countryStatus, homeTotals, tripsInCountry } from '../../lib/countries'
@@ -9,10 +9,12 @@ import { Sheet } from '../../components/Sheet'
 import { EmptyState } from '../../components/EmptyState'
 import { Icon } from '../../components/Icon'
 import { OfflineBadge } from '../../components/OfflineBadge'
-import { Globe } from './Globe'
 import { Totals } from './Totals'
 import { nextSideTrips, TripCard, TripRow } from './Upcoming'
 import { TripForm } from './TripForm'
+
+// maplibre is large and needs webgl; load it after the page shows
+const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
 const regionName = (code: string) => {
   try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code } catch { return code }
@@ -48,7 +50,9 @@ export function HomePage() {
     <main className="home">
       <OfflineBadge />
       <h1 className="wordmark home-mark">planner</h1>
-      <Globe status={status} onCountry={pickCountry} />
+      <Suspense fallback={<div className="globe" />}>
+        <Globe status={status} onCountry={pickCountry} />
+      </Suspense>
       {trips.length > 0 && <Totals {...totals} />}
 
       <section className="home-section">
