@@ -1,0 +1,61 @@
+.trip-phone { min-height: 100dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 76px); }
+.trip-main { width: min(720px, 100%); margin: 0 auto; }
+.trip-header { padding: calc(env(safe-area-inset-top) + 10px) 16px 8px; display: grid; gap: 6px; }
+.crumbs { display: flex; align-items: center; gap: 4px; min-height: 40px; margin-left: -10px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
+.crumb { display: inline-flex; align-items: center; gap: 4px; }
+.crumb + .crumb::before { content: '/'; color: var(--line); margin-right: 2px; }
+.crumb a { text-decoration: none; font-weight: 600; }
+.crumb a:hover { color: var(--ink); }
+.trip-title-row { display: flex; align-items: flex-start; gap: 8px; }
+.trip-title { flex: 1; min-width: 0; }
+.trip-title h1 { font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+.avatars { display: flex; padding-top: 6px; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--soft); color: var(--ink); font-size: 13px; font-weight: 700; border: 2px solid var(--ground);
+}
+.avatar + .avatar { margin-left: -8px; }
+
+.trip-panel { padding: 8px 16px 24px; }
+.trip-phone.tab-is-map .trip-panel { padding: 0; }
+
+/* bottom tabs (phone) */
+.tabs-bottom {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  padding: 6px 4px calc(env(safe-area-inset-bottom) + 6px);
+  background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+.tabs-bottom .tab {
+  display: grid; justify-items: center; gap: 2px; padding: 6px 0; border: 0; background: none;
+  font-size: 11px; font-weight: 600; color: var(--ink-2);
+}
+.tabs-bottom .tab[aria-selected="true"] { color: var(--ink); }
+.fab {
+  position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 80px); z-index: 21;
+  width: 56px; height: 56px; border-radius: 50%; border: 0; display: grid; place-items: center;
+  background: var(--ink); color: var(--card); box-shadow: 0 6px 20px rgba(22, 24, 29, .22);
+}
+.fab:disabled, .icon-btn:disabled { opacity: .4; cursor: default; }
+
+/* top tabs (laptop) */
+.tabs-row { display: flex; align-items: center; gap: 12px; padding: 4px 16px 8px; }
+.tabs-top { flex: 1; display: flex; gap: 4px; }
+.tabs-top .tab {
+  min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none;
+  font-weight: 600; color: var(--ink-2);
+}
+.tabs-top .tab[aria-selected="true"] { background: var(--ink); color: var(--card); }
+
+.trip-wide { display: grid; grid-template-columns: minmax(420px, 1fr) minmax(0, 1.15fr); height: 100dvh; }
+.trip-wide .trip-main { width: 100%; overflow: auto; }
+.trip-map { position: sticky; top: 0; height: 100dvh; border-left: 1px solid var(--line); }
+
+/* add menu */
+.add-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.add-option {
+  display: grid; justify-items: center; gap: 8px; padding: 18px 8px; border-radius: 16px;
+  border: 1px solid var(--line); background: var(--card); font-weight: 600; font-size: 14px;
+}
+.add-option:hover { background: var(--ground); }

@@ -8,6 +8,7 @@ import './styles/tokens.css'
 import './styles/base.css'
 import './styles/ui.css'
 import './styles/home.css'
+import './styles/trip.css'
 import { App } from './App'
 import { MAX_AGE, persister } from './lib/offline'
 
