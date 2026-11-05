@@ -1,6 +1,7 @@
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { AuthGate, AuthProvider } from './lib/auth'
 import { RealtimeBridge } from './lib/realtime'
+import { HomePage } from './features/home/HomePage'
 
 export function App() {
   return (
@@ -10,7 +11,8 @@ export function App() {
           <RealtimeBridge />
           <HashRouter>
             <Routes>
-              <Route path="*" element={<h1 className="wordmark">planner</h1>} />
+              <Route path="/" element={<HomePage />} />
+              <Route path="*" element={<HomePage />} />
             </Routes>
           </HashRouter>
         </AuthGate>

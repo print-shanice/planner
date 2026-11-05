@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
+import { fetchRates } from './rates'
+import type { Rates } from './money'
 import type { Cost, FileRow, Link, Member, PackingItem, Stop, TableName, Trip } from './types'
 
 export const keys = {
@@ -31,6 +33,10 @@ export const useLinks = () => useTable<Link>('links')
 export const usePacking = () => useTable<PackingItem>('packing')
 export const useFiles = () => useTable<FileRow>('files')
 export const useMembers = () => useTable<Member>('members')
+
+export function useRates() {
+  return useQuery<Rates>({ queryKey: ['rates'], queryFn: fetchRates, staleTime: 6 * 60 * 60 * 1000, retry: 0 })
+}
 
 export function newId(): string {
   const c = globalThis.crypto as Crypto | undefined

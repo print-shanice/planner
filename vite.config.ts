@@ -26,14 +26,9 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: 'index.html',
-        globPatterns: ['**/*.{js,css,html,svg,png,geojson,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,geojson,webmanifest}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'fonts' },
-          },
           {
             urlPattern: /^https:\/\/tiles\.openfreemap\.org\/(styles|fonts|sprites)\/.*/,
             handler: 'StaleWhileRevalidate',

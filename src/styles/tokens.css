@@ -24,8 +24,8 @@
   --map-water: #CFE0E7;
   --map-land: #F1EFE8;
 
-  --f-head: "Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
-  --f-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-head: "Bricolage Grotesque Variable", "Hanken Grotesk Variable", system-ui, sans-serif;
+  --f-body: "Hanken Grotesk Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --radius: 20px;
   --shadow: 0 1px 0 var(--line);
