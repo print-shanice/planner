@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
+import { configProblem as check } from './config'
 
-const url = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321'
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY || 'anon-key-missing'
+const env = import.meta.env
+export const configProblem = check(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)
 
-export const supabase = createClient(url, key, {
-  auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true, autoRefreshToken: true },
-})
+// with a bad setup, never hand a secret key to the client; the app shows what to fix instead
+const ok = configProblem === null
+export const supabase = createClient(
+  ok ? env.VITE_SUPABASE_URL.trim() : 'http://localhost:54321',
+  ok ? env.VITE_SUPABASE_ANON_KEY.trim() : 'not-configured',
+  { auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true, autoRefreshToken: true } },
+)

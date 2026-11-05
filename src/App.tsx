@@ -2,10 +2,13 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import { AuthGate, AuthProvider } from './lib/auth'
 import { RealtimeBridge } from './lib/realtime'
 import { AsleepBanner } from './lib/asleep'
+import { configProblem } from './lib/supabase'
+import { ConfigProblem } from './features/auth/ConfigProblem'
 import { HomePage } from './features/home/HomePage'
 import { TripPage } from './features/trip/TripPage'
 
 export function App() {
+  if (configProblem) return <div className="app"><ConfigProblem problem={configProblem} /></div>
   return (
     <div className="app">
       <AuthProvider>

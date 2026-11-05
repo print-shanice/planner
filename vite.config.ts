@@ -2,6 +2,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { configProblem } from './src/lib/config'
+
+// refuse to build a public site around a secret key or a key pasted into the url field
+const url = process.env.VITE_SUPABASE_URL
+const key = process.env.VITE_SUPABASE_ANON_KEY
+const problem = url || key ? configProblem(url, key) : null
+if (problem === 'secret') throw new Error('VITE_SUPABASE_ANON_KEY is a secret key. Use the publishable key.')
+if (problem === 'url') throw new Error('VITE_SUPABASE_URL is not the project URL (https://<ref>.supabase.co).')
 
 export default defineConfig({
   base: '/planner/',
