@@ -43,9 +43,13 @@ function stopDays(s: Stop): string[] {
 export function visibleDays(t: Trip, stops: Stop[], children: Trip[]): string[] {
   const all = tripDays(t)
   if (all.length && all.length <= 21) return all
+  // a long trip lists only days with something starting or ending on them
   const set = new Set<string>()
-  for (const s of stops) for (const d of stopDays(s)) set.add(d)
-  for (const c of children) for (const d of tripDays(c)) set.add(d)
+  for (const s of stops) {
+    const ds = stopDays(s)
+    if (ds.length) { set.add(ds[0]); set.add(ds[ds.length - 1]) }
+  }
+  for (const c of children) if (c.start_date) set.add(c.start_date)
   const inTrip = (d: string) => !all.length || (d >= all[0] && d <= all[all.length - 1])
   return [...set].filter(inTrip).sort()
 }
@@ -68,7 +72,11 @@ export function groupByDay(t: Trip, stops: Stop[], children: Trip[]) {
     if (!s.day) { undated.push(s); continue }
     if (s.kind === 'stay') {
       const ds = stayDays(s)
-      ds.forEach((d, i) => push(d, { kind: i === 0 ? 'stop' : i === ds.length - 1 ? 'checkout' : 'staying', stop: s }))
+      ds.forEach((d, i) => {
+        const kind = i === 0 ? 'stop' : i === ds.length - 1 ? 'checkout' : 'staying'
+        // "staying at" only joins days that are already shown
+        if (kind !== 'staying' || days.has(d)) push(d, { kind, stop: s })
+      })
     } else push(s.day, { kind: 'stop', stop: s })
   }
   const out = [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, entries]) => ({

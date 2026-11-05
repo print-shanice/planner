@@ -43,7 +43,13 @@ it('trip without dates still groups its dated stops', () => {
 it('long trips show only busy days', () => {
   const long = trip({ start_date: '2027-01-28', end_date: '2027-07-13' })
   const child = trip({ id: 'c', parent_id: long.id, start_date: '2027-02-07', end_date: '2027-02-08' })
-  expect(visibleDays(long, [stop({ day: '2027-03-01' })], [child])).toEqual(['2027-02-07', '2027-02-08', '2027-03-01'])
+  expect(visibleDays(long, [stop({ day: '2027-03-01' })], [child])).toEqual(['2027-02-07', '2027-03-01'])
+})
+
+it('in a long trip a long stay only adds its check-in and check-out days', () => {
+  const long = trip({ start_date: '2027-01-28', end_date: '2027-07-13' })
+  const home = stop({ kind: 'stay', day: '2027-01-28', end_date: '2027-07-13' })
+  expect(visibleDays(long, [home], [])).toEqual(['2027-01-28', '2027-07-13'])
 })
 
 it('short trips show every day', () => {
@@ -74,4 +80,13 @@ it('fmtRange is short and lowercase', async () => {
   const { fmtRange } = await import('../../src/lib/dates')
   expect(fmtRange('2027-02-07', '2027-02-11')).toBe('7 – 11 feb')
   expect(fmtRange('2027-01-28', '2027-07-13')).toBe('28 jan – 13 jul')
+})
+
+it('a long stay in a long trip does not fill every day with staying rows', () => {
+  const long = trip({ start_date: '2027-01-28', end_date: '2027-07-13' })
+  const home = stop({ kind: 'stay', day: '2027-01-28', end_date: '2027-07-13' })
+  const museum = stop({ day: '2027-03-01' })
+  const g = groupByDay(long, [home, museum], [])
+  expect(g.days.map((d) => d.date)).toEqual(['2027-01-28', '2027-03-01', '2027-07-13'])
+  expect(g.days[1].entries.map((e) => e.kind)).toEqual(['staying', 'stop'])
 })
