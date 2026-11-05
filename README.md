@@ -17,7 +17,7 @@ A shared travel planner for two. React + Supabase, hosted on GitHub Pages.
 7. In **Authentication → Emails → Templates → Magic Link**, add `<p>or enter this code: {{ .Token }}</p>` so the email also carries a code (the app installed on an iPhone home screen signs in with the code).
 8. In **Authentication → Users**, use **Add user → Create new user** for each email (any password, keep **Auto Confirm User** ticked).
 9. In the GitHub repo, **Settings → Secrets and variables → Actions → Variables**, add:
-   - `VITE_SUPABASE_URL`: the project URL, `https://<ref>.supabase.co` (Supabase **Connect**, or **Project Settings → Data API**)
+   - `VITE_SUPABASE_URL`: the project URL, `https://<ref>.supabase.co`, with nothing after `.co` (Supabase **Connect**, or **Project Settings → Data API**)
    - `VITE_SUPABASE_ANON_KEY`: the **publishable** key (`sb_publishable_…`). Never the secret key: the site is public. The build stops if it gets one.
 10. In **Settings → Pages**, set **Source** to **GitHub Actions**.
 11. Push to `main`. The workflow tests, builds and publishes to `https://<username>.github.io/planner/`.

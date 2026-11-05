@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { configProblem } from '../../src/lib/config'
+import { configProblem, projectOrigin } from '../../src/lib/config'
 import { ConfigProblem } from '../../src/features/auth/ConfigProblem'
 
 const jwt = (payload: object) => `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify(payload)).replace(/=+$/, '')}.sig`
@@ -28,4 +28,9 @@ it('the problem screen names the variable to fix', () => {
   expect(screen.getByRole('heading', { name: 'planner' })).toBeInTheDocument()
   expect(screen.getByText('VITE_SUPABASE_URL')).toHaveClass('keep-case')
   expect(screen.getByText(/isn't the project url/)).toBeInTheDocument()
+})
+
+it('the api url with /rest/v1 still points at the project', () => {
+  expect(projectOrigin('https://abcd.supabase.co/rest/v1/')).toBe('https://abcd.supabase.co')
+  expect(projectOrigin(' https://abcd.supabase.co ')).toBe('https://abcd.supabase.co')
 })

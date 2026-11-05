@@ -23,3 +23,8 @@ export function configProblem(url: string | undefined, key: string | undefined):
   if (!k) return 'key'
   return null
 }
+
+// the dashboard also shows the api url (…/rest/v1/); the client needs just the project address
+export function projectOrigin(url: string): string {
+  return new URL(url.trim()).origin
+}
