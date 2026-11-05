@@ -49,30 +49,38 @@ export function newId(): string {
 
 type Row = { id?: string } & Record<string, unknown>
 
+type Change = { row: Row & { id: string }; isNew: boolean }
+
+// new rows are inserted; existing rows send only the fields that changed,
+// so two people editing different fields of one row never undo each other
 export function useSave<T extends { id: string } = { id: string }>(table: TableName) {
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (fields: Row) => {
-      const row = { ...fields, id: (fields.id as string | undefined) ?? newId() }
-      const { data, error } = await supabase.from(table).upsert(row).select().single()
+  const m = useMutation({
+    mutationFn: async ({ row, isNew }: Change) => {
+      const { id, ...fields } = row
+      const q = isNew ? supabase.from(table).insert(row) : supabase.from(table).update(fields).eq('id', id)
+      const { data, error } = await q.select().single()
       if (error) throw error
       return data as T
     },
-    onMutate: (fields: Row) => {
-      // show the change at once; the refetch after settle is the source of truth
-      const id = fields.id ?? newId()
-      fields.id = id
+    onMutate: ({ row }: Change) => {
       qc.setQueryData<Row[]>(keys[table], (old) => {
         const list = old ?? []
-        const i = list.findIndex((r) => r.id === id)
-        if (i === -1) return [...list, { ...fields }]
+        const i = list.findIndex((r) => r.id === row.id)
+        if (i === -1) return [...list, { ...row }]
         const next = list.slice()
-        next[i] = { ...list[i], ...fields }
+        next[i] = { ...list[i], ...row }
         return next
       })
     },
     onSettled: () => qc.invalidateQueries({ queryKey: keys[table] }),
   })
+  const mutateAsync = (fields: Row): Promise<T> => {
+    const known = !!fields.id && !!qc.getQueryData<Row[]>(keys[table])?.some((r) => r.id === fields.id)
+    const row = { ...fields, id: (fields.id as string | undefined) ?? newId() }
+    return m.mutateAsync({ row, isNew: !known })
+  }
+  return { ...m, mutateAsync, mutate: (fields: Row) => { mutateAsync(fields).catch(() => {}) } }
 }
 
 export function useRemove(table: TableName) {

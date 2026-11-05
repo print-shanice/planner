@@ -1,0 +1,75 @@
+.plan { display: grid; gap: 14px; }
+
+.trip-notes { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px; }
+.trip-notes summary { font-weight: 600; cursor: pointer; }
+.trip-notes p { margin-top: 8px; white-space: pre-wrap; color: var(--ink-2); font-size: 15px; }
+
+.chips {
+  position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -16px; padding: 8px 16px; background: var(--ground);
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; display: grid; justify-items: center; gap: 0; min-width: 48px; padding: 6px 10px;
+  border-radius: 14px; border: 1px solid var(--line); background: var(--card); font-size: 12px; line-height: 1.2;
+}
+.chip .num { font-size: 16px; font-weight: 700; }
+.chip-pick { position: relative; display: flex; align-items: center; font-weight: 600; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.chip-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.day { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); scroll-margin-top: 72px; }
+.day-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 6px; }
+.day-head h3 { flex: 1; font-size: 17px; font-weight: 700; }
+.day-head .muted { font-size: 13px; }
+.day-bar { width: 4px; height: 18px; border-radius: 4px; }
+.day-body { padding: 4px 8px 10px; }
+
+.stop-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 14px; background: var(--card); }
+.stop-row.dragging { z-index: 3; box-shadow: 0 10px 24px rgba(22, 24, 29, .16); }
+.num-badge {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--card); font-size: 13px; font-weight: 700;
+}
+.num-badge.quiet { background: var(--soft); color: var(--ink-2); }
+.stop-main {
+  flex: 1; min-width: 0; display: grid; gap: 1px; text-align: left; padding: 4px 0;
+  border: 0; background: none; color: inherit;
+}
+.stop-main:disabled { cursor: default; }
+.stop-title { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }
+.stop-title > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stop-sub { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grip {
+  flex: none; width: 32px; height: 40px; display: grid; place-items: center; border: 0; background: none;
+  color: var(--line); cursor: grab; touch-action: none;
+}
+.grip:hover { color: var(--ink-2); }
+
+.leg { display: flex; align-items: center; gap: 6px; min-height: 8px; margin-left: 20px; padding: 0 0 0 20px; border-left: 2px dotted var(--line); font-size: 13px; color: var(--ink-2); }
+.leg:not(:empty) { min-height: 28px; }
+
+.side-card {
+  display: flex; align-items: center; gap: 10px; margin: 4px 0; padding: 12px 14px; border-radius: 14px;
+  background: var(--ground); text-decoration: none;
+}
+.side-name { flex: 1; font-weight: 600; }
+
+.add-place {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 10px;
+  border: 0; background: none; color: var(--ink-2); font-weight: 600; border-radius: 12px;
+}
+.add-place:hover { background: var(--ground); color: var(--ink); }
+.place-search { display: grid; gap: 6px; padding: 6px 2px 2px; }
+.search-box {
+  display: flex; align-items: center; gap: 8px; padding: 0 4px 0 12px; min-height: 44px;
+  border-radius: 14px; background: var(--ground); color: var(--ink-2);
+}
+.search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
+.search-box input::-webkit-search-cancel-button { display: none; }
+.search-note { display: flex; align-items: center; gap: 10px; padding: 4px 10px; font-size: 14px; }
+.results { list-style: none; margin: 0; padding: 0; }
+.result { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 10px; border: 0; background: none; text-align: left; border-radius: 12px; color: var(--ink-2); }
+.result:hover { background: var(--ground); }
+.result-text { display: grid; color: var(--ink); }
+.result-text > :first-child { font-weight: 600; }
+.result-text .muted { font-size: 14px; }
