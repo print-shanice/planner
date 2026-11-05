@@ -1,0 +1,36 @@
+.trip-phone.tab-is-map { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(env(safe-area-inset-bottom) + 62px); }
+.trip-phone.tab-is-map .trip-main { flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%; }
+.trip-phone.tab-is-map .trip-panel { flex: 1; min-height: 0; position: relative; }
+.map-tab { position: relative; height: 100%; min-height: 320px; overflow: hidden; background: var(--map-land); }
+.trip-map .map-tab { height: 100dvh; }
+.map-tab .trip-map-canvas { position: absolute; inset: 0; }
+
+.map-top { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 2; display: grid; gap: 8px; pointer-events: none; }
+.map-top > * { pointer-events: auto; }
+.map-search { background: var(--card); border-radius: 18px; box-shadow: 0 4px 18px rgba(22, 24, 29, .12); padding: 4px; }
+.map-search .place-search { padding: 0; }
+.map-search .search-box { background: transparent; }
+.map-search .results { max-height: 40dvh; overflow: auto; }
+.map-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.map-chips::-webkit-scrollbar { display: none; }
+.chip-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  border-radius: 999px; border: 0; background: var(--card); font-size: 14px; font-weight: 600;
+  box-shadow: 0 2px 8px rgba(22, 24, 29, .1);
+}
+.chip-pill[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.chip-pill .dot { width: 8px; height: 8px; }
+
+.map-bottom { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; }
+.place-card {
+  display: grid; gap: 12px; padding: 16px; border-radius: var(--radius); background: var(--card);
+  box-shadow: 0 8px 28px rgba(22, 24, 29, .18); max-width: 520px; margin: 0 auto;
+}
+.place-card-head { display: flex; align-items: flex-start; gap: 8px; }
+.place-card-head > :first-child { flex: 1; min-width: 0; }
+.place-card h3 { font-size: 18px; font-weight: 700; }
+.place-card .muted { font-size: 14px; }
+.place-card-actions { display: flex; align-items: center; gap: 8px; }
+.day-select { flex: 1; min-width: 0; min-height: 44px; }
+.place-card-actions .icon-btn[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.maplibregl-ctrl-group { border-radius: 14px !important; box-shadow: 0 2px 8px rgba(22, 24, 29, .12) !important; }

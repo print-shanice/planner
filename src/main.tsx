@@ -10,6 +10,7 @@ import './styles/ui.css'
 import './styles/home.css'
 import './styles/trip.css'
 import './styles/plan.css'
+import './styles/map.css'
 import { App } from './App'
 import { MAX_AGE, persister } from './lib/offline'
 

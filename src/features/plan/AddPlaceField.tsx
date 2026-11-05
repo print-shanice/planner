@@ -3,10 +3,10 @@ import type { Place } from '../../lib/types'
 import { searchPlaces } from '../../lib/photon'
 import { Icon } from '../../components/Icon'
 
-type Props = { near?: { lat: number; lng: number } | null; onPick: (p: Place) => void; label?: string }
+type Props = { near?: { lat: number; lng: number } | null; onPick: (p: Place) => void; label?: string; alwaysOpen?: boolean }
 
-export function AddPlaceField({ near, onPick, label = 'add a place' }: Props) {
-  const [open, setOpen] = useState(false)
+export function AddPlaceField({ near, onPick, label = 'add a place', alwaysOpen = false }: Props) {
+  const [open, setOpen] = useState(alwaysOpen)
   const [q, setQ] = useState('')
   const [results, setResults] = useState<Place[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -37,7 +37,7 @@ export function AddPlaceField({ near, onPick, label = 'add a place' }: Props) {
     timer.current = setTimeout(() => run(v, 3), 350)
   }
 
-  function close() { setOpen(false); setQ(''); setResults(null); setFailed(false) }
+  function close() { setOpen(alwaysOpen); setQ(''); setResults(null); setFailed(false) }
 
   if (!open) {
     return (
@@ -50,13 +50,13 @@ export function AddPlaceField({ near, onPick, label = 'add a place' }: Props) {
     <div className="place-search">
       <div className="search-box">
         <Icon name="search" size={18} />
-        <input type="search" role="searchbox" aria-label={label} value={q} autoFocus enterKeyHint="search"
+        <input type="search" role="searchbox" aria-label={label} value={q} autoFocus={!alwaysOpen} enterKeyHint="search" placeholder={alwaysOpen ? label : undefined}
           onChange={(e) => change(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer.current); run() }
             if (e.key === 'Escape') close()
           }} />
-        <button type="button" className="icon-btn" aria-label="cancel" onClick={close}><Icon name="close" size={18} /></button>
+        {(!alwaysOpen || q) && <button type="button" className="icon-btn" aria-label="cancel" onClick={close}><Icon name="close" size={18} /></button>}
       </div>
       {failed && (
         <div className="search-note">

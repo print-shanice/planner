@@ -93,7 +93,7 @@ function TripScreen() {
       {wide && <aside className="trip-map"><Suspense fallback={null}><MapTab trip={trip} /></Suspense></aside>}
       {!wide && (
         <>
-          {add}
+          {tab !== 'map' && add}
           <TripTabs tabs={tabs} value={tab} onChange={setTab} variant="bottom" />
         </>
       )}
