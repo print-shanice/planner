@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -15,6 +15,7 @@ import { PackingTab } from '../packing/PackingTab'
 import { TripHeader } from './TripHeader'
 import { PHONE_TABS, TripTabs, WIDE_TABS, type Tab } from './TripTabs'
 import { AddMenu, type AddKind } from './AddMenu'
+import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 
 const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapTab })))
 
@@ -29,6 +30,15 @@ function Panel({ tab, trip }: { tab: Tab; trip: Trip }) {
 }
 
 export function AddForms({ kind, trip, onClose }: { kind: AddKind | null; trip: Trip; onClose: () => void }) {
+  const sheet = useStopSheet()
+  useEffect(() => {
+    if (kind === 'stay' || kind === 'journey' || kind === 'note') {
+      const defaults = kind === 'stay' ? { day: trip.start_date, end_date: trip.end_date }
+        : kind === 'journey' ? { day: trip.start_date } : {}
+      sheet?.newStop(kind, trip.id, defaults)
+      onClose()
+    }
+  }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Sheet open={kind === 'side trip'} title="new side trip" onClose={onClose}>
       <TripForm parentId={trip.id} onDone={onClose} />
@@ -37,6 +47,10 @@ export function AddForms({ kind, trip, onClose }: { kind: AddKind | null; trip: 
 }
 
 export function TripPage() {
+  return <StopSheetProvider><TripScreen /></StopSheetProvider>
+}
+
+function TripScreen() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
   const { data: trips, isLoading } = useTrips()

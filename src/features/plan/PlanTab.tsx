@@ -7,8 +7,11 @@ import { clashes } from '../../lib/clash'
 import { DayChips } from './DayChips'
 import { DayCard } from './DayCard'
 import { NoDate } from './NoDate'
+import { useStopSheet } from '../stops/StopSheet'
 
-export function PlanTab({ trip, onOpen }: { trip: Trip; onOpen?: (s: Stop) => void }) {
+export function PlanTab({ trip }: { trip: Trip }) {
+  const sheet = useStopSheet()
+  const onOpen = sheet ? (s: Stop) => sheet.openStop(s.id) : undefined
   const trips = useTrips().data ?? []
   const allStops = useStops().data ?? []
   const canEdit = useCanEdit()

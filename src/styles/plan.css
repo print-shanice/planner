@@ -73,3 +73,24 @@
 .result-text { display: grid; color: var(--ink); }
 .result-text > :first-child { font-weight: 600; }
 .result-text .muted { font-size: 14px; }
+
+/* stop sheet */
+.cost-fields { border: 0; margin: 0; padding: 0; display: grid; gap: 12px; min-width: 0; }
+.time-field { flex: 0 0 136px !important; }
+.field input, .field select { min-width: 0; }
+.place-chip { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 4px 6px 12px; border-radius: 14px; background: var(--ground); color: var(--ink-2); }
+.place-chip .result-text { flex: 1; min-width: 0; }
+.stop-view { gap: 18px; }
+.facts { display: grid; gap: 6px; }
+.facts p { font-size: 16px; }
+.fact-copy { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.fact-copy .copy-text { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.fact-copy > .icon-btn { margin-left: -4px; }
+.fact-link { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); text-decoration: none; font-weight: 600; }
+.notes { white-space: pre-wrap; color: var(--ink-2); }
+.files { display: grid; gap: 4px; }
+.file-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 12px; background: var(--ground); }
+.file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; text-decoration: none; }
+.file-add { justify-self: start; cursor: pointer; }
+.file-add.busy { opacity: .5; }
+.move { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }

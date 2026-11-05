@@ -87,3 +87,12 @@ it('unknown trip shows not found', () => {
   expect(screen.getByText('trip not found')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'all trips' })).toHaveAttribute('href', '/')
 })
+
+it('stay from the add menu opens a new stay with the trip dates', async () => {
+  show('/trip/summer')
+  await userEvent.click(screen.getByRole('button', { name: 'add' }))
+  await userEvent.click(screen.getByRole('button', { name: 'stay' }))
+  const d = await screen.findByRole('dialog', { name: 'new stay' })
+  expect(within(d).getByLabelText('check-in')).toHaveValue('2027-06-26')
+  expect(within(d).getByLabelText('check-out')).toHaveValue('2027-07-13')
+})

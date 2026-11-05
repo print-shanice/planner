@@ -5,6 +5,7 @@ import { descendants } from '../../lib/countries'
 import type { Place, Trip } from '../../lib/types'
 import { Button } from '../../components/Button'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
+import { PlaceField } from '../stops/PlaceField'
 
 type Props = { trip?: Trip; parentId?: string | null; onDone: () => void; onDeleted?: () => void }
 
@@ -21,7 +22,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   const [end, setEnd] = useState(trip?.end_date ?? '')
   const [budget, setBudget] = useState(trip?.budget != null ? String(trip.budget) : '')
   const [currency, setCurrency] = useState(trip?.currency ?? (trips.find((t) => t.id === parentId)?.currency ?? 'EUR'))
-  const [base, setBase] = useState(trip?.base?.name ?? '')
+  const [base, setBase] = useState<Place | null>(trip?.base ?? null)
   const [color, setColor] = useState(trip?.color ?? (trips.filter((t) => t.parent_id === parentId).length % 6))
   const [notes, setNotes] = useState(trip?.notes ?? '')
   const [parent, setParent] = useState<string | null>(trip ? trip.parent_id : parentId)
@@ -45,8 +46,6 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
     if (!name.trim()) return
     if (start && end && end < start) { setProblem('ends before it starts'); return }
     setProblem(null)
-    const keepBase = trip?.base && trip.base.name === base.trim()
-    const nextBase: Place | null = base.trim() ? (keepBase ? trip!.base : { name: base.trim(), lat: null, lng: null }) : null
     await save.mutateAsync({
       ...(trip ? { id: trip.id } : {}),
       name: name.trim(),
@@ -54,7 +53,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
       end_date: end || (start || null),
       budget: budget.trim() === '' ? null : Number(budget),
       currency,
-      base: nextBase,
+      base,
       color,
       notes,
       parent_id: parent,
@@ -90,10 +89,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
           </select>
         </label>
       </div>
-      <label className="field">
-        <span className="label">home base</span>
-        <input value={base} onChange={(e) => setBase(e.target.value)} />
-      </label>
+      <PlaceField id={`base-${trip?.id ?? 'new'}`} label="home base" value={base} onChange={setBase} />
       <div className="field" role="radiogroup" aria-label="colour">
         <span className="label">colour</span>
         <div className="swatches">
@@ -108,7 +104,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
           <span className="label">part of</span>
           <select value={parent ?? ''} onChange={(e) => setParent(e.target.value || null)}>
             <option value="">none</option>
-            {parentChoices.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {parentChoices.map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
           </select>
         </label>
       )}

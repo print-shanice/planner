@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
 import { fetchRates } from './rates'
+import { newId } from './id'
 import type { Rates } from './money'
 import type { Cost, FileRow, Link, Member, PackingItem, Stop, TableName, Trip } from './types'
 
@@ -38,14 +39,6 @@ export function useRates() {
   return useQuery<Rates>({ queryKey: ['rates'], queryFn: fetchRates, staleTime: 6 * 60 * 60 * 1000, retry: 0 })
 }
 
-export function newId(): string {
-  const c = globalThis.crypto as Crypto | undefined
-  if (c?.randomUUID) return c.randomUUID()
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
-    const r = (Math.random() * 16) | 0
-    return (ch === 'x' ? r : (r & 0x3) | 0x8).toString(16)
-  })
-}
 
 type Row = { id?: string } & Record<string, unknown>
 

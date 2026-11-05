@@ -8,10 +8,17 @@ export type RowVariant = 'stop' | 'staying' | 'checkout'
 
 const MODE_ICON: Record<string, string> = { flight: 'plane', train: 'train', bus: 'bus', ferry: 'ferry' }
 
+const routed = (s: Stop) => s.kind === 'journey' && !!s.origin?.name && !!s.destination?.name
+
+export function stopTitle(s: Stop): string {
+  if (routed(s)) return `${s.origin!.name} → ${s.destination!.name}`
+  return s.title || (s.kind === 'journey' ? s.mode ?? 'journey' : s.place?.name ?? '')
+}
+
 export function stopSub(s: Stop): string {
   if (s.kind === 'journey') {
     const times = s.time ? (s.end_time ? `${s.time}–${s.end_time}` : s.time) : ''
-    return [s.mode, times].filter(Boolean).join(' · ')
+    return [s.mode, routed(s) ? s.title : '', times].filter(Boolean).join(' · ')
   }
   if (s.kind === 'stay') {
     const n = nights(s.day, s.end_date)
@@ -34,7 +41,7 @@ type Props = {
 }
 
 export function StopRow({ stop, variant, n, colorIndex, clash, onOpen, onGrab, dragging, offset = 0 }: Props) {
-  const title = variant === 'staying' ? `staying at ${stop.title}` : variant === 'checkout' ? `check out · ${stop.title}` : stop.title
+  const title = variant === 'staying' ? `staying at ${stop.title}` : variant === 'checkout' ? `check out · ${stop.title}` : stopTitle(stop)
   const sub = variant === 'stop' ? stopSub(stop) : ''
   const mark = variant === 'stop' && n != null
     ? <span className="num-badge num" data-testid="stop-num" style={{ background: dayColor(colorIndex) }}>{n}</span>
