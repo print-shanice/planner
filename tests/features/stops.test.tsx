@@ -23,6 +23,8 @@ vi.mock('../../src/lib/queries', async () => {
   }
 })
 vi.mock('../../src/lib/id', () => ({ newId: () => 'new-id' }))
+const tickets = vi.hoisted(() => ({ open: vi.fn(), keep: vi.fn(() => Promise.resolve()) }))
+vi.mock('../../src/lib/ticketCache', () => ({ openTicket: tickets.open, keepTickets: tickets.keep }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => db.canEdit }))
 vi.mock('../../src/lib/supabase', () => ({
   supabase: { storage: { from: () => ({ remove: db.storageRemove, createSignedUrls: () => Promise.resolve({ data: [], error: null }), upload: vi.fn() }) } },
@@ -167,4 +169,23 @@ it('moving to another trip moves its cost too', async () => {
   await userEvent.selectOptions(within(screen.getByRole('dialog')).getByLabelText('move to another trip'), 'par')
   expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', trip_id: 'par' })
   expect(db.save).toHaveBeenCalledWith('costs', { id: 'c1', trip_id: 'par' })
+})
+
+it('a ticket not saved on this device says so', async () => {
+  db.files = [{ id: 'f1', stop_id: 's1', path: 'lap/s1/a-ticket.pdf', name: 'ticket.pdf', mime: 'application/pdf' }]
+  tickets.open.mockRejectedValueOnce(new Error('not saved offline'))
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ticket.pdf' }))
+  expect(await screen.findByText('not saved offline')).toHaveClass('warn-line')
+})
+
+it('opening a ticket shows it from the device copy', async () => {
+  db.files = [{ id: 'f1', stop_id: 's1', path: 'lap/s1/b-qr.png', name: 'qr.png', mime: 'image/png' }]
+  tickets.open.mockResolvedValueOnce('blob:qr')
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'qr.png' }))
+  expect(await screen.findByRole('img', { name: 'qr.png' })).toHaveAttribute('src', 'blob:qr')
+  expect(tickets.keep).toHaveBeenCalled()
 })

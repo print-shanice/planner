@@ -94,3 +94,7 @@
 .file-add { justify-self: start; cursor: pointer; }
 .file-add.busy { opacity: .5; }
 .move { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.file-name { border: 0; background: none; text-align: left; padding: 10px 0; color: inherit; }
+.ticket { display: grid; gap: 12px; }
+.ticket img { width: 100%; height: auto; border-radius: 12px; background: var(--ground); }
+.ticket iframe { width: 100%; height: 70dvh; border: 0; border-radius: 12px; background: var(--ground); }

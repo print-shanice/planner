@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: '/planner/',
+  // maplibre is one ~900 kB chunk, loaded only when a map is shown
+  build: { chunkSizeWarningLimit: 1000 },
   plugins: [
     react(),
     VitePWA({
@@ -33,6 +35,12 @@ export default defineConfig({
             urlPattern: /^https:\/\/tiles\.openfreemap\.org\/(styles|fonts|sprites)\/.*/,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'map-style' },
+          },
+          {
+            // map tiles already seen stay available offline
+            urlPattern: /^https:\/\/tiles\.openfreemap\.org\/planet\/.*/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'map-tiles', expiration: { maxEntries: 3000, maxAgeSeconds: 60 * 60 * 24 * 30 }, cacheableResponse: { statuses: [0, 200] } },
           },
         ],
       },

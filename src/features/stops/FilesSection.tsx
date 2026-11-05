@@ -1,10 +1,11 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import type { FileRow, Stop } from '../../lib/types'
 import { useFiles, useRemove, useSave } from '../../lib/queries'
 import { newId } from '../../lib/id'
 import { supabase } from '../../lib/supabase'
 import { Icon } from '../../components/Icon'
+import { Sheet } from '../../components/Sheet'
+import { keepTickets, openTicket } from '../../lib/ticketCache'
 
 const MAX = 20 * 1024 * 1024
 
@@ -18,18 +19,19 @@ export function FilesSection({ stop, canEdit }: { stop: Stop; canEdit: boolean }
   const remove = useRemove('files')
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const paths = files.map((f) => f.path)
+  const [viewing, setViewing] = useState<{ file: FileRow; url: string } | null>(null)
+  const key = files.map((f) => f.id).join()
 
-  const { data: urls } = useQuery({
-    queryKey: ['signed', paths],
-    enabled: paths.length > 0,
-    staleTime: 50 * 60 * 1000,
-    gcTime: 55 * 60 * 1000,
-    queryFn: async () => {
-      const { data } = await supabase.storage.from('files').createSignedUrls(paths, 3600)
-      return Object.fromEntries((data ?? []).filter((x) => x.signedUrl).map((x) => [x.path, x.signedUrl]))
-    },
-  })
+  // keep a device copy of every ticket on a stop that has been opened, for use without signal
+  useEffect(() => { if (files.length) keepTickets(files) }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (viewing) URL.revokeObjectURL(viewing.url) }, [viewing])
+
+  async function view(f: FileRow) {
+    setProblem(null)
+    try { setViewing({ file: f, url: await openTicket(f) }) } catch (e) {
+      setProblem((e as Error).message === 'not saved offline' ? 'not saved offline' : "couldn't open, try again")
+    }
+  }
 
   async function upload(list: FileList | null) {
     if (!list?.length) return
@@ -62,9 +64,7 @@ export function FilesSection({ stop, canEdit }: { stop: Stop; canEdit: boolean }
       {files.map((f) => (
         <div key={f.id} className="file-row">
           <Icon name="file" size={18} />
-          {urls?.[f.path]
-            ? <a href={urls[f.path]} target="_blank" rel="noopener noreferrer" className="file-name">{f.name}</a>
-            : <span className="file-name">{f.name}</span>}
+          <button type="button" className="file-name" onClick={() => view(f)}>{f.name}</button>
           {canEdit && <button type="button" className="icon-btn" aria-label={`remove ${f.name}`} onClick={() => drop(f)}><Icon name="trash" size={18} /></button>}
         </div>
       ))}
@@ -76,6 +76,16 @@ export function FilesSection({ stop, canEdit }: { stop: Stop; canEdit: boolean }
         </label>
       )}
       {problem && <p className="warn-line">{problem}</p>}
+      <Sheet open={!!viewing} title={viewing?.file.name ?? ''} onClose={() => setViewing(null)}>
+        {viewing && (
+          <div className="ticket">
+            {viewing.file.mime.startsWith('image/')
+              ? <img src={viewing.url} alt={viewing.file.name} />
+              : <iframe src={viewing.url} title={viewing.file.name} />}
+            <a className="btn ghost block" href={viewing.url} download={viewing.file.name} target="_blank" rel="noopener noreferrer"><Icon name="ext" size={18} /><span>open</span></a>
+          </div>
+        )}
+      </Sheet>
     </section>
   )
 }

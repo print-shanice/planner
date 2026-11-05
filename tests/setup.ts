@@ -7,3 +7,7 @@ afterEach(() => {
   cleanup()
   localStorage.clear()
 })
+
+// jsdom has no object urls
+URL.createObjectURL ??= (() => 'blob:test') as typeof URL.createObjectURL
+URL.revokeObjectURL ??= (() => {}) as typeof URL.revokeObjectURL
