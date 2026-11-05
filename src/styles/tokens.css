@@ -1,0 +1,32 @@
+:root {
+  --ground: #F4F3EF;
+  --card: #FFFFFF;
+  --ink: #16181D;
+  --ink-2: #5D626B;
+  --line: #E3E2DC;
+  --soft: #ECEBE6;
+
+  --brand: #E60023;
+
+  --ok: #1F6B45;
+  --ok-bg: #E2F1E8;
+  --warn: #8A5200;
+  --warn-bg: #FBEFD6;
+  --idle: #5D626B;
+
+  --g0: #3346C7;
+  --g1: #2B7FC0;
+  --g2: #7444C1;
+  --g3: #A23C8F;
+  --g4: #4E5D6E;
+  --g5: #1F4E8C;
+
+  --map-water: #CFE0E7;
+  --map-land: #F1EFE8;
+
+  --f-head: "Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
+  --f-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius: 20px;
+  --shadow: 0 1px 0 var(--line);
+}
