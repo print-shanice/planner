@@ -5,3 +5,6 @@ dev-dist
 .env.*
 *.log
 .DS_Store
+
+# personal trip data and the one-off import (kept out of the public repo)
+seed/
