@@ -1,0 +1,42 @@
+import { useSyncExternalStore } from 'react'
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
+import { del, get, set } from 'idb-keyval'
+import { useAuth } from './auth'
+
+export const persister = createAsyncStoragePersister({
+  storage: {
+    getItem: (k: string) => get<string>(k).then((v) => v ?? null),
+    setItem: (k: string, v: string) => set(k, v),
+    removeItem: (k: string) => del(k),
+  },
+  key: 'planner-cache',
+  throttleTime: 1000,
+})
+
+export const MAX_AGE = 30 * 24 * 60 * 60 * 1000
+
+function subscribe(cb: () => void) {
+  window.addEventListener('online', cb)
+  window.addEventListener('offline', cb)
+  return () => {
+    window.removeEventListener('online', cb)
+    window.removeEventListener('offline', cb)
+  }
+}
+
+let online = typeof navigator === 'undefined' ? true : navigator.onLine
+function snapshot() { return online }
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => { online = true })
+  window.addEventListener('offline', () => { online = false })
+}
+
+export function useOnline(): boolean {
+  return useSyncExternalStore(subscribe, snapshot, () => true)
+}
+
+export function useCanEdit(): boolean {
+  const on = useOnline()
+  const { status } = useAuth()
+  return on && status === 'signed-in'
+}
