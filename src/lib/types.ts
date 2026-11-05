@@ -1,6 +1,7 @@
 export type Place = {
   name: string
   address?: string
+  city?: string
   country?: string
   lat: number | null
   lng: number | null
