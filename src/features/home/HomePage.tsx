@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useStops, useTrips } from '../../lib/queries'
+import { useLinks, useStops, useTrips } from '../../lib/queries'
 import { countryStatus, homeTotals, tripsInCountry } from '../../lib/countries'
 import { countdown, todayISO } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
@@ -12,6 +12,7 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { nextSideTrips, TripCard, TripRow } from './Upcoming'
 import { TripForm } from './TripForm'
+import { LinkCard } from '../saved/LinkCard'
 
 // maplibre is large and needs webgl; load it after the page shows
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
@@ -23,6 +24,7 @@ const regionName = (code: string) => {
 export function HomePage() {
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
+  const unsorted = (useLinks().data ?? []).filter((l) => !l.trip_id)
   const canEdit = useCanEdit()
   const navigate = useNavigate()
   const today = todayISO()
@@ -72,6 +74,13 @@ export function HomePage() {
           </div>
         ))}
       </section>
+
+      {unsorted.length > 0 && (
+        <section className="home-section">
+          <div className="section-head"><h2 className="head">unsorted</h2></div>
+          {unsorted.map((l) => <LinkCard key={l.id} link={l} trips={trips} />)}
+        </section>
+      )}
 
       {past.length > 0 && (
         <section className="home-section">

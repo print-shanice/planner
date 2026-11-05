@@ -96,3 +96,14 @@ it('stay from the add menu opens a new stay with the trip dates', async () => {
   expect(within(d).getByLabelText('check-in')).toHaveValue('2027-06-26')
   expect(within(d).getByLabelText('check-out')).toHaveValue('2027-07-13')
 })
+
+it('cost and link from the add menu open their forms', async () => {
+  show('/trip/summer')
+  await userEvent.click(screen.getByRole('button', { name: 'add' }))
+  await userEvent.click(screen.getByRole('button', { name: 'cost' }))
+  expect(await screen.findByRole('dialog', { name: 'new cost' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'close' }))
+  await userEvent.click(screen.getByRole('button', { name: 'add' }))
+  await userEvent.click(screen.getByRole('button', { name: 'link' }))
+  expect(await screen.findByRole('dialog', { name: 'new link' })).toBeInTheDocument()
+})

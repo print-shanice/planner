@@ -16,6 +16,8 @@ import { TripHeader } from './TripHeader'
 import { PHONE_TABS, TripTabs, WIDE_TABS, type Tab } from './TripTabs'
 import { AddMenu, type AddKind } from './AddMenu'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
+import { CostForm } from '../money/CostForm'
+import { LinkForm } from '../saved/LinkForm'
 
 const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapTab })))
 
@@ -40,9 +42,17 @@ export function AddForms({ kind, trip, onClose }: { kind: AddKind | null; trip: 
     }
   }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Sheet open={kind === 'side trip'} title="new side trip" onClose={onClose}>
-      <TripForm parentId={trip.id} onDone={onClose} />
-    </Sheet>
+    <>
+      <Sheet open={kind === 'side trip'} title="new side trip" onClose={onClose}>
+        <TripForm parentId={trip.id} onDone={onClose} />
+      </Sheet>
+      <Sheet open={kind === 'cost'} title="new cost" onClose={onClose}>
+        <CostForm trip={trip} onDone={onClose} />
+      </Sheet>
+      <Sheet open={kind === 'link'} title="new link" onClose={onClose}>
+        <LinkForm tripId={trip.id} onDone={onClose} />
+      </Sheet>
+    </>
   )
 }
 

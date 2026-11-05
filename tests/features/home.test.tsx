@@ -7,12 +7,14 @@ import type { Trip, Stop } from '../../src/lib/types'
 const db = vi.hoisted(() => ({
   trips: [] as unknown[],
   stops: [] as unknown[],
+  links: [] as unknown[],
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   remove: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips, isLoading: false }),
   useStops: () => ({ data: db.stops, isLoading: false }),
+  useLinks: () => ({ data: db.links }),
   useRates: () => ({ data: null }),
   useSave: () => ({ mutateAsync: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, isPending: false }),
@@ -39,7 +41,7 @@ function show() {
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-11-05T10:00:00'))
-  db.trips = []; db.stops = []; db.save.mockClear(); db.remove.mockClear()
+  db.trips = []; db.stops = []; db.links = []; db.save.mockClear(); db.remove.mockClear()
 })
 afterEach(() => vi.useRealTimers())
 
@@ -155,4 +157,13 @@ it('choosing a country with one trip opens it', async () => {
   show()
   await userEvent.click(await screen.findByRole('button', { name: 'globe' }))
   expect(screen.getByText('opened trip')).toBeInTheDocument()
+})
+
+it('unsorted links show on home only when any exist', () => {
+  db.trips = europe()
+  show()
+  expect(screen.queryByRole('heading', { name: 'unsorted' })).toBeNull()
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
+  show()
+  expect(screen.getByRole('heading', { name: 'unsorted' })).toBeInTheDocument()
 })
