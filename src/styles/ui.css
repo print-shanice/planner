@@ -90,3 +90,9 @@
 @keyframes fade { from { opacity: 0 } }
 @keyframes rise { from { transform: translateY(24px); opacity: .6 } }
 @keyframes pop { from { transform: scale(.98); opacity: 0 } }
+
+.asleep-banner {
+  position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px 8px; background: var(--warn-bg);
+}
+.asleep-banner .warn-line { font-weight: 600; }

@@ -1,6 +1,7 @@
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { AuthGate, AuthProvider } from './lib/auth'
 import { RealtimeBridge } from './lib/realtime'
+import { AsleepBanner } from './lib/asleep'
 import { HomePage } from './features/home/HomePage'
 import { TripPage } from './features/trip/TripPage'
 
@@ -10,6 +11,7 @@ export function App() {
       <AuthProvider>
         <AuthGate>
           <RealtimeBridge />
+          <AsleepBanner />
           <HashRouter>
             <Routes>
               <Route path="/" element={<HomePage />} />

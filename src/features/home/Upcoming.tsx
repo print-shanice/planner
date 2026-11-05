@@ -34,7 +34,9 @@ export function TripCard({ trip, trips, today }: { trip: Trip; trips: Trip[]; to
         {cd.kind === 'upcoming' && (
           <div className="countdown"><span className="num head">{cd.days}</span><span className="muted">{cd.days === 1 ? 'day' : 'days'}</span></div>
         )}
-        {cd.kind === 'ongoing' && <div className="countdown"><span className="pill ok">now</span></div>}
+        {cd.kind === 'ongoing' && (
+          <div className="countdown"><span className="num head">{cd.days}</span><span className="muted">day</span></div>
+        )}
       </div>
       <Strip trip={trip} kids={kids} />
     </Link>

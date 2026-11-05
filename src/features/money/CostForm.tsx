@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import type { Cost, Trip } from '../../lib/types'
 import { useMembers, useRates, useRemove, useSave } from '../../lib/queries'
 import { CATEGORIES } from '../../lib/money'
+import { useCanEdit } from '../../lib/offline'
 import { Button } from '../../components/Button'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { checkCost, costDraft, CostFields, costValues } from '../stops/CostFields'
@@ -14,6 +15,7 @@ export function CostForm({ trip, cost, onDone }: Props) {
   const rates = useRates().data ?? null
   const save = useSave('costs')
   const remove = useRemove('costs')
+  const canEdit = useCanEdit()
   const [title, setTitle] = useState(cost?.title ?? '')
   const [category, setCategory] = useState(cost?.category ?? 'food')
   const [date, setDate] = useState(cost?.date ?? '')
@@ -57,9 +59,9 @@ export function CostForm({ trip, cost, onDone }: Props) {
       </div>
       {problem && <p className="warn-line" role="alert">{problem}</p>}
       <div className="row form-actions">
-        {cost && <TwoTapDelete onConfirm={async () => { await remove.mutateAsync(cost.id); onDone() }} />}
+        {cost && <TwoTapDelete disabled={!canEdit} onConfirm={async () => { await remove.mutateAsync(cost.id); onDone() }} />}
         <span className="spacer" />
-        <Button variant="primary" type="submit">save</Button>
+        <Button variant="primary" type="submit" disabled={!canEdit}>save</Button>
       </div>
     </form>
   )

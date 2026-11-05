@@ -7,6 +7,7 @@ import { formatMoney } from '../../lib/money'
 import { positionsAfterMove } from '../../lib/order'
 import { gmapsUrl } from '../../lib/gmaps'
 import { supabase } from '../../lib/supabase'
+import { safeUrl } from '../../lib/embed'
 import { Pill } from '../../components/Pill'
 import { Icon } from '../../components/Icon'
 import { Button } from '../../components/Button'
@@ -117,7 +118,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
           <div className="fact-copy"><span className="muted">ref</span><span className="copy-text keep-case num">{stop.ref}</span><Copy text={stop.ref} label="copy ref" /></div>
         )}
         {linked && <p className="num">{costLine(linked, members)}</p>}
-        {stop.url && <a href={stop.url} target="_blank" rel="noopener noreferrer" className="fact-link"><Icon name="ext" size={16} /><span>{hostOf(stop.url)}</span></a>}
+        {safeUrl(stop.url) && <a href={safeUrl(stop.url)!} target="_blank" rel="noopener noreferrer" className="fact-link"><Icon name="ext" size={16} /><span>{hostOf(stop.url)}</span></a>}
         {stop.notes && stop.kind !== 'note' && <p className="notes">{stop.notes}</p>}
         {stop.kind === 'note' && stop.notes && <p className="notes">{stop.notes}</p>}
       </div>

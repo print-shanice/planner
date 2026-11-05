@@ -18,8 +18,8 @@ export const keys = {
 export const TABLES = Object.keys(keys) as TableName[]
 
 async function loadAll<T>(table: TableName): Promise<T[]> {
-  const { data, error } = await supabase.from(table).select('*')
-  if (error) throw error
+  const { data, error, status } = await supabase.from(table).select('*')
+  if (error) throw Object.assign(new Error(error.message), { code: error.code, status })
   return (data ?? []) as T[]
 }
 

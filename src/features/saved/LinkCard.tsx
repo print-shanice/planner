@@ -2,14 +2,15 @@ import { useEffect, useRef } from 'react'
 import type { Link, Trip } from '../../lib/types'
 import { useRemove, useSave } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
-import { embedFor, hostOf } from '../../lib/embed'
+import { embedFor, hostOf, safeUrl } from '../../lib/embed'
 import { Icon } from '../../components/Icon'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { ItemMenu } from './ItemMenu'
 import { runEmbeds } from './embedScripts'
 
 export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
-  const e = embedFor(link.url)
+  const href = safeUrl(link.url) ?? undefined
+  const e = href ? embedFor(href) : { kind: 'link' as const }
   const box = useRef<HTMLDivElement>(null)
   const save = useSave('links')
   const remove = useRemove('links')
@@ -30,16 +31,16 @@ export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
       )}
       {e.kind === 'instagram' && (
         <blockquote className="instagram-media" data-instgrm-permalink={link.url} data-instgrm-version="14">
-          <a href={link.url} target="_blank" rel="noopener noreferrer">{title}</a>
+          <a href={href} target="_blank" rel="noopener noreferrer">{title}</a>
         </blockquote>
       )}
       {e.kind === 'tiktok' && (
         <blockquote className="tiktok-embed" cite={link.url} data-video-id={e.id}>
-          <section><a href={link.url} target="_blank" rel="noopener noreferrer">{title}</a></section>
+          <section><a href={href} target="_blank" rel="noopener noreferrer">{title}</a></section>
         </blockquote>
       )}
       <div className="link-foot">
-        <a href={link.url} target="_blank" rel="noopener noreferrer" className="link-text">
+        <a href={href} target="_blank" rel="noopener noreferrer" className="link-text">
           {e.kind === 'link' && <Icon name="link" size={18} />}
           <span className="stack-xs">
             {link.title ? <span className="link-title">{link.title}</span> : null}
