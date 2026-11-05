@@ -4,6 +4,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import './styles/tokens.css'
 import './styles/base.css'
+import './styles/ui.css'
 import { App } from './App'
 import { MAX_AGE, persister } from './lib/offline'
 

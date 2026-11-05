@@ -1,0 +1,92 @@
+/* buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 18px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font-weight: 600; text-decoration: none; white-space: nowrap;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--card); }
+.btn.ghost:hover { background: var(--soft); }
+.btn.danger.armed { background: var(--warn-bg); border-color: var(--warn-bg); color: var(--warn); }
+.btn.small { min-height: 34px; padding: 0 12px; font-size: 14px; }
+.btn.block { width: 100%; }
+
+.icon-btn {
+  display: inline-grid; place-items: center; width: 40px; height: 40px;
+  border: 0; border-radius: 999px; background: transparent; color: var(--ink);
+}
+.icon-btn:hover { background: var(--soft); }
+.icon-btn.filled { background: var(--ink); color: var(--card); }
+.icon { flex: none; display: block; }
+
+/* status pills: green = booked/paid, amber = needs action (always with words) */
+.pill {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+  border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.warn-line { color: var(--warn); font-size: 14px; }
+.offline-badge { position: fixed; top: calc(env(safe-area-inset-top) + 10px); right: 12px; z-index: 30; }
+
+/* fields */
+.field { display: grid; gap: 6px; }
+.label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.field input, .field select, .field textarea, .input {
+  width: 100%; min-height: 44px; padding: 10px 14px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--card); font-size: 16px;
+}
+.field textarea { min-height: 88px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus, .input:focus { outline: 2px solid var(--ink); outline-offset: -1px; border-color: transparent; }
+.row { display: flex; gap: 10px; align-items: center; }
+.row > .field { flex: 1; min-width: 0; }
+.stack { display: grid; gap: 16px; }
+.stack-sm { display: grid; gap: 6px; }
+.center { text-align: center; justify-items: center; }
+.spacer { flex: 1; }
+
+.segmented { display: flex; gap: 4px; padding: 4px; background: var(--soft); border-radius: 999px; }
+.segmented button {
+  flex: 1; min-height: 36px; border: 0; border-radius: 999px; background: transparent;
+  font-size: 14px; font-weight: 600; color: var(--ink-2);
+}
+.segmented button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+/* empty */
+.empty { padding: 40px 16px; text-align: center; color: var(--ink-2); }
+
+/* sign in / asleep */
+.center-screen {
+  min-height: 100dvh; display: grid; place-content: center; justify-items: center;
+  gap: 28px; padding: 24px 16px; text-align: center;
+}
+.wordmark.big { font-size: clamp(56px, 16vw, 88px); line-height: .9; }
+.signin { width: min(340px, 100%); display: grid; gap: 14px; text-align: left; }
+
+/* sheet: bottom sheet on phones, centred dialog on wide screens */
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 50; background: rgba(22, 24, 29, .32);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fade .18s ease-out;
+}
+.sheet {
+  width: 100%; max-height: 92dvh; display: flex; flex-direction: column;
+  background: var(--card); border-radius: var(--radius) var(--radius) 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: rise .22s cubic-bezier(.2,.8,.2,1);
+}
+.sheet:focus { outline: none; }
+.sheet-head { display: flex; align-items: center; gap: 8px; padding: 14px 12px 6px 20px; }
+.sheet-head h2 { flex: 1; font-size: 20px; font-weight: 700; }
+.sheet-body { overflow: auto; padding: 8px 20px 20px; overscroll-behavior: contain; }
+.sheet-foot { display: flex; gap: 10px; align-items: center; padding: 12px 20px 16px; border-top: 1px solid var(--line); }
+@media (min-width: 700px) {
+  .sheet-backdrop { align-items: center; padding: 24px; }
+  .sheet { width: min(520px, 100%); border-radius: var(--radius); animation: pop .18s ease-out; }
+}
+@keyframes fade { from { opacity: 0 } }
+@keyframes rise { from { transform: translateY(24px); opacity: .6 } }
+@keyframes pop { from { transform: scale(.98); opacity: 0 } }
