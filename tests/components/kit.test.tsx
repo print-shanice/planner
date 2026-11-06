@@ -1,11 +1,11 @@
-import { render, screen, act, fireEvent } from '@testing-library/react'
+import { render, screen, act, fireEvent, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
 vi.mock('../../src/lib/supabase', () => ({ supabase: {} }))
 
 import { Pill } from '../../src/components/Pill'
-import { Sheet } from '../../src/components/Sheet'
+import { Sheet, SheetFooter } from '../../src/components/Sheet'
 import { TwoTapDelete } from '../../src/components/TwoTapDelete'
 import { OfflineBadge } from '../../src/components/OfflineBadge'
 import { EmptyState } from '../../src/components/EmptyState'
@@ -117,4 +117,27 @@ it('escape closes the newest sheet first, then the one under it', async () => {
   expect(screen.getByRole('dialog', { name: 'stop' })).toBeInTheDocument()
   await userEvent.keyboard('{Escape}')
   expect(closed).toEqual(['ticket', 'stop'])
+})
+
+it('a sheet footer sits outside the scrolling body', () => {
+  render(<Sheet open title="new note" onClose={() => {}}><p>body</p><SheetFooter><button>save</button></SheetFooter></Sheet>)
+  const save = screen.getByRole('button', { name: 'save' })
+  expect(save.closest('.sheet-foot')).not.toBeNull()
+  expect(save.closest('.sheet-body')).toBeNull()
+})
+
+it('a sheet footer without a sheet renders in place', () => {
+  render(<div data-testid="here"><SheetFooter><button>save</button></SheetFooter></div>)
+  expect(within(screen.getByTestId('here')).getByRole('button', { name: 'save' })).toBeInTheDocument()
+})
+
+it('the sheet rises above the on-screen keyboard', () => {
+  const vv = Object.assign(new EventTarget(), { height: 800, offsetTop: 0 })
+  Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true })
+  Object.defineProperty(window, 'innerHeight', { value: 800, configurable: true })
+  render(<Sheet open title="new note" onClose={() => {}}><input /></Sheet>)
+  vv.height = 500
+  act(() => { vv.dispatchEvent(new Event('resize')) })
+  expect(document.querySelector<HTMLElement>('.sheet-backdrop')!.style.getPropertyValue('--kb')).toBe('300px')
+  Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true })
 })
