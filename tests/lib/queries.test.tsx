@@ -26,7 +26,7 @@ vi.mock('../../src/lib/supabase', () => ({ supabase: sb.supabase }))
 
 import { RealtimeBridge } from '../../src/lib/realtime'
 import { useSave, useRemove, useStops, keys } from '../../src/lib/queries'
-import { useFailure, forgetPending } from '../../src/lib/pending'
+import { useFailure, forgetPending, failSave, failureOf } from '../../src/lib/pending'
 
 afterEach(() => { forgetPending(); sb.single.mockReset().mockImplementation(() => Promise.resolve({ data: { id: 'x' }, error: null })) })
 
@@ -102,4 +102,33 @@ it('a later save of a row whose insert failed is sent as that insert', async () 
   await act(async () => { await result.current.mutateAsync({ id: 'p1', done: true }) })
   expect(sb.update).not.toHaveBeenCalled()
   expect(sb.insert).toHaveBeenCalledWith({ id: 'p1', text: 'socks', done: true })
+})
+
+const asleep = () => Promise.resolve({ data: null, error: { message: 'asleep' } }) as never
+
+it('removing a row whose save failed forgets that save for good', async () => {
+  const qc = new QueryClient()
+  qc.setQueryData(keys.packing, [])
+  failSave('packing', 'p1', { text: 'socks' }, true)
+  const { result } = renderHook(() => useRemove('packing'), { wrapper: wrap(qc) })
+  await act(async () => { await result.current.mutateAsync('p1') })
+  expect(failureOf('packing', 'p1')).toBeUndefined()
+})
+
+it('a failed trip edit is not kept, since nothing on screen would say so', async () => {
+  const qc = new QueryClient()
+  qc.setQueryData(keys.trips, [{ id: 't1', name: 'lapland' }])
+  const { result } = renderHook(() => useSave('trips'), { wrapper: wrap(qc) })
+  sb.single.mockImplementationOnce(asleep)
+  await act(async () => { await result.current.mutateAsync({ id: 't1', name: 'lapland 2' }).catch(() => {}) })
+  expect(failureOf('trips', 't1')).toBeUndefined()
+})
+
+it('a delete that fails puts the row back where it was, even if the refresh fails too', async () => {
+  const qc = new QueryClient()
+  qc.setQueryData(keys.stops, [{ id: 's1' }, { id: 's2' }, { id: 's3' }])
+  sb.eq.mockImplementationOnce(() => Promise.resolve({ error: { message: 'asleep' } }) as never)
+  const { result } = renderHook(() => useRemove('stops'), { wrapper: wrap(qc) })
+  await act(async () => { await result.current.mutateAsync('s2').catch(() => {}) })
+  expect(qc.getQueryData(keys.stops)).toEqual([{ id: 's1' }, { id: 's2' }, { id: 's3' }])
 })

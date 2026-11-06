@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import type { Mode, Place, Stop, StopStatus, Trip } from '../../lib/types'
 import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '../../lib/queries'
+import { newId } from '../../lib/id'
 import { hasPoint } from '../../lib/walk'
 import { Button } from '../../components/Button'
 import { PlaceField } from './PlaceField'
@@ -54,6 +55,8 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const costs = useCosts().data
   // seeded once when the sheet opens; a realtime refresh never overwrites what is being typed
   const [linked] = useState(() => costs?.find((c) => c.stop_id === stop.id))
+  // a new price keeps one id, so saving again after a failure sends the same cost
+  const [costId] = useState(() => linked?.id ?? newId())
   const [initial] = useState(() => seed(stop))
   const [d, setD] = useState<Draft>(initial)
   const [cost, setCost] = useState(() => costDraft(linked, trip?.currency ?? 'EUR', rates))
@@ -90,7 +93,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       const values = costValues(cost)
       if (values) {
         await saveCost.mutateAsync({
-          ...(linked ? { id: linked.id } : {}),
+          id: costId,
           trip_id: stop.trip_id, stop_id: stop.id, title: stopTitle({ ...stop, ...row } as Stop),
           category: stop.category ?? CATEGORY_OF[kind], date: day, ...values,
         })

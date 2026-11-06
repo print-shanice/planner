@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { del, get, set } from 'idb-keyval'
-import type { QueryClient } from '@tanstack/react-query'
+import { onlineManager, type QueryClient } from '@tanstack/react-query'
 import { useAuth } from './auth'
 import { clearTickets } from './ticketCache'
 import { pausePersist, persistPaused } from './wipe'
@@ -35,6 +35,8 @@ function subscribe(cb: () => void) {
 }
 
 let online = typeof navigator === 'undefined' ? true : navigator.onLine
+// react query assumes online until an event says otherwise; opening the app offline should pause, not fail
+onlineManager.setOnline(online)
 function snapshot() { return online }
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => { online = true })

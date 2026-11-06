@@ -104,7 +104,7 @@ it('price writes one linked cost; clearing it removes the cost', async () => {
     trip_id: 'lap', stop_id: 's1', amount: 120, currency: 'EUR', paid_by: 'u2', status: 'paid', split: 'even', category: 'activities',
   }))
   const saved = db.save.mock.calls.find(([t]) => t === 'costs')![1]
-  expect(saved.id).toBeUndefined()
+  expect(saved.id).toEqual(expect.any(String))
 
   db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 120 })]
   qc.setQueryData(['costs'], db.costs)
@@ -201,4 +201,16 @@ it('editStop opens a stop straight in its edit form', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'edit it' }))
   const sheet = screen.getByRole('dialog', { name: 'edit' })
   expect(within(sheet).getByDisplayValue('aurora cabin')).toBeInTheDocument()
+})
+
+it('saving a price again after it failed sends the same new cost, not a second one', async () => {
+  const d = await openEdit()
+  db.save.mockImplementation((t: string, r: any) => (t === 'costs' && !db.calls.includes('failed') ? (db.calls.push('failed'), Promise.reject(new Error('asleep'))) : Promise.resolve(r)))
+  await userEvent.type(within(d).getByLabelText('amount'), '120')
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'save' }))
+  const ids = db.save.mock.calls.filter(([t]) => t === 'costs').map(([, r]) => r.id)
+  expect(ids).toHaveLength(2)
+  expect(ids[0]).toEqual(expect.any(String))
+  expect(ids[1]).toBe(ids[0])
 })

@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { useSave } from '../../lib/queries'
+import { newId } from '../../lib/id'
 import { hostOf } from '../../lib/embed'
 import { Button } from '../../components/Button'
 import { saveError } from '../stops/errors'
 
 export function LinkForm({ tripId, onDone }: { tripId: string | null; onDone: () => void }) {
   const save = useSave('links')
+  // one id for the new link, so saving again after a failure sends the same row
+  const [id] = useState(newId)
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
   const [note, setNote] = useState('')
@@ -17,7 +20,7 @@ export function LinkForm({ tripId, onDone }: { tripId: string | null; onDone: ()
     if (u && !/^https?:\/\//i.test(u)) u = `https://${u}`
     try { new URL(u) } catch { setProblem('check the link'); return }
     try {
-      await save.mutateAsync({ trip_id: tripId, url: u, title: title.trim() || hostOf(u), note: note.trim() })
+      await save.mutateAsync({ id, trip_id: tripId, url: u, title: title.trim() || hostOf(u), note: note.trim() })
       onDone()
     } catch (err) {
       setProblem(saveError(err))

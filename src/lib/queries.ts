@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
 import { fetchRates } from './rates'
 import { newId } from './id'
-import { failSave, failureOf, overlay, savedFields, usePending } from './pending'
+import { failSave, failureOf, forgetFailure, overlay, savedFields, usePending } from './pending'
 import type { Rates } from './money'
 import type { Cost, FileRow, Link, Member, PackingItem, Stop, TableName, Trip } from './types'
 
@@ -46,6 +46,9 @@ export function useRates() {
 
 type Row = { id?: string } & Record<string, unknown>
 
+// tables whose rows show "couldn't save"; elsewhere a kept failure would look saved when it isn't
+const KEEPS_FAILURES: TableName[] = ['stops', 'costs', 'links', 'packing']
+
 type Change = { row: Row & { id: string }; isNew: boolean }
 
 // new rows are inserted; existing rows send only the fields that changed,
@@ -72,6 +75,7 @@ export function useSave<T extends { id: string } = { id: string }>(table: TableN
     },
     // a failure is kept on screen with a retry instead of quietly disappearing on the next refresh
     onError: (_e: unknown, { row, isNew }: Change) => {
+      if (!KEEPS_FAILURES.includes(table)) return
       const { id, ...fields } = row
       failSave(table, id, fields, isNew)
     },
@@ -97,7 +101,21 @@ export function useRemove(table: TableName) {
       if (error) throw error
     },
     onMutate: (id: string) => {
+      forgetFailure(table, id)
+      const before = qc.getQueryData<Row[]>(keys[table])
+      const at = before?.findIndex((r) => r.id === id) ?? -1
       qc.setQueryData<Row[]>(keys[table], (old) => old?.filter((r) => r.id !== id))
+      return { row: at === -1 ? undefined : before![at], at }
+    },
+    // a delete that didn't go through puts the row back, even when the refresh can't reach the server either
+    onError: (_e: unknown, _id: string, ctx?: { row?: Row; at: number }) => {
+      const row = ctx?.row
+      if (!row) return
+      qc.setQueryData<Row[]>(keys[table], (old) => {
+        const list = (old ?? []).filter((r) => r.id !== row.id)
+        list.splice(Math.min(ctx.at, list.length), 0, row)
+        return list
+      })
     },
     onSettled: () => qc.invalidateQueries({ queryKey: keys[table] }),
   })

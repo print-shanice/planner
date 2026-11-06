@@ -64,7 +64,7 @@ it('the link form defaults the title to the host', async () => {
   render(<LinkForm tripId="lap" onDone={done} />)
   await userEvent.type(screen.getByLabelText('link'), 'https://www.booking.com/hotel/fi/arctic.html')
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
-  expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', url: 'https://www.booking.com/hotel/fi/arctic.html', title: 'booking.com', note: '' })
+  expect(db.save).toHaveBeenCalledWith({ id: expect.any(String), trip_id: 'lap', url: 'https://www.booking.com/hotel/fi/arctic.html', title: 'booking.com', note: '' })
   expect(done).toHaveBeenCalled()
 })
 
@@ -91,4 +91,15 @@ it('a saved place whose save failed says so', () => {
   failSave('stops', 's9', { day: '2027-02-08' }, false)
   show()
   expect(within(screen.getByRole('region', { name: 'saved places' })).getByRole('alert')).toHaveTextContent("couldn't save")
+})
+
+it('saving a link again after it failed sends the same new row, not a second one', async () => {
+  db.save.mockReset().mockRejectedValueOnce(new Error('asleep')).mockResolvedValue({})
+  render(<LinkForm tripId="lap" onDone={vi.fn()} />)
+  await userEvent.type(screen.getByLabelText('link'), 'https://example.com')
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  const [a, b] = db.save.mock.calls.map((c) => c[0].id)
+  expect(a).toEqual(expect.any(String))
+  expect(b).toBe(a)
 })

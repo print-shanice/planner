@@ -85,3 +85,17 @@ it('the saved copy restored on start stays until something uses it', async () =>
   await new Promise((r) => setTimeout(r, 50))
   expect(qc.getQueryData(keys.stops)).toEqual([{ id: 's1', title: 'arktikum' }])
 })
+
+it('opening the app offline counts as offline for the data too', async () => {
+  const was = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine')!
+  Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false })
+  try {
+    vi.resetModules()
+    const { onlineManager } = await import('@tanstack/react-query')
+    await import('../../src/lib/offline')
+    expect(onlineManager.isOnline()).toBe(false)
+  } finally {
+    delete (navigator as unknown as Record<string, unknown>).onLine
+    Object.defineProperty(Navigator.prototype, 'onLine', was)
+  }
+})

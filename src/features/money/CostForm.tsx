@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import type { Cost, Trip } from '../../lib/types'
 import { useMembers, useRates, useRemove, useSave } from '../../lib/queries'
+import { newId } from '../../lib/id'
 import { CATEGORIES } from '../../lib/money'
 import { useCanEdit } from '../../lib/offline'
 import { Button } from '../../components/Button'
@@ -16,6 +17,8 @@ export function CostForm({ trip, cost, onDone }: Props) {
   const save = useSave('costs')
   const remove = useRemove('costs')
   const canEdit = useCanEdit()
+  // a new cost keeps one id, so saving again after a failure sends the same row
+  const [id] = useState(() => cost?.id ?? newId())
   const [title, setTitle] = useState(cost?.title ?? '')
   const [category, setCategory] = useState(cost?.category ?? 'food')
   const [date, setDate] = useState(cost?.date ?? '')
@@ -32,7 +35,8 @@ export function CostForm({ trip, cost, onDone }: Props) {
     const v = costValues(money)!
     try {
       await save.mutateAsync({
-        ...(cost ? { id: cost.id } : { trip_id: trip.id, stop_id: null }),
+        id,
+        ...(cost ? {} : { trip_id: trip.id, stop_id: null }),
         title: title.trim(), category, date: date || null, ...v, status,
       })
       onDone()

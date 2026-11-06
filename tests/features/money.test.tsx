@@ -2,20 +2,22 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, cost } from '../factories'
 
-const db = vi.hoisted(() => ({ trips: [] as any[], costs: [] as any[], stops: [] as any[], costsQ: null as null | Record<string, unknown> }))
+const db = vi.hoisted(() => ({ save: vi.fn(), trips: [] as any[], costs: [] as any[], stops: [] as any[], costsQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useCosts: () => db.costsQ ?? ({ data: db.costs }),
   useStops: () => ({ data: db.stops }),
   useMembers: () => ({ data: [{ email: 's@x.com', user_id: 'u1', name: 'shanice', color: 0 }, { email: 'k@x.com', user_id: 'u2', name: 'kai', color: 1 }] }),
   useRates: () => ({ data: { date: '2026-11-04', rates: { SGD: 1.4398, GBP: 0.85 } } }),
-  useSave: () => ({ mutateAsync: vi.fn(), mutate: vi.fn(), isPending: false }),
+  useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ userId: 'u1', status: 'signed-in' }) }))
 
 import { MoneyTab } from '../../src/features/money/MoneyTab'
+import { CostForm } from '../../src/features/money/CostForm'
+import userEvent from '@testing-library/user-event'
 import { failSave, forgetPending } from '../../src/lib/pending'
 
 const show = (t: any) => render(<MemoryRouter><MoneyTab trip={t} /></MemoryRouter>)
@@ -90,4 +92,16 @@ it('a cost whose save failed says so', () => {
   failSave('costs', 'c7', { amount: 12 }, false)
   show(t)
   expect(within(screen.getByRole('region', { name: 'all costs' })).getByRole('alert')).toHaveTextContent("couldn't save")
+})
+
+it('saving a cost again after it failed sends the same new row, not a second one', async () => {
+  db.save.mockReset().mockRejectedValueOnce(new Error('asleep')).mockResolvedValue({})
+  render(<CostForm trip={trip({ id: 'lap' })} onDone={vi.fn()} />)
+  await userEvent.type(screen.getByLabelText('name'), 'sauna')
+  await userEvent.type(screen.getByLabelText('amount'), '80')
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  const [a, b] = db.save.mock.calls.map((c) => c[0].id)
+  expect(a).toEqual(expect.any(String))
+  expect(b).toBe(a)
 })

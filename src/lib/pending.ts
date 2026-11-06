@@ -57,6 +57,16 @@ export function savedFields(table: TableName, id: string, fields: string[]): voi
   })
 }
 
+// a removed row takes its unsaved changes with it
+export function forgetFailure(table: TableName, id: string): void {
+  if (!state[table]?.failed[id]) return
+  update(table, (p) => {
+    const failed = { ...p.failed }
+    delete failed[id]
+    return { ...p, failed }
+  })
+}
+
 export const failureOf = (table: TableName, id: string): Failed | undefined => state[table]?.failed[id]
 
 export function hide(table: TableName, id: string): void {
