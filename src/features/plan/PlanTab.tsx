@@ -3,9 +3,13 @@ import type { Place, Stop, Trip } from '../../lib/types'
 import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { daysBetween, groupByDay, tripDays, type DayEntry } from '../../lib/dates'
-import { clashes } from '../../lib/clash'
+import { clashPairs, type Clash } from '../../lib/clash'
+import { descendants } from '../../lib/countries'
 import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
+import { Sheet } from '../../components/Sheet'
+import { TripForm } from '../home/TripForm'
+import { ClashRow } from '../trip/ClashRow'
 import { DayChips } from './DayChips'
 import { DayCard } from './DayCard'
 import { NoDate } from './NoDate'
@@ -25,7 +29,14 @@ export function PlanTab({ trip }: { trip: Trip }) {
 
   const stops = useMemo(() => allStops.filter((s) => s.trip_id === trip.id), [allStops, trip.id])
   const children = useMemo(() => trips.filter((t) => t.parent_id === trip.id), [trips, trip.id])
-  const clash = useMemo(() => clashes(trips, allStops), [trips, allStops])
+  const pairs = useMemo(() => clashPairs(trips, allStops), [trips, allStops])
+  const clash = useMemo(() => new Set(pairs.flatMap((c) => [c.a.id, c.b.id])), [pairs])
+  // a clash shows on every trip it touches, and on the trips above them
+  const mine = useMemo(() => {
+    const ids = new Set(descendants(trip.id, trips))
+    return pairs.filter((c) => ids.has(c.a.tripId) || ids.has(c.b.tripId))
+  }, [pairs, trips, trip.id])
+  const [adjusting, setAdjusting] = useState<Trip | null>(null)
   const all = tripDays(trip)
   const long = all.length > 21
 
@@ -37,6 +48,11 @@ export function PlanTab({ trip }: { trip: Trip }) {
   }, [trip, stops, children, extra])
 
   if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
+
+  function adjust(c: Clash) {
+    if (c.kind === 'stay') sheet?.editStop(c.b.id)
+    else setAdjusting(trips.find((t) => t.id === c.b.id) ?? null)
+  }
 
   function addPlace(p: Place, date: string | null) {
     const same = stops.filter((s) => (s.day ?? null) === date)
@@ -52,6 +68,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
   return (
     <div className="plan">
       <LoadState load={load} />
+      {mine.map((c) => <ClashRow key={`${c.a.id}-${c.b.id}`} clash={c} canEdit={canEdit} onAdjust={adjust} />)}
       {trip.notes?.trim() && (
         <details className="trip-notes">
           <summary>notes</summary>
@@ -70,6 +87,9 @@ export function PlanTab({ trip }: { trip: Trip }) {
       })}
       <NoDate trip={trip} stops={undated} canAdd={canEdit && all.length === 0} onOpen={onOpen}
         onAddPlace={(p) => addPlace(p, null)} />
+      <Sheet open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
+        {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
+      </Sheet>
     </div>
   )
 }

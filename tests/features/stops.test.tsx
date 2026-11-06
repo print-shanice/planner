@@ -189,3 +189,16 @@ it('opening a ticket shows it from the device copy', async () => {
   expect(await screen.findByRole('img', { name: 'qr.png' })).toHaveAttribute('src', 'blob:qr')
   expect(tickets.keep).toHaveBeenCalled()
 })
+
+function Editor({ id }: { id: string }) {
+  const s = useStopSheet()!
+  return <button onClick={() => s.editStop(id)}>edit it</button>
+}
+
+it('editStop opens a stop straight in its edit form', async () => {
+  db.stops = [stop({ id: 'h1', trip_id: 'lap', kind: 'stay', title: 'aurora cabin', day: '2027-02-08', end_date: '2027-02-10' })]
+  show(<Editor id="h1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'edit it' }))
+  const sheet = screen.getByRole('dialog', { name: 'edit' })
+  expect(within(sheet).getByDisplayValue('aurora cabin')).toBeInTheDocument()
+})

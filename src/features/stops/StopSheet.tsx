@@ -7,7 +7,7 @@ import { StopForm } from './StopForm'
 import { StopView } from './StopView'
 import { stopTitle } from '../plan/StopRow'
 
-type Api = { openStop: (id: string) => void; newStop: (kind: StopKind, tripId: string, defaults?: Partial<Stop>) => void }
+type Api = { openStop: (id: string) => void; editStop: (id: string) => void; newStop: (kind: StopKind, tripId: string, defaults?: Partial<Stop>) => void }
 const Ctx = createContext<Api | null>(null)
 export const useStopSheet = () => useContext(Ctx)
 
@@ -27,11 +27,12 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
   const trips = useTrips().data
 
   const openStop = useCallback((id: string) => setState((s) => ({ n: (s?.n ?? 0) + 1, mode: 'view', id })), [])
+  const editStop = useCallback((id: string) => setState((s) => ({ n: (s?.n ?? 0) + 1, mode: 'edit', id })), [])
   const newStop = useCallback((kind: StopKind, tripId: string, defaults?: Partial<Stop>) => {
     const draft = blankStop(kind, tripId, defaults)
     setState((s) => ({ n: (s?.n ?? 0) + 1, mode: 'edit', id: draft.id, draft }))
   }, [])
-  const api = useMemo(() => ({ openStop, newStop }), [openStop, newStop])
+  const api = useMemo(() => ({ openStop, editStop, newStop }), [openStop, editStop, newStop])
 
   const close = () => setState(null)
   const saved = state?.draft ? undefined : stops?.find((s) => s.id === state?.id)

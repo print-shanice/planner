@@ -6,6 +6,7 @@ import type { Place, Stop, Trip } from '../../lib/types'
 import { hasPoint } from '../../lib/walk'
 import { positionsAfterMove } from '../../lib/order'
 import { useSave } from '../../lib/queries'
+import { Pill } from '../../components/Pill'
 import { StopRow } from './StopRow'
 import { WalkLeg } from './WalkLeg'
 import { AddPlaceField } from './AddPlaceField'
@@ -78,6 +79,7 @@ export function DayCard({ trip, date, entries, colorIndex, dayNumber, clash, can
           <span className="dot" style={{ background: `var(--g${(t.color ?? 0) % 6})` }} />
           <span className="side-name">{t.name}</span>
           <span className="muted num">{fmtRange(t.start_date, t.end_date)}</span>
+          {clash.has(t.id) && <Pill status="warn" label="dates clash" />}
         </Link>,
       )
       continue

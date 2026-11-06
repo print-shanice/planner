@@ -203,3 +203,29 @@ it('a stop whose save failed says so on its row', async () => {
   await userEvent.click(within(day('2027-02-08')).getByRole('button', { name: 'retry' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'x1', title: 'arktikum' })
 })
+
+it('overlapping side trips show one clash row naming both, and adjust dates opens the later trip', async () => {
+  const eu = trip({ id: 'eu', name: 'euro summer', start_date: '2027-06-01', end_date: '2027-07-01' })
+  const rome = trip({ id: 'rome', parent_id: 'eu', name: 'rome', start_date: '2027-06-12', end_date: '2027-06-16', color: 1 })
+  const flo = trip({ id: 'flo', parent_id: 'eu', name: 'florence', start_date: '2027-06-14', end_date: '2027-06-18', color: 2 })
+  db.trips = [eu, rome, flo]
+  db.stops = []
+  show(eu)
+  const row = screen.getByText('rome and florence · 14 – 16 jun').closest('.notice') as HTMLElement
+  expect(row).toHaveTextContent('dates clash')
+  // the side-trip cards carry the pill too
+  expect(screen.getAllByText('dates clash').filter((el) => el.classList.contains('pill'))).toHaveLength(2)
+  await userEvent.click(within(row).getByRole('button', { name: 'adjust dates' }))
+  const sheet = screen.getByRole('dialog', { name: 'edit trip' })
+  expect(within(sheet).getByDisplayValue('florence')).toBeInTheDocument()
+})
+
+it('a side trip sees its clash too', () => {
+  const eu = trip({ id: 'eu', name: 'euro summer', start_date: '2027-06-01', end_date: '2027-07-01' })
+  const rome = trip({ id: 'rome', parent_id: 'eu', name: 'rome', start_date: '2027-06-12', end_date: '2027-06-16' })
+  const flo = trip({ id: 'flo', parent_id: 'eu', name: 'florence', start_date: '2027-06-14', end_date: '2027-06-18' })
+  db.trips = [eu, rome, flo]
+  db.stops = []
+  show(rome)
+  expect(screen.getByText('rome and florence · 14 – 16 jun')).toBeInTheDocument()
+})
