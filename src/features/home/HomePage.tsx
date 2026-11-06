@@ -12,7 +12,8 @@ import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
-import { nextSideTrips, TripCard, TripRow } from './Upcoming'
+import { TripRow } from './Upcoming'
+import { Calendar } from './Calendar'
 import { TripForm } from './TripForm'
 import { AccountButton } from './Account'
 
@@ -39,7 +40,6 @@ export function HomePage() {
   const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
   const upcoming = top.filter((t) => countdown(t, today).kind !== 'done').sort(byStart)
   const past = top.filter((t) => countdown(t, today).kind === 'done').sort((a, b) => byStart(b, a))
-  const sideRows = upcoming[0] ? nextSideTrips(upcoming[0], trips, today) : []
 
   const choices = country ? tripsInCountry(country, trips, stops) : []
 
@@ -69,14 +69,7 @@ export function HomePage() {
         <LoadState load={load} blocks={1} />
         {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
         {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-        {upcoming.map((t, i) => (
-          <div key={t.id} className="stack-sm">
-            <TripCard trip={t} trips={trips} today={today} />
-            {i === 0 && sideRows.length > 0 && (
-              <div className="rows">{sideRows.map((s) => <TripRow key={s.id} trip={s} testId="side-row" />)}</div>
-            )}
-          </div>
-        ))}
+        {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
       </section>
 
       <div className="home-world">

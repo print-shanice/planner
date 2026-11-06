@@ -15,7 +15,6 @@ vi.mock('../../src/lib/supabase', () => ({ supabase: {} }))
 
 import { safeUrl } from '../../src/lib/embed'
 import { LinkCard } from '../../src/features/saved/LinkCard'
-import { TripCard } from '../../src/features/home/Upcoming'
 import { CostForm } from '../../src/features/money/CostForm'
 import { AsleepBanner } from '../../src/lib/asleep'
 
@@ -29,16 +28,6 @@ it('only web links become links', () => {
 it('a link card never renders a script url', () => {
   render(<MemoryRouter><LinkCard link={{ id: 'l', trip_id: 't', url: 'javascript:alert(1)', title: 'x', note: '' }} trips={[]} /></MemoryRouter>)
   for (const a of document.querySelectorAll('a')) expect(a.getAttribute('href') ?? '').not.toMatch(/^javascript:/i)
-})
-
-it('an ongoing trip shows which day it is, not a status colour', () => {
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date('2027-02-09T10:00:00'))
-  render(<MemoryRouter><TripCard trip={trip({ start_date: '2027-02-07', end_date: '2027-02-11' })} trips={[]} today="2027-02-09" /></MemoryRouter>)
-  expect(screen.getByText('3')).toBeInTheDocument()
-  expect(screen.getByText('day')).toBeInTheDocument()
-  expect(document.querySelector('.pill.ok')).toBeNull()
-  vi.useRealTimers()
 })
 
 it('the cost form cannot save offline', () => {

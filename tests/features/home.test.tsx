@@ -67,17 +67,70 @@ function europe() {
   return [sum, lap, ex, par] as Trip[]
 }
 
-it('next up shows the soonest top-level trip first with its countdown', () => {
+const legend = () => screen.getAllByTestId('cal-row').map((r) => r.textContent)
+
+it('next up is a calendar that opens on the month the soonest trip starts', () => {
   db.trips = europe()
   show()
   expect(screen.getByRole('heading', { name: 'next up' })).toBeInTheDocument()
-  const cards = screen.getAllByTestId('trip-card')
-  expect(cards[0]).toHaveTextContent('europe exchange 2027')
-  expect(within(cards[0]).getByText('84')).toBeInTheDocument()
-  expect(cards[0]).toHaveTextContent('2 side trips')
-  expect(cards[1]).toHaveTextContent('summer')
-  const rows = screen.getAllByTestId('side-row')
-  expect(rows.map((r) => r.textContent)).toEqual([expect.stringContaining('lapland'), expect.stringContaining('paris')])
+  const cal = screen.getByTestId('calendar')
+  expect(within(cal).getByText('january')).toBeInTheDocument()
+  expect(within(cal).getByText('2027')).toBeInTheDocument()
+  expect(cal.querySelectorAll('[data-day]')).toHaveLength(31)
+  expect(cal.querySelector('[data-day="2027-01-28"]')).toHaveAttribute('data-ribbon', 'start')
+  expect(cal.querySelector('[data-day="2027-01-29"]')).toHaveAttribute('data-ribbon', 'on')
+  expect(cal.querySelector('[data-day="2027-01-27"]')).not.toHaveAttribute('data-ribbon')
+  // every upcoming trip stays listed, the ones on the calendar first
+  expect(legend()).toEqual([
+    expect.stringMatching(/europe exchange 2027.*28 jan – 13 jul · in 84 days/),
+    expect.stringMatching(/summer.*1 – 10 jun · in 208 days/),
+  ])
+  expect(screen.getAllByTestId('cal-row')[0]).toHaveAttribute('href', '/trip/ex')
+  expect(screen.queryByTestId('trip-card')).toBeNull()
+})
+
+it('the calendar moves by month and draws side trips as named bars', async () => {
+  const user = userEvent.setup()
+  db.trips = europe()
+  show()
+  await user.click(screen.getByRole('button', { name: 'next month' }))
+  const cal = screen.getByTestId('calendar')
+  expect(within(cal).getByText('february')).toBeInTheDocument()
+  expect(cal.querySelector('[data-day="2027-02-01"]')).toHaveAttribute('data-ribbon', 'on')
+  // lapland runs sunday to thursday, so it carries over into the next week
+  const bars = within(cal).getAllByTestId('cal-bar')
+  expect(bars.map((b) => [b.textContent, b.hasAttribute('data-starts'), b.hasAttribute('data-ends')])).toEqual([
+    ['lapland', true, false], ['lapland', false, true],
+  ])
+  expect(bars[0]).toHaveAttribute('href', '/trip/lap')
+  expect(legend()).toEqual([
+    expect.stringContaining('europe exchange 2027'),
+    expect.stringMatching(/lapland.*7 – 11 feb/),
+    expect.stringContaining('summer'),
+  ])
+  expect(screen.getAllByTestId('cal-row')[1]).toHaveAttribute('data-depth', '1')
+  await user.click(screen.getByRole('button', { name: 'previous month' }))
+  await user.click(screen.getByRole('button', { name: 'previous month' }))
+  expect(within(screen.getByTestId('calendar')).getByText('december')).toBeInTheDocument()
+  expect(within(screen.getByTestId('calendar')).getByText('2026')).toBeInTheDocument()
+})
+
+it('a trip that is on now opens on this month, rings today and says which day it is', () => {
+  vi.setSystemTime(new Date('2027-02-09T10:00:00'))
+  db.trips = [trip({ id: 'fin', name: 'finland', start_date: '2027-02-07', end_date: '2027-02-11' })]
+  show()
+  const cal = screen.getByTestId('calendar')
+  expect(within(cal).getByText('february')).toBeInTheDocument()
+  expect(cal.querySelector('[aria-current="date"]')).toHaveAttribute('data-day', '2027-02-09')
+  expect(cal.querySelector('[data-day="2027-02-11"]')).toHaveAttribute('data-ribbon', 'end')
+  expect(legend()).toEqual([expect.stringMatching(/finland.*7 – 11 feb · day 3/)])
+  expect(document.querySelector('.pill.ok')).toBeNull()
+})
+
+it('an upcoming trip without dates is still listed', () => {
+  db.trips = [...europe(), trip({ id: 'maybe', name: 'someday japan', start_date: null, end_date: null })]
+  show()
+  expect(legend().at(-1)).toContain('someday japan')
 })
 
 it('there is exactly one add-trip control on home', () => {
@@ -89,7 +142,7 @@ it('there is exactly one add-trip control on home', () => {
 it('no trips shows only the empty title', () => {
   show()
   expect(screen.getByText('no trips yet')).toBeVisible()
-  expect(screen.queryByTestId('trip-card')).toBeNull()
+  expect(screen.queryByTestId('calendar')).toBeNull()
   expect(screen.queryByRole('heading', { name: 'past trips' })).toBeNull()
   expect(screen.queryByText('life well lived')).toBeNull()
 })
@@ -196,6 +249,7 @@ it('when every trip is over, next up says so', () => {
   db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' })]
   show()
   expect(screen.getByText('nothing coming up')).toBeInTheDocument()
+  expect(screen.queryByTestId('calendar')).toBeNull()
 })
 
 it('the globe gets a pin for each country with a located place', async () => {
