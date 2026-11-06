@@ -116,3 +116,23 @@
 
 .save-failed { display: flex; align-items: center; gap: 10px; flex-basis: 100%; padding: 2px 0 6px; color: var(--warn); font-size: 14px; font-weight: 600; }
 .save-failed .btn { color: var(--warn); }
+
+/* toast: phones keep it above the tabs and clear of the + button; laptops keep it under the plan */
+.toast-region {
+  position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 60;
+  display: flex; justify-content: center; pointer-events: none;
+}
+body:has(.trip-phone) .toast-region { bottom: calc(env(safe-area-inset-bottom) + 84px); right: 88px; }
+body:has(.trip-phone.tab-is-map) .toast-region { right: 16px; }
+body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw / 2.15) - 32px); }
+.toast {
+  display: flex; align-items: center; gap: 4px; min-height: 48px; max-width: 100%; padding: 2px 4px 2px 18px;
+  border-radius: 14px; background: var(--ink); color: var(--card); font-size: 15px;
+  box-shadow: 0 6px 20px rgba(22, 24, 29, .22); pointer-events: auto; animation: toast-in .16s ease-out;
+}
+.toast button {
+  min-height: 44px; padding: 0 14px; border: 0; background: none; color: var(--card);
+  font-weight: 700; text-decoration: underline; text-underline-offset: 3px;
+}
+.toast button:focus-visible { outline-color: var(--card); outline-offset: -4px; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }

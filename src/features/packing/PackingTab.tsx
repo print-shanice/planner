@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Trip } from '../../lib/types'
-import { usePacking, useRemove, useSave } from '../../lib/queries'
+import { usePacking, useSave } from '../../lib/queries'
+import { useUndoRemove } from '../../lib/undo'
 import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
@@ -12,7 +13,7 @@ export function PackingTab({ trip }: { trip: Trip }) {
   const load = loadState(pq)
   const items = (pq.data ?? []).filter((p) => p.trip_id === trip.id).sort((a, b) => a.position - b.position)
   const save = useSave('packing')
-  const remove = useRemove('packing')
+  const removeLater = useUndoRemove('packing')
   const canEdit = useCanEdit()
   const [text, setText] = useState('')
   if (load.state !== 'ready') return <LoadState load={load} blocks={1} />
@@ -38,7 +39,7 @@ export function PackingTab({ trip }: { trip: Trip }) {
                 <span className="tick" aria-hidden="true">{p.done && <Icon name="check" size={16} />}</span>
                 <span>{p.text}</span>
               </button>
-              {canEdit && <button type="button" className="icon-btn" aria-label={`remove ${p.text}`} onClick={() => remove.mutate(p.id)}><Icon name="close" size={18} /></button>}
+              {canEdit && <button type="button" className="icon-btn" aria-label={`remove ${p.text}`} onClick={() => removeLater(p.id)}><Icon name="close" size={18} /></button>}
               <SaveFailed table="packing" id={p.id} />
             </li>
           ))}

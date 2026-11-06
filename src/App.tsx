@@ -2,6 +2,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import { AuthGate, AuthProvider } from './lib/auth'
 import { RealtimeBridge } from './lib/realtime'
 import { AsleepBanner } from './lib/asleep'
+import { ToastProvider } from './components/Toast'
 import { configProblem } from './lib/supabase'
 import { ConfigProblem } from './features/auth/ConfigProblem'
 import { HomePage } from './features/home/HomePage'
@@ -15,13 +16,15 @@ export function App() {
         <AuthGate>
           <RealtimeBridge />
           <AsleepBanner />
-          <HashRouter>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/trip/:id" element={<TripPage />} />
-              <Route path="*" element={<HomePage />} />
-            </Routes>
-          </HashRouter>
+          <ToastProvider>
+            <HashRouter>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/trip/:id" element={<TripPage />} />
+                <Route path="*" element={<HomePage />} />
+              </Routes>
+            </HashRouter>
+          </ToastProvider>
         </AuthGate>
       </AuthProvider>
     </div>

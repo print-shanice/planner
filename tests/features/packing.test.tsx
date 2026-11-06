@@ -11,6 +11,7 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 
 import { PackingTab } from '../../src/features/packing/PackingTab'
+import { ToastProvider } from '../../src/components/Toast'
 import { failSave, forgetPending } from '../../src/lib/pending'
 
 it('packing: add, tick, count', async () => {
@@ -60,4 +61,14 @@ it('an item whose save failed says so, and retries', async () => {
   expect(screen.getByRole('alert')).toHaveTextContent("couldn't save")
   await userEvent.click(screen.getByRole('button', { name: 'retry' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'p2', done: true })
+})
+
+it('removing an item can be undone', async () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'thermal gloves', done: false, position: 0 }]
+  db.remove.mockReset().mockResolvedValue(undefined)
+  render(<ToastProvider><PackingTab trip={trip({ id: 'lap' })} /></ToastProvider>)
+  await userEvent.click(screen.getByRole('button', { name: 'remove thermal gloves' }))
+  expect(screen.getByRole('status')).toHaveTextContent('removed')
+  await userEvent.click(screen.getByRole('button', { name: 'undo' }))
+  expect(db.remove).not.toHaveBeenCalled()
 })
