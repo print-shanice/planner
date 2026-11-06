@@ -36,17 +36,74 @@ function placesOf(s: Stop): Place[] {
 
 const cc = (p: Place | null | undefined) => (p?.country ? p.country.toUpperCase() : null)
 
-export function countryStatus(trips: Trip[], stops: Stop[], today: string): Map<string, 'been' | 'planned'> {
-  const out = new Map<string, 'been' | 'planned'>()
-  const ended = new Map(trips.map((t) => [t.id, !!t.end_date && t.end_date < today]))
-  const mark = (code: string | null, been: boolean) => {
-    if (!code) return
-    if (been) out.set(code, 'been')
-    else if (!out.has(code)) out.set(code, 'planned')
+export function countryName(code: string): string {
+  try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code } catch { return code }
+}
+
+type Visit = { code: string; place: Place; city: string | null; been: boolean; when: string }
+
+const cityOf = (p: Place, journey: boolean) => p.city ?? (journey ? p.name : null)
+
+// a place counts as visited once its day has come; an undated stop once its trip has ended;
+// a trip's base once the trip has started
+function visits(trips: Trip[], stops: Stop[], today: string): Visit[] {
+  const byId = new Map(trips.map((t) => [t.id, t]))
+  const out: Visit[] = []
+  const add = (p: Place, city: string | null, been: boolean, when: string) => {
+    const code = cc(p)
+    if (code) out.push({ code, place: p, city, been, when })
   }
-  for (const t of trips) mark(cc(t.base), ended.get(t.id) ?? false)
-  for (const s of stops) for (const p of placesOf(s)) mark(cc(p), ended.get(s.trip_id) ?? false)
+  for (const t of trips) if (t.base) add(t.base, t.base.city ?? null, !!t.start_date && t.start_date <= today, t.start_date ?? '9999')
+  for (const s of stops) {
+    const t = byId.get(s.trip_id)
+    const been = s.day ? s.day <= today : !!t?.end_date && t.end_date < today
+    const when = s.day ?? t?.start_date ?? '9999'
+    for (const p of placesOf(s)) add(p, cityOf(p, s.kind === 'journey'), been, when)
+  }
   return out
+}
+
+function statusOf(all: Visit[]): Map<string, 'been' | 'planned'> {
+  const out = new Map<string, 'been' | 'planned'>()
+  for (const v of all) {
+    if (v.been) out.set(v.code, 'been')
+    else if (!out.has(v.code)) out.set(v.code, 'planned')
+  }
+  return out
+}
+
+export function countryStatus(trips: Trip[], stops: Stop[], today: string): Map<string, 'been' | 'planned'> {
+  return statusOf(visits(trips, stops, today))
+}
+
+export type GlobePin = { code: string; name: string; status: 'been' | 'planned'; cities: string[]; lng: number; lat: number }
+
+const located = (p: Place): p is Place & { lat: number; lng: number } => typeof p.lat === 'number' && typeof p.lng === 'number'
+
+export function globePins(trips: Trip[], stops: Stop[], today: string): GlobePin[] {
+  const all = visits(trips, stops, today)
+  const pins: GlobePin[] = []
+  for (const [code, status] of statusOf(all)) {
+    // a country you've been to only shows what you've seen there
+    const mine = all
+      .filter((v) => v.code === code && (status === 'planned' || v.been))
+      .sort((a, b) => a.when.localeCompare(b.when))
+    const seen = new Set<string>()
+    const cities: string[] = []
+    for (const v of mine) {
+      const c = v.city?.trim()
+      if (c && !seen.has(c.toLowerCase())) { seen.add(c.toLowerCase()); cities.push(c) }
+    }
+    const pts = mine.map((v) => v.place).filter(located)
+    if (!pts.length) continue
+    const lat = pts.reduce((n, p) => n + p.lat, 0) / pts.length
+    const lng = pts.reduce((n, p) => n + p.lng, 0) / pts.length
+    const far = (p: { lat: number; lng: number }) => (p.lat - lat) ** 2 + (p.lng - lng) ** 2
+    // sit on a real place near the middle, so the pin never lands in the sea
+    const at = pts.reduce((best, p) => (far(p) < far(best) ? p : best))
+    pins.push({ code, name: countryName(code), status, cities, lng: at.lng, lat: at.lat })
+  }
+  return pins.sort((a, b) => a.code.localeCompare(b.code))
 }
 
 export function tripsInCountry(code: string, trips: Trip[], stops: Stop[]): Trip[] {

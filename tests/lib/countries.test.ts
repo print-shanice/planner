@@ -1,5 +1,5 @@
 import { clashes } from '../../src/lib/clash'
-import { countryStatus, tripsInCountry, homeTotals, ancestors, descendants } from '../../src/lib/countries'
+import { countryStatus, tripsInCountry, homeTotals, ancestors, descendants, globePins } from '../../src/lib/countries'
 import { trip, stop, place } from '../factories'
 
 describe('clashes', () => {
@@ -42,7 +42,7 @@ describe('globe', () => {
 
   it('been vs planned, from places and journey ends', () => {
     const s = countryStatus([past, future], [
-      stop({ trip_id: 'past', place: place({ country: 'jp' }) }),
+      stop({ trip_id: 'past', day: '2026-09-21', place: place({ country: 'jp' }) }),
       stop({ trip_id: 'fut', place: place({ country: 'FI' }) }),
       stop({ trip_id: 'fut', kind: 'journey', origin: place({ country: 'NL' }), destination: place({ country: 'FI' }) }),
     ], '2026-11-05')
@@ -53,7 +53,7 @@ describe('globe', () => {
 
   it('been wins over planned for the same country', () => {
     const s = countryStatus([past, future], [
-      stop({ trip_id: 'past', place: place({ country: 'JP' }) }),
+      stop({ trip_id: 'past', day: '2026-09-21', place: place({ country: 'JP' }) }),
       stop({ trip_id: 'fut', place: place({ country: 'JP' }) }),
     ], '2026-11-05')
     expect(s.get('JP')).toBe('been')
@@ -91,5 +91,79 @@ describe('tree', () => {
   it('descendants is cycle safe', () => {
     const ts = [trip({ id: 'a', parent_id: 'b' }), trip({ id: 'b', parent_id: 'a' })]
     expect(descendants('a', ts).sort()).toEqual(['a', 'b'])
+  })
+})
+
+describe('visited by date', () => {
+  const ex = trip({ id: 'ex', start_date: '2027-01-28', end_date: '2027-07-13', base: place({ country: 'NL', city: 'Eindhoven' }) })
+
+  it('a place turns been once its day arrives, not when the trip ends', () => {
+    const stops = [stop({ trip_id: 'ex', day: '2027-02-01', place: place({ country: 'BE' }) })]
+    expect(countryStatus([ex], stops, '2027-01-31').get('BE')).toBe('planned')
+    expect(countryStatus([ex], stops, '2027-02-01').get('BE')).toBe('been')
+  })
+
+  it('a trip base turns been once the trip starts', () => {
+    expect(countryStatus([ex], [], '2027-01-27').get('NL')).toBe('planned')
+    expect(countryStatus([ex], [], '2027-01-28').get('NL')).toBe('been')
+  })
+
+  it('an undated stop turns been once its trip has ended', () => {
+    const stops = [stop({ trip_id: 'ex', day: null, place: place({ country: 'DE' }) })]
+    expect(countryStatus([ex], stops, '2027-07-13').get('DE')).toBe('planned')
+    expect(countryStatus([ex], stops, '2027-07-14').get('DE')).toBe('been')
+  })
+})
+
+describe('globe pins', () => {
+  const today = '2027-03-01'
+  const ex = trip({ id: 'ex', start_date: '2027-01-28', end_date: '2027-07-13' })
+  const at = (name: string, city: string, country: string, lat: number, lng: number) => place({ name, city, country, lat, lng })
+
+  it('one pin per country with its cities in visit order, deduped', () => {
+    const pins = globePins([ex], [
+      stop({ trip_id: 'ex', day: '2027-02-10', place: at('sintra palace', 'Sintra', 'PT', 38.79, -9.39) }),
+      stop({ trip_id: 'ex', day: '2027-02-08', place: at('time out market', 'Lisbon', 'PT', 38.71, -9.15) }),
+      stop({ trip_id: 'ex', day: '2027-02-09', place: at('belem tower', 'lisbon', 'PT', 38.69, -9.22) }),
+    ], today)
+    expect(pins).toHaveLength(1)
+    expect(pins[0]).toMatchObject({ code: 'PT', name: 'Portugal', status: 'been', cities: ['Lisbon', 'Sintra'] })
+  })
+
+  it('the pin sits on the visited place nearest the middle', () => {
+    const pins = globePins([ex], [
+      stop({ trip_id: 'ex', day: '2027-02-01', place: at('a', 'Amsterdam', 'NL', 52.37, 4.9) }),
+      stop({ trip_id: 'ex', day: '2027-02-02', place: at('u', 'Utrecht', 'NL', 52.09, 5.12) }),
+      stop({ trip_id: 'ex', day: '2027-02-03', place: at('e', 'Eindhoven', 'NL', 51.44, 5.47) }),
+    ], today)
+    expect([pins[0].lat, pins[0].lng]).toEqual([52.09, 5.12])
+  })
+
+  it('a country you have been to lists only the cities you have seen', () => {
+    const pins = globePins([ex], [
+      stop({ trip_id: 'ex', day: '2027-02-01', place: at('dom', 'Utrecht', 'NL', 52.09, 5.12) }),
+      stop({ trip_id: 'ex', day: '2027-05-01', place: at('keukenhof', 'Lisse', 'NL', 52.27, 4.55) }),
+    ], today)
+    expect(pins[0]).toMatchObject({ status: 'been', cities: ['Utrecht'], lat: 52.09, lng: 5.12 })
+  })
+
+  it('a planned country lists its planned cities', () => {
+    const pins = globePins([ex], [stop({ trip_id: 'ex', day: '2027-05-01', place: at('louvre', 'Paris', 'FR', 48.86, 2.34) })], today)
+    expect(pins[0]).toMatchObject({ code: 'FR', status: 'planned', cities: ['Paris'] })
+  })
+
+  it('journey ends count, using the stop name when there is no city', () => {
+    const pins = globePins([ex], [stop({
+      trip_id: 'ex', kind: 'journey', day: '2027-02-07',
+      origin: place({ name: 'Eindhoven', country: 'NL', lat: 51.45, lng: 5.37 }),
+      destination: place({ name: 'Rovaniemi', country: 'FI', lat: 66.56, lng: 25.83 }),
+    })], today)
+    expect(pins.map((p) => [p.code, p.cities])).toEqual([['FI', ['Rovaniemi']], ['NL', ['Eindhoven']]])
+  })
+
+  it('a country with no located place gets no pin but keeps its colour', () => {
+    const stops = [stop({ trip_id: 'ex', day: '2027-02-01', place: place({ country: 'BE', lat: null, lng: null }) })]
+    expect(globePins([ex], stops, today)).toEqual([])
+    expect(countryStatus([ex], stops, today).get('BE')).toBe('been')
   })
 })
