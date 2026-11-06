@@ -44,8 +44,8 @@ type Visit = { code: string; place: Place; city: string | null; been: boolean; w
 
 const cityOf = (p: Place, journey: boolean) => p.city ?? (journey ? p.name : null)
 
-// a place counts as visited once its day has come; an undated stop once its trip has ended;
-// a trip's base once the trip has started
+// a place counts as visited once its day has come; an undated stop once its trip has ended
+// (but never a saved one: that's a wish, not a visit); a trip's base once the trip has started
 function visits(trips: Trip[], stops: Stop[], today: string): Visit[] {
   const byId = new Map(trips.map((t) => [t.id, t]))
   const out: Visit[] = []
@@ -56,7 +56,7 @@ function visits(trips: Trip[], stops: Stop[], today: string): Visit[] {
   for (const t of trips) if (t.base) add(t.base, t.base.city ?? null, !!t.start_date && t.start_date <= today, t.start_date ?? '9999')
   for (const s of stops) {
     const t = byId.get(s.trip_id)
-    const been = s.day ? s.day <= today : !!t?.end_date && t.end_date < today
+    const been = s.day ? s.day <= today : !s.saved && !!t?.end_date && t.end_date < today
     const when = s.day ?? t?.start_date ?? '9999'
     for (const p of placesOf(s)) add(p, cityOf(p, s.kind === 'journey'), been, when)
   }
@@ -78,7 +78,9 @@ export function countryStatus(trips: Trip[], stops: Stop[], today: string): Map<
 
 export type GlobePin = { code: string; name: string; status: 'been' | 'planned'; cities: string[]; lng: number; lat: number }
 
-const located = (p: Place): p is Place & { lat: number; lng: number } => typeof p.lat === 'number' && typeof p.lng === 'number'
+// maplibre throws on impossible coordinates, which would blank the whole home page
+const located = (p: Place): p is Place & { lat: number; lng: number } =>
+  Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat!) <= 90 && Math.abs(p.lng!) <= 180
 
 export function globePins(trips: Trip[], stops: Stop[], today: string): GlobePin[] {
   const all = visits(trips, stops, today)

@@ -108,6 +108,11 @@ describe('visited by date', () => {
     expect(countryStatus([ex], [], '2027-01-28').get('NL')).toBe('been')
   })
 
+  it('a saved place with no day never counts as been', () => {
+    const stops = [stop({ trip_id: 'ex', day: null, saved: true, place: place({ country: 'DE' }) })]
+    expect(countryStatus([ex], stops, '2027-07-14').get('DE')).toBe('planned')
+  })
+
   it('an undated stop turns been once its trip has ended', () => {
     const stops = [stop({ trip_id: 'ex', day: null, place: place({ country: 'DE' }) })]
     expect(countryStatus([ex], stops, '2027-07-13').get('DE')).toBe('planned')
@@ -165,5 +170,17 @@ describe('globe pins', () => {
     const stops = [stop({ trip_id: 'ex', day: '2027-02-01', place: place({ country: 'BE', lat: null, lng: null }) })]
     expect(globePins([ex], stops, today)).toEqual([])
     expect(countryStatus([ex], stops, today).get('BE')).toBe('been')
+  })
+})
+
+describe('bad coordinates', () => {
+  it('a place with impossible coordinates gets no pin but keeps its colour', () => {
+    const ex = trip({ id: 'ex', start_date: '2027-01-28', end_date: '2027-07-13' })
+    const stops = [
+      stop({ trip_id: 'ex', day: '2027-02-01', place: place({ country: 'JP', lat: 139.7, lng: 35.7 }) }),
+      stop({ trip_id: 'ex', day: '2027-02-02', place: place({ country: 'KR', lat: Number.NaN, lng: 127 }) }),
+    ]
+    expect(globePins([ex], stops, '2027-03-01')).toEqual([])
+    expect(countryStatus([ex], stops, '2027-03-01').get('JP')).toBe('been')
   })
 })
