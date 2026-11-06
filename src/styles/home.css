@@ -5,6 +5,7 @@
 }
 .home-top { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .home-mark { flex: 1; font-size: 40px; line-height: 1; }
+.account-name { font-size: 20px; font-weight: 700; }
 .home-world { display: grid; gap: 16px; }
 
 /* laptop: plans on the left, globe on the right, like the trip page */

@@ -12,6 +12,7 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { nextSideTrips, TripCard, TripRow } from './Upcoming'
 import { TripForm } from './TripForm'
+import { AccountButton } from './Account'
 
 // maplibre is large and needs webgl; load it after the page shows
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
@@ -48,6 +49,7 @@ export function HomePage() {
       <header className="home-top">
         <h1 className="wordmark home-mark">planner</h1>
         <OfflineBadge inline />
+        <AccountButton />
       </header>
 
       <section className="home-section home-next">

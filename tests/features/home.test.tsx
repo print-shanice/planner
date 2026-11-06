@@ -1,4 +1,5 @@
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
@@ -8,6 +9,7 @@ const db = vi.hoisted(() => ({
   trips: [] as unknown[],
   stops: [] as unknown[],
   links: [] as unknown[],
+  members: [] as unknown[],
   globe: null as null | { pins: { code: string }[] },
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   remove: vi.fn(() => Promise.resolve()),
@@ -16,12 +18,14 @@ vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips, isLoading: false }),
   useStops: () => ({ data: db.stops, isLoading: false }),
   useLinks: () => ({ data: db.links }),
+  useMembers: () => ({ data: db.members }),
   useRates: () => ({ data: null }),
   useSave: () => ({ mutateAsync: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, isPending: false }),
 }))
-const env = vi.hoisted(() => ({ online: true }))
-vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => env.online }))
+const env = vi.hoisted(() => ({ online: true, signOut: vi.fn(), forget: vi.fn() }))
+vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => env.online, forgetDevice: env.forget }))
+vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: 'signed-in', email: 'shanice@x.com', userId: 'u1', signOut: env.signOut }) }))
 vi.mock('../../src/features/home/Globe', () => ({
   Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[] }) => {
     db.globe = p
@@ -34,12 +38,14 @@ import { TripForm } from '../../src/features/home/TripForm'
 
 function show() {
   return render(
-    <MemoryRouter initialEntries={['/']}>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/trip/:id" element={<p>opened trip</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/trip/:id" element={<p>opened trip</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -48,6 +54,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-11-05T10:00:00'))
   db.trips = []; db.stops = []; db.links = []; db.save.mockClear(); db.remove.mockClear()
   db.globe = null; env.online = true
+  db.members = []; env.signOut.mockReset().mockResolvedValue(undefined); env.forget.mockReset().mockResolvedValue(undefined)
 })
 afterEach(() => vi.useRealTimers())
 
@@ -194,4 +201,33 @@ it('offline shows the inline pill in the header', () => {
   const pill = screen.getByRole('status')
   expect(pill).toHaveTextContent('offline')
   expect(pill).not.toHaveClass('offline-badge')
+})
+
+it('account shows who is signed in, and signing out forgets this device', async () => {
+  db.members = [{ email: 'Shanice@x.com', user_id: 'u1', name: 'Shanice', color: 0 }]
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'account' }))
+  const sheet = screen.getByRole('dialog', { name: 'account' })
+  expect(within(sheet).getByText('Shanice')).toBeInTheDocument()
+  expect(within(sheet).getByText('shanice@x.com')).toBeInTheDocument()
+  await userEvent.click(within(sheet).getByRole('button', { name: 'sign out' }))
+  expect(env.signOut).toHaveBeenCalledTimes(1)
+  await waitFor(() => expect(env.forget).toHaveBeenCalledWith(expect.any(QueryClient)))
+})
+
+it('sign out waits for a connection', async () => {
+  env.online = false
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'account' }))
+  expect(screen.getByRole('button', { name: 'sign out' })).toBeDisabled()
+})
+
+it('a failed sign out says so and keeps the data', async () => {
+  env.signOut.mockRejectedValue(new Error('network'))
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'account' }))
+  await userEvent.click(screen.getByRole('button', { name: 'sign out' }))
+  expect(await screen.findByText("couldn't sign out")).toHaveClass('warn-line')
+  expect(env.forget).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'sign out' })).toBeEnabled()
 })
