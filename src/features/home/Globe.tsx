@@ -163,23 +163,38 @@ export function Globe({ status, pins, onCountry }: Props) {
     place()
   }, [pins]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // pinches zoom the globe, never the page; a plain scroll still scrolls the page
+  // pinches zoom the globe, never the page; a plain scroll still scrolls the page.
+  // safari on a mac sends a trackpad pinch as its own gesture events (scale since the pinch began);
+  // phones send those too, but maplibre already zooms from the touches there
   useEffect(() => {
     const el = wrap.current
     if (!el) return
+    const trackpad = 'GestureEvent' in window && !navigator.maxTouchPoints
+    let from: number | null = null
+    const zoom = (z: number) => map.current?.zoomTo(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z)), { duration: 0 })
     const wheel = (e: WheelEvent) => {
       const m = map.current
       if (!e.ctrlKey || !m) return
       e.preventDefault()
-      m.zoomTo(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, m.getZoom() - e.deltaY / 100)), { duration: 0 })
+      if (from === null) zoom(m.getZoom() - e.deltaY / 100)
     }
-    const block = (e: Event) => e.preventDefault()
-    const safari = ['gesturestart', 'gesturechange', 'gestureend']
-    el.addEventListener('wheel', wheel, { passive: false })
-    for (const t of safari) el.addEventListener(t, block, { passive: false })
+    const start = (e: Event) => { e.preventDefault(); from = map.current?.getZoom() ?? null }
+    const change = (e: Event) => {
+      e.preventDefault()
+      const scale = (e as Event & { scale?: number }).scale
+      if (trackpad && from !== null && scale) zoom(from + Math.log2(scale))
+    }
+    const end = (e: Event) => { e.preventDefault(); from = null }
+    const opts = { passive: false }
+    el.addEventListener('wheel', wheel, opts)
+    el.addEventListener('gesturestart', start, opts)
+    el.addEventListener('gesturechange', change, opts)
+    el.addEventListener('gestureend', end, opts)
     return () => {
       el.removeEventListener('wheel', wheel)
-      for (const t of safari) el.removeEventListener(t, block)
+      el.removeEventListener('gesturestart', start)
+      el.removeEventListener('gesturechange', change)
+      el.removeEventListener('gestureend', end)
     }
   }, [])
 

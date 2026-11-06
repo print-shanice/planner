@@ -255,3 +255,48 @@ it('pins are pin shaped and point at the place', () => {
   expect(pin.querySelector('svg')).not.toBeNull()
   expect(mk.markers.at(-1)!.anchor).toBe('bottom')
 })
+
+// safari's own pinch events carry a scale relative to where the pinch started
+function gesture(el: Element, type: string, scale: number) {
+  const e = new Event(type, { cancelable: true })
+  Object.defineProperty(e, 'scale', { value: scale })
+  el.dispatchEvent(e)
+  return e
+}
+const touchPoints = (n: number) => Object.defineProperty(navigator, 'maxTouchPoints', { value: n, configurable: true })
+
+describe('safari pinches', () => {
+  beforeEach(() => { vi.stubGlobal('GestureEvent', class {}); touchPoints(0) })
+  afterEach(() => touchPoints(0))
+
+  it('a trackpad pinch in safari on a mac zooms the globe', () => {
+    const { m, view } = show()
+    const wrap = view.container.querySelector('.globe-wrap')!
+    gesture(wrap, 'gesturestart', 1)
+    const e = gesture(wrap, 'gesturechange', 2)
+    expect(e.defaultPrevented).toBe(true)
+    expect(m.zoomTo.mock.calls.at(-1)![0]).toBeCloseTo(1.9)
+    gesture(wrap, 'gesturechange', 0.5)
+    expect(m.zoomTo.mock.calls.at(-1)![0]).toBeCloseTo(0.6)
+  })
+
+  it('a ctrl+wheel copy of the same pinch is ignored, so it never zooms twice', () => {
+    const { m, view } = show()
+    const wrap = view.container.querySelector('.globe-wrap')!
+    gesture(wrap, 'gesturestart', 1)
+    wrap.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true }))
+    expect(m.zoomTo).not.toHaveBeenCalled()
+    gesture(wrap, 'gestureend', 1)
+    wrap.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true }))
+    expect(m.zoomTo).toHaveBeenCalledTimes(1)
+  })
+
+  it('on an iphone a pinch is left to the map, so it never zooms twice', () => {
+    touchPoints(5)
+    const { m, view } = show()
+    const wrap = view.container.querySelector('.globe-wrap')!
+    gesture(wrap, 'gesturestart', 1)
+    expect(gesture(wrap, 'gesturechange', 2).defaultPrevented).toBe(true)
+    expect(m.zoomTo).not.toHaveBeenCalled()
+  })
+})
