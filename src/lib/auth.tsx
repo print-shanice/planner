@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
 import { SignIn } from '../features/auth/SignIn'
+import { resumePersist } from './wipe'
 
 type Status = 'loading' | 'signed-out' | 'signed-in' | 'asleep'
 type AuthValue = {
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const accept = useCallback((session: { user: { id: string; email?: string | null } } | null) => {
     if (!session) { setUser(null); setStatus('signed-out'); return }
+    resumePersist()
     setUser({ id: session.user.id, email: session.user.email ?? null })
     setStatus('signed-in')
     if (!claimed.current) {
@@ -52,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: user?.email ?? null,
     userId: user?.id ?? null,
     signOut: async () => {
-      const { error } = await supabase.auth.signOut()
+      // this device only; the default would sign out every phone and laptop too
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
       if (error) throw error
     },
     markAsleep: () => setStatus('asleep'),

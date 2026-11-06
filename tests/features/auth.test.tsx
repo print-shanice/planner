@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { AuthProvider, AuthGate, useAuth } from '../../src/lib/auth'
+import { pausePersist, persistPaused } from '../../src/lib/wipe'
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -107,4 +108,21 @@ it('sign out resolves when it worked', async () => {
   render(<AuthProvider><SignOutButton /></AuthProvider>)
   await userEvent.click(await screen.findByRole('button', { name: 'sign out' }))
   expect(await screen.findByRole('button', { name: 'out' })).toBeInTheDocument()
+})
+
+it('sign out only signs out this device', async () => {
+  auth.getSession.mockResolvedValue({ data: { session }, error: null })
+  auth.signOut.mockResolvedValue({ error: null })
+  render(<AuthProvider><SignOutButton /></AuthProvider>)
+  await userEvent.click(await screen.findByRole('button', { name: 'sign out' }))
+  await screen.findByRole('button', { name: 'out' })
+  expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
+})
+
+it('signing in lets the cache be saved again after a sign out', async () => {
+  pausePersist()
+  auth.getSession.mockResolvedValue({ data: { session }, error: null })
+  ui()
+  expect(await screen.findByText('inside')).toBeVisible()
+  expect(persistPaused()).toBe(false)
 })

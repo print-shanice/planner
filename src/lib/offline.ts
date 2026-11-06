@@ -4,11 +4,12 @@ import { del, get, set } from 'idb-keyval'
 import type { QueryClient } from '@tanstack/react-query'
 import { useAuth } from './auth'
 import { clearTickets } from './ticketCache'
+import { pausePersist, persistPaused } from './wipe'
 
 export const persister = createAsyncStoragePersister({
   storage: {
     getItem: (k: string) => get<string>(k).then((v) => v ?? null),
-    setItem: (k: string, v: string) => set(k, v),
+    setItem: (k: string, v: string) => (persistPaused() ? Promise.resolve() : set(k, v)),
     removeItem: (k: string) => del(k),
   },
   key: 'planner-cache',
@@ -45,6 +46,7 @@ export function useCanEdit(): boolean {
 
 // after signing out, nothing from the plan stays on this device
 export async function forgetDevice(qc: QueryClient): Promise<void> {
+  pausePersist()
   qc.clear()
   await Promise.allSettled([persister.removeClient(), clearTickets()])
 }
