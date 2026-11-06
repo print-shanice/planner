@@ -2,6 +2,7 @@ import type { Cost, Member, StopKind } from '../../lib/types'
 import type { Rates } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
 import { useAuth } from '../../lib/auth'
+import { Choice } from '../../components/Choice'
 
 export type CostDraft = { amount: string; currency: string; other: boolean; code: string; rate: string; paid: boolean; paid_by: string; split: string }
 
@@ -47,6 +48,8 @@ export function costValues(d: CostDraft) {
   }
 }
 
+const PAYMENT = [{ value: false, label: 'not paid' }, { value: true, label: 'paid', tone: 'ok' as const }]
+
 export const CATEGORY_OF: Record<StopKind, string> = { place: 'activities', stay: 'stays', journey: 'transport', note: 'other' }
 
 type Props = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[]; rates: Rates | null }
@@ -85,10 +88,7 @@ export function CostFields({ value: d, onChange, members, rates }: Props) {
           </label>
         </div>
       )}
-      <div className="segmented" role="group" aria-label="payment">
-        <button type="button" aria-pressed={!d.paid} onClick={() => pay(false)}>not paid</button>
-        <button type="button" aria-pressed={d.paid} onClick={() => pay(true)}>paid</button>
-      </div>
+      <Choice label="payment" options={PAYMENT} value={d.paid} onChange={pay} />
       <div className="row">
         {d.paid && (
           <label className="field">

@@ -28,11 +28,12 @@ export function PlaceField({ id, label, value, onChange, near }: Props) {
 
   return (
     <div className="field">
-      <label className="label" htmlFor={id}>{label}</label>
+      <label className="sr-only" htmlFor={id}>{label}</label>
       {value ? (
         <div className="place-chip">
           <Icon name="pin" size={18} />
           <span className="result-text">
+            <span className="chip-label">{label}</span>
             <span>{value.name}</span>
             {value.address && <span className="muted">{value.address}</span>}
           </span>
@@ -42,7 +43,7 @@ export function PlaceField({ id, label, value, onChange, near }: Props) {
         <>
           <div className="search-box">
             <Icon name="search" size={18} />
-            <input id={id} type="search" value={q} enterKeyHint="search" autoComplete="off"
+            <input id={id} type="search" placeholder={label} value={q} enterKeyHint="search" autoComplete="off"
               onChange={(e) => { const v = e.target.value; setQ(v); clearTimeout(timer.current); timer.current = setTimeout(() => run(v, 3), 300) }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer.current); run(q, 1) } }} />
           </div>

@@ -223,6 +223,8 @@ it('saving a price again after it failed sends the same new cost, not a second o
 it('not paid saves no payer, and paid presets a payer', async () => {
   const d = await openEdit()
   await userEvent.type(within(d).getByLabelText('amount'), '30')
+  expect(within(d).getByRole('button', { name: 'not paid' })).toHaveClass('choice-chip', 'idle')
+  expect(within(d).getByRole('button', { name: 'paid' })).toHaveClass('choice-chip', 'ok')
   expect(within(d).queryByLabelText('paid by')).toBeNull()
   await userEvent.click(within(d).getByRole('button', { name: 'paid' }))
   expect(within(d).getByLabelText('paid by')).toHaveValue('u1')
@@ -261,15 +263,48 @@ it('a new journey shows its essentials and folds the rest, with save in the foot
   const d = screen.getByRole('dialog', { name: 'new journey' })
   for (const l of ['from', 'to', 'depart', 'depart time', 'arrive', 'arrive time']) expect(within(d).getByLabelText(l)).toBeInTheDocument()
   const folds = [...d.querySelectorAll('details')].map((x) => [x.querySelector('summary')!.textContent, x.open])
-  expect(folds).toEqual([['booking', false], ['cost', false], ['notes & links', false]])
-  expect(within(d).getByLabelText('carrier / number').closest('details')).not.toBeNull()
+  expect(folds).toEqual([['cost', false], ['notes & links', false]])
   expect(within(d).getByRole('button', { name: 'save' }).closest('.sheet-foot')).not.toBeNull()
 })
 
-it('a stop with booking details opens with booking unfolded', async () => {
+it('booking status is a choice in its colours: idea grey, to book amber, booked green', async () => {
+  show(<Opener kind="place" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  const status = within(d).getByRole('group', { name: 'status' })
+  expect(within(status).getByRole('button', { name: 'idea' })).toHaveClass('choice-chip', 'idle')
+  expect(within(status).getByRole('button', { name: 'idea' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(status).getByRole('button', { name: 'to book' })).toHaveClass('warn')
+  expect(within(status).getByRole('button', { name: 'booked' })).toHaveClass('ok')
+})
+
+it('the booking ref shows once booked, and a journey asks for its carrier once it is being booked', async () => {
+  show(<Opener kind="journey" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  expect(within(d).queryByLabelText('booking ref')).toBeNull()
+  expect(within(d).queryByLabelText('carrier / number')).toBeNull()
+  await userEvent.click(within(d).getByRole('button', { name: 'to book' }))
+  expect(within(d).getByLabelText('carrier / number')).toBeInTheDocument()
+  expect(within(d).queryByLabelText('booking ref')).toBeNull()
+  await userEvent.click(within(d).getByRole('button', { name: 'booked' }))
+  expect(within(d).getByLabelText('booking ref')).toBeInTheDocument()
+})
+
+it('a stop that already has a ref shows it whatever its status', async () => {
   const d = await openEdit()
-  expect(within(d).getByText('booking').closest('details')!.open).toBe(true)
-  expect(within(d).getByText('cost').closest('details')!.open).toBe(false)
+  expect(within(d).getByLabelText('booking ref')).toHaveValue('AB12')
+})
+
+it('dates and times read like a calendar, and say date or time when empty', async () => {
+  show(<Opener kind="journey" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  expect(within(d).getByLabelText('depart').closest('.pick')).toHaveTextContent('mon 8 feb')
+  expect(within(d).getByLabelText('arrive').closest('.pick')).toHaveTextContent('date')
+  expect(within(d).getByLabelText('depart time').closest('.pick')).toHaveTextContent('time')
+  fireEvent.change(within(d).getByLabelText('depart time'), { target: { value: '07:20' } })
+  expect(within(d).getByLabelText('depart time').closest('.pick')).toHaveTextContent('07:20')
 })
 
 it('a cost problem opens the cost fold', async () => {

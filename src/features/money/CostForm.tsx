@@ -7,6 +7,7 @@ import { useCanEdit } from '../../lib/offline'
 import { draftKey, useDraft } from '../../lib/drafts'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
+import { Pick } from '../../components/Pick'
 import { checkCost, costDraft, CostFields, costValues, type CostDraft } from '../stops/CostFields'
 
 type Props = { trip: Trip; cost?: Cost; onDone: () => void }
@@ -48,16 +49,16 @@ export function CostForm({ trip, cost, onDone }: Props) {
 
   return (
     <form id={formId} className="stack" onSubmit={submit} noValidate>
-      <label className="field"><span className="label">name</span><input value={title} onChange={(e) => set({ title: e.target.value })} autoFocus={!cost} /></label>
+      <input className="title-input" aria-label="name" placeholder="name" value={title} onChange={(e) => set({ title: e.target.value })} autoFocus={!cost} />
       <CostFields value={money} onChange={(m) => set({ money: m })} members={members} rates={rates} />
-      <div className="row">
-        <label className="field">
-          <span className="label">category</span>
-          <select value={category} onChange={(e) => set({ category: e.target.value })}>
-            {CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-        </label>
-        <label className="field"><span className="label">date</span><input type="date" value={date} onChange={(e) => set({ date: e.target.value })} /></label>
+      <label className="field">
+        <span className="label">category</span>
+        <select value={category} onChange={(e) => set({ category: e.target.value })}>
+          {CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      </label>
+      <div className="when">
+        <div className="when-row"><span className="when-label">date</span><Pick type="date" label="date" value={date} onChange={(v) => set({ date: v })} /></div>
       </div>
       <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}>
         {cost && <TwoTapDelete disabled={!canEdit} onConfirm={async () => { await remove.mutateAsync(cost.id); onDone() }} />}

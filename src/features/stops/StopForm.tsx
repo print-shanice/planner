@@ -4,6 +4,9 @@ import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '..
 import { newId } from '../../lib/id'
 import { hasPoint } from '../../lib/walk'
 import { Fold } from '../../components/Fold'
+import { Choice, type Tone } from '../../components/Choice'
+import { Pick } from '../../components/Pick'
+import { Icon } from '../../components/Icon'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { draftKey, useDraft } from '../../lib/drafts'
 import { PlaceField } from './PlaceField'
@@ -13,7 +16,9 @@ import { stopTitle } from '../plan/StopRow'
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: () => void }
 
 const MODES: Mode[] = ['flight', 'train', 'bus', 'ferry']
-const STATUSES: [StopStatus, string][] = [['idea', 'idea'], ['to_book', 'to book'], ['booked', 'booked']]
+const STATUSES: { value: StopStatus; label: string; tone: Tone }[] = [
+  { value: 'idea', label: 'idea', tone: 'idle' }, { value: 'to_book', label: 'to book', tone: 'warn' }, { value: 'booked', label: 'booked', tone: 'ok' },
+]
 
 type Draft = {
   title: string; place: Place | null; day: string; time: string; end_date: string; end_time: string
@@ -114,15 +119,17 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   }
 
   const nameField = (label: string) => (
-    <label className="field">
-      <span className="label">{label}</span>
-      <input value={d.title} onChange={(e) => set({ title: e.target.value })} autoFocus={isNew} />
-    </label>
+    <input className="title-input" aria-label={label} placeholder={label} value={d.title} onChange={(e) => set({ title: e.target.value })} autoFocus={isNew} />
   )
-  const dateTime = (dl: string, dk: 'day' | 'end_date', tl: string, tk: 'time' | 'end_time') => (
-    <div className="row">
-      <label className="field"><span className="label">{dl}</span><input type="date" value={d[dk]} onChange={(e) => set({ [dk]: e.target.value } as Partial<Draft>)} /></label>
-      <label className="field time-field"><span className="label">{tl}</span><input type="time" value={d[tk]} onChange={(e) => set({ [tk]: e.target.value } as Partial<Draft>)} /></label>
+  const when = (rows: [string, 'day' | 'end_date', 'time' | 'end_time' | null][]) => (
+    <div className="when">
+      {rows.map(([label, dk, tk]) => (
+        <div key={label} className="when-row">
+          <span className="when-label">{label}</span>
+          <Pick type="date" label={label} value={d[dk]} onChange={(v) => set({ [dk]: v } as Partial<Draft>)} min={dk === 'end_date' ? d.day || undefined : undefined} />
+          {tk && <Pick type="time" label={`${label} time`} value={d[tk]} onChange={(v) => set({ [tk]: v } as Partial<Draft>)} />}
+        </div>
+      ))}
     </div>
   )
   const placeField = (
@@ -131,45 +138,45 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   )
   const link = <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={d.url} onChange={(e) => set({ url: e.target.value })} /></label>
   const notes = <label className="field"><span className="label">notes</span><textarea value={d.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
+  // the booking details that fit the status: a carrier once a journey is being booked, a ref once it's booked
+  const showCarrier = kind === 'journey' && (d.status !== 'idea' || !!d.title.trim())
+  const showRef = d.status === 'booked' || !!d.ref.trim()
 
   return (
     <form id={formId} className="stack" onSubmit={submit} noValidate>
       {kind === 'place' && (<>
         {nameField('name')}
         {placeField}
-        {dateTime('day', 'day', 'time', 'time')}
+        {when([['day', 'day', 'time']])}
       </>)}
       {kind === 'stay' && (<>
         {nameField('name')}
         {placeField}
-        {dateTime('check-in', 'day', 'check-in time', 'time')}
-        {dateTime('check-out', 'end_date', 'check-out time', 'end_time')}
+        {when([['check-in', 'day', 'time'], ['check-out', 'end_date', 'end_time']])}
       </>)}
       {kind === 'journey' && (<>
-        <div className="segmented" role="group" aria-label="mode">
-          {MODES.map((m) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}>{m}</button>)}
+        <div className="segmented modes" role="group" aria-label="mode">
+          {MODES.map((m) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m} size={16} />{m}</button>)}
         </div>
         <PlaceField id={`from-${id}`} label="from" value={d.origin} near={near} onChange={(p) => set({ origin: p })} />
         <PlaceField id={`to-${id}`} label="to" value={d.destination} near={near} onChange={(p) => set({ destination: p })} />
-        {dateTime('depart', 'day', 'depart time', 'time')}
-        {dateTime('arrive', 'end_date', 'arrive time', 'end_time')}
+        {when([['depart', 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
       </>)}
       {kind === 'note' && (<>
         {nameField('title')}
-        <label className="field"><span className="label">day</span><input type="date" value={d.day} onChange={(e) => set({ day: e.target.value })} /></label>
+        {when([['day', 'day', null]])}
         {notes}
       </>)}
 
+      <Choice label="status" options={STATUSES} value={d.status} onChange={(v) => set({ status: v })} />
+      {(showCarrier || showRef) && (
+        <div className="row">
+          {showCarrier && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
+          {showRef && <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>}
+        </div>
+      )}
+
       <div className="folds">
-        <Fold label="booking" open={d.status !== 'idea' || !!d.ref.trim() || (kind === 'journey' && !!d.title.trim())}>
-          <div className="segmented" role="group" aria-label="status">
-            {STATUSES.map(([v, l]) => <button key={v} type="button" aria-pressed={d.status === v} onClick={() => set({ status: v })}>{l}</button>)}
-          </div>
-          {kind === 'journey' && (
-            <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>
-          )}
-          <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>
-        </Fold>
         <Fold label="cost" open={!!cost.amount.trim()} reveal={costReveal}>
           <CostFields value={cost} onChange={setCost} members={members} rates={rates} />
         </Fold>

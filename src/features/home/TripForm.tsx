@@ -5,6 +5,7 @@ import { descendants } from '../../lib/countries'
 import { newId } from '../../lib/id'
 import type { Place, Trip } from '../../lib/types'
 import { Fold } from '../../components/Fold'
+import { Pick } from '../../components/Pick'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { PlaceField } from '../stops/PlaceField'
@@ -71,19 +72,10 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
 
   return (
     <form id={formId} className="stack" onSubmit={submit} noValidate>
-      <label className="field">
-        <span className="label">name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
-      </label>
-      <div className="row">
-        <label className="field">
-          <span className="label">starts</span>
-          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
-        </label>
-        <label className="field">
-          <span className="label">ends</span>
-          <input type="date" value={end} min={start || undefined} onChange={(e) => setEnd(e.target.value)} />
-        </label>
+      <input className="title-input" aria-label="name" placeholder="name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
+      <div className="when">
+        <div className="when-row"><span className="when-label">starts</span><Pick type="date" label="starts" value={start} onChange={setStart} /></div>
+        <div className="when-row"><span className="when-label">ends</span><Pick type="date" label="ends" value={end} min={start || undefined} onChange={setEnd} /></div>
       </div>
       {trip && (
         <label className="field">
