@@ -19,6 +19,12 @@ export const persister = createAsyncStoragePersister({
 
 export const MAX_AGE = 30 * 24 * 60 * 60 * 1000
 
+// kept in memory for the whole visit: a gcTime as long as MAX_AGE overflows setTimeout (about 24.8 days),
+// which fires at once and threw away the saved copy restored on start
+export const queryDefaults = {
+  queries: { gcTime: Infinity, staleTime: 60_000, retry: 1, networkMode: 'offlineFirst' as const },
+}
+
 function subscribe(cb: () => void) {
   window.addEventListener('online', cb)
   window.addEventListener('offline', cb)

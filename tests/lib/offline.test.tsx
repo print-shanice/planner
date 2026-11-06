@@ -7,7 +7,7 @@ const auth = vi.hoisted(() => ({ status: 'signed-in' as string }))
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: auth.status }) }))
 vi.mock('../../src/lib/supabase', () => ({ supabase: {} }))
 
-import { persister, useOnline, useCanEdit, forgetDevice } from '../../src/lib/offline'
+import { persister, useOnline, useCanEdit, forgetDevice, queryDefaults } from '../../src/lib/offline'
 import { failSave, failureOf } from '../../src/lib/pending'
 import { getTicket, putTicket } from '../../src/lib/ticketCache'
 import { resumePersist } from '../../src/lib/wipe'
@@ -73,4 +73,15 @@ it('a save running while the device is wiped cannot put the plan back', async ()
   expect(await get('planner-cache')).toBeUndefined()
   unsubscribe()
   resumePersist()
+})
+
+it('the saved copy restored on start stays until something uses it', async () => {
+  const seed = new QueryClient()
+  seed.setQueryData(keys.stops, [{ id: 's1', title: 'arktikum' }])
+  await persistQueryClientSave({ queryClient: seed, persister })
+  const qc = new QueryClient({ defaultOptions: queryDefaults })
+  await persistQueryClientRestore({ queryClient: qc, persister })
+  // nothing observes it yet; a garbage-collect timer must not throw it away
+  await new Promise((r) => setTimeout(r, 50))
+  expect(qc.getQueryData(keys.stops)).toEqual([{ id: 's1', title: 'arktikum' }])
 })

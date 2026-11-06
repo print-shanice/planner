@@ -13,13 +13,9 @@ import './styles/plan.css'
 import './styles/map.css'
 import './styles/tabs.css'
 import { App } from './App'
-import { MAX_AGE, persister } from './lib/offline'
+import { MAX_AGE, persister, queryDefaults } from './lib/offline'
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { gcTime: MAX_AGE, staleTime: 60_000, retry: 1, networkMode: 'offlineFirst' },
-  },
-})
+const queryClient = new QueryClient({ defaultOptions: queryDefaults })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
