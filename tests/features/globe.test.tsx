@@ -25,6 +25,7 @@ const mk = vi.hoisted(() => {
     zoomTo = vi.fn((z: number) => { this.fire('zoomstart'); this.zoom = z })
     easeTo = vi.fn((o: { center: { lng: number; lat: number } }) => { this.center = o.center; this.fire('move'); this.fire('moveend') })
     jumpTo = vi.fn((o: { center: [number, number] }) => { this.center = { lng: o.center[0], lat: o.center[1] } })
+    flyTo = vi.fn((o: { center: [number, number]; zoom: number; duration?: number }) => { this.zoom = o.zoom; this.center = { lng: o.center[0], lat: o.center[1] }; this.fire('move') })
     setCenter = vi.fn((c: [number, number]) => { this.center = { lng: c[0], lat: c[1] }; this.fire('move') })
     remove = vi.fn()
     constructor(opts: any) { this.opts = opts; this.container = opts.container; this.center = { lng: opts.center[0], lat: opts.center[1] }; maps.push(this) }
@@ -87,11 +88,16 @@ function pointer(el: Element, type: string, pointerType: string) {
   fireEvent(el, e)
 }
 
-function show(pins: GlobePin[] = [portugal, france]) {
+// most tests look at a globe zoomed in far enough for its pins; OUT is the globe zoomed out, where it spins and pins hide
+const IN = 3
+const OUT = 0.9
+function show(pins: GlobePin[] = [portugal, france], zoom = IN) {
   const onCountry = vi.fn()
   const view = render(<Globe status={status()} pins={pins} onCountry={onCountry} />)
   const m = mk.maps[mk.maps.length - 1]
   act(() => m.fire('load'))
+  m.zoom = zoom
+  act(() => m.fire('move'))
   const box = view.container.querySelector('.globe')!
   return { m, onCountry, box, view }
 }
@@ -219,7 +225,7 @@ it('long city lists are shortened', () => {
 })
 
 it('a trackpad pinch zooms the globe, a plain scroll is left to the page', () => {
-  const { m, view } = show()
+  const { m, view } = show(undefined, OUT)
   const wrap = view.container.querySelector('.globe-wrap')!
   const pinch = new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true })
   wrap.dispatchEvent(pinch)
@@ -250,7 +256,7 @@ it('has no spin or zoom buttons', () => {
 
 describe('spinning', () => {
   it('turns slowly on its own while zoomed out, about 4° a second', () => {
-    const { m } = show()
+    const { m } = show(undefined, OUT)
     play(1000)
     expect(m.center.lng).toBeCloseTo(-7.5, 0)
     expect(m.center.lat).toBe(44)
@@ -264,7 +270,7 @@ describe('spinning', () => {
   })
 
   it('stops while you hold it and starts again a few seconds after you let go', () => {
-    const { m, view } = show()
+    const { m, view } = show(undefined, OUT)
     pointer(view.container.querySelector('.globe-wrap')!, 'pointerdown', 'mouse')
     play(1000)
     expect(m.center.lng).toBe(-3.5)
@@ -276,40 +282,33 @@ describe('spinning', () => {
   })
 
   it('a trackpad pinch pauses it too', () => {
-    const { m, view } = show()
+    const { m, view } = show(undefined, OUT)
     view.container.querySelector('.globe-wrap')!.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -10, cancelable: true, bubbles: true }))
-    play(1000)
-    expect(m.center.lng).toBe(-3.5)
-  })
-
-  it('pauses while a tip is open, so the pin stays under it', () => {
-    const { m } = show()
-    act(() => screen.getByRole('button', { name: 'Portugal' }).focus())
     play(1000)
     expect(m.center.lng).toBe(-3.5)
   })
 
   it('never spins when the device asks for less motion', () => {
     vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q }))
-    const { m } = show()
+    const { m } = show(undefined, OUT)
     play(1000)
     expect(m.center.lng).toBe(-3.5)
   })
 
   it('does not jump after the app was in the background', () => {
-    const { m } = show()
+    const { m } = show(undefined, OUT)
     act(() => { tick(1000); tick(61000) })
     expect(Math.abs(m.center.lng + 3.5)).toBeLessThan(1)
   })
 
   it('stops for good when the globe goes away', () => {
-    const { view } = show()
+    const { view } = show(undefined, OUT)
     view.unmount()
     expect(frames.size).toBe(0)
   })
 
   it('turning on its own never counts as someone turning it', () => {
-    const { m, view } = show([])
+    const { m, view } = show([], OUT)
     play(1000)
     view.rerender(<Globe status={status()} pins={[portugal]} onCountry={() => {}} />)
     expect(m.jumpTo).toHaveBeenLastCalledWith({ center: [-9, 39] })
@@ -393,7 +392,7 @@ describe('names', () => {
   })
 
   it('fetches nothing extra while zoomed out', () => {
-    const { m } = show()
+    const { m } = show(undefined, OUT)
     expect(m.opts.style.sources['cities'].data.features).toEqual([])
     expect(m.opts.style.sources['country-names'].data.features).toEqual([])
     act(() => { m.zoom = 1.9; m.fire('zoom') })
@@ -401,7 +400,7 @@ describe('names', () => {
   })
 
   it('loads detailed coastlines, country names and cities the first time you zoom in, once', () => {
-    const { m } = show()
+    const { m } = show(undefined, OUT)
     act(() => { m.zoom = 2.1; m.fire('zoom') })
     expect(m.getSource('countries').setData).toHaveBeenCalledWith(expect.stringMatching(/globe\/countries-50m\.json$/))
     expect(m.getSource('country-names').setData).toHaveBeenCalledWith(expect.stringMatching(/globe\/country-names\.json$/))
@@ -456,7 +455,7 @@ describe('safari pinches', () => {
   afterEach(() => touchPoints(0))
 
   it('a trackpad pinch in safari on a mac zooms the globe', () => {
-    const { m, view } = show()
+    const { m, view } = show(undefined, OUT)
     const wrap = view.container.querySelector('.globe-wrap')!
     gesture(wrap, 'gesturestart', 1)
     const e = gesture(wrap, 'gesturechange', 2)
@@ -551,4 +550,81 @@ it('the arrow stays on a narrow tip near the edge', () => {
     expect(el).toHaveStyle({ left: '60px' })
     expect(el.style.getPropertyValue('--arrow')).toBe('-46px')
   } finally { spy.mockRestore() }
+})
+
+describe('pins zoomed out', () => {
+  const pinEl = (box: Element, name: string) => box.querySelector<HTMLElement>(`.globe-pin[aria-label="${name}"]`)!
+  const countryNames = (m: any) => m.opts.style.layers.filter((l: any) => l.source === 'country-names')
+  const click = (m: any, box: Element, lngLat = { lng: 0, lat: 0 }) =>
+    act(() => m.fire('click', { point: { x: 0, y: 0 }, lngLat, originalEvent: { target: box } }))
+
+  it('stay hidden while zoomed out, like the names', () => {
+    const { box } = show(undefined, OUT)
+    expect(screen.queryByRole('button', { name: 'Portugal' })).toBeNull()
+    expect(pinEl(box, 'Portugal').style.visibility).toBe('hidden')
+  })
+
+  it('fade in exactly as the first country names do', () => {
+    const { m, box } = show(undefined, OUT)
+    // the first names' fade: ['interpolate', ['linear'], ['zoom'], from, 0, to, 1]
+    const first = countryNames(m).reduce((a: any, b: any) => (b.minzoom < a.minzoom ? b : a))
+    const [, , , from, , to] = first.paint['text-opacity']
+    act(() => { m.zoom = from - 0.01; m.fire('move') })
+    expect(pinEl(box, 'Portugal').style.visibility).toBe('hidden')
+    act(() => { m.zoom = (from + to) / 2; m.fire('move') })
+    expect(pinEl(box, 'Portugal').style.visibility).toBe('')
+    expect(Number(pinEl(box, 'Portugal').style.opacity)).toBeCloseTo(0.5)
+    act(() => { m.zoom = to; m.fire('move') })
+    expect(screen.getByRole('button', { name: 'Portugal' })).toBeInTheDocument()
+    expect(Number(pinEl(box, 'Portugal').style.opacity || 1)).toBe(1)
+  })
+
+  it('tapping a coloured country flies in to its pin, close enough to read every country name', () => {
+    const { m, onCountry, box } = show(undefined, OUT)
+    m.hit = 'PT'
+    click(m, box)
+    expect(m.flyTo).toHaveBeenCalledTimes(1)
+    const to = m.flyTo.mock.calls[0][0]
+    expect(to.center).toEqual([-9, 39])
+    const lastName = Math.max(...countryNames(m).map((l: any) => l.paint['text-opacity'][5]))
+    expect(to.zoom).toBeGreaterThanOrEqual(lastName)
+    expect(to.duration).toBeGreaterThan(0)
+    expect(onCountry).not.toHaveBeenCalled()
+    expect(tip()).toBeNull()
+    // once there, the pins show
+    expect(screen.getByRole('button', { name: 'Portugal' })).toBeInTheDocument()
+  })
+
+  it('on a phone a tap flies in too, with no tip yet', () => {
+    const { m, onCountry, box } = show(undefined, OUT)
+    pointer(box, 'pointerdown', 'touch')
+    m.hit = 'FR'
+    click(m, box)
+    expect(m.flyTo.mock.calls[0][0].center).toEqual([2, 49])
+    expect(onCountry).not.toHaveBeenCalled()
+    expect(tip()).toBeNull()
+  })
+
+  it('with reduced motion it jumps there instead of gliding', () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q }))
+    const { m, box } = show(undefined, OUT)
+    m.hit = 'PT'
+    click(m, box)
+    expect(m.flyTo.mock.calls[0][0].duration).toBe(0)
+  })
+
+  it('tapping a country that is not coloured does nothing', () => {
+    const { m, onCountry, box } = show(undefined, OUT)
+    m.hit = 'DE'
+    click(m, box)
+    expect(m.flyTo).not.toHaveBeenCalled()
+    expect(onCountry).not.toHaveBeenCalled()
+  })
+
+  it('a coloured country without a pin flies to where it was tapped', () => {
+    const { m, box } = show([portugal], OUT)
+    m.hit = 'FR'
+    click(m, box, { lng: 2.5, lat: 46 })
+    expect(m.flyTo.mock.calls[0][0].center).toEqual([2.5, 46])
+  })
 })

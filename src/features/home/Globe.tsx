@@ -16,11 +16,14 @@ const START_ZOOM = 1.7
 const EUROPE: [number, number] = [10, 48]
 // detailed coastlines, place names and cities load the first time someone zooms in this far
 const DETAIL_FROM = 2
-// the first names show here
+// the first names (and the pins) show here, fading in over FADE of a zoom level
 const NAMES_FROM = 2.4
+const FADE = 0.35
 // names fade in by importance, biggest first: [shown from zoom, natural earth's own zoom for the place up to]
 const COUNTRY_NAMES: [number, number][] = [[NAMES_FROM, 3], [3, 4], [3.6, 5], [4.2, 99]]
 const CITY_NAMES: [number, number][] = [[4, 4.7], [4.8, 5.4], [5.6, 6.2], [6.4, 99]]
+// zoomed out, a tap on a coloured country flies in this close: every country name has faded in by here
+const CLOSE = 4.6
 // the reds soften as names come in, so the names on them stay easy to read
 const NEAR: [number, number] = [NAMES_FROM, 3.6]
 // a gentle spin, one turn in about a minute and a half, only while zoomed out (it holds still once names show)
@@ -58,7 +61,7 @@ export function fillFor(status: Status): ExpressionSpecification {
 // once the red softens, a red edge keeps the countries you've been to clearly yours
 const edgeFor = (status: Status): ExpressionSpecification => ['in', ['get', 'ISO_A2'], ['literal', codes(status, 'been')]]
 
-const fadeIn = (from: number): ExpressionSpecification => ['interpolate', ['linear'], ['zoom'], from, 0, from + 0.35, 1]
+const fadeIn = (from: number): ExpressionSpecification => ['interpolate', ['linear'], ['zoom'], from, 0, from + FADE, 1]
 const halo = () => ({ 'text-halo-color': css('--globe-halo'), 'text-halo-width': 1, 'text-halo-blur': 0.6 })
 
 // each band shows the places natural earth ranks between the previous band and this one
@@ -125,14 +128,17 @@ export function Globe({ status, pins, onCountry }: Props) {
   const latest = useRef({ status, onCountry, pins })
   latest.current = { status, onCountry, pins }
 
-  // pins on the far side of the globe hide; the open tip follows its pin, or closes with it
+  // pins hide while zoomed out and fade in with the first country names; pins on the far side
+  // of the globe hide too. the open tip follows its pin, or closes with it
   function place() {
     const m = map.current
     if (!m) return
+    const near = Math.max(0, Math.min(1, (m.getZoom() - NAMES_FROM) / FADE))
     let at: { x: number; y: number } | null = null
     for (const { pin, marker, el } of placed.current) {
-      const hidden = m.transform.isLocationOccluded(marker.getLngLat())
+      const hidden = near === 0 || m.transform.isLocationOccluded(marker.getLngLat())
       el.style.visibility = hidden ? 'hidden' : ''
+      el.style.opacity = near < 1 ? String(near) : ''
       if (pin.code === open.current && !hidden) {
         at = m.project(marker.getLngLat())
         el.setAttribute('aria-describedby', tipId)
@@ -159,6 +165,13 @@ export function Globe({ status, pins, onCountry }: Props) {
       return
     }
     show(code)
+  }
+
+  // zoomed out the pins are hidden, so a tap on a coloured country flies in to it first (its pin, or where it was tapped)
+  function flyIn(code: string, at: maplibregl.LngLat) {
+    const hit = placed.current.find((x) => x.pin.code === code)
+    const center: [number, number] = hit ? [hit.pin.lng, hit.pin.lat] : [at.lng, at.lat]
+    map.current?.flyTo({ center, zoom: CLOSE, duration: reduced() ? 0 : 1200 })
   }
 
   useEffect(() => {
@@ -200,8 +213,9 @@ export function Globe({ status, pins, onCountry }: Props) {
     m.on('click', (e) => {
       if ((e.originalEvent?.target as Element | null)?.closest?.('.globe-pin')) return
       const code = m.queryRenderedFeatures(e.point, { layers: ['countries-fill'] })[0]?.properties?.ISO_A2 as string | undefined
-      if (code && latest.current.status.has(code)) choose(code)
-      else hide()
+      if (!code || !latest.current.status.has(code)) hide()
+      else if (m.getZoom() < NAMES_FROM) flyIn(code, e.lngLat)
+      else choose(code)
     })
     m.on('mousemove', 'countries-fill', (e) => {
       const code = e.features?.[0]?.properties?.ISO_A2 as string | undefined
@@ -244,7 +258,7 @@ export function Globe({ status, pins, onCountry }: Props) {
     else m.once('load', apply)
   }, [status])
 
-  // the slow spin: only zoomed out, never while someone holds it or a tip is open, never with reduced motion
+  // the slow spin: only zoomed out, never while someone holds it (pins and tips only show once it stops), never with reduced motion
   useEffect(() => {
     if (reduced()) return
     let frame = 0
@@ -256,7 +270,7 @@ export function Globe({ status, pins, onCountry }: Props) {
       last = t
       const m = map.current
       const s = still.current
-      if (!m || s.held || open.current || m.getZoom() >= NAMES_FROM || m.isMoving()) return
+      if (!m || s.held || m.getZoom() >= NAMES_FROM || m.isMoving()) return
       if (s.until === 'next') s.until = t + RESUME_MS
       if (t < s.until) return
       const c = m.getCenter()
