@@ -7,7 +7,9 @@ import { currencyList } from '../../lib/rates'
 import { balances, transfers } from '../../lib/settle'
 import { descendants } from '../../lib/countries'
 import { fmtDay } from '../../lib/dates'
+import { loadState } from '../../lib/load'
 import { EmptyState } from '../../components/EmptyState'
+import { LoadState } from '../../components/States'
 import { Pill } from '../../components/Pill'
 import { Sheet } from '../../components/Sheet'
 import { useStopSheet } from '../stops/StopSheet'
@@ -16,8 +18,11 @@ import { CostForm } from './CostForm'
 const LABEL = Object.fromEntries(CATEGORIES)
 
 export function MoneyTab({ trip }: { trip: Trip }) {
-  const trips = useTrips().data ?? []
-  const allCosts = useCosts().data ?? []
+  const tq = useTrips()
+  const cq = useCosts()
+  const trips = tq.data ?? []
+  const allCosts = cq.data ?? []
+  const load = loadState(tq, cq)
   const members = useMembers().data ?? []
   const rates = useRates().data ?? null
   const { userId } = useAuth()
@@ -42,11 +47,14 @@ export function MoneyTab({ trip }: { trip: Trip }) {
     return transfers(balances(paid, people, rates))
   }, [costs, members, rates])
 
+  if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
+
   const sorted = [...costs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || a.title.localeCompare(b.title))
   const show = (v: number) => formatMoney(v, cur)
 
   return (
     <div className="money stack">
+      <LoadState load={load} />
       <div className="money-head">
         <div className="stack-xs">
           <p className="money-total num head" data-testid="money-total">{show(total)}</p>

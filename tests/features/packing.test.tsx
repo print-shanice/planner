@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { trip } from '../factories'
 
-const db = vi.hoisted(() => ({ packing: [] as any[], save: vi.fn(), remove: vi.fn() }))
+const db = vi.hoisted(() => ({ packing: [] as any[], save: vi.fn(), remove: vi.fn(), packingQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
-  usePacking: () => ({ data: db.packing }),
+  usePacking: () => db.packingQ ?? ({ data: db.packing }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, mutate: db.remove, isPending: false }),
 }))
@@ -36,4 +36,15 @@ it('an empty list shows just the field', () => {
   render(<PackingTab trip={trip({ id: 'lap' })} />)
   expect(screen.getByRole('textbox', { name: 'add to pack' })).toBeInTheDocument()
   expect(screen.queryByText(/packed/)).toBeNull()
+})
+
+const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
+
+beforeEach(() => { db.packingQ = null })
+
+it('the list still loading shows grey rows and no add field yet', () => {
+  db.packingQ = loading
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: 'add to pack' })).toBeNull()
 })

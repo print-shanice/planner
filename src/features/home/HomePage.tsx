@@ -4,9 +4,11 @@ import { useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeTotals, tripsInCountry } from '../../lib/countries'
 import { countdown, todayISO } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
+import { loadState } from '../../lib/load'
 import type { Trip } from '../../lib/types'
 import { Sheet } from '../../components/Sheet'
 import { EmptyState } from '../../components/EmptyState'
+import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
@@ -18,8 +20,11 @@ import { AccountButton } from './Account'
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
 export function HomePage() {
-  const trips = useTrips().data ?? []
-  const stops = useStops().data ?? []
+  const tq = useTrips()
+  const sq = useStops()
+  const trips = tq.data ?? []
+  const stops = sq.data ?? []
+  const load = loadState(tq, sq)
   const canEdit = useCanEdit()
   const navigate = useNavigate()
   const today = todayISO()
@@ -61,8 +66,9 @@ export function HomePage() {
             <Icon name="plus" />
           </button>
         </div>
-        {trips.length === 0 && <EmptyState title="no trips yet" />}
-        {trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
+        <LoadState load={load} blocks={1} />
+        {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
+        {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
         {upcoming.map((t, i) => (
           <div key={t.id} className="stack-sm">
             <TripCard trip={t} trips={trips} today={today} />

@@ -2,14 +2,19 @@ import { useState } from 'react'
 import type { Trip } from '../../lib/types'
 import { usePacking, useRemove, useSave } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
+import { loadState } from '../../lib/load'
+import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
 
 export function PackingTab({ trip }: { trip: Trip }) {
-  const items = (usePacking().data ?? []).filter((p) => p.trip_id === trip.id).sort((a, b) => a.position - b.position)
+  const pq = usePacking()
+  const load = loadState(pq)
+  const items = (pq.data ?? []).filter((p) => p.trip_id === trip.id).sort((a, b) => a.position - b.position)
   const save = useSave('packing')
   const remove = useRemove('packing')
   const canEdit = useCanEdit()
   const [text, setText] = useState('')
+  if (load.state !== 'ready') return <LoadState load={load} blocks={1} />
   const done = items.filter((p) => p.done).length
 
   function add() {
@@ -22,6 +27,7 @@ export function PackingTab({ trip }: { trip: Trip }) {
 
   return (
     <div className="packing stack">
+      <LoadState load={load} />
       {items.length > 0 && <p className="muted num">{done} of {items.length} packed</p>}
       {items.length > 0 && (
         <ul className="list pack-list">

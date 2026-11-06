@@ -3,6 +3,8 @@ import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { dayColor, daysBetween, fmtDay } from '../../lib/dates'
 import { reversePlace } from '../../lib/photon'
+import { loadState } from '../../lib/load'
+import { LoadNotice } from '../../components/States'
 import { AddPlaceField } from '../plan/AddPlaceField'
 import { busyDays, mapFeatures, type Filter } from './features'
 import { TripMap } from './TripMap'
@@ -11,8 +13,11 @@ import { PlaceCard } from './PlaceCard'
 type Card = { place: Place; stopId?: string; seq: number }
 
 export function MapTab({ trip }: { trip: Trip }) {
-  const trips = useTrips().data ?? []
-  const stops = useStops().data ?? []
+  const tq = useTrips()
+  const sq = useStops()
+  const trips = tq.data ?? []
+  const stops = sq.data ?? []
+  const load = loadState(tq, sq)
   const [filter, setFilter] = useState<Filter>('all')
   const [card, setCard] = useState<Card | null>(null)
   const center = useRef<{ lat: number; lng: number } | null>(null)
@@ -53,6 +58,8 @@ export function MapTab({ trip }: { trip: Trip }) {
           ))}
           <button type="button" className="chip-pill" aria-pressed={filter === 'saved'} onClick={() => setFilter('saved')}>saved</button>
         </div>
+        {load.state === 'loading' && <span className="chip-pill quiet" role="status" aria-label="loading">loading</span>}
+        {(load.state === 'failed' || load.stale) && <LoadNotice onRetry={load.retry} />}
       </div>
       {card && (
         <div className="map-bottom">

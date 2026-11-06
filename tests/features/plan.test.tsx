@@ -6,6 +6,7 @@ import { trip, stop, place } from '../factories'
 import type { Stop, Trip } from '../../src/lib/types'
 
 const db = vi.hoisted(() => ({
+  stopsQ: null as null | Record<string, unknown>,
   trips: [] as unknown[],
   stops: [] as unknown[],
   save: vi.fn((r: unknown) => Promise.resolve(r)),
@@ -14,7 +15,7 @@ const db = vi.hoisted(() => ({
 }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
-  useStops: () => ({ data: db.stops }),
+  useStops: () => db.stopsQ ?? ({ data: db.stops }),
   useCosts: () => ({ data: [] }),
   useFiles: () => ({ data: [] }),
   useMembers: () => ({ data: [] }),
@@ -162,4 +163,29 @@ it('long trips list only busy days and offer a date picker', () => {
   show(t)
   expect(screen.getAllByTestId(/^day-/)).toHaveLength(1)
   expect(screen.getByLabelText('pick a date')).toBeInTheDocument()
+})
+
+const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
+
+beforeEach(() => { db.stopsQ = null })
+
+it('stops still loading show grey rows instead of empty days', () => {
+  const t = lap()
+  db.trips = [t]
+  db.stopsQ = loading
+  show(t)
+  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+  expect(screen.queryByTestId('day-2027-02-07')).toBeNull()
+})
+
+it('a failed refresh keeps the saved plan with a retry', async () => {
+  const t = lap()
+  db.trips = [t]
+  const refetch = vi.fn()
+  db.stopsQ = { data: [stop({ trip_id: 'lap', title: 'arktikum', day: '2027-02-08' })], status: 'error', fetchStatus: 'idle', refetch }
+  show(t)
+  expect(screen.getByText('arktikum')).toBeInTheDocument()
+  expect(screen.getByRole('alert')).toHaveTextContent("couldn't load")
+  await userEvent.click(screen.getByRole('button', { name: 'retry' }))
+  expect(refetch).toHaveBeenCalled()
 })

@@ -59,3 +59,5 @@
   border: 1px solid var(--line); background: var(--card); font-weight: 600; font-size: 14px;
 }
 .add-option:hover { background: var(--ground); }
+
+.trip-wait { width: min(720px, 100%); margin: 0 auto; padding: calc(env(safe-area-inset-top) + 64px) 16px 24px; }

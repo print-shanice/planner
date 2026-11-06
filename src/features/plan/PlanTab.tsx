@@ -4,6 +4,8 @@ import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { daysBetween, groupByDay, tripDays, type DayEntry } from '../../lib/dates'
 import { clashes } from '../../lib/clash'
+import { loadState } from '../../lib/load'
+import { LoadState } from '../../components/States'
 import { DayChips } from './DayChips'
 import { DayCard } from './DayCard'
 import { NoDate } from './NoDate'
@@ -12,8 +14,11 @@ import { useStopSheet } from '../stops/StopSheet'
 export function PlanTab({ trip }: { trip: Trip }) {
   const sheet = useStopSheet()
   const onOpen = sheet ? (s: Stop) => sheet.openStop(s.id) : undefined
-  const trips = useTrips().data ?? []
-  const allStops = useStops().data ?? []
+  const tq = useTrips()
+  const sq = useStops()
+  const trips = tq.data ?? []
+  const allStops = sq.data ?? []
+  const load = loadState(tq, sq)
   const canEdit = useCanEdit()
   const save = useSave('stops')
   const [extra, setExtra] = useState<string[]>([])
@@ -31,6 +36,8 @@ export function PlanTab({ trip }: { trip: Trip }) {
     return { days: [...g.days, ...more].sort((a, b) => a.date.localeCompare(b.date)), undated: g.undated }
   }, [trip, stops, children, extra])
 
+  if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
+
   function addPlace(p: Place, date: string | null) {
     const same = stops.filter((s) => (s.day ?? null) === date)
     const position = same.length ? Math.max(...same.map((s) => s.position)) + 1 : 0
@@ -44,6 +51,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
 
   return (
     <div className="plan">
+      <LoadState load={load} />
       {trip.notes?.trim() && (
         <details className="trip-notes">
           <summary>notes</summary>

@@ -3,8 +3,10 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { useWide } from '../../lib/useWide'
+import { loadState } from '../../lib/load'
 import type { Trip } from '../../lib/types'
 import { EmptyState } from '../../components/EmptyState'
+import { LoadState, Skeleton } from '../../components/States'
 import { Icon } from '../../components/Icon'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
@@ -63,7 +65,9 @@ export function TripPage() {
 function TripScreen() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
-  const { data: trips, isLoading } = useTrips()
+  const tq = useTrips()
+  const trips = tq.data
+  const load = loadState(tq)
   const wide = useWide()
   const canEdit = useCanEdit()
   const [menu, setMenu] = useState(false)
@@ -71,7 +75,15 @@ function TripScreen() {
 
   const trip = trips?.find((t) => t.id === id)
   if (!trip) {
-    if (isLoading || !trips) return null
+    if (load.state === 'loading') return <main className="trip-wait"><Skeleton blocks={3} /></main>
+    if (load.state !== 'ready') {
+      return (
+        <main className="center-screen">
+          <LoadState load={load} />
+          <Link to="/" className="btn ghost">all trips</Link>
+        </main>
+      )
+    }
     return (
       <main className="center-screen">
         <EmptyState title="trip not found" />

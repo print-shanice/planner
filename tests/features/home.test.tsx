@@ -6,6 +6,7 @@ import { trip, stop, place } from '../factories'
 import type { Trip, Stop } from '../../src/lib/types'
 
 const db = vi.hoisted(() => ({
+  tripsQ: null as null | Record<string, unknown>,
   trips: [] as unknown[],
   stops: [] as unknown[],
   links: [] as unknown[],
@@ -15,7 +16,7 @@ const db = vi.hoisted(() => ({
   remove: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('../../src/lib/queries', () => ({
-  useTrips: () => ({ data: db.trips, isLoading: false }),
+  useTrips: () => db.tripsQ ?? ({ data: db.trips, isLoading: false }),
   useStops: () => ({ data: db.stops, isLoading: false }),
   useLinks: () => ({ data: db.links }),
   useMembers: () => ({ data: db.members }),
@@ -240,4 +241,25 @@ it('a failed sign out says so and keeps the data', async () => {
   expect(await screen.findByText("couldn't sign out")).toHaveClass('warn-line')
   expect(env.forget).not.toHaveBeenCalled()
   expect(screen.getByRole('button', { name: 'sign out' })).toBeEnabled()
+})
+
+const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
+
+beforeEach(() => { db.tripsQ = null })
+
+it('home shows grey rows while trips load, never "no trips yet"', () => {
+  db.tripsQ = loading
+  show()
+  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+  expect(screen.queryByText('no trips yet')).toBeNull()
+})
+
+it('home says when trips could not load, and retries', async () => {
+  const refetch = vi.fn()
+  db.tripsQ = { data: undefined, status: 'error', fetchStatus: 'idle', refetch }
+  show()
+  expect(screen.getByRole('alert')).toHaveTextContent("couldn't load")
+  expect(screen.queryByText('no trips yet')).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'retry' }))
+  expect(refetch).toHaveBeenCalled()
 })

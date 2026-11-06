@@ -4,9 +4,9 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { trip } from '../factories'
 import type { Trip } from '../../src/lib/types'
 
-const db = vi.hoisted(() => ({ trips: [] as unknown[] }))
+const db = vi.hoisted(() => ({ trips: [] as unknown[], tripsQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
-  useTrips: () => ({ data: db.trips, isLoading: false }),
+  useTrips: () => db.tripsQ ?? ({ data: db.trips, isLoading: false }),
   useStops: () => ({ data: [] }),
   useCosts: () => ({ data: [] }),
   useLinks: () => ({ data: [] }),
@@ -106,4 +106,30 @@ it('cost and link from the add menu open their forms', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'add' }))
   await userEvent.click(screen.getByRole('button', { name: 'link' }))
   expect(await screen.findByRole('dialog', { name: 'new link' })).toBeInTheDocument()
+})
+
+const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
+
+beforeEach(() => { db.tripsQ = null })
+
+it('a trip that is still loading shows grey rows, not "trip not found"', () => {
+  db.tripsQ = loading
+  show('/trip/summer')
+  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+  expect(screen.queryByText('trip not found')).toBeNull()
+})
+
+it('opening a trip offline with nothing saved says offline', () => {
+  db.tripsQ = { data: undefined, status: 'pending', fetchStatus: 'paused' }
+  show('/trip/summer')
+  expect(screen.getByText('offline')).toBeInTheDocument()
+  expect(screen.queryByText('trip not found')).toBeNull()
+})
+
+it('a trip that could not load offers retry and the way home', () => {
+  db.tripsQ = { data: undefined, status: 'error', fetchStatus: 'idle', refetch: vi.fn() }
+  show('/trip/summer')
+  expect(screen.getByRole('alert')).toHaveTextContent("couldn't load")
+  expect(screen.getByRole('link', { name: 'all trips' })).toBeInTheDocument()
+  expect(screen.queryByText('trip not found')).toBeNull()
 })

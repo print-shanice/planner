@@ -2,10 +2,10 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, cost } from '../factories'
 
-const db = vi.hoisted(() => ({ trips: [] as any[], costs: [] as any[], stops: [] as any[] }))
+const db = vi.hoisted(() => ({ trips: [] as any[], costs: [] as any[], stops: [] as any[], costsQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
-  useCosts: () => ({ data: db.costs }),
+  useCosts: () => db.costsQ ?? ({ data: db.costs }),
   useStops: () => ({ data: db.stops }),
   useMembers: () => ({ data: [{ email: 's@x.com', user_id: 'u1', name: 'shanice', color: 0 }, { email: 'k@x.com', user_id: 'u2', name: 'kai', color: 1 }] }),
   useRates: () => ({ data: { date: '2026-11-04', rates: { SGD: 1.4398, GBP: 0.85 } } }),
@@ -64,4 +64,18 @@ it('side trips are included and listed by trip', () => {
   expect(screen.getByTestId('money-total')).toHaveTextContent('€40')
   const rows = within(screen.getByRole('region', { name: 'by trip' })).getAllByRole('listitem').map((r) => r.textContent)
   expect(rows).toEqual(['europe€10', 'lapland€30'])
+})
+
+const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
+
+beforeEach(() => { db.costsQ = null })
+
+it('costs still loading are not "no costs yet"', () => {
+  const t = trip({ id: 'lap' })
+  db.trips = [t]
+  db.costsQ = loading
+  show(t)
+  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+  expect(screen.queryByText('no costs yet')).toBeNull()
+  expect(screen.queryByTestId('money-total')).toBeNull()
 })

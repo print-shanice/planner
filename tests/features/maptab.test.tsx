@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
-const db = vi.hoisted(() => ({ trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn() }))
+const db = vi.hoisted(() => ({ trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
-  useStops: () => ({ data: db.stops }),
+  useStops: () => db.stopsQ ?? ({ data: db.stops }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
@@ -77,4 +77,14 @@ it('filter chips list all days, each busy day and saved', () => {
   show()
   const chips = screen.getByRole('group', { name: 'show' })
   expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['all days', expect.stringContaining('8'), 'saved'])
+})
+
+const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
+
+beforeEach(() => { db.stopsQ = null })
+
+it('the map says it is loading places', () => {
+  db.stopsQ = loading
+  show()
+  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
 })

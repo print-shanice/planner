@@ -4,7 +4,9 @@ import { useLinks, useRemove, useSave, useStops, useTrips } from '../../lib/quer
 import { useCanEdit } from '../../lib/offline'
 import { descendants } from '../../lib/countries'
 import { fmtDay, tripDays } from '../../lib/dates'
+import { loadState } from '../../lib/load'
 import { EmptyState } from '../../components/EmptyState'
+import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { LinkCard } from './LinkCard'
@@ -55,16 +57,22 @@ function PlaceItem({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[
 }
 
 export function SavedTab({ trip }: { trip: Trip }) {
-  const trips = useTrips().data ?? []
-  const links = useLinks().data ?? []
-  const stops = useStops().data ?? []
+  const tq = useTrips()
+  const lq = useLinks()
+  const sq = useStops()
+  const trips = tq.data ?? []
+  const links = lq.data ?? []
+  const stops = sq.data ?? []
+  const load = loadState(tq, lq, sq)
   const ids = useMemo(() => new Set(descendants(trip.id, trips)), [trip.id, trips])
+  if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
   const mine = links.filter((l) => l.trip_id && ids.has(l.trip_id)).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
   const places = stops.filter((s) => s.saved && ids.has(s.trip_id))
 
   if (!mine.length && !places.length) return <EmptyState title="nothing saved yet" />
   return (
     <div className="saved stack">
+      <LoadState load={load} />
       {mine.map((l) => <LinkCard key={l.id} link={l} trips={trips} />)}
       {places.length > 0 && (
         <section className="block" aria-label="saved places">

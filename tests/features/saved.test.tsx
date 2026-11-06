@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
-const db = vi.hoisted(() => ({ trips: [] as any[], links: [] as any[], stops: [] as any[], save: vi.fn(), remove: vi.fn() }))
+const db = vi.hoisted(() => ({ trips: [] as any[], links: [] as any[], stops: [] as any[], save: vi.fn(), remove: vi.fn(), linksQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
-  useLinks: () => ({ data: db.links }),
+  useLinks: () => db.linksQ ?? ({ data: db.links }),
   useStops: () => ({ data: db.stops }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, mutate: db.remove, isPending: false }),
@@ -65,4 +65,15 @@ it('the link form defaults the title to the host', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', url: 'https://www.booking.com/hotel/fi/arctic.html', title: 'booking.com', note: '' })
   expect(done).toHaveBeenCalled()
+})
+
+const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
+
+beforeEach(() => { db.linksQ = null })
+
+it('links still loading are not "nothing saved yet"', () => {
+  db.linksQ = loading
+  show()
+  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+  expect(screen.queryByText('nothing saved yet')).toBeNull()
 })
