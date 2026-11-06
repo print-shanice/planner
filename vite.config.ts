@@ -40,6 +40,12 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
+            // the globe's detailed coastlines, place names and lettering load the first time someone zooms in, then stay offline
+            urlPattern: /\/globe\/.+\.(json|pbf)$/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'globe', cacheableResponse: { statuses: [0, 200] } },
+          },
+          {
             urlPattern: /^https:\/\/tiles\.openfreemap\.org\/(styles|fonts|sprites)\/.*/,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'map-style' },

@@ -27,6 +27,10 @@
   --globe-land: #D3DFC6;
   --been: #C8283A;
   --been-soft: #F3CDD2;
+  /* the same two reds, softened once you zoom in close enough to read names on them */
+  --been-near: #EBA3AB;
+  --been-soft-near: #F8E3E6;
+  --globe-halo: rgba(255, 255, 255, 0.6);
 
   --f-head: "Bricolage Grotesque Variable", "Hanken Grotesk Variable", system-ui, sans-serif;
   --f-body: "Hanken Grotesk Variable", system-ui, -apple-system, "Segoe UI", sans-serif;

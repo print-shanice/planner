@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import { existsSync, readFileSync } from 'node:fs'
 import type { GlobePin } from '../../src/lib/countries'
 
 // a stand-in for maplibre: records what the globe asks for and lets tests fire map events
@@ -12,15 +13,21 @@ const mk = vi.hoisted(() => {
     zoom = 0.9
     center = { lng: 10, lat: 30 }
     hit: string | null = null
+    sources: Record<string, { setData: ReturnType<typeof vi.fn> }> = {}
     touchZoomRotate = { disableRotation: vi.fn() }
     transform = { isLocationOccluded: vi.fn((_: { lng: number; lat: number }) => false) }
     setPaintProperty = vi.fn()
+    setFilter = vi.fn()
+    addImage = vi.fn()
+    hasImage = vi.fn(() => false)
     zoomIn = vi.fn()
     zoomOut = vi.fn()
     zoomTo = vi.fn((z: number) => { this.zoom = z })
     jumpTo = vi.fn((o: { center: [number, number] }) => { this.center = { lng: o.center[0], lat: o.center[1] } })
+    setCenter = vi.fn((c: [number, number]) => { this.center = { lng: c[0], lat: c[1] }; this.fire('move') })
     remove = vi.fn()
-    constructor(opts: any) { this.opts = opts; this.container = opts.container; maps.push(this) }
+    constructor(opts: any) { this.opts = opts; this.container = opts.container; this.center = { lng: opts.center[0], lat: opts.center[1] }; maps.push(this) }
+    getSource(id: string) { return (this.sources[id] ??= { setData: vi.fn() }) }
     on(type: string, a: any, b?: any) { (this.handlers[type] ??= []).push(b ?? a); return this }
     once(type: string, fn: (e?: any) => void) { return this.on(type, fn) }
     fire(type: string, e: any = {}) { for (const fn of this.handlers[type] ?? []) fn(e) }
@@ -47,12 +54,16 @@ const mk = vi.hoisted(() => {
 })
 vi.mock('maplibre-gl', () => ({ default: { Map: mk.FakeMap, Marker: mk.FakeMarker } }))
 
-// animation frames run only when a test calls tick()
+// animation frames run only when a test calls tick() or play()
 const frames = new Map<number, FrameRequestCallback>()
 let nextFrame = 0
-const tick = () => { const queued = [...frames.values()]; frames.clear(); for (const cb of queued) cb(0) }
+let now = 0
+const tick = (t: number) => { const queued = [...frames.values()]; frames.clear(); for (const cb of queued) cb(t) }
+// a stretch of smooth frames, 50ms apart
+const play = (ms: number) => act(() => { for (let i = 0; i < ms / 50; i++) { now += 50; tick(now) } })
 beforeEach(() => {
   frames.clear()
+  now = 0
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { frames.set(++nextFrame, cb); return nextFrame })
   vi.stubGlobal('cancelAnimationFrame', (id: number) => { frames.delete(id) })
 })
@@ -83,16 +94,25 @@ function show(pins: GlobePin[] = [portugal, france]) {
 
 const tip = () => screen.queryByRole('tooltip')
 
-it('colours been countries red, planned ones pale red, and the rest sage land', () => {
-  const tokens: Record<string, string> = { '--been': 'RED', '--been-soft': 'PALE', '--globe-land': 'LAND' }
+it('colours been countries red, planned ones pale red, and the rest sage land; the reds soften up close', () => {
+  const tokens: Record<string, string> = { '--been': 'RED', '--been-soft': 'PALE', '--been-near': 'SOFT RED', '--been-soft-near': 'PALER', '--globe-land': 'LAND' }
   const spy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({ getPropertyValue: (n: string) => tokens[n] ?? '' } as unknown as CSSStyleDeclaration)
   let fill: unknown
   try { fill = fillFor(status()) } finally { spy.mockRestore() }
-  expect(fill).toEqual(['case',
-    ['in', ['get', 'ISO_A2'], ['literal', ['PT']]], 'RED',
-    ['in', ['get', 'ISO_A2'], ['literal', ['FR']]], 'PALE',
-    'LAND',
+  const been = ['in', ['get', 'ISO_A2'], ['literal', ['PT']]]
+  const planned = ['in', ['get', 'ISO_A2'], ['literal', ['FR']]]
+  expect(fill).toEqual(['interpolate', ['linear'], ['zoom'],
+    2.4, ['case', been, 'RED', planned, 'PALE', 'LAND'],
+    3.6, ['case', been, 'SOFT RED', planned, 'PALER', 'LAND'],
   ])
+})
+
+it('a red edge follows the countries you have been to', () => {
+  const { m, view } = show()
+  const edge = m.opts.style.layers.find((l: any) => l.id === 'been-edge')
+  expect(edge.filter).toEqual(['in', ['get', 'ISO_A2'], ['literal', ['PT']]])
+  view.rerender(<Globe status={new Map([['PT', 'been'], ['ES', 'been']])} pins={[portugal]} onCountry={() => {}} />)
+  expect(m.setFilter).toHaveBeenLastCalledWith('been-edge', ['in', ['get', 'ISO_A2'], ['literal', ['PT', 'ES']]])
 })
 
 it('shows one pin per country, solid when been and hollow when planned', () => {
@@ -217,12 +237,174 @@ it('a pinch on the globe never zooms the page in safari', () => {
   }
 })
 
-it('stays still until someone turns it, with no spin or zoom buttons', () => {
+it('has no spin or zoom buttons', () => {
   show()
   expect(screen.queryByRole('button', { name: 'spin' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'zoom in' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'zoom out' })).toBeNull()
-  expect(frames.size).toBe(0)
+})
+
+describe('spinning', () => {
+  it('turns slowly on its own while zoomed out, about 4° a second', () => {
+    const { m } = show()
+    play(1000)
+    expect(m.center.lng).toBeCloseTo(-7.5, 0)
+    expect(m.center.lat).toBe(44)
+  })
+
+  it('holds still once names show, so they can be read', () => {
+    const { m } = show()
+    m.zoom = 2.4
+    play(1000)
+    expect(m.center.lng).toBe(-3.5)
+  })
+
+  it('stops while you hold it and starts again a few seconds after you let go', () => {
+    const { m, view } = show()
+    pointer(view.container.querySelector('.globe-wrap')!, 'pointerdown', 'mouse')
+    play(1000)
+    expect(m.center.lng).toBe(-3.5)
+    fireEvent(window, new MouseEvent('pointerup'))
+    play(2900)
+    expect(m.center.lng).toBe(-3.5)
+    play(1000)
+    expect(m.center.lng).toBeLessThan(-5)
+  })
+
+  it('a trackpad pinch pauses it too', () => {
+    const { m, view } = show()
+    view.container.querySelector('.globe-wrap')!.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -10, cancelable: true, bubbles: true }))
+    play(1000)
+    expect(m.center.lng).toBe(-3.5)
+  })
+
+  it('pauses while a tip is open, so the pin stays under it', () => {
+    const { m } = show()
+    act(() => screen.getByRole('button', { name: 'Portugal' }).focus())
+    play(1000)
+    expect(m.center.lng).toBe(-3.5)
+  })
+
+  it('never spins when the device asks for less motion', () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q }))
+    const { m } = show()
+    play(1000)
+    expect(m.center.lng).toBe(-3.5)
+  })
+
+  it('does not jump after the app was in the background', () => {
+    const { m } = show()
+    act(() => { tick(1000); tick(61000) })
+    expect(Math.abs(m.center.lng + 3.5)).toBeLessThan(1)
+  })
+
+  it('stops for good when the globe goes away', () => {
+    const { view } = show()
+    view.unmount()
+    expect(frames.size).toBe(0)
+  })
+
+  it('turning on its own never counts as someone turning it', () => {
+    const { m, view } = show([])
+    play(1000)
+    view.rerender(<Globe status={status()} pins={[portugal]} onCountry={() => {}} />)
+    expect(m.jumpTo).toHaveBeenLastCalledWith({ center: [-9, 39] })
+  })
+})
+
+describe('names', () => {
+  const nameLayers = (m: any, source?: string) => m.opts.style.layers.filter((l: any) => l.type === 'symbol' && (!source || l.source === source))
+
+  it('shows no names zoomed out', () => {
+    const { m } = show()
+    expect(nameLayers(m).length).toBeGreaterThan(0)
+    for (const l of nameLayers(m)) expect(l.minzoom).toBeGreaterThan(m.opts.zoom)
+  })
+
+  it('country names come in before city names', () => {
+    const { m } = show()
+    const first = (source: string) => Math.min(...nameLayers(m, source).map((l: any) => l.minzoom))
+    expect(first('country-names')).toBeLessThan(first('cities'))
+  })
+
+  // maplibre places names from the top of the style down, and a placed name hides the ones it would overlap
+  it('when names would overlap, the bigger place keeps its name', () => {
+    const { m } = show()
+    const at = (l: any) => m.opts.style.layers.indexOf(l)
+    for (const source of ['country-names', 'cities']) {
+      const layers = nameLayers(m, source)
+      const biggest = layers.reduce((a: any, b: any) => (b.minzoom < a.minzoom ? b : a))
+      const smallest = layers.reduce((a: any, b: any) => (b.minzoom > a.minzoom ? b : a))
+      expect(at(biggest), source).toBeGreaterThan(at(smallest))
+    }
+  })
+
+  it('zooms in far enough to read the smaller cities', () => {
+    const { m } = show()
+    const last = Math.max(...nameLayers(m, 'cities').map((l: any) => l.minzoom))
+    expect(m.opts.maxZoom).toBeGreaterThanOrEqual(last + 0.5)
+  })
+
+  it('names are lettered from files the app carries, not a font server', () => {
+    const { m } = show()
+    expect(m.opts.style.glyphs).not.toMatch(/^https?:/)
+    expect(m.opts.style.glyphs).toMatch(/globe\/fonts\/\{fontstack\}\/\{range\}\.pbf$/)
+    for (const l of nameLayers(m)) {
+      for (const font of l.layout['text-font']) expect(existsSync(`public/globe/fonts/${font}/0-255.pbf`), font).toBe(true)
+    }
+  })
+
+  it('every letter in the place names has lettering in every font the globe uses', () => {
+    const { m } = show()
+    const fonts = new Set<string>(nameLayers(m).flatMap((l: any) => l.layout['text-font']))
+    for (const file of ['country-names', 'cities']) {
+      const data = JSON.parse(readFileSync(`public/globe/${file}.json`, 'utf8'))
+      const ranges = new Set<number>()
+      for (const f of data.features) for (const ch of f.properties.n as string) ranges.add(Math.floor(ch.codePointAt(0)! / 256) * 256)
+      for (const font of fonts) for (const r of ranges) expect(existsSync(`public/globe/fonts/${font}/${r}-${r + 255}.pbf`), `${font} ${r}`).toBe(true)
+    }
+  })
+
+  it('place names are lowercase, like the rest of the app', () => {
+    for (const file of ['country-names', 'cities']) {
+      const data = JSON.parse(readFileSync(`public/globe/${file}.json`, 'utf8'))
+      const upper = data.features.map((f: any) => f.properties.n as string).filter((n: string) => n !== n.toLowerCase())
+      expect(upper).toEqual([])
+    }
+  })
+
+  it('draws the dot beside a city name itself: round, solid in the middle, clear at the corners', () => {
+    const { m } = show()
+    act(() => m.fire('styleimagemissing', { id: 'city-dot' }))
+    expect(m.addImage).toHaveBeenCalledTimes(1)
+    const [id, img, opts] = m.addImage.mock.calls[0]
+    expect(id).toBe('city-dot')
+    expect(opts).toEqual({ pixelRatio: 2 })
+    const alpha = (x: number, y: number) => img.data[(y * img.width + x) * 4 + 3]
+    const mid = Math.floor(img.width / 2)
+    expect(alpha(mid, mid)).toBe(255)
+    expect(alpha(0, 0)).toBe(0)
+    act(() => m.fire('styleimagemissing', { id: 'someone-elses-icon' }))
+    expect(m.addImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches nothing extra while zoomed out', () => {
+    const { m } = show()
+    expect(m.opts.style.sources['cities'].data.features).toEqual([])
+    expect(m.opts.style.sources['country-names'].data.features).toEqual([])
+    act(() => { m.zoom = 1.9; m.fire('zoom') })
+    expect(m.sources['cities']).toBeUndefined()
+  })
+
+  it('loads detailed coastlines, country names and cities the first time you zoom in, once', () => {
+    const { m } = show()
+    act(() => { m.zoom = 2.1; m.fire('zoom') })
+    expect(m.getSource('countries').setData).toHaveBeenCalledWith(expect.stringMatching(/globe\/countries-50m\.json$/))
+    expect(m.getSource('country-names').setData).toHaveBeenCalledWith(expect.stringMatching(/globe\/country-names\.json$/))
+    expect(m.getSource('cities').setData).toHaveBeenCalledWith(expect.stringMatching(/globe\/cities\.json$/))
+    act(() => { m.zoom = 1.5; m.fire('zoom'); m.zoom = 3; m.fire('zoom') })
+    expect(m.getSource('cities').setData).toHaveBeenCalledTimes(1)
+  })
 })
 
 it('opens zoomed in on your places', () => {
