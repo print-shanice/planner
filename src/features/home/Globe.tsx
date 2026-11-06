@@ -23,14 +23,14 @@ function middleOf(pins: GlobePin[]): [number, number] {
   return [pins.reduce((n, p) => n + p.lng, 0) / pins.length, pins.reduce((n, p) => n + p.lat, 0) / pins.length]
 }
 
-// red = been there, pale red = planned
+// red = been there, pale red = planned; other land is sage, a map colour rather than a status
 export function fillFor(status: Status): ExpressionSpecification {
   const been = [...status].filter(([, s]) => s === 'been').map(([c]) => c)
   const planned = [...status].filter(([, s]) => s === 'planned').map(([c]) => c)
   return ['case',
     ['in', ['get', 'ISO_A2'], ['literal', been]], css('--been'),
     ['in', ['get', 'ISO_A2'], ['literal', planned]], css('--been-soft'),
-    css('--map-land'),
+    css('--globe-land'),
   ]
 }
 

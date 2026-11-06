@@ -83,15 +83,16 @@ function show(pins: GlobePin[] = [portugal, france]) {
 
 const tip = () => screen.queryByRole('tooltip')
 
-it('colours been countries red and planned ones pale red', () => {
-  const tokens: Record<string, string> = { '--been': 'RED', '--been-soft': 'PALE', '--map-land': 'LAND' }
+it('colours been countries red, planned ones pale red, and the rest sage land', () => {
+  const tokens: Record<string, string> = { '--been': 'RED', '--been-soft': 'PALE', '--globe-land': 'LAND' }
   const spy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({ getPropertyValue: (n: string) => tokens[n] ?? '' } as unknown as CSSStyleDeclaration)
-  expect(fillFor(status())).toEqual(['case',
+  let fill: unknown
+  try { fill = fillFor(status()) } finally { spy.mockRestore() }
+  expect(fill).toEqual(['case',
     ['in', ['get', 'ISO_A2'], ['literal', ['PT']]], 'RED',
     ['in', ['get', 'ISO_A2'], ['literal', ['FR']]], 'PALE',
     'LAND',
   ])
-  spy.mockRestore()
 })
 
 it('shows one pin per country, solid when been and hollow when planned', () => {
