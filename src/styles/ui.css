@@ -113,3 +113,6 @@
 }
 .notice-text { flex: 1; min-width: 0; display: grid; }
 .notice .btn { background: transparent; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+
+.save-failed { display: flex; align-items: center; gap: 10px; flex-basis: 100%; padding: 2px 0 6px; color: var(--warn); font-size: 14px; font-weight: 600; }
+.save-failed .btn { color: var(--warn); }

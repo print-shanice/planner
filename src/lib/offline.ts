@@ -5,6 +5,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { useAuth } from './auth'
 import { clearTickets } from './ticketCache'
 import { pausePersist, persistPaused } from './wipe'
+import { forgetPending } from './pending'
 
 export const persister = createAsyncStoragePersister({
   storage: {
@@ -48,5 +49,6 @@ export function useCanEdit(): boolean {
 export async function forgetDevice(qc: QueryClient): Promise<void> {
   pausePersist()
   qc.clear()
+  forgetPending()
   await Promise.allSettled([persister.removeClient(), clearTickets()])
 }

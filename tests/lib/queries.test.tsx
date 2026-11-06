@@ -14,7 +14,7 @@ const sb = vi.hoisted(() => {
   const update = vi.fn(() => ({ eq: updEq }))
   const eq = vi.fn(() => Promise.resolve({ error: null }))
   return {
-    handlers, channel, insert, update, updEq, eq,
+    handlers, channel, insert, update, updEq, eq, single,
     supabase: {
       channel: vi.fn(() => channel),
       removeChannel: vi.fn(),
@@ -25,7 +25,10 @@ const sb = vi.hoisted(() => {
 vi.mock('../../src/lib/supabase', () => ({ supabase: sb.supabase }))
 
 import { RealtimeBridge } from '../../src/lib/realtime'
-import { useSave, useRemove, keys } from '../../src/lib/queries'
+import { useSave, useRemove, useStops, keys } from '../../src/lib/queries'
+import { useFailure, forgetPending } from '../../src/lib/pending'
+
+afterEach(() => { forgetPending(); sb.single.mockReset().mockImplementation(() => Promise.resolve({ data: { id: 'x' }, error: null })) })
 
 function wrap(qc: QueryClient) {
   return ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>
@@ -70,4 +73,33 @@ it('useRemove deletes by id', async () => {
   const { result } = renderHook(() => useRemove('stops'), { wrapper: wrap(qc) })
   await act(async () => { await result.current.mutateAsync('s1') })
   expect(sb.eq).toHaveBeenCalledWith('id', 's1')
+})
+
+it('a failed save stays on screen with its failure, and retry sends it again', async () => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const { result } = renderHook(() => ({ stops: useStops(), save: useSave('stops'), failed: useFailure('stops', 'n1') }), { wrapper: wrap(qc) })
+  await waitFor(() => expect(result.current.stops.data).toEqual([]))
+  sb.single.mockImplementationOnce(() => Promise.resolve({ data: null, error: { message: 'asleep' } }) as never)
+  await act(async () => { await result.current.save.mutateAsync({ id: 'n1', title: 'arktikum' }).catch(() => {}) })
+  // the server still has nothing, but the row stays
+  await waitFor(() => expect(result.current.stops.data).toEqual([expect.objectContaining({ id: 'n1', title: 'arktikum' })]))
+  expect(result.current.failed).toMatchObject({ isNew: true })
+  sb.insert.mockClear()
+  await act(async () => { await result.current.save.mutateAsync({ id: 'n1' }) })
+  expect(sb.insert).toHaveBeenCalledWith(expect.objectContaining({ id: 'n1', title: 'arktikum' }))
+  expect(result.current.failed).toBeUndefined()
+})
+
+it('a later save of a row whose insert failed is sent as that insert', async () => {
+  const qc = new QueryClient()
+  qc.setQueryData(keys.packing, [])
+  const { result } = renderHook(() => useSave('packing'), { wrapper: wrap(qc) })
+  sb.single.mockImplementationOnce(() => Promise.resolve({ data: null, error: { message: 'asleep' } }) as never)
+  await act(async () => { await result.current.mutateAsync({ id: 'p1', text: 'socks', done: false }).catch(() => {}) })
+  // the optimistic row is in the cache, so this would otherwise go as an update
+  qc.setQueryData(keys.packing, [{ id: 'p1', text: 'socks', done: false }])
+  sb.insert.mockClear(); sb.update.mockClear()
+  await act(async () => { await result.current.mutateAsync({ id: 'p1', done: true }) })
+  expect(sb.update).not.toHaveBeenCalled()
+  expect(sb.insert).toHaveBeenCalledWith({ id: 'p1', text: 'socks', done: true })
 })

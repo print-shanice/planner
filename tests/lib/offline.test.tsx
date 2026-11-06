@@ -8,6 +8,7 @@ vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: auth.status }) 
 vi.mock('../../src/lib/supabase', () => ({ supabase: {} }))
 
 import { persister, useOnline, useCanEdit, forgetDevice } from '../../src/lib/offline'
+import { failSave, failureOf } from '../../src/lib/pending'
 import { getTicket, putTicket } from '../../src/lib/ticketCache'
 import { resumePersist } from '../../src/lib/wipe'
 import { keys } from '../../src/lib/queries'
@@ -49,7 +50,9 @@ it('forgetDevice empties the cache, the saved copy and the tickets', async () =>
   qc.setQueryData(keys.trips, [{ id: 't1', name: 'lapland' }])
   await persistQueryClientSave({ queryClient: qc, persister })
   await putTicket('f1', new Blob(['ticket'], { type: 'text/plain' }))
+  failSave('stops', 's1', { title: 'x' }, false)
   await forgetDevice(qc)
+  expect(failureOf('stops', 's1')).toBeUndefined()
   expect(qc.getQueryData(keys.trips)).toBeUndefined()
   const again = new QueryClient()
   await persistQueryClientRestore({ queryClient: again, persister })

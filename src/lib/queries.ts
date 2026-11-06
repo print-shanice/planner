@@ -1,7 +1,9 @@
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
 import { fetchRates } from './rates'
 import { newId } from './id'
+import { failSave, failureOf, overlay, savedFields, usePending } from './pending'
 import type { Rates } from './money'
 import type { Cost, FileRow, Link, Member, PackingItem, Stop, TableName, Trip } from './types'
 
@@ -24,7 +26,9 @@ async function loadAll<T>(table: TableName): Promise<T[]> {
 }
 
 function useTable<T>(table: TableName) {
-  return useQuery<T[]>({ queryKey: keys[table], queryFn: () => loadAll<T>(table) })
+  const pending = usePending(table)
+  const select = useCallback((rows: T[]) => overlay(rows, pending), [pending])
+  return useQuery<T[]>({ queryKey: keys[table], queryFn: () => loadAll<T>(table), select })
 }
 
 export const useTrips = () => useTable<Trip>('trips')
@@ -66,12 +70,21 @@ export function useSave<T extends { id: string } = { id: string }>(table: TableN
         return next
       })
     },
+    // a failure is kept on screen with a retry instead of quietly disappearing on the next refresh
+    onError: (_e: unknown, { row, isNew }: Change) => {
+      const { id, ...fields } = row
+      failSave(table, id, fields, isNew)
+    },
+    onSuccess: (_d: T, { row }: Change) => savedFields(table, row.id, Object.keys(row)),
     onSettled: () => qc.invalidateQueries({ queryKey: keys[table] }),
   })
   const mutateAsync = (fields: Row): Promise<T> => {
+    const id = (fields.id as string | undefined) ?? newId()
+    // a row whose insert failed is still new: send everything it had
+    const prior = failureOf(table, id)
+    if (prior?.isNew) return m.mutateAsync({ row: { ...prior.fields, ...fields, id }, isNew: true })
     const known = !!fields.id && !!qc.getQueryData<Row[]>(keys[table])?.some((r) => r.id === fields.id)
-    const row = { ...fields, id: (fields.id as string | undefined) ?? newId() }
-    return m.mutateAsync({ row, isNew: !known })
+    return m.mutateAsync({ row: { ...fields, id }, isNew: !known })
   }
   return { ...m, mutateAsync, mutate: (fields: Row) => { mutateAsync(fields).catch(() => {}) } }
 }
