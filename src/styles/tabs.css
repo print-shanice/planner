@@ -13,12 +13,12 @@
 .cur-select { width: auto; min-height: 38px; padding: 6px 10px; border-radius: 999px; font-weight: 600; }
 .budget-bar { display: flex; height: 12px; border-radius: 999px; background: var(--soft); overflow: hidden; }
 .budget-bar .paid { background: var(--ok); }
-.budget-bar .planned { background: repeating-linear-gradient(135deg, var(--warn-bg) 0 5px, color-mix(in srgb, var(--warn) 35%, var(--warn-bg)) 5px 8px); }
+.budget-bar .planned { background: repeating-linear-gradient(135deg, var(--soft) 0 5px, color-mix(in srgb, var(--ink-2) 40%, var(--soft)) 5px 8px); }
 .legend { display: flex; gap: 18px; font-size: 13px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
 .key.paid { background: var(--ok); }
-.key.planned { background: repeating-linear-gradient(135deg, var(--warn-bg) 0 2px, color-mix(in srgb, var(--warn) 35%, var(--warn-bg)) 2px 4px); }
+.key.planned { background: repeating-linear-gradient(135deg, var(--soft) 0 2px, color-mix(in srgb, var(--ink-2) 40%, var(--soft)) 2px 4px); }
 .list.costs > li { padding: 0; }
 .cost-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 8px 16px; border: 0; background: none; text-align: left; }
 .cost-row:hover { background: var(--ground); }
@@ -46,7 +46,7 @@
 .pack-list > li { padding: 0 6px 0 0; }
 .pack-item { flex: 1; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px 0 16px; border: 0; background: none; text-align: left; }
 .tick { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; color: var(--card); flex: none; }
-.packed .tick { background: var(--ok); border-color: var(--ok); }
+.packed .tick { background: var(--ink); border-color: var(--ink); }
 .packed .pack-item > span:last-child { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--line); }
 .pack-add { background: var(--card); border: 1px solid var(--line); }
 .pack-add input::placeholder, .map-search input::placeholder { color: var(--ink-2); }
