@@ -37,6 +37,10 @@ function Opener({ id, kind }: { id?: string; kind?: 'stay' | 'place' | 'journey'
   const s = useStopSheet()!
   return <button onClick={() => (id ? s.openStop(id) : s.newStop(kind!, 'lap', { day: '2027-02-08' }))}>open</button>
 }
+function OtherTrip() {
+  const s = useStopSheet()!
+  return <button onClick={() => s.newStop('note', 'par')}>open paris</button>
+}
 function show(el: JSX.Element) {
   qc = new QueryClient()
   return render(<QueryClientProvider client={qc}><MemoryRouter><StopSheetProvider>{el}</StopSheetProvider></MemoryRouter></QueryClientProvider>)
@@ -209,7 +213,7 @@ it('saving a price again after it failed sends the same new cost, not a second o
   db.save.mockImplementation((t: string, r: any) => (t === 'costs' && !db.calls.includes('failed') ? (db.calls.push('failed'), Promise.reject(new Error('asleep'))) : Promise.resolve(r)))
   await userEvent.type(within(d).getByLabelText('amount'), '120')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
-  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'save' }))
+  await userEvent.click(await within(screen.getByRole('dialog')).findByRole('button', { name: 'retry' }))
   const ids = db.save.mock.calls.filter(([t]) => t === 'costs').map(([, r]) => r.id)
   expect(ids).toHaveLength(2)
   expect(ids[0]).toEqual(expect.any(String))
@@ -249,4 +253,75 @@ it('the stop view says whether it is paid', async () => {
   show(<Opener id="s1" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   expect(within(screen.getByRole('dialog')).getByText(/not paid/)).toBeInTheDocument()
+})
+
+it('a new journey shows its essentials and folds the rest, with save in the footer', async () => {
+  show(<Opener kind="journey" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog', { name: 'new journey' })
+  for (const l of ['from', 'to', 'depart', 'depart time', 'arrive', 'arrive time']) expect(within(d).getByLabelText(l)).toBeInTheDocument()
+  const folds = [...d.querySelectorAll('details')].map((x) => [x.querySelector('summary')!.textContent, x.open])
+  expect(folds).toEqual([['booking', false], ['cost', false], ['notes & links', false]])
+  expect(within(d).getByLabelText('carrier / number').closest('details')).not.toBeNull()
+  expect(within(d).getByRole('button', { name: 'save' }).closest('.sheet-foot')).not.toBeNull()
+})
+
+it('a stop with booking details opens with booking unfolded', async () => {
+  const d = await openEdit()
+  expect(within(d).getByText('booking').closest('details')!.open).toBe(true)
+  expect(within(d).getByText('cost').closest('details')!.open).toBe(false)
+})
+
+it('a cost problem opens the cost fold', async () => {
+  const d = await openEdit()
+  const fold = within(d).getByText('cost').closest('details')!
+  await userEvent.type(within(d).getByLabelText('amount'), 'abc')
+  act(() => { fold.open = false; fireEvent(fold, new Event('toggle')) })
+  expect(fold.open).toBe(false)
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  expect(within(d).getByText('check the amount')).toBeInTheDocument()
+  expect(fold.open).toBe(true)
+})
+
+it('closing a new note keeps its draft for that trip only', async () => {
+  show(<><Opener kind="note" /><OtherTrip /></>)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  await userEvent.type(within(screen.getByRole('dialog')).getByLabelText('title'), 'buy gloves')
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'close' }))
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  expect(within(screen.getByRole('dialog')).getByLabelText('title')).toHaveValue('buy gloves')
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'close' }))
+  await userEvent.click(screen.getByRole('button', { name: 'open paris' }))
+  expect(within(screen.getByRole('dialog')).getByLabelText('title')).toHaveValue('')
+})
+
+it('a failed save keeps the sheet with retry, and retry sends the same stop', async () => {
+  db.save.mockRejectedValueOnce(new Error('asleep'))
+  show(<Opener kind="note" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  await userEvent.type(within(d).getByLabelText('title'), 'buy gloves')
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  expect(await within(d).findByText("couldn't save")).toBeInTheDocument()
+  expect(within(d).getByLabelText('title')).toHaveValue('buy gloves')
+  await userEvent.click(within(d).getByRole('button', { name: 'retry' }))
+  const ids = db.save.mock.calls.filter(([t]) => t === 'stops').map(([, r]) => r.id)
+  expect(ids).toEqual(['new-id', 'new-id'])
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it('closing mid-save leaves no draft behind', async () => {
+  let finish!: () => void
+  db.save.mockImplementationOnce((_t: string, r: any) => new Promise((res) => { finish = () => res(r) }))
+  show(<Opener kind="note" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  let d = screen.getByRole('dialog')
+  await userEvent.type(within(d).getByLabelText('title'), 'buy gloves')
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  expect(within(d).getByRole('button', { name: 'saving…' })).toBeDisabled()
+  await userEvent.click(within(d).getByRole('button', { name: 'close' }))
+  await act(async () => { finish() })
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  d = screen.getByRole('dialog')
+  expect(within(d).getByLabelText('title')).toHaveValue('')
 })

@@ -158,3 +158,12 @@ it('a fold opens by itself when it has something in it', () => {
   rerender(<Fold label="cost" open><input /></Fold>)
   expect(d.open).toBe(true)
 })
+
+it('a fold closed by hand opens again when revealed', () => {
+  const { rerender } = render(<Fold label="cost" open><input /></Fold>)
+  const d = screen.getByText('cost').closest('details')!
+  act(() => { d.open = false; fireEvent(d, new Event('toggle')) })
+  expect(d.open).toBe(false)
+  rerender(<Fold label="cost" open reveal={1}><input /></Fold>)
+  expect(d.open).toBe(true)
+})

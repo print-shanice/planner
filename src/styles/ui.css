@@ -161,3 +161,4 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
 .fold[open] summary::after { transform: translateY(2px) rotate(-135deg); }
 .fold > .stack { padding-bottom: 12px; }
 @media (prefers-reduced-motion: reduce) { .fold summary::after { transition: none; } }
+.folds > .fold:last-child { border-bottom: 1px solid var(--line); }

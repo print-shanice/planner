@@ -1,9 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
-// optional fields tucked away; opens by itself when it has something in it
-export function Fold({ label, open = false, children }: { label: string; open?: boolean; children: ReactNode }) {
+type Props = { label: string; open?: boolean; reveal?: number; children: ReactNode }
+
+// optional fields tucked away; opens by itself when it has something in it,
+// and again each time `reveal` changes (a problem inside it, even after it was closed by hand)
+export function Fold({ label, open = false, reveal = 0, children }: Props) {
   const [isOpen, setOpen] = useState(open)
-  useEffect(() => { if (open) setOpen(true) }, [open])
+  useEffect(() => { if (open || reveal) setOpen(true) }, [open, reveal])
   return (
     <details className="fold" open={isOpen} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary>{label}</summary>
