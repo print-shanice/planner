@@ -135,13 +135,13 @@ export function Globe({ status, pins, onCountry }: Props) {
       el.type = 'button'
       el.className = 'globe-pin'
       el.dataset.status = pin.status
-      el.setAttribute('aria-label', pin.name)
       el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') show(pin.code) })
       el.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hide() })
       el.addEventListener('focus', () => show(pin.code))
       el.addEventListener('blur', hide)
       el.addEventListener('click', () => choose(pin.code))
       const marker = new maplibregl.Marker({ element: el }).setLngLat([pin.lng, pin.lat]).addTo(m)
+      el.setAttribute('aria-label', pin.name) // after addTo, which labels every marker "map marker"
       return { pin, marker, el }
     })
     place()

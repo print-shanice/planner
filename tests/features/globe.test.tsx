@@ -37,7 +37,8 @@ const mk = vi.hoisted(() => {
     constructor(o: { element: HTMLElement }) { this.el = o.element }
     setLngLat(ll: [number, number]) { this.ll = { lng: ll[0], lat: ll[1] }; return this }
     getLngLat() { return this.ll }
-    addTo(m: FakeMap) { m.container.appendChild(this.el); return this }
+    // like maplibre, adding a marker stamps a generic label on it
+    addTo(m: FakeMap) { this.el.setAttribute('aria-label', 'Map marker'); m.container.appendChild(this.el); return this }
     remove() { this.el.remove(); return this }
   }
   return { maps, FakeMap, FakeMarker }
