@@ -10,6 +10,7 @@ import { TwoTapDelete } from '../../src/components/TwoTapDelete'
 import { OfflineBadge } from '../../src/components/OfflineBadge'
 import { EmptyState } from '../../src/components/EmptyState'
 import { Icon } from '../../src/components/Icon'
+import { Fold } from '../../src/components/Fold'
 
 it('pill colours follow the colour rules', () => {
   expect(render(<Pill status="idea" />).container).toBeEmptyDOMElement()
@@ -140,4 +141,20 @@ it('the sheet rises above the on-screen keyboard', () => {
   act(() => { vv.dispatchEvent(new Event('resize')) })
   expect(document.querySelector<HTMLElement>('.sheet-backdrop')!.style.getPropertyValue('--kb')).toBe('300px')
   Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true })
+})
+
+it('a fold starts closed and opens on tap', async () => {
+  render(<Fold label="booking"><label>booking ref<input /></label></Fold>)
+  const d = screen.getByText('booking').closest('details')!
+  expect(d.open).toBe(false)
+  await userEvent.click(screen.getByText('booking'))
+  expect(d.open).toBe(true)
+})
+
+it('a fold opens by itself when it has something in it', () => {
+  const { rerender } = render(<Fold label="cost" open={false}><input /></Fold>)
+  const d = screen.getByText('cost').closest('details')!
+  expect(d.open).toBe(false)
+  rerender(<Fold label="cost" open><input /></Fold>)
+  expect(d.open).toBe(true)
 })

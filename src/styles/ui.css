@@ -148,3 +148,16 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
 /* form footer: problem line, extra actions, then save */
 .form-foot { display: flex; align-items: center; gap: 10px; width: 100%; }
 .form-foot .warn-line { margin: 0; min-width: 0; }
+
+/* fold: optional fields behind a one-word summary */
+.fold { border-top: 1px solid var(--line); }
+.fold summary { display: flex; align-items: center; min-height: 44px; font-weight: 600; cursor: pointer; list-style: none; }
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary::after {
+  content: ''; margin: 0 6px 0 auto; width: 7px; height: 7px;
+  border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2);
+  transform: translateY(-2px) rotate(45deg); transition: transform .15s;
+}
+.fold[open] summary::after { transform: translateY(2px) rotate(-135deg); }
+.fold > .stack { padding-bottom: 12px; }
+@media (prefers-reduced-motion: reduce) { .fold summary::after { transition: none; } }
