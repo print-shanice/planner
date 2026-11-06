@@ -6,7 +6,7 @@ import { hasPoint } from '../../lib/walk'
 import { Button } from '../../components/Button'
 import { PlaceField } from './PlaceField'
 import { CATEGORY_OF, checkCost, costDraft, CostFields, costValues } from './CostFields'
-import { saveError } from './errors'
+import { saveError } from '../../lib/errors'
 import { stopTitle } from '../plan/StopRow'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: () => void }

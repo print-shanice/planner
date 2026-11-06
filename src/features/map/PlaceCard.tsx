@@ -8,7 +8,7 @@ import { Icon } from '../../components/Icon'
 import { Button } from '../../components/Button'
 import { useStopSheet } from '../stops/StopSheet'
 import { stopTitle } from '../plan/StopRow'
-import { saveError } from '../stops/errors'
+import { saveError } from '../../lib/errors'
 
 type Props = { trip: Trip; place: Place; stop?: Stop; defaultDay?: string | null; onClose: () => void; onDone?: () => void }
 

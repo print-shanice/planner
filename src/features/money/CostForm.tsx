@@ -7,7 +7,7 @@ import { useCanEdit } from '../../lib/offline'
 import { Button } from '../../components/Button'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { checkCost, costDraft, CostFields, costValues } from '../stops/CostFields'
-import { saveError } from '../stops/errors'
+import { saveError } from '../../lib/errors'
 
 type Props = { trip: Trip; cost?: Cost; onDone: () => void }
 

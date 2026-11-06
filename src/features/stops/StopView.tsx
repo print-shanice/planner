@@ -13,7 +13,7 @@ import { Icon } from '../../components/Icon'
 import { Button } from '../../components/Button'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { FilesSection, filesOf } from './FilesSection'
-import { saveError } from './errors'
+import { saveError } from '../../lib/errors'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
 

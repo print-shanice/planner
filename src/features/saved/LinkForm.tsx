@@ -3,7 +3,7 @@ import { useSave } from '../../lib/queries'
 import { newId } from '../../lib/id'
 import { hostOf } from '../../lib/embed'
 import { Button } from '../../components/Button'
-import { saveError } from '../stops/errors'
+import { saveError } from '../../lib/errors'
 
 export function LinkForm({ tripId, onDone }: { tripId: string | null; onDone: () => void }) {
   const save = useSave('links')
