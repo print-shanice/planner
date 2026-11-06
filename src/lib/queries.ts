@@ -75,7 +75,11 @@ export function useSave<T extends { id: string } = { id: string }>(table: TableN
     },
     // a failure is kept on screen with a retry instead of quietly disappearing on the next refresh
     onError: (_e: unknown, { row, isNew }: Change) => {
-      if (!KEEPS_FAILURES.includes(table)) return
+      if (!KEEPS_FAILURES.includes(table)) {
+        // a new row nothing will keep on screen comes back out, so trying again inserts it rather than updating it
+        if (isNew) qc.setQueryData<Row[]>(keys[table], (old) => old?.filter((r) => r.id !== row.id))
+        return
+      }
       const { id, ...fields } = row
       failSave(table, id, fields, isNew)
     },

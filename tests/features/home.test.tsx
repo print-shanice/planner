@@ -263,3 +263,38 @@ it('home says when trips could not load, and retries', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'retry' }))
   expect(refetch).toHaveBeenCalled()
 })
+
+it('the trip form folds budget and more away until they have something', () => {
+  render(<MemoryRouter><TripForm onDone={() => {}} /></MemoryRouter>)
+  const folds = [...document.querySelectorAll('details')].map((x) => [x.querySelector('summary')!.textContent, x.open])
+  expect(folds).toEqual([['budget', false], ['more', false]])
+  expect(screen.getByLabelText('home base').closest('details')).not.toBeNull()
+  expect(screen.getByLabelText('notes').closest('details')).not.toBeNull()
+})
+
+it('a trip with a budget opens with budget unfolded', () => {
+  render(<MemoryRouter><TripForm trip={trip({ id: 't9', budget: 900 }) as Trip} onDone={() => {}} /></MemoryRouter>)
+  expect(screen.getByText('budget', { selector: 'summary' }).closest('details')!.open).toBe(true)
+  expect(screen.getByText('more').closest('details')!.open).toBe(false)
+})
+
+it('a failed trip save stays open with retry, and retry sends the same trip', async () => {
+  db.save.mockRejectedValueOnce(new Error('asleep'))
+  const done = vi.fn()
+  render(<MemoryRouter><TripForm onDone={done} /></MemoryRouter>)
+  await userEvent.type(screen.getByLabelText('name'), 'porto')
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  expect(await screen.findByText("couldn't save")).toBeInTheDocument()
+  expect(done).not.toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('button', { name: 'retry' }))
+  expect(done).toHaveBeenCalled()
+  const [a, b] = db.save.mock.calls.map((c) => (c[0] as { id: string }).id)
+  expect(a).toEqual(expect.any(String))
+  expect(b).toBe(a)
+})
+
+it('a trip without a name asks for one', async () => {
+  render(<MemoryRouter><TripForm onDone={() => {}} /></MemoryRouter>)
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  expect(screen.getByText('add a name')).toBeInTheDocument()
+})

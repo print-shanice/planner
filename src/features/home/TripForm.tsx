@@ -1,9 +1,11 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useId, useMemo, useState, type FormEvent } from 'react'
 import { useRates, useRemove, useSave, useTrips } from '../../lib/queries'
 import { currencyList } from '../../lib/rates'
 import { descendants } from '../../lib/countries'
+import { newId } from '../../lib/id'
 import type { Place, Trip } from '../../lib/types'
-import { Button } from '../../components/Button'
+import { Fold } from '../../components/Fold'
+import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { PlaceField } from '../stops/PlaceField'
 
@@ -17,6 +19,8 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   const save = useSave('trips')
   const remove = useRemove('trips')
 
+  // a new trip keeps one id, so saving again after a failure sends the same row
+  const [id] = useState(() => trip?.id ?? newId())
   const [name, setName] = useState(trip?.name ?? '')
   const [start, setStart] = useState(trip?.start_date ?? '')
   const [end, setEnd] = useState(trip?.end_date ?? '')
@@ -27,6 +31,8 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   const [notes, setNotes] = useState(trip?.notes ?? '')
   const [parent, setParent] = useState<string | null>(trip ? trip.parent_id : parentId)
   const [problem, setProblem] = useState<string | null>(null)
+  const { run, saving, failure } = useSubmit()
+  const formId = useId()
 
   const currencies = useMemo(() => {
     const list = currencyList(rates)
@@ -41,28 +47,30 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
 
   const hasChildren = !!trip && trips.some((t) => t.parent_id === trip.id)
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
-    if (start && end && end < start) { setProblem('ends before it starts'); return }
-    setProblem(null)
-    await save.mutateAsync({
-      ...(trip ? { id: trip.id } : {}),
-      name: name.trim(),
-      start_date: start || null,
-      end_date: end || (start || null),
-      budget: budget.trim() === '' ? null : Number(budget),
-      currency,
-      base,
-      color,
-      notes,
-      parent_id: parent,
+    const p = !name.trim() ? 'add a name' : start && end && end < start ? 'ends before it starts' : null
+    setProblem(p)
+    if (p) return
+    void run(async () => {
+      await save.mutateAsync({
+        id,
+        name: name.trim(),
+        start_date: start || null,
+        end_date: end || (start || null),
+        budget: budget.trim() === '' ? null : Number(budget),
+        currency,
+        base,
+        color,
+        notes,
+        parent_id: parent,
+      })
+      onDone()
     })
-    onDone()
   }
 
   return (
-    <form className="stack" onSubmit={submit} noValidate>
+    <form id={formId} className="stack" onSubmit={submit} noValidate>
       <label className="field">
         <span className="label">name</span>
         <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
@@ -77,28 +85,6 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
           <input type="date" value={end} min={start || undefined} onChange={(e) => setEnd(e.target.value)} />
         </label>
       </div>
-      <div className="row">
-        <label className="field">
-          <span className="label">budget</span>
-          <input type="number" inputMode="decimal" min="0" step="any" value={budget} onChange={(e) => setBudget(e.target.value)} />
-        </label>
-        <label className="field currency-field">
-          <span className="label">currency</span>
-          <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-            {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-      </div>
-      <PlaceField id={`base-${trip?.id ?? 'new'}`} label="home base" value={base} onChange={setBase} />
-      <div className="field" role="radiogroup" aria-label="colour">
-        <span className="label">colour</span>
-        <div className="swatches">
-          {SWATCHES.map((i) => (
-            <button key={i} type="button" role="radio" aria-checked={color === i} aria-label={`colour ${i + 1}`}
-              className="swatch" style={{ background: `var(--g${i})` }} onClick={() => setColor(i)} />
-          ))}
-        </div>
-      </div>
       {trip && (
         <label className="field">
           <span className="label">part of</span>
@@ -108,20 +94,45 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
           </select>
         </label>
       )}
-      <label className="field">
-        <span className="label">notes</span>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </label>
-      {problem && <p className="warn-line">{problem}</p>}
-      <div className="row form-actions">
+      <div className="folds">
+        <Fold label="budget" open={budget.trim() !== ''}>
+          <div className="row">
+            <label className="field">
+              <span className="label">budget</span>
+              <input type="number" inputMode="decimal" min="0" step="any" value={budget} onChange={(e) => setBudget(e.target.value)} />
+            </label>
+            <label className="field currency-field">
+              <span className="label">currency</span>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          </div>
+        </Fold>
+        <Fold label="more" open={!!base || !!notes.trim()}>
+          <PlaceField id={`base-${id}`} label="home base" value={base} onChange={setBase} />
+          <div className="field" role="radiogroup" aria-label="colour">
+            <span className="label">colour</span>
+            <div className="swatches">
+              {SWATCHES.map((i) => (
+                <button key={i} type="button" role="radio" aria-checked={color === i} aria-label={`colour ${i + 1}`}
+                  className="swatch" style={{ background: `var(--g${i})` }} onClick={() => setColor(i)} />
+              ))}
+            </div>
+          </div>
+          <label className="field">
+            <span className="label">notes</span>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </label>
+        </Fold>
+      </div>
+      {hasChildren && <p className="warn-line">move or delete its side trips first</p>}
+      <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}>
         {trip && (
           <TwoTapDelete label="delete trip" disabled={hasChildren}
             onConfirm={async () => { await remove.mutateAsync(trip.id); (onDeleted ?? onDone)() }} />
         )}
-        <span className="spacer" />
-        <Button variant="primary" type="submit" disabled={save.isPending}>save</Button>
-      </div>
-      {hasChildren && <p className="warn-line">move or delete its side trips first</p>}
+      </FormFooter>
     </form>
   )
 }

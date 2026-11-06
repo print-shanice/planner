@@ -124,6 +124,21 @@ it('a failed trip edit is not kept, since nothing on screen would say so', async
   expect(failureOf('trips', 't1')).toBeUndefined()
 })
 
+it('a new trip whose insert failed is taken back out, so trying again inserts it', async () => {
+  const qc = new QueryClient()
+  qc.setQueryData(keys.trips, [])
+  // the refresh can't reach the server either, so only the save itself can tidy the cache
+  vi.spyOn(qc, 'invalidateQueries').mockResolvedValue()
+  const { result } = renderHook(() => useSave('trips'), { wrapper: wrap(qc) })
+  sb.single.mockImplementationOnce(asleep)
+  await act(async () => { await result.current.mutateAsync({ id: 't9', name: 'porto' }).catch(() => {}) })
+  expect(qc.getQueryData(keys.trips)).toEqual([])
+  sb.insert.mockClear(); sb.update.mockClear()
+  await act(async () => { await result.current.mutateAsync({ id: 't9', name: 'porto' }) })
+  expect(sb.update).not.toHaveBeenCalled()
+  expect(sb.insert).toHaveBeenCalledWith({ id: 't9', name: 'porto' })
+})
+
 it('a delete that fails puts the row back where it was, even if the refresh fails too', async () => {
   const qc = new QueryClient()
   qc.setQueryData(keys.stops, [{ id: 's1' }, { id: 's2' }, { id: 's3' }])
