@@ -35,7 +35,7 @@ function Copy({ text, label }: { text: string; label: string }) {
 function costLine(c: Cost, members: Member[]) {
   const who = (id: string | null) => members.find((m) => m.user_id === id)?.name
   const parts = [formatMoney(c.amount, c.currency)]
-  if (c.paid_by) parts.push(`paid by ${who(c.paid_by) ?? 'someone'}`)
+  parts.push(c.status === 'paid' ? (c.paid_by ? `paid by ${who(c.paid_by) ?? 'someone'}` : 'paid') : 'not paid')
   parts.push(c.split === 'even' ? 'split evenly' : `only for ${who(c.split) ?? 'one'}`)
   return parts.join(' · ')
 }

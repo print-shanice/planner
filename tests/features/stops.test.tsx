@@ -98,6 +98,7 @@ it('a new stop lands at the end of its day', async () => {
 it('price writes one linked cost; clearing it removes the cost', async () => {
   let d = await openEdit()
   await userEvent.type(within(d).getByLabelText('amount'), '120')
+  await userEvent.click(within(d).getByRole('button', { name: 'paid' }))
   await userEvent.selectOptions(within(d).getByLabelText('paid by'), 'u2')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({
@@ -213,4 +214,39 @@ it('saving a price again after it failed sends the same new cost, not a second o
   expect(ids).toHaveLength(2)
   expect(ids[0]).toEqual(expect.any(String))
   expect(ids[1]).toBe(ids[0])
+})
+
+it('not paid saves no payer, and paid presets a payer', async () => {
+  const d = await openEdit()
+  await userEvent.type(within(d).getByLabelText('amount'), '30')
+  expect(within(d).queryByLabelText('paid by')).toBeNull()
+  await userEvent.click(within(d).getByRole('button', { name: 'paid' }))
+  expect(within(d).getByLabelText('paid by')).toHaveValue('u1')
+  await userEvent.click(within(d).getByRole('button', { name: 'not paid' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ amount: 30, status: 'estimate', paid_by: null }))
+})
+
+it('an older paid cost with no payer asks who paid', async () => {
+  db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'paid', paid_by: null })]
+  const d = await openEdit()
+  expect(within(d).getByRole('button', { name: 'paid' })).toHaveAttribute('aria-pressed', 'true')
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  expect(within(d).getByText('pick who paid')).toBeInTheDocument()
+  expect(db.save).not.toHaveBeenCalled()
+})
+
+it('an older estimate with a payer saves as not paid with no payer', async () => {
+  db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'estimate', paid_by: 'u2' })]
+  const d = await openEdit()
+  expect(within(d).getByRole('button', { name: 'not paid' })).toHaveAttribute('aria-pressed', 'true')
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ id: 'c1', status: 'estimate', paid_by: null }))
+})
+
+it('the stop view says whether it is paid', async () => {
+  db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'estimate', paid_by: 'u2' })]
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  expect(within(screen.getByRole('dialog')).getByText(/not paid/)).toBeInTheDocument()
 })

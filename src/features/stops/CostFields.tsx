@@ -1,8 +1,9 @@
 import type { Cost, Member, StopKind } from '../../lib/types'
 import type { Rates } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
+import { useAuth } from '../../lib/auth'
 
-export type CostDraft = { amount: string; currency: string; other: boolean; code: string; rate: string; paid_by: string; split: string }
+export type CostDraft = { amount: string; currency: string; other: boolean; code: string; rate: string; paid: boolean; paid_by: string; split: string }
 
 export function costDraft(c: Cost | undefined, fallback: string, rates: Rates | null): CostDraft {
   const cur = c?.currency ?? fallback
@@ -13,10 +14,14 @@ export function costDraft(c: Cost | undefined, fallback: string, rates: Rates | 
     other: !known,
     code: known ? '' : cur,
     rate: c?.eur_rate != null ? String(c.eur_rate) : '',
-    paid_by: c?.paid_by ?? '',
+    // paid and its payer always go together: an older estimate with a payer reads as not paid
+    paid: c?.status === 'paid',
+    paid_by: c?.status === 'paid' ? c.paid_by ?? '' : '',
     split: c?.split ?? 'even',
   }
 }
+
+export const COST_PROBLEMS = ['check the amount', 'enter a 3-letter currency code', 'pick who paid']
 
 const num = (s: string) => Number(s.replace(',', '.').trim())
 
@@ -26,6 +31,7 @@ export function checkCost(d: CostDraft): string | null {
   if (!Number.isFinite(a) || a < 0) return 'check the amount'
   if (d.other && !/^[a-z]{3}$/i.test(d.code.trim())) return 'enter a 3-letter currency code'
   if (d.other && d.rate.trim() && !(num(d.rate) > 0)) return 'check the amount'
+  if (d.paid && !d.paid_by) return 'pick who paid'
   return null
 }
 
@@ -35,9 +41,9 @@ export function costValues(d: CostDraft) {
     amount: num(d.amount),
     currency: d.other ? d.code.trim().toUpperCase() : d.currency,
     eur_rate: d.other && d.rate.trim() ? num(d.rate) : null,
-    paid_by: d.paid_by || null,
+    paid_by: d.paid ? d.paid_by || null : null,
     split: d.split || 'even',
-    status: (d.paid_by ? 'paid' : 'estimate') as Cost['status'],
+    status: (d.paid ? 'paid' : 'estimate') as Cost['status'],
   }
 }
 
@@ -48,6 +54,10 @@ type Props = { value: CostDraft; onChange: (d: CostDraft) => void; members: Memb
 export function CostFields({ value: d, onChange, members, rates }: Props) {
   const set = (p: Partial<CostDraft>) => onChange({ ...d, ...p })
   const people = members.filter((m) => m.user_id)
+  const me = useAuth().userId
+  const pay = (paid: boolean) => set(paid
+    ? { paid, paid_by: d.paid_by || (people.some((m) => m.user_id === me) ? me! : people[0]?.user_id ?? '') }
+    : { paid })
   return (
     <fieldset className="cost-fields">
       <div className="row">
@@ -75,14 +85,20 @@ export function CostFields({ value: d, onChange, members, rates }: Props) {
           </label>
         </div>
       )}
+      <div className="segmented" role="group" aria-label="payment">
+        <button type="button" aria-pressed={!d.paid} onClick={() => pay(false)}>not paid</button>
+        <button type="button" aria-pressed={d.paid} onClick={() => pay(true)}>paid</button>
+      </div>
       <div className="row">
-        <label className="field">
-          <span className="label">paid by</span>
-          <select value={d.paid_by} onChange={(e) => set({ paid_by: e.target.value })}>
-            <option value="">not set</option>
-            {people.map((m) => <option key={m.user_id!} value={m.user_id!}>{(m.name || m.email).toLowerCase()}</option>)}
-          </select>
-        </label>
+        {d.paid && (
+          <label className="field">
+            <span className="label">paid by</span>
+            <select value={d.paid_by} onChange={(e) => set({ paid_by: e.target.value })}>
+              {!d.paid_by && <option value="" />}
+              {people.map((m) => <option key={m.user_id!} value={m.user_id!}>{(m.name || m.email).toLowerCase()}</option>)}
+            </select>
+          </label>
+        )}
         <label className="field">
           <span className="label">for</span>
           <select value={d.split} onChange={(e) => set({ split: e.target.value })}>
