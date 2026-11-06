@@ -22,14 +22,18 @@ const mk = vi.hoisted(() => {
     hasImage = vi.fn(() => false)
     zoomIn = vi.fn()
     zoomOut = vi.fn()
-    zoomTo = vi.fn((z: number) => { this.zoom = z })
+    zoomTo = vi.fn((z: number) => { this.fire('zoomstart'); this.zoom = z })
+    easeTo = vi.fn((o: { center: { lng: number; lat: number } }) => { this.center = o.center; this.fire('move'); this.fire('moveend') })
     jumpTo = vi.fn((o: { center: [number, number] }) => { this.center = { lng: o.center[0], lat: o.center[1] } })
     setCenter = vi.fn((c: [number, number]) => { this.center = { lng: c[0], lat: c[1] }; this.fire('move') })
     remove = vi.fn()
     constructor(opts: any) { this.opts = opts; this.container = opts.container; this.center = { lng: opts.center[0], lat: opts.center[1] }; maps.push(this) }
     getSource(id: string) { return (this.sources[id] ??= { setData: vi.fn() }) }
     on(type: string, a: any, b?: any) { (this.handlers[type] ??= []).push(b ?? a); return this }
-    once(type: string, fn: (e?: any) => void) { return this.on(type, fn) }
+    once(type: string, fn: (e?: any) => void) {
+      const wrapped = (e?: any) => { this.handlers[type] = this.handlers[type].filter((f) => f !== wrapped); fn(e) }
+      return this.on(type, wrapped)
+    }
     fire(type: string, e: any = {}) { for (const fn of this.handlers[type] ?? []) fn(e) }
     getCanvas() { return { style: {} as Record<string, string> } }
     getCenter() { return this.center }
@@ -481,4 +485,70 @@ describe('safari pinches', () => {
     expect(gesture(wrap, 'gesturechange', 2).defaultPrevented).toBe(true)
     expect(m.zoomTo).not.toHaveBeenCalled()
   })
+})
+
+it('a pin keeps keyboard focus when pins are redrawn', () => {
+  const { view } = show()
+  const pin = screen.getByRole('button', { name: 'Portugal' })
+  act(() => pin.focus())
+  view.rerender(<Globe status={status()} pins={[{ ...portugal, cities: ['Lisbon', 'Sintra', 'Porto'] }, { ...france }]} onCountry={() => {}} />)
+  expect(document.activeElement).toBe(pin)
+  expect(tip()).toHaveTextContent('Porto')
+})
+
+it('a pin that went away is removed, and a new one is added', () => {
+  const { view } = show()
+  view.rerender(<Globe status={status()} pins={[portugal, { code: 'ES', name: 'Spain', status: 'been', cities: [], lng: -4, lat: 40 }]} onCountry={() => {}} />)
+  expect(screen.queryByRole('button', { name: 'France' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Spain' })).toBeInTheDocument()
+})
+
+it('a pinch counts as turning the globe, so places that arrive later do not re-centre it', () => {
+  const { m, view } = show([])
+  view.container.querySelector('.globe-wrap')!.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true }))
+  view.rerender(<Globe status={status()} pins={[portugal]} onCountry={() => {}} />)
+  expect(m.jumpTo).not.toHaveBeenCalled()
+})
+
+it('escape closes the tip', () => {
+  show()
+  act(() => screen.getByRole('button', { name: 'Portugal' }).focus())
+  expect(tip()).not.toBeNull()
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(tip()).toBeNull()
+})
+
+it('tapping outside the globe closes the tip', () => {
+  show()
+  const pin = screen.getByRole('button', { name: 'Portugal' })
+  pointer(pin, 'pointerdown', 'touch')
+  fireEvent.click(pin)
+  expect(tip()).not.toBeNull()
+  pointer(document.body, 'pointerdown', 'touch')
+  expect(tip()).toBeNull()
+})
+
+it('tapping a country whose pin is behind the horizon turns the globe to it and shows the tip', () => {
+  const { m, onCountry, box } = show()
+  // portugal's pin is round the back until the globe turns
+  let turned = false
+  m.transform.isLocationOccluded.mockImplementation((ll) => ll.lng === -9 && !turned)
+  m.easeTo.mockImplementation((o: any) => { turned = true; m.center = o.center; m.fire('move'); m.fire('moveend') })
+  act(() => m.fire('move'))
+  pointer(box, 'pointerdown', 'touch')
+  m.hit = 'PT'
+  act(() => m.fire('click', { point: { x: 0, y: 0 }, originalEvent: { target: box } }))
+  expect(m.easeTo).toHaveBeenCalledWith(expect.objectContaining({ center: { lng: -9, lat: 39 } }))
+  expect(tip()).toHaveTextContent('Portugal')
+  expect(onCountry).not.toHaveBeenCalled()
+})
+
+it('the arrow stays on a narrow tip near the edge', () => {
+  const spy = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(120)
+  try {
+    render(<GlobeTip id="t" pin={portugal} x={4} y={100} width={400} />)
+    const el = screen.getByRole('tooltip')
+    expect(el).toHaveStyle({ left: '60px' })
+    expect(el.style.getPropertyValue('--arrow')).toBe('-46px')
+  } finally { spy.mockRestore() }
 })

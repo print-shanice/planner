@@ -3,6 +3,7 @@ import maplibregl, { type ExpressionSpecification, type GeoJSONSource, type Laye
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GlobePin } from '../../lib/countries'
 import { GlobeTip } from './GlobeTip'
+import { openLayer } from '../../lib/layers'
 
 type Status = Map<string, 'been' | 'planned'>
 type Props = { status: Status; pins: GlobePin[]; onCountry: (code: string) => void }
@@ -26,6 +27,7 @@ const NEAR: [number, number] = [NAMES_FROM, 3.6]
 const SPIN = 4
 const RESUME_MS = 3000
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const globeFile = (name: string) => `${import.meta.env.BASE_URL}globe/${name}`
 
 // a map pin whose point sits on the place
@@ -145,11 +147,18 @@ export function Globe({ status, pins, onCountry }: Props) {
   function show(code: string) { open.current = code; place() }
   function hide() { open.current = null; place() }
 
-  // phones have no hover: the first tap shows the tip, the second opens the country
+  // phones have no hover: the first tap shows the tip, the second opens the country.
+  // a pin round the back of the globe is turned to first, so the tap still shows something
   function choose(code: string) {
-    const pinned = placed.current.some((x) => x.pin.code === code)
-    if (touch.current && pinned && open.current !== code) show(code)
-    else latest.current.onCountry(code)
+    const hit = placed.current.find((x) => x.pin.code === code)
+    const m = map.current
+    if (!touch.current || !hit || open.current === code) { latest.current.onCountry(code); return }
+    if (m && m.transform.isLocationOccluded(hit.marker.getLngLat())) {
+      m.once('moveend', () => show(code))
+      m.easeTo({ center: hit.marker.getLngLat(), duration: reduced() ? 0 : 400 })
+      return
+    }
+    show(code)
   }
 
   useEffect(() => {
@@ -237,7 +246,7 @@ export function Globe({ status, pins, onCountry }: Props) {
 
   // the slow spin: only zoomed out, never while someone holds it or a tip is open, never with reduced motion
   useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    if (reduced()) return
     let frame = 0
     let last: number | null = null
     const turn = (t: number) => {
@@ -267,12 +276,23 @@ export function Globe({ status, pins, onCountry }: Props) {
     }
   }, [])
 
-  // pins are real buttons: focusable, and they need no map font
+  // pins are real buttons: focusable, and they need no map font. they're kept by country,
+  // so a realtime redraw doesn't take keyboard focus away
   useEffect(() => {
     const m = map.current
     if (!m) return
-    for (const x of placed.current) x.marker.remove()
+    const have = new Map(placed.current.map((x) => [x.pin.code, x]))
+    const codes = new Set(pins.map((p) => p.code))
+    for (const x of placed.current) if (!codes.has(x.pin.code)) x.marker.remove()
     placed.current = pins.map((pin) => {
+      const old = have.get(pin.code)
+      if (old) {
+        old.pin = pin
+        old.el.dataset.status = pin.status
+        old.el.setAttribute('aria-label', pin.name)
+        old.marker.setLngLat([pin.lng, pin.lat])
+        return old
+      }
       const el = document.createElement('button')
       el.type = 'button'
       el.className = 'globe-pin'
@@ -333,6 +353,16 @@ export function Globe({ status, pins, onCountry }: Props) {
       el.removeEventListener('gestureend', end)
     }
   }, [])
+
+  // an open tip closes on escape or a tap anywhere off the globe
+  const tipCode = tip?.code ?? null
+  useEffect(() => {
+    if (!tipCode) return
+    const off = openLayer(() => hide())
+    const away = (e: Event) => { if (!wrap.current?.contains(e.target as Node)) hide() }
+    document.addEventListener('pointerdown', away)
+    return () => { off(); document.removeEventListener('pointerdown', away) }
+  }, [tipCode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pin = tip ? pins.find((p) => p.code === tip.code) : undefined
   return (
