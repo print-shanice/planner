@@ -1,4 +1,4 @@
-import { createStore, get, set } from 'idb-keyval'
+import { clear, createStore, get, set } from 'idb-keyval'
 import type { FileRow } from './types'
 import { supabase } from './supabase'
 
@@ -49,4 +49,8 @@ export async function openTicket(file: FileRow): Promise<string> {
 export async function keepTickets(files: FileRow[]): Promise<void> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return
   for (const f of files) if (!(await getTicket(f.id))) await download(f)
+}
+
+export async function clearTickets(): Promise<void> {
+  await clear(store)
 }

@@ -51,7 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status,
     email: user?.email ?? null,
     userId: user?.id ?? null,
-    signOut: async () => { await supabase.auth.signOut() },
+    signOut: async () => {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    },
     markAsleep: () => setStatus('asleep'),
   }), [status, user])
 

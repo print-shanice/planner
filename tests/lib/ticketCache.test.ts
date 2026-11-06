@@ -1,7 +1,7 @@
 const sb = vi.hoisted(() => ({ download: vi.fn() }))
 vi.mock('../../src/lib/supabase', () => ({ supabase: { storage: { from: () => ({ download: sb.download }) } } }))
 
-import { getTicket, putTicket, openTicket } from '../../src/lib/ticketCache'
+import { getTicket, putTicket, openTicket, clearTickets } from '../../src/lib/ticketCache'
 
 const file = (id: string) => ({ id, stop_id: 's1', path: `t/s1/${id}.pdf`, name: `${id}.pdf`, mime: 'application/pdf' })
 const setOnline = (v: boolean) => Object.defineProperty(navigator, 'onLine', { value: v, configurable: true })
@@ -44,4 +44,10 @@ it('a failed download falls back to the stored copy', async () => {
   await putTicket('f5', new Blob(['old']))
   sb.download.mockResolvedValue({ data: null, error: new Error('503') })
   await expect(openTicket(file('f5'))).resolves.toBeTypeOf('string')
+})
+
+it('clearTickets forgets every saved ticket', async () => {
+  await putTicket('f9', new Blob(['x'], { type: 'text/plain' }))
+  await clearTickets()
+  expect(await getTicket('f9')).toBeNull()
 })

@@ -6,7 +6,8 @@ const auth = vi.hoisted(() => ({ status: 'signed-in' as string }))
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: auth.status }) }))
 vi.mock('../../src/lib/supabase', () => ({ supabase: {} }))
 
-import { persister, useOnline, useCanEdit } from '../../src/lib/offline'
+import { persister, useOnline, useCanEdit, forgetDevice } from '../../src/lib/offline'
+import { getTicket, putTicket } from '../../src/lib/ticketCache'
 import { keys } from '../../src/lib/queries'
 
 it('useOnline follows the browser events', () => {
@@ -39,4 +40,17 @@ it('the cache survives a reload via IndexedDB', async () => {
   const b = new QueryClient()
   await persistQueryClientRestore({ queryClient: b, persister })
   expect(b.getQueryData(keys.trips)).toEqual([{ id: 't1', name: 'lapland' }])
+})
+
+it('forgetDevice empties the cache, the saved copy and the tickets', async () => {
+  const qc = new QueryClient()
+  qc.setQueryData(keys.trips, [{ id: 't1', name: 'lapland' }])
+  await persistQueryClientSave({ queryClient: qc, persister })
+  await putTicket('f1', new Blob(['ticket'], { type: 'text/plain' }))
+  await forgetDevice(qc)
+  expect(qc.getQueryData(keys.trips)).toBeUndefined()
+  const again = new QueryClient()
+  await persistQueryClientRestore({ queryClient: again, persister })
+  expect(again.getQueryData(keys.trips)).toBeUndefined()
+  expect(await getTicket('f1')).toBeNull()
 })

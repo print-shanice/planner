@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
-import { AuthProvider, AuthGate } from '../../src/lib/auth'
+import { AuthProvider, AuthGate, useAuth } from '../../src/lib/auth'
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -84,4 +85,26 @@ it('a wrong code says so', async () => {
   await userEvent.type(await screen.findByLabelText('code'), '000000')
   await userEvent.click(screen.getByRole('button', { name: 'sign in' }))
   expect(await screen.findByText('that code didn\'t work')).toHaveClass('warn-line')
+})
+
+function SignOutButton() {
+  const { signOut } = useAuth()
+  const [result, setResult] = useState('sign out')
+  return <button onClick={() => signOut().then(() => setResult('out'), () => setResult('failed'))}>{result}</button>
+}
+
+it('sign out says when it failed instead of pretending', async () => {
+  auth.getSession.mockResolvedValue({ data: { session }, error: null })
+  auth.signOut.mockResolvedValue({ error: { message: 'network' } })
+  render(<AuthProvider><SignOutButton /></AuthProvider>)
+  await userEvent.click(await screen.findByRole('button', { name: 'sign out' }))
+  expect(await screen.findByRole('button', { name: 'failed' })).toBeInTheDocument()
+})
+
+it('sign out resolves when it worked', async () => {
+  auth.getSession.mockResolvedValue({ data: { session }, error: null })
+  auth.signOut.mockResolvedValue({ error: null })
+  render(<AuthProvider><SignOutButton /></AuthProvider>)
+  await userEvent.click(await screen.findByRole('button', { name: 'sign out' }))
+  expect(await screen.findByRole('button', { name: 'out' })).toBeInTheDocument()
 })

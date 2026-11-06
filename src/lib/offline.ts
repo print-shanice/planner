@@ -1,7 +1,9 @@
 import { useSyncExternalStore } from 'react'
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { del, get, set } from 'idb-keyval'
+import type { QueryClient } from '@tanstack/react-query'
 import { useAuth } from './auth'
+import { clearTickets } from './ticketCache'
 
 export const persister = createAsyncStoragePersister({
   storage: {
@@ -39,4 +41,10 @@ export function useCanEdit(): boolean {
   const on = useOnline()
   const { status } = useAuth()
   return on && status === 'signed-in'
+}
+
+// after signing out, nothing from the plan stays on this device
+export async function forgetDevice(qc: QueryClient): Promise<void> {
+  qc.clear()
+  await Promise.allSettled([persister.removeClient(), clearTickets()])
 }
