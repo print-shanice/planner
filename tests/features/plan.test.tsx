@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
 import type { Stop, Trip } from '../../src/lib/types'
@@ -41,6 +41,27 @@ function show(t: Trip) {
 }
 
 const day = (date: string) => screen.getByTestId(`day-${date}`)
+
+function Probe() {
+  const l = useLocation()
+  return <output data-testid="loc">{l.pathname + l.search}</output>
+}
+function Routed() {
+  const { id } = useParams()
+  const t = (db.trips as Trip[]).find((x) => x.id === id)!
+  return <PlanTab key={t.id} trip={t} />
+}
+// the plan inside a router, so tapping a day can move between trips
+function showAt(path: string) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes><Route path="/trip/:id" element={<><Routed /><Probe /></>} /></Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+const loc = () => screen.getByTestId('loc').textContent
 
 beforeEach(() => {
   db.save.mockClear(); db.walk.mockClear(); db.search.mockReset()
@@ -148,22 +169,129 @@ it('a dateless trip still renders its undated stops', () => {
   expect(within(nd).getByRole('button', { name: 'add a place' })).toBeInTheDocument()
 })
 
-it('side trips show as a card on their first day', () => {
-  const t = trip({ id: 'eu', name: 'europe', start_date: '2027-02-01', end_date: '2027-02-14' })
-  const kid = trip({ id: 'lap', parent_id: 'eu', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
-  db.trips = [t, kid]
+const feb = () => {
+  const eu = trip({ id: 'eu', name: 'europe', start_date: '2027-02-01', end_date: '2027-02-14', base: place({ name: 'eindhoven', city: 'eindhoven' }) })
+  const kid = trip({ id: 'lap', parent_id: 'eu', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', color: 1 })
+  return [eu, kid] as Trip[]
+}
+
+it("a side trip's days fold into one row that opens it", () => {
+  db.trips = feb()
   db.stops = []
-  show(t)
-  expect(within(day('2027-02-07')).getByRole('link', { name: /lapland/ })).toHaveAttribute('href', '/trip/lap')
+  show(db.trips[0] as Trip)
+  const fold = screen.getByTestId('fold')
+  expect(fold).toHaveAttribute('href', '/trip/lap')
+  expect(fold).toHaveTextContent('lapland')
+  expect(fold).toHaveTextContent('7 – 11 feb · 5 days')
+  expect(screen.queryByTestId('day-2027-02-08')).toBeNull()
+  expect(screen.queryByTestId('day-2027-02-07')).toBeNull()
+  expect(day('2027-02-06')).toBeInTheDocument()
+  expect(day('2027-02-12')).toBeInTheDocument()
 })
 
-it('long trips list only busy days and offer a date picker', () => {
+it("the parent's own plans on a side-trip day still show", () => {
+  db.trips = feb()
+  db.stops = [stop({ trip_id: 'eu', title: 'pay rent', day: '2027-02-09' })] as Stop[]
+  show(db.trips[0] as Trip)
+  expect(within(day('2027-02-09')).getByText('pay rent')).toBeInTheDocument()
+  expect(screen.getByTestId('fold')).toBeInTheDocument()
+})
+
+it('the trip calendar shows its side trips and the city you sleep in', () => {
+  db.trips = feb()
+  db.stops = [stop({ trip_id: 'eu', kind: 'stay', title: 'hotel v', day: '2027-02-02', end_date: '2027-02-04', place: place({ name: 'hotel v', city: 'amsterdam' }) })] as Stop[]
+  show(db.trips[0] as Trip)
+  const cal = screen.getByTestId('calendar')
+  expect(within(cal).getByText('february')).toBeInTheDocument()
+  expect(within(cal).getAllByTestId('cal-bar').map((b) => b.textContent)).toEqual(['lapland', 'lapland'])
+  expect(within(cal).getAllByTestId('cal-city').map((b) => b.textContent)).toEqual(['eindhoven', 'amsterdam', 'eindhoven', 'eindhoven'])
+  // only this trip's months
+  expect(screen.getByRole('button', { name: 'previous month' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'next month' })).toBeDisabled()
+  // days outside the trip can't be picked
+  expect(screen.queryByRole('button', { name: 'mon 15 feb' })).toBeNull()
+})
+
+it('a short trip without side trips keeps just its days', () => {
+  const t = lap()
+  db.trips = [t]
+  db.stops = []
+  show(t)
+  expect(screen.queryByTestId('calendar')).toBeNull()
+})
+
+it('tapping a day selects it and puts it in the url', async () => {
+  db.trips = feb()
+  db.stops = []
+  showAt('/trip/eu')
+  const cal = () => within(screen.getByTestId('calendar'))
+  await userEvent.click(cal().getByRole('button', { name: 'fri 5 feb' }))
+  expect(loc()).toBe('/trip/eu?day=2027-02-05')
+  expect(cal().getByRole('button', { name: 'fri 5 feb' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: 'fri 5 feb' })).toHaveAttribute('aria-current', 'true')
+})
+
+it('tapping a day inside a side trip opens the side trip on that day', async () => {
+  db.trips = feb()
+  db.stops = []
+  showAt('/trip/eu')
+  await userEvent.click(within(screen.getByTestId('calendar')).getByRole('button', { name: 'mon 8 feb' }))
+  expect(loc()).toBe('/trip/lap?day=2027-02-08')
+  // lapland is short, so it has no calendar; its chip shows the day
+  expect(screen.queryByTestId('calendar')).toBeNull()
+  expect(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: 'mon 8 feb' })).toHaveAttribute('aria-current', 'true')
+})
+
+it('long trips list only busy days, and the calendar opens any day', async () => {
   const t = trip({ id: 'eu', name: 'europe', start_date: '2027-01-28', end_date: '2027-07-13' })
   db.trips = [t]
   db.stops = [stop({ trip_id: 'eu', title: 'museum', day: '2027-03-02' })] as Stop[]
-  show(t)
+  showAt('/trip/eu')
   expect(screen.getAllByTestId(/^day-/)).toHaveLength(1)
-  expect(screen.getByLabelText('pick a date')).toBeInTheDocument()
+  expect(screen.queryByLabelText('pick a date')).toBeNull()
+  expect(within(screen.getByTestId('calendar')).getByText('january')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'sat 30 jan' }))
+  expect(day('2027-01-30')).toBeInTheDocument()
+})
+
+it('opening a trip at a day shows that month and that day', () => {
+  const t = trip({ id: 'eu', name: 'europe', start_date: '2027-01-28', end_date: '2027-07-13' })
+  db.trips = [t]
+  db.stops = []
+  showAt('/trip/eu?day=2027-03-05')
+  expect(within(screen.getByTestId('calendar')).getByText('march')).toBeInTheDocument()
+  expect(within(screen.getByTestId('calendar')).getByRole('button', { name: 'fri 5 mar' })).toHaveAttribute('aria-pressed', 'true')
+  expect(day('2027-03-05')).toBeInTheDocument()
+})
+
+it('undated side trips are always listed, with set dates', async () => {
+  const [eu] = feb()
+  const rome = trip({ id: 'rome', parent_id: 'eu', name: 'someday rome', start_date: null, end_date: null })
+  db.trips = [eu, rome]
+  db.stops = []
+  show(eu)
+  const nd = screen.getByRole('region', { name: 'no date' })
+  expect(within(nd).getByRole('link', { name: /someday rome/ })).toHaveAttribute('href', '/trip/rome')
+  await userEvent.click(within(nd).getByRole('button', { name: 'set dates' }))
+  expect(within(screen.getByRole('dialog', { name: 'edit trip' })).getByDisplayValue('someday rome')).toBeInTheDocument()
+})
+
+it('day chips name the month, and a folded side trip gets one chip', () => {
+  db.trips = feb()
+  db.stops = []
+  show(db.trips[0] as Trip)
+  const chips = within(screen.getByRole('navigation', { name: 'days' })).getAllByRole('button').map((b) => b.textContent)
+  expect(chips.slice(0, 2)).toEqual(['mon1feb', 'tue2feb'])
+  expect(chips).toContain('lapland')
+  expect(chips).not.toContain('mon8feb')
+})
+
+it('month headings split a plan that spans months', () => {
+  const t = trip({ id: 'nye', name: 'new year', start_date: '2026-12-28', end_date: '2027-01-03' })
+  db.trips = [t]
+  db.stops = []
+  show(t)
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['december 2026', 'january 2027'])
 })
 
 const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
@@ -213,7 +341,7 @@ it('overlapping side trips show one clash row naming both, and adjust dates open
   show(eu)
   const row = screen.getByText('rome and florence · 14 – 16 jun').closest('.notice') as HTMLElement
   expect(row).toHaveTextContent('dates clash')
-  // the side-trip cards carry the pill too
+  // the folded side-trip rows carry the pill too
   expect(screen.getAllByText('dates clash').filter((el) => el.classList.contains('pill'))).toHaveLength(2)
   await userEvent.click(within(row).getByRole('button', { name: 'adjust dates' }))
   const sheet = screen.getByRole('dialog', { name: 'edit trip' })

@@ -1,5 +1,5 @@
-import type { Trip } from './types'
-import { addDays, countdown } from './dates'
+import type { Place, Stop, Trip } from './types'
+import { addDays, countdown, tripDays, type DayEntry } from './dates'
 
 // months are 'YYYY-MM'; days are 'YYYY-MM-DD'
 export function shiftMonth(m: string, n: number): string {
@@ -29,28 +29,78 @@ export function openingMonth(trips: Trip[], today: string): string | null {
   return next ? next.start_date!.slice(0, 7) : null
 }
 
-const covers = (t: Trip, d: string) => !!t.start_date && t.start_date <= d && end(t) >= d
+// a stretch of days drawn on the calendar: a trip, or the city you sleep in
+export type Span = { id: string; name: string; start: string; end: string; color: number | null; trip?: Trip }
 
-export function ribbonDay(d: string, tops: Trip[]): Trip | undefined {
-  return tops.filter((t) => covers(t, d)).sort(byStart)[0]
+export function tripSpan(t: Trip): Span | null {
+  if (!t.start_date) return null
+  return { id: t.id, name: t.name, start: t.start_date, end: end(t), color: t.color ?? 0, trip: t }
 }
 
-export type Bar = { trip: Trip; from: number; to: number; starts: boolean; ends: boolean; lane: number }
+const within = (s: Span, d: string) => s.start <= d && s.end >= d
+const spanOrder = (a: Span, b: Span) => a.start.localeCompare(b.start) || b.end.localeCompare(a.end) || a.name.localeCompare(b.name)
 
-export function weekBars(week: (string | null)[], trips: Trip[]): Bar[] {
+export function ribbonDay(d: string, spans: Span[]): Span | undefined {
+  return spans.filter((s) => within(s, d)).sort(spanOrder)[0]
+}
+
+export type Bar = { span: Span; from: number; to: number; starts: boolean; ends: boolean; lane: number }
+
+export function weekBars(week: (string | null)[], spans: Span[]): Bar[] {
   const lanes: number[] = [] // the last column each lane is busy until
   const out: Bar[] = []
-  for (const t of trips.filter((x) => x.start_date).sort(byStart)) {
-    const cols = week.flatMap((d, i) => (d && covers(t, d) ? [i] : []))
+  for (const s of [...spans].sort(spanOrder)) {
+    const cols = week.flatMap((d, i) => (d && within(s, d) ? [i] : []))
     if (!cols.length) continue
     const from = cols[0]
     const to = cols[cols.length - 1]
     let lane = lanes.findIndex((busy) => busy < from)
     if (lane < 0) lane = lanes.length
     lanes[lane] = to
-    out.push({ trip: t, from, to, starts: week[from] === t.start_date, ends: week[to] === end(t), lane })
+    out.push({ span: s, from, to, starts: week[from] === s.start, ends: week[to] === s.end, lane })
   }
   return out
+}
+
+const city = (p: Place | null | undefined) => p?.city?.trim() || null
+
+// on the trip's own days (not a side trip's): the city of that night's stay, else where a journey takes you, else the base
+export function citySpans(trip: Trip, stops: Stop[], children: Trip[]): Span[] {
+  const kids = children.map(tripSpan).filter((x): x is Span => !!x)
+  const home = city(trip.base) ?? (trip.base?.name?.trim() || null)
+  const out: Span[] = []
+  for (const d of tripDays(trip)) {
+    if (kids.some((k) => within(k, d))) continue
+    const stay = stops.find((s) => s.kind === 'stay' && s.day && city(s.place)
+      && (s.end_date && s.end_date > s.day ? s.day <= d && d < s.end_date : s.day === d))
+    const journey = stops.find((s) => s.kind === 'journey' && s.day === d && city(s.destination))
+    const name = city(stay?.place) ?? city(journey?.destination) ?? home
+    if (!name) continue
+    const last = out[out.length - 1]
+    if (last && last.name === name && addDays(last.end, 1) === d) last.end = d
+    else out.push({ id: `city-${d}`, name, start: d, end: d, color: null })
+  }
+  return out
+}
+
+export type PlanItem =
+  | { kind: 'day'; date: string; entries: DayEntry[] }
+  | { kind: 'fold'; date: string; trip: Trip }
+
+// a side trip's days are planned in the side trip, so the parent shows them as one row;
+// a day the parent has its own plans on (not just "staying at") still shows
+export function planItems(days: { date: string; entries: DayEntry[] }[], children: Trip[]): PlanItem[] {
+  const kids = children.map(tripSpan).filter((x): x is Span => !!x)
+  const items: PlanItem[] = []
+  for (const d of days) {
+    const entries = d.entries.filter((e) => e.kind !== 'sidetrip')
+    const own = entries.some((e) => e.kind !== 'staying')
+    if (!own && kids.some((k) => within(k, d.date))) continue
+    items.push({ kind: 'day', date: d.date, entries })
+  }
+  for (const k of kids) items.push({ kind: 'fold', date: k.start, trip: k.trip! })
+  const rank = (i: PlanItem) => (i.kind === 'fold' ? 0 : 1)
+  return items.sort((a, b) => a.date.localeCompare(b.date) || rank(a) - rank(b))
 }
 
 // every trip with a day in the month: top-level by start, each followed by its own side trips

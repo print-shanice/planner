@@ -6,9 +6,31 @@
 .crumb + .crumb::before { content: '/'; color: var(--line); margin-right: 2px; }
 .crumb a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; font-weight: 600; }
 .crumb a:hover { color: var(--ink); }
+.crumb .dot { width: 8px; height: 8px; margin-right: 6px; background: var(--c); }
 .trip-title-row { display: flex; align-items: flex-start; gap: 8px; }
 .trip-title { flex: 1; min-width: 0; }
 .trip-title h1 { font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+/* with side trips or a parent, the title opens the trip family */
+.title-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; letter-spacing: inherit; text-align: left; border-radius: 8px; }
+.title-btn .icon { flex: none; margin-top: 3px; color: var(--ink-3); transition: color .12s; }
+.title-btn:hover .icon { color: var(--ink); }
+
+.tree { list-style: none; margin: 0; padding: 0; }
+.tree-root { margin: 0 -8px; }
+.tree-row { display: flex; align-items: center; gap: 2px; }
+.tree-link {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 10px;
+  border-radius: 12px; text-decoration: none;
+}
+.tree-link:hover { background: var(--ground); }
+.tree-link .dot { background: var(--c); }
+.tree-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-root > li > .tree-row .tree-name { font-family: var(--f-head); font-size: 18px; font-weight: 700; }
+.tree-link .muted { flex: none; font-size: 14px; }
+.tree-link[aria-current="page"] { background: var(--soft); }
+.tree-link[aria-current="page"] .tree-name { font-weight: 800; }
+.tree-toggle .icon { transition: transform .15s; }
+.tree-toggle[aria-expanded="false"] .icon { transform: rotate(-90deg); }
 .avatars { display: flex; padding-top: 6px; }
 .avatar {
   width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;

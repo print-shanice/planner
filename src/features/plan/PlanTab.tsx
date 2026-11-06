@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Place, Stop, Trip } from '../../lib/types'
 import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
-import { daysBetween, groupByDay, tripDays, type DayEntry } from '../../lib/dates'
+import { daysBetween, fmtDay, groupByDay, tripDays, type DayEntry } from '../../lib/dates'
+import { planItems } from '../../lib/calendar'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { descendants } from '../../lib/countries'
 import { loadState } from '../../lib/load'
@@ -10,7 +12,9 @@ import { LoadState } from '../../components/States'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { ClashRow } from '../trip/ClashRow'
-import { DayChips } from './DayChips'
+import { DayChips, itemId, jumpTo } from './DayChips'
+import { FoldRow } from './FoldRow'
+import { TripCalendar, wantsCalendar } from './TripCalendar'
 import { DayCard } from './DayCard'
 import { NoDate } from './NoDate'
 import { useStopSheet } from '../stops/StopSheet'
@@ -38,14 +42,33 @@ export function PlanTab({ trip }: { trip: Trip }) {
   }, [pairs, trips, trip.id])
   const [adjusting, setAdjusting] = useState<Trip | null>(null)
   const all = tripDays(trip)
-  const long = all.length > 21
+  const inTrip = (d: string) => all.length > 0 && d >= all[0] && d <= all[all.length - 1]
+  const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
+  const selected = params.get('day')
+  const datedKids = useMemo(() => children.filter((c) => c.start_date), [children])
+  const undatedKids = useMemo(() => children.filter((c) => !c.start_date).sort((a, b) => a.name.localeCompare(b.name)), [children])
 
-  const { days, undated } = useMemo(() => {
+  const { items, undated } = useMemo(() => {
     const g = groupByDay(trip, stops, children)
     const have = new Set(g.days.map((d) => d.date))
-    const more = extra.filter((d) => !have.has(d)).map((date) => ({ date, entries: [] as DayEntry[] }))
-    return { days: [...g.days, ...more].sort((a, b) => a.date.localeCompare(b.date)), undated: g.undated }
-  }, [trip, stops, children, extra])
+    // a long trip only lists busy days; a day picked on the calendar joins them
+    const wanted = selected && inTrip(selected) ? [...extra, selected] : extra
+    const more = [...new Set(wanted)].filter((d) => !have.has(d)).map((date) => ({ date, entries: [] as DayEntry[] }))
+    const days = [...g.days, ...more].sort((a, b) => a.date.localeCompare(b.date))
+    return { items: planItems(days, children), undated: g.undated }
+  }, [trip, stops, children, extra, selected]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // scroll to the picked day once it's on screen (a folded day scrolls to its side trip)
+  const scrolled = useRef<string | null>(null)
+  useEffect(() => {
+    if (!selected || scrolled.current === selected || load.state !== 'ready') return
+    const item = items.find((i) => (i.kind === 'day' ? i.date === selected
+      : i.trip.start_date! <= selected && (i.trip.end_date ?? i.trip.start_date!) >= selected))
+    if (!item) return
+    scrolled.current = selected
+    requestAnimationFrame(() => jumpTo(itemId(item)))
+  }, [selected, items, load.state])
 
   if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
 
@@ -60,10 +83,22 @@ export function PlanTab({ trip }: { trip: Trip }) {
     save.mutate({ trip_id: trip.id, kind: 'place', title: p.name, day: date, position, place: p, status: 'idea' })
   }
 
-  function pick(d: string) {
+  // a day inside a side trip is planned there, so it opens the side trip at that day
+  function goDay(d: string) {
+    const kid = datedKids.find((c) => c.start_date! <= d && (c.end_date ?? c.start_date!) >= d)
+    if (kid) return navigate(`/trip/${kid.id}?day=${d}`)
+    if (d === selected) {
+      const item = items.find((i) => i.kind === 'day' && i.date === d)
+      if (item) jumpTo(itemId(item))
+      return
+    }
     setExtra((x) => (x.includes(d) ? x : [...x, d]))
-    requestAnimationFrame(() => document.getElementById(`day-${d}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    setParams((p) => { const n = new URLSearchParams(p); n.set('day', d); return n }, { replace: true })
   }
+
+  // month headings once the list spans more than one month
+  const multi = items.length > 0 && items[0].date.slice(0, 7) !== items[items.length - 1].date.slice(0, 7)
+  let shownMonth = ''
 
   return (
     <div className="plan">
@@ -75,18 +110,33 @@ export function PlanTab({ trip }: { trip: Trip }) {
           <p>{trip.notes}</p>
         </details>
       )}
-      <DayChips days={days.map((d) => d.date)} pick={long ? { min: all[0], max: all[all.length - 1], onPick: pick } : undefined} />
-      {days.map((d, i) => {
-        const idx = trip.start_date ? daysBetween(trip.start_date, d.date) : i
-        const inTrip = !!trip.start_date && !!trip.end_date && d.date >= trip.start_date && d.date <= trip.end_date
+      {wantsCalendar(trip, children) && (
+        <TripCalendar trip={trip} stops={stops} children={children} selected={selected} onDay={goDay} />
+      )}
+      <DayChips items={items} selected={selected} />
+      {items.map((it) => {
+        const m = it.date.slice(0, 7)
+        const head = multi && m !== shownMonth
+        shownMonth = m
+        let body: JSX.Element
+        if (it.kind === 'fold') body = <FoldRow trip={it.trip} clash={clash.has(it.trip.id)} />
+        else {
+          const idx = trip.start_date ? daysBetween(trip.start_date, it.date) : 0
+          body = (
+            <DayCard trip={trip} date={it.date} entries={it.entries} colorIndex={idx}
+              dayNumber={inTrip(it.date) ? idx + 1 : null} clash={clash} canEdit={canEdit} onOpen={onOpen}
+              onAddPlace={addPlace} />
+          )
+        }
         return (
-          <DayCard key={d.date} trip={trip} date={d.date} entries={d.entries} colorIndex={idx}
-            dayNumber={inTrip ? idx + 1 : null} clash={clash} canEdit={canEdit} onOpen={onOpen}
-            onAddPlace={addPlace} />
+          <Fragment key={itemId(it)}>
+            {head && <h2 className="month-head head">{fmtDay(`${m}-01`, { month: 'long', year: 'numeric' })}</h2>}
+            {body}
+          </Fragment>
         )
       })}
-      <NoDate trip={trip} stops={undated} canAdd={canEdit && all.length === 0} onOpen={onOpen}
-        onAddPlace={(p) => addPlace(p, null)} />
+      <NoDate trip={trip} stops={undated} sideTrips={undatedKids} canAdd={canEdit && all.length === 0} canEdit={canEdit}
+        onOpen={onOpen} onAddPlace={(p) => addPlace(p, null)} onSetDates={setAdjusting} />
       <Sheet open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>

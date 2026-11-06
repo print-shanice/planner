@@ -1,12 +1,10 @@
 import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
-import { Link } from 'react-router-dom'
 import type { DayEntry } from '../../lib/dates'
-import { dayColor, fmtDay, fmtRange } from '../../lib/dates'
+import { dayColor, fmtDay } from '../../lib/dates'
 import type { Place, Stop, Trip } from '../../lib/types'
 import { hasPoint } from '../../lib/walk'
 import { positionsAfterMove } from '../../lib/order'
 import { useSave } from '../../lib/queries'
-import { Pill } from '../../components/Pill'
 import { StopRow } from './StopRow'
 import { WalkLeg } from './WalkLeg'
 import { AddPlaceField } from './AddPlaceField'
@@ -72,19 +70,9 @@ export function DayCard({ trip, date, entries, colorIndex, dayNumber, clash, can
   let n = 0
   let prev: Stop | null = null
   for (const e of entries) {
-    if (e.kind === 'sidetrip' && e.trip) {
-      const t = e.trip
-      items.push(
-        <Link key={`t-${t.id}`} to={`/trip/${t.id}`} className="side-card">
-          <span className="dot" style={{ background: `var(--g${(t.color ?? 0) % 6})` }} />
-          <span className="side-name">{t.name}</span>
-          <span className="muted num">{fmtRange(t.start_date, t.end_date)}</span>
-          {clash.has(t.id) && <Pill status="warn" label="dates clash" />}
-        </Link>,
-      )
-      continue
-    }
-    const s = e.stop!
+    // side trips never reach a day card: the plan folds them into their own row
+    if (!e.stop) continue
+    const s = e.stop
     const a = prev ? placeOut(prev) : null, b = placeIn(s)
     if (prev && hasPoint(a) && hasPoint(b)) items.push(<WalkLeg key={`w-${prev.id}-${s.id}-${e.kind}`} from={a} to={b} />)
     const isNum = e.kind === 'stop'

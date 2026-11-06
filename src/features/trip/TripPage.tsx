@@ -106,10 +106,10 @@ function TripScreen() {
   return (
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`}>
       <section className="trip-main">
-        <TripHeader trip={trip} />
+        <TripHeader key={trip.id} trip={trip} />
         {wide && <div className="tabs-row"><TripTabs tabs={tabs} value={tab} onChange={setTab} variant="top" />{add}</div>}
         <div id="tab-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="trip-panel">
-          <Panel tab={tab} trip={trip} />
+          <Panel key={trip.id} tab={tab} trip={trip} />
         </div>
       </section>
       {wide && <aside className="trip-map"><Suspense fallback={null}><MapTab trip={trip} /></Suspense></aside>}

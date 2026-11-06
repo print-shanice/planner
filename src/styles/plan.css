@@ -14,9 +14,15 @@
   border-radius: 14px; border: 1px solid var(--line); background: var(--card); font-size: 12px; line-height: 1.2;
 }
 .chip .num { font-size: 16px; font-weight: 700; }
-.chip-pick { position: relative; display: flex; align-items: center; font-weight: 600; font-size: 13px; white-space: nowrap; cursor: pointer; }
-.chip-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.chip-pick:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.chip .muted:last-child { font-size: 11px; }
+.chip[aria-current="true"] { background: var(--ink); border-color: var(--ink); color: var(--card); }
+.chip[aria-current="true"] .muted { color: inherit; opacity: .75; }
+/* a folded side trip: one chip with its name */
+.chip-trip { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; white-space: nowrap; color: var(--c); }
+.chip-trip .dot { width: 8px; height: 8px; background: var(--c); }
+
+/* the day list's month headings, once it spans months */
+.month-head { padding: 10px 4px 0; font-size: 15px; font-weight: 700; color: var(--ink-2); }
 
 .day { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); scroll-margin-top: 72px; }
 .day-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 6px; }
@@ -49,11 +55,22 @@
 .leg { display: flex; align-items: center; gap: 6px; min-height: 8px; margin-left: 20px; padding: 0 0 0 20px; border-left: 2px dotted var(--line); font-size: 13px; color: var(--ink-2); }
 .leg:not(:empty) { min-height: 28px; }
 
-.side-card {
-  display: flex; align-items: center; gap: 10px; margin: 4px 0; padding: 12px 14px; border-radius: 14px;
-  background: var(--ground); text-decoration: none;
+/* a side trip's days in its parent: one row in its colour that opens it */
+.fold {
+  display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 12px; scroll-margin-top: 72px;
+  border-radius: var(--radius); text-decoration: none; color: var(--ink);
+  background: color-mix(in srgb, var(--c) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--c) 26%, var(--card));
 }
-.side-name { flex: 1; font-weight: 600; }
+.fold:hover { background: color-mix(in srgb, var(--c) 14%, var(--card)); }
+.fold-bar { align-self: stretch; width: 5px; border-radius: 4px; background: var(--c); }
+.fold-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.fold-name { font-family: var(--f-head); font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fold-text .muted { font-size: 14px; }
+.fold > .icon { flex: none; color: var(--c); }
+
+.nodate-trip { display: flex; align-items: center; gap: 8px; padding: 0 4px 0 8px; }
+.nodate-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; text-decoration: none; }
+.nodate-trip .dot { background: var(--c); }
 
 .add-place {
   display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 10px;

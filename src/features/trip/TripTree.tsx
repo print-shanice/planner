@@ -1,0 +1,46 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import type { Trip } from '../../lib/types'
+import { ancestors } from '../../lib/countries'
+import { fmtRange } from '../../lib/dates'
+import { Icon } from '../../components/Icon'
+import { tint } from '../../components/MonthCalendar'
+
+// side trips in date order, the undated ones last
+const order = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
+
+// the whole family of a trip, from the top: open along the way to the current trip, folded elsewhere
+export function TripTree({ trips, current, onPick }: { trips: Trip[]; current: string; onPick: () => void }) {
+  const path = ancestors(current, trips)
+  const root = path[0] ?? trips.find((t) => t.id === current)!
+  const [open, setOpen] = useState(() => new Set([...path.map((t) => t.id), current]))
+  const kids = (id: string) => trips.filter((t) => t.parent_id === id).sort(order)
+
+  // a plain function, not a component, so expanding a row keeps focus on its toggle
+  function node(t: Trip, depth: number): JSX.Element {
+    const children = kids(t.id)
+    const expanded = open.has(t.id)
+    return (
+      <li key={t.id}>
+        <div className="tree-row" style={{ paddingLeft: depth * 22, ...tint(t.color) }}>
+          <Link to={`/trip/${t.id}`} className="tree-link" aria-current={t.id === current ? 'page' : undefined} onClick={onPick}>
+            <span className="dot" />
+            <span className="tree-name">{t.name}</span>
+            <span className="muted num">{t.start_date ? fmtRange(t.start_date, t.end_date) : 'no dates'}</span>
+          </Link>
+          {children.length > 0 && depth > 0 && (
+            <button type="button" className="icon-btn tree-toggle" aria-label={`side trips of ${t.name}`} aria-expanded={expanded}
+              onClick={() => setOpen((s) => { const n = new Set(s); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n })}>
+              <Icon name="chevron" />
+            </button>
+          )}
+        </div>
+        {children.length > 0 && (expanded || depth === 0) && (
+          <ul className="tree">{children.map((c) => node(c, depth + 1))}</ul>
+        )}
+      </li>
+    )
+  }
+
+  return <ul className="tree tree-root">{node(root, 0)}</ul>
+}

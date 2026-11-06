@@ -54,6 +54,52 @@ it('breadcrumb lists parent trips root first', () => {
   expect(screen.getByText('26 jun – 13 jul · 17 nights')).toBeInTheDocument()
 })
 
+function family() {
+  db.trips = [
+    ...(db.trips as Trip[]),
+    trip({ id: 'lap', parent_id: 'eu2027', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', color: 1 }),
+    trip({ id: 'rov', parent_id: 'lap', name: 'rovaniemi day', start_date: '2027-02-09', end_date: '2027-02-09', color: 2 }),
+    trip({ id: 'some', parent_id: 'eu2027', name: 'someday rome', start_date: null, end_date: null }),
+  ] as Trip[]
+}
+
+it('the title opens the whole trip family as a tree, and a row opens that trip', async () => {
+  family()
+  show('/trip/summer')
+  await userEvent.click(screen.getByRole('button', { name: 'the long summer' }))
+  const sheet = screen.getByRole('dialog', { name: 'trips' })
+  const names = () => within(sheet).getAllByRole('link').map((a) => a.querySelector('.tree-name')?.textContent)
+  // side trips in date order, undated last; deeper side trips stay folded away off the current path
+  expect(names()).toEqual(['europe exchange 2027', 'lapland', 'the long summer', 'someday rome'])
+  expect(within(sheet).getByRole('link', { name: /the long summer/ })).toHaveAttribute('aria-current', 'page')
+  expect(within(sheet).getByRole('link', { name: /lapland/ })).toHaveTextContent('7 – 11 feb')
+  expect(within(sheet).getByRole('link', { name: /someday rome/ })).toHaveTextContent('no dates')
+  const toggle = within(sheet).getByRole('button', { name: 'side trips of lapland' })
+  expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await userEvent.click(toggle)
+  expect(names()).toContain('rovaniemi day')
+  await userEvent.click(within(sheet).getByRole('link', { name: /lapland/ }))
+  expect(screen.getByTestId('loc')).toHaveTextContent('/trip/lap')
+  expect(screen.queryByRole('dialog', { name: 'trips' })).toBeNull()
+  expect(screen.getByRole('heading', { level: 1, name: 'lapland' })).toBeInTheDocument()
+})
+
+it('a side trip deep down opens the tree along its path', async () => {
+  family()
+  show('/trip/rov')
+  await userEvent.click(screen.getByRole('button', { name: 'rovaniemi day' }))
+  const sheet = screen.getByRole('dialog', { name: 'trips' })
+  expect(within(sheet).getByRole('button', { name: 'side trips of lapland' })).toHaveAttribute('aria-expanded', 'true')
+  expect(within(sheet).getByRole('link', { name: /rovaniemi day/ })).toHaveAttribute('aria-current', 'page')
+})
+
+it('a trip on its own has a plain title', () => {
+  db.trips = [trip({ id: 'solo', name: 'solo trip' })] as Trip[]
+  show('/trip/solo')
+  expect(screen.getByRole('heading', { level: 1, name: 'solo trip' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'solo trip' })).toBeNull()
+})
+
 it('add menu has exactly the six options', async () => {
   show('/trip/summer')
   await userEvent.click(screen.getByRole('button', { name: 'add' }))
