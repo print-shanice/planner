@@ -3,7 +3,6 @@ import maplibregl, { type ExpressionSpecification, type StyleSpecification } fro
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GlobePin } from '../../lib/countries'
 import { GlobeTip } from './GlobeTip'
-import { Icon } from '../../components/Icon'
 
 type Status = Map<string, 'been' | 'planned'>
 type Props = { status: Status; pins: GlobePin[]; onCountry: (code: string) => void }
@@ -12,6 +11,17 @@ type Placed = { pin: GlobePin; marker: maplibregl.Marker; el: HTMLButtonElement 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 const MIN_ZOOM = 0.6
 const MAX_ZOOM = 4
+const START_ZOOM = 1.7
+const EUROPE: [number, number] = [10, 48]
+
+// a map pin whose point sits on the place
+const PIN = '<svg viewBox="0 0 24 32" width="24" height="32" aria-hidden="true"><path d="M12 30.5s-9.5-9.9-9.5-17.6a9.5 9.5 0 0 1 19 0c0 7.7-9.5 17.6-9.5 17.6z"/><circle cx="12" cy="12.6" r="3.6"/></svg>'
+
+// the globe opens on the middle of your places
+function middleOf(pins: GlobePin[]): [number, number] {
+  if (!pins.length) return EUROPE
+  return [pins.reduce((n, p) => n + p.lng, 0) / pins.length, pins.reduce((n, p) => n + p.lat, 0) / pins.length]
+}
 
 // red = been there, pale red = planned
 export function fillFor(status: Status): ExpressionSpecification {
@@ -27,16 +37,16 @@ export function fillFor(status: Status): ExpressionSpecification {
 export function Globe({ status, pins, onCountry }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
-  const [loaded, setLoaded] = useState(false)
-  const [spinning, setSpinning] = useState(() => !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+  const moved = useRef(false)
+  const aimed = useRef(false)
   const map = useRef<maplibregl.Map | null>(null)
   const placed = useRef<Placed[]>([])
   const open = useRef<string | null>(null)
   const touch = useRef(false)
   const [tip, setTip] = useState<{ code: string; x: number; y: number } | null>(null)
   const tipId = useId()
-  const latest = useRef({ status, onCountry })
-  latest.current = { status, onCountry }
+  const latest = useRef({ status, onCountry, pins })
+  latest.current = { status, onCountry, pins }
 
   // pins on the far side of the globe hide; the open tip follows its pin, or closes with it
   function place() {
@@ -82,7 +92,7 @@ export function Globe({ status, pins, onCountry }: Props) {
     let m: maplibregl.Map
     try {
       m = new maplibregl.Map({
-        container: box.current, style, center: [10, 30], zoom: 0.9, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM,
+        container: box.current, style, center: middleOf(latest.current.pins), zoom: START_ZOOM, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM,
         attributionControl: false, scrollZoom: false, dragRotate: false, pitchWithRotate: false,
         renderWorldCopies: false,
       })
@@ -90,6 +100,7 @@ export function Globe({ status, pins, onCountry }: Props) {
       return // no webgl: the rest of home still works
     }
     map.current = m
+    aimed.current = latest.current.pins.length > 0
     m.touchZoomRotate.disableRotation()
 
     m.on('click', (e) => {
@@ -104,10 +115,9 @@ export function Globe({ status, pins, onCountry }: Props) {
     })
     m.on('mouseleave', 'countries-fill', () => { m.getCanvas().style.cursor = '' })
     m.on('move', place)
-    m.on('load', () => setLoaded(true))
-    const stop = () => setSpinning(false)
-    m.on('dragstart', stop)
-    m.on('zoomstart', stop)
+    const touched = () => { moved.current = true }
+    m.on('dragstart', touched)
+    m.on('zoomstart', touched)
 
     return () => {
       for (const x of placed.current) x.marker.remove()
@@ -135,31 +145,23 @@ export function Globe({ status, pins, onCountry }: Props) {
       el.type = 'button'
       el.className = 'globe-pin'
       el.dataset.status = pin.status
+      el.innerHTML = PIN
       el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') show(pin.code) })
       el.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hide() })
       el.addEventListener('focus', () => show(pin.code))
       el.addEventListener('blur', hide)
       el.addEventListener('click', () => choose(pin.code))
-      const marker = new maplibregl.Marker({ element: el }).setLngLat([pin.lng, pin.lat]).addTo(m)
+      const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([pin.lng, pin.lat]).addTo(m)
       el.setAttribute('aria-label', pin.name) // after addTo, which labels every marker "map marker"
       return { pin, marker, el }
     })
+    // places that arrive after the globe opened still get centred on, unless someone already turned it
+    if (!aimed.current && !moved.current && pins.length) {
+      aimed.current = true
+      m.jumpTo({ center: middleOf(pins) })
+    }
     place()
   }, [pins]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // turns slowly until someone drags or zooms; an open tip holds it still
-  useEffect(() => {
-    const m = map.current
-    if (!m || !loaded || !spinning) return
-    let frame = requestAnimationFrame(function turn() {
-      if (!open.current && !m.isMoving()) {
-        const c = m.getCenter()
-        m.jumpTo({ center: [c.lng + 0.04, c.lat] })
-      }
-      frame = requestAnimationFrame(turn)
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [loaded, spinning])
 
   // pinches zoom the globe, never the page; a plain scroll still scrolls the page
   useEffect(() => {
@@ -186,15 +188,6 @@ export function Globe({ status, pins, onCountry }: Props) {
     <div ref={wrap} className="globe-wrap" onPointerDownCapture={(e) => { touch.current = e.pointerType === 'touch' }}>
       <div ref={box} className="globe" role="region" aria-label="globe" />
       {tip && pin && <GlobeTip id={tipId} pin={pin} x={tip.x} y={tip.y} width={box.current?.clientWidth ?? 0} />}
-      {loaded && (
-        <div className="globe-controls">
-          <button type="button" className="icon-btn" aria-label="zoom in" onClick={() => map.current?.zoomIn()}><Icon name="plus" size={18} /></button>
-          <button type="button" className="icon-btn" aria-label="zoom out" onClick={() => map.current?.zoomOut()}><Icon name="minus" size={18} /></button>
-          <button type="button" className="icon-btn" aria-label="spin" aria-pressed={spinning} onClick={() => setSpinning((s) => !s)}>
-            <Icon name={spinning ? 'pause' : 'play'} size={18} />
-          </button>
-        </div>
-      )}
     </div>
   )
 }

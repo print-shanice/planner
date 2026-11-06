@@ -4,6 +4,7 @@ import type { GlobePin } from '../../src/lib/countries'
 // a stand-in for maplibre: records what the globe asks for and lets tests fire map events
 const mk = vi.hoisted(() => {
   const maps: FakeMap[] = []
+  const markers: FakeMarker[] = []
   class FakeMap {
     opts: any
     container: HTMLElement
@@ -33,15 +34,16 @@ const mk = vi.hoisted(() => {
   }
   class FakeMarker {
     el: HTMLElement
+    anchor?: string
     ll = { lng: 0, lat: 0 }
-    constructor(o: { element: HTMLElement }) { this.el = o.element }
+    constructor(o: { element: HTMLElement; anchor?: string }) { this.el = o.element; this.anchor = o.anchor; markers.push(this) }
     setLngLat(ll: [number, number]) { this.ll = { lng: ll[0], lat: ll[1] }; return this }
     getLngLat() { return this.ll }
     // like maplibre, adding a marker stamps a generic label on it
     addTo(m: FakeMap) { this.el.setAttribute('aria-label', 'Map marker'); m.container.appendChild(this.el); return this }
     remove() { this.el.remove(); return this }
   }
-  return { maps, FakeMap, FakeMarker }
+  return { maps, markers, FakeMap, FakeMarker }
 })
 vi.mock('maplibre-gl', () => ({ default: { Map: mk.FakeMap, Marker: mk.FakeMarker } }))
 
@@ -191,53 +193,6 @@ it('long city lists are shortened', () => {
   expect(cityLine(['a', 'b'])).toBe('a · b')
 })
 
-it('zoom buttons zoom the globe', () => {
-  const { m } = show()
-  fireEvent.click(screen.getByRole('button', { name: 'zoom in' }))
-  fireEvent.click(screen.getByRole('button', { name: 'zoom out' }))
-  expect(m.zoomIn).toHaveBeenCalledTimes(1)
-  expect(m.zoomOut).toHaveBeenCalledTimes(1)
-})
-
-it('turns until you press pause, and play starts it again', () => {
-  const { m } = show()
-  const spin = screen.getByRole('button', { name: 'spin' })
-  expect(spin).toHaveAttribute('aria-pressed', 'true')
-  act(tick)
-  expect(m.jumpTo.mock.calls[0][0].center[0]).toBeCloseTo(10.04)
-  fireEvent.click(spin)
-  expect(spin).toHaveAttribute('aria-pressed', 'false')
-  m.jumpTo.mockClear()
-  act(tick)
-  expect(m.jumpTo).not.toHaveBeenCalled()
-  fireEvent.click(spin)
-  act(tick)
-  expect(m.jumpTo).toHaveBeenCalled()
-})
-
-it('dragging or zooming stops the spin', () => {
-  const { m } = show()
-  act(() => m.fire('dragstart'))
-  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'false')
-  fireEvent.click(screen.getByRole('button', { name: 'spin' }))
-  act(() => m.fire('zoomstart'))
-  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'false')
-})
-
-it('an open tip holds the globe still without stopping the spin', () => {
-  const { m } = show()
-  act(() => screen.getByRole('button', { name: 'Portugal' }).focus())
-  act(tick)
-  expect(m.jumpTo).not.toHaveBeenCalled()
-  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'true')
-})
-
-it('starts still when the system asks for less motion', () => {
-  vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce') }))
-  show()
-  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'false')
-})
-
 it('a trackpad pinch zooms the globe, a plain scroll is left to the page', () => {
   const { m, view } = show()
   const wrap = view.container.querySelector('.globe-wrap')!
@@ -259,4 +214,43 @@ it('a pinch on the globe never zooms the page in safari', () => {
     wrap.dispatchEvent(e)
     expect(e.defaultPrevented).toBe(true)
   }
+})
+
+it('stays still until someone turns it, with no spin or zoom buttons', () => {
+  show()
+  expect(screen.queryByRole('button', { name: 'spin' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'zoom in' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'zoom out' })).toBeNull()
+  expect(frames.size).toBe(0)
+})
+
+it('opens zoomed in on your places', () => {
+  const { m } = show()
+  expect(m.opts.zoom).toBe(1.7)
+  expect(m.opts.center).toEqual([-3.5, 44])
+})
+
+it('with no places yet it opens on europe', () => {
+  const { m } = show([])
+  expect(m.opts.center).toEqual([10, 48])
+})
+
+it('places that load after the globe opens still get centred on', () => {
+  const { m, view } = show([])
+  view.rerender(<Globe status={status()} pins={[portugal]} onCountry={() => {}} />)
+  expect(m.jumpTo).toHaveBeenLastCalledWith({ center: [-9, 39] })
+})
+
+it('never pulls the globe away from where someone turned it', () => {
+  const { m, view } = show([])
+  act(() => m.fire('dragstart'))
+  view.rerender(<Globe status={status()} pins={[portugal]} onCountry={() => {}} />)
+  expect(m.jumpTo).not.toHaveBeenCalled()
+})
+
+it('pins are pin shaped and point at the place', () => {
+  show()
+  const pin = screen.getByRole('button', { name: 'Portugal' })
+  expect(pin.querySelector('svg')).not.toBeNull()
+  expect(mk.markers.at(-1)!.anchor).toBe('bottom')
 })
