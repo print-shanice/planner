@@ -47,7 +47,9 @@ export function HomePage() {
   return (
     <main className="home">
       <header className="home-top">
-        <h1 className="wordmark home-mark">planner</h1>
+        <h1 className="wordmark home-mark">
+          <img src={`${import.meta.env.BASE_URL}wordmark.svg`} alt="planner" width="1367" height="468" />
+        </h1>
         <OfflineBadge inline />
         <AccountButton />
       </header>
