@@ -96,3 +96,20 @@
   padding: calc(env(safe-area-inset-top) + 8px) 16px 8px; background: var(--warn-bg);
 }
 .asleep-banner .warn-line { font-weight: 600; }
+
+/* loading: grey cards that appear only if the wait is noticeable */
+.skeleton { display: grid; gap: 14px; animation: skeleton-in .2s .2s backwards; }
+.skeleton-card { display: grid; gap: 12px; padding: 18px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+.bone { display: block; height: 14px; border-radius: 7px; background: var(--soft); animation: breathe 1.4s ease-in-out infinite; }
+.bone.w45 { width: 45%; }
+.bone.w70 { width: 70%; }
+@keyframes skeleton-in { from { opacity: 0; } }
+@keyframes breathe { 50% { opacity: .5; } }
+
+/* needs action, in words */
+.notice {
+  display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 8px 6px 16px;
+  border-radius: 14px; background: var(--warn-bg); color: var(--warn); font-size: 14px; font-weight: 600;
+}
+.notice-text { flex: 1; min-width: 0; display: grid; }
+.notice .btn { background: transparent; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
