@@ -43,3 +43,14 @@ it('green means booked or paid, nothing else', () => {
   const green = rules.filter(([, body]) => /var\(--ok\b/.test(body)).map(([sel]) => sel.trim())
   for (const sel of green) expect(sel).toMatch(/\.ok\b|paid/)
 })
+
+const ruleFor = (sel: string) => rules.find(([s]) => s.trim() === sel)?.[1] ?? ''
+
+it('icon buttons and the grip are 44px targets', () => {
+  expect(ruleFor('.icon-btn')).toMatch(/width:\s*44px;\s*height:\s*44px/)
+  expect(ruleFor('.grip')).toMatch(/width:\s*44px;\s*height:\s*44px/)
+})
+
+it('search boxes show focus, since their input hides its own outline', () => {
+  expect(ruleFor('.search-box:focus-within')).toMatch(/outline:\s*2px solid var\(--ink\)/)
+})

@@ -15,6 +15,8 @@ button { cursor: pointer; }
 a { color: inherit; }
 h1, h2, h3, p { margin: 0; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* inside boxes that clip, the ring is drawn inside so it isn't cut off */
+:where(.list, .rows, .link-card, .map-chips) :focus-visible { outline-offset: -2px; }
 
 .app { text-transform: lowercase; min-height: 100dvh; }
 input, textarea, .keep-case { text-transform: none; }

@@ -11,7 +11,7 @@
 .map-search .place-search { padding: 0; }
 .map-search .search-box { background: transparent; }
 .map-search .results { max-height: 40dvh; overflow: auto; }
-.map-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.map-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 5px 0; margin: -5px 0; }
 .map-chips::-webkit-scrollbar { display: none; }
 .chip-pill {
   flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
@@ -35,3 +35,4 @@
 .place-card-actions .icon-btn[aria-pressed="true"] { background: var(--ink); color: var(--card); }
 .maplibregl-ctrl-group { border-radius: 14px !important; box-shadow: 0 2px 8px rgba(22, 24, 29, .12) !important; }
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
+.map-tab .maplibregl-canvas:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }

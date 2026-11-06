@@ -10,7 +10,7 @@
 /* money */
 .money-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .money-total { font-size: 44px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
-.cur-select { width: auto; min-height: 38px; padding: 6px 10px; border-radius: 999px; font-weight: 600; }
+.cur-select { width: auto; min-height: 44px; padding: 6px 10px; border-radius: 999px; font-weight: 600; }
 .budget-bar { display: flex; height: 12px; border-radius: 999px; background: var(--soft); overflow: hidden; }
 .budget-bar .paid { background: var(--ok); }
 .budget-bar .planned { background: repeating-linear-gradient(135deg, var(--soft) 0 5px, color-mix(in srgb, var(--ink-2) 40%, var(--soft)) 5px 8px); }

@@ -1,10 +1,10 @@
 .trip-phone { min-height: 100dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 76px); }
 .trip-main { width: min(720px, 100%); margin: 0 auto; }
 .trip-header { padding: calc(env(safe-area-inset-top) + 10px) 16px 8px; display: grid; gap: 6px; }
-.crumbs { display: flex; align-items: center; gap: 4px; min-height: 40px; margin-left: -10px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
+.crumbs { display: flex; align-items: center; gap: 4px; min-height: 44px; margin-left: -10px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
 .crumb { display: inline-flex; align-items: center; gap: 4px; }
 .crumb + .crumb::before { content: '/'; color: var(--line); margin-right: 2px; }
-.crumb a { text-decoration: none; font-weight: 600; }
+.crumb a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; font-weight: 600; }
 .crumb a:hover { color: var(--ink); }
 .trip-title-row { display: flex; align-items: flex-start; gap: 8px; }
 .trip-title { flex: 1; min-width: 0; }
