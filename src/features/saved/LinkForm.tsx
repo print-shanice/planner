@@ -1,39 +1,41 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { useSave } from '../../lib/queries'
 import { newId } from '../../lib/id'
 import { hostOf } from '../../lib/embed'
-import { Button } from '../../components/Button'
-import { saveError } from '../../lib/errors'
+import { draftKey, useDraft } from '../../lib/drafts'
+import { FormFooter, useSubmit } from '../../components/FormFooter'
+
+type Draft = { id: string; url: string; title: string; note: string }
 
 export function LinkForm({ tripId, onDone }: { tripId: string | null; onDone: () => void }) {
   const save = useSave('links')
-  // one id for the new link, so saving again after a failure sends the same row
-  const [id] = useState(newId)
-  const [url, setUrl] = useState('')
-  const [title, setTitle] = useState('')
-  const [note, setNote] = useState('')
+  // kept as a draft for this trip, with one id, so saving again after a failure sends the same row
+  const [form, update, settle] = useDraft<Draft>(draftKey(tripId, 'link'), () => ({ id: newId(), url: '', title: '', note: '' }))
+  const { id, url, title, note } = form
+  const set = (p: Partial<Draft>) => update((v) => ({ ...v, ...p }))
   const [problem, setProblem] = useState<string | null>(null)
+  const { run, saving, failure } = useSubmit()
+  const formId = useId()
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault()
     let u = url.trim()
     if (u && !/^https?:\/\//i.test(u)) u = `https://${u}`
     try { new URL(u) } catch { setProblem('check the link'); return }
-    try {
+    setProblem(null)
+    settle()
+    void run(async () => {
       await save.mutateAsync({ id, trip_id: tripId, url: u, title: title.trim() || hostOf(u), note: note.trim() })
       onDone()
-    } catch (err) {
-      setProblem(saveError(err))
-    }
+    })
   }
 
   return (
-    <form className="stack" onSubmit={submit} noValidate>
-      <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={url} autoFocus onChange={(e) => setUrl(e.target.value)} /></label>
-      <label className="field"><span className="label">title</span><input value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-      <label className="field"><span className="label">note</span><textarea value={note} onChange={(e) => setNote(e.target.value)} /></label>
-      {problem && <p className="warn-line" role="alert">{problem}</p>}
-      <div className="row form-actions"><span className="spacer" /><Button variant="primary" type="submit">save</Button></div>
+    <form id={formId} className="stack" onSubmit={submit} noValidate>
+      <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={url} autoFocus onChange={(e) => set({ url: e.target.value })} /></label>
+      <label className="field"><span className="label">title</span><input value={title} onChange={(e) => set({ title: e.target.value })} /></label>
+      <label className="field"><span className="label">note</span><textarea value={note} onChange={(e) => set({ note: e.target.value })} /></label>
+      <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure} />
     </form>
   )
 }

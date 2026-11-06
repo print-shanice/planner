@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
@@ -98,8 +98,26 @@ it('saving a link again after it failed sends the same new row, not a second one
   render(<LinkForm tripId="lap" onDone={vi.fn()} />)
   await userEvent.type(screen.getByLabelText('link'), 'https://example.com')
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
-  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'retry' }))
   const [a, b] = db.save.mock.calls.map((c) => c[0].id)
   expect(a).toEqual(expect.any(String))
   expect(b).toBe(a)
+})
+
+it('a new link keeps its draft per trip and says when it could not save', async () => {
+  const first = render(<LinkForm tripId="lap" onDone={vi.fn()} />)
+  await userEvent.type(screen.getByLabelText('link'), 'example.com')
+  first.unmount()
+  render(<LinkForm tripId="par" onDone={vi.fn()} />)
+  expect(screen.getByLabelText('link')).toHaveValue('')
+  cleanup()
+  db.save.mockReset().mockRejectedValueOnce(new Error('asleep')).mockResolvedValue({})
+  const done = vi.fn()
+  render(<LinkForm tripId="lap" onDone={done} />)
+  expect(screen.getByLabelText('link')).toHaveValue('example.com')
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  expect(await screen.findByText("couldn't save")).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'retry' }))
+  expect(db.save.mock.calls[1][0].id).toBe(db.save.mock.calls[0][0].id)
+  expect(done).toHaveBeenCalled()
 })
