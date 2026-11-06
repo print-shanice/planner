@@ -6,6 +6,7 @@ import { useAuth } from './auth'
 import { clearTickets } from './ticketCache'
 import { pausePersist, persistPaused } from './wipe'
 import { forgetPending } from './pending'
+import { forgetDrafts } from './drafts'
 
 export const persister = createAsyncStoragePersister({
   storage: {
@@ -58,5 +59,6 @@ export async function forgetDevice(qc: QueryClient): Promise<void> {
   pausePersist()
   qc.clear()
   forgetPending()
+  forgetDrafts()
   await Promise.allSettled([persister.removeClient(), clearTickets()])
 }

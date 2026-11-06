@@ -9,6 +9,7 @@ vi.mock('../../src/lib/supabase', () => ({ supabase: {} }))
 
 import { persister, useOnline, useCanEdit, forgetDevice, queryDefaults } from '../../src/lib/offline'
 import { failSave, failureOf } from '../../src/lib/pending'
+import { draftKey, readDraft, writeDraft } from '../../src/lib/drafts'
 import { getTicket, putTicket } from '../../src/lib/ticketCache'
 import { resumePersist } from '../../src/lib/wipe'
 import { keys } from '../../src/lib/queries'
@@ -45,14 +46,16 @@ it('the cache survives a reload via IndexedDB', async () => {
   expect(b.getQueryData(keys.trips)).toEqual([{ id: 't1', name: 'lapland' }])
 })
 
-it('forgetDevice empties the cache, the saved copy and the tickets', async () => {
+it('forgetDevice empties the cache, the saved copy, drafts and the tickets', async () => {
   const qc = new QueryClient()
   qc.setQueryData(keys.trips, [{ id: 't1', name: 'lapland' }])
   await persistQueryClientSave({ queryClient: qc, persister })
   await putTicket('f1', new Blob(['ticket'], { type: 'text/plain' }))
   failSave('stops', 's1', { title: 'x' }, false)
+  writeDraft(draftKey('lis', 'note'), { title: 'tram 28' })
   await forgetDevice(qc)
   expect(failureOf('stops', 's1')).toBeUndefined()
+  expect(readDraft(draftKey('lis', 'note'))).toBeUndefined()
   expect(qc.getQueryData(keys.trips)).toBeUndefined()
   const again = new QueryClient()
   await persistQueryClientRestore({ queryClient: again, persister })
