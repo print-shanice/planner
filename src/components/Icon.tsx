@@ -1,5 +1,8 @@
 const P: Record<string, string> = {
   plus: 'M12 5v14M5 12h14',
+  minus: 'M5 12h14',
+  play: 'M8 5.5v13l10-6.5z',
+  pause: 'M9 5v14M15 5v14',
   back: 'M15 5l-7 7 7 7',
   close: 'M6 6l12 12M18 6L6 18',
   plan: 'M4 6h16M4 12h16M4 18h10',

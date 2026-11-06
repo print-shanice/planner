@@ -44,6 +44,17 @@ const mk = vi.hoisted(() => {
 })
 vi.mock('maplibre-gl', () => ({ default: { Map: mk.FakeMap, Marker: mk.FakeMarker } }))
 
+// animation frames run only when a test calls tick()
+const frames = new Map<number, FrameRequestCallback>()
+let nextFrame = 0
+const tick = () => { const queued = [...frames.values()]; frames.clear(); for (const cb of queued) cb(0) }
+beforeEach(() => {
+  frames.clear()
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { frames.set(++nextFrame, cb); return nextFrame })
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => { frames.delete(id) })
+})
+afterEach(() => vi.unstubAllGlobals())
+
 import { Globe, fillFor } from '../../src/features/home/Globe'
 import { GlobeTip, cityLine } from '../../src/features/home/GlobeTip'
 
@@ -177,4 +188,74 @@ it('keeps a tip near the edge inside the globe', () => {
 it('long city lists are shortened', () => {
   expect(cityLine(['a', 'b', 'c', 'd', 'e', 'f'])).toBe('a · b · c · d +2')
   expect(cityLine(['a', 'b'])).toBe('a · b')
+})
+
+it('zoom buttons zoom the globe', () => {
+  const { m } = show()
+  fireEvent.click(screen.getByRole('button', { name: 'zoom in' }))
+  fireEvent.click(screen.getByRole('button', { name: 'zoom out' }))
+  expect(m.zoomIn).toHaveBeenCalledTimes(1)
+  expect(m.zoomOut).toHaveBeenCalledTimes(1)
+})
+
+it('turns until you press pause, and play starts it again', () => {
+  const { m } = show()
+  const spin = screen.getByRole('button', { name: 'spin' })
+  expect(spin).toHaveAttribute('aria-pressed', 'true')
+  act(tick)
+  expect(m.jumpTo.mock.calls[0][0].center[0]).toBeCloseTo(10.04)
+  fireEvent.click(spin)
+  expect(spin).toHaveAttribute('aria-pressed', 'false')
+  m.jumpTo.mockClear()
+  act(tick)
+  expect(m.jumpTo).not.toHaveBeenCalled()
+  fireEvent.click(spin)
+  act(tick)
+  expect(m.jumpTo).toHaveBeenCalled()
+})
+
+it('dragging or zooming stops the spin', () => {
+  const { m } = show()
+  act(() => m.fire('dragstart'))
+  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'false')
+  fireEvent.click(screen.getByRole('button', { name: 'spin' }))
+  act(() => m.fire('zoomstart'))
+  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+it('an open tip holds the globe still without stopping the spin', () => {
+  const { m } = show()
+  act(() => screen.getByRole('button', { name: 'Portugal' }).focus())
+  act(tick)
+  expect(m.jumpTo).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+it('starts still when the system asks for less motion', () => {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce') }))
+  show()
+  expect(screen.getByRole('button', { name: 'spin' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+it('a trackpad pinch zooms the globe, a plain scroll is left to the page', () => {
+  const { m, view } = show()
+  const wrap = view.container.querySelector('.globe-wrap')!
+  const pinch = new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true })
+  wrap.dispatchEvent(pinch)
+  expect(pinch.defaultPrevented).toBe(true)
+  expect(m.zoomTo.mock.calls[0][0]).toBeCloseTo(1.9)
+  const scroll = new WheelEvent('wheel', { deltaY: 100, cancelable: true, bubbles: true })
+  wrap.dispatchEvent(scroll)
+  expect(scroll.defaultPrevented).toBe(false)
+  expect(m.zoomTo).toHaveBeenCalledTimes(1)
+})
+
+it('a pinch on the globe never zooms the page in safari', () => {
+  const { view } = show()
+  const wrap = view.container.querySelector('.globe-wrap')!
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    const e = new Event(type, { cancelable: true })
+    wrap.dispatchEvent(e)
+    expect(e.defaultPrevented).toBe(true)
+  }
 })

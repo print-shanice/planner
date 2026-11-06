@@ -38,6 +38,10 @@
 .globe-tip span { font-size: 13px; line-height: 1.35; color: color-mix(in srgb, var(--card) 72%, transparent); }
 @keyframes tip-in { from { opacity: 0; transform: translate(-50%, calc(-100% - 8px)); } }
 
+.globe-controls { position: absolute; right: 0; bottom: 6px; display: grid; gap: 6px; }
+.globe-controls .icon-btn { width: 44px; height: 44px; background: var(--card); border: 1px solid var(--line); }
+.globe-controls .icon-btn:hover { background: var(--soft); }
+
 .totals { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; text-align: center; }
 .totals div { display: grid; gap: 2px; }
 .totals dt { font-size: 30px; font-weight: 700; line-height: 1.1; }

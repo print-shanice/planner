@@ -3,12 +3,15 @@ import maplibregl, { type ExpressionSpecification, type StyleSpecification } fro
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GlobePin } from '../../lib/countries'
 import { GlobeTip } from './GlobeTip'
+import { Icon } from '../../components/Icon'
 
 type Status = Map<string, 'been' | 'planned'>
 type Props = { status: Status; pins: GlobePin[]; onCountry: (code: string) => void }
 type Placed = { pin: GlobePin; marker: maplibregl.Marker; el: HTMLButtonElement }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+const MIN_ZOOM = 0.6
+const MAX_ZOOM = 4
 
 // red = been there, pale red = planned
 export function fillFor(status: Status): ExpressionSpecification {
@@ -23,6 +26,9 @@ export function fillFor(status: Status): ExpressionSpecification {
 
 export function Globe({ status, pins, onCountry }: Props) {
   const box = useRef<HTMLDivElement>(null)
+  const wrap = useRef<HTMLDivElement>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [spinning, setSpinning] = useState(() => !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
   const map = useRef<maplibregl.Map | null>(null)
   const placed = useRef<Placed[]>([])
   const open = useRef<string | null>(null)
@@ -76,7 +82,7 @@ export function Globe({ status, pins, onCountry }: Props) {
     let m: maplibregl.Map
     try {
       m = new maplibregl.Map({
-        container: box.current, style, center: [10, 30], zoom: 0.9, minZoom: 0.6, maxZoom: 4,
+        container: box.current, style, center: [10, 30], zoom: 0.9, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM,
         attributionControl: false, scrollZoom: false, dragRotate: false, pitchWithRotate: false,
         renderWorldCopies: false,
       })
@@ -98,6 +104,10 @@ export function Globe({ status, pins, onCountry }: Props) {
     })
     m.on('mouseleave', 'countries-fill', () => { m.getCanvas().style.cursor = '' })
     m.on('move', place)
+    m.on('load', () => setLoaded(true))
+    const stop = () => setSpinning(false)
+    m.on('dragstart', stop)
+    m.on('zoomstart', stop)
 
     return () => {
       for (const x of placed.current) x.marker.remove()
@@ -137,11 +147,54 @@ export function Globe({ status, pins, onCountry }: Props) {
     place()
   }, [pins]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // turns slowly until someone drags or zooms; an open tip holds it still
+  useEffect(() => {
+    const m = map.current
+    if (!m || !loaded || !spinning) return
+    let frame = requestAnimationFrame(function turn() {
+      if (!open.current && !m.isMoving()) {
+        const c = m.getCenter()
+        m.jumpTo({ center: [c.lng + 0.04, c.lat] })
+      }
+      frame = requestAnimationFrame(turn)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [loaded, spinning])
+
+  // pinches zoom the globe, never the page; a plain scroll still scrolls the page
+  useEffect(() => {
+    const el = wrap.current
+    if (!el) return
+    const wheel = (e: WheelEvent) => {
+      const m = map.current
+      if (!e.ctrlKey || !m) return
+      e.preventDefault()
+      m.zoomTo(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, m.getZoom() - e.deltaY / 100)), { duration: 0 })
+    }
+    const block = (e: Event) => e.preventDefault()
+    const safari = ['gesturestart', 'gesturechange', 'gestureend']
+    el.addEventListener('wheel', wheel, { passive: false })
+    for (const t of safari) el.addEventListener(t, block, { passive: false })
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      for (const t of safari) el.removeEventListener(t, block)
+    }
+  }, [])
+
   const pin = tip ? pins.find((p) => p.code === tip.code) : undefined
   return (
-    <div className="globe-wrap" onPointerDownCapture={(e) => { touch.current = e.pointerType === 'touch' }}>
+    <div ref={wrap} className="globe-wrap" onPointerDownCapture={(e) => { touch.current = e.pointerType === 'touch' }}>
       <div ref={box} className="globe" role="region" aria-label="globe" />
       {tip && pin && <GlobeTip id={tipId} pin={pin} x={tip.x} y={tip.y} width={box.current?.clientWidth ?? 0} />}
+      {loaded && (
+        <div className="globe-controls">
+          <button type="button" className="icon-btn" aria-label="zoom in" onClick={() => map.current?.zoomIn()}><Icon name="plus" size={18} /></button>
+          <button type="button" className="icon-btn" aria-label="zoom out" onClick={() => map.current?.zoomOut()}><Icon name="minus" size={18} /></button>
+          <button type="button" className="icon-btn" aria-label="spin" aria-pressed={spinning} onClick={() => setSpinning((s) => !s)}>
+            <Icon name={spinning ? 'pause' : 'play'} size={18} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
