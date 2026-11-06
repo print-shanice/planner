@@ -90,6 +90,7 @@ it('no trips shows only the empty title', () => {
   expect(screen.getByText('no trips yet')).toBeVisible()
   expect(screen.queryByTestId('trip-card')).toBeNull()
   expect(screen.queryByRole('heading', { name: 'past trips' })).toBeNull()
+  expect(screen.queryByText('life well lived')).toBeNull()
 })
 
 it('past appears once a top-level trip has ended', () => {
@@ -110,6 +111,15 @@ it('totals count countries, cities and trips', () => {
   expect(totals).toHaveTextContent(/2\s*countries/)
   expect(totals).toHaveTextContent(/2\s*cities/)
   expect(totals).toHaveTextContent(/4\s*trips/)
+})
+
+it('the numbers sit under "life well lived"', () => {
+  db.trips = europe()
+  show()
+  const title = screen.getByText('life well lived')
+  const totals = screen.getByTestId('totals')
+  expect(title.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(totals).toHaveAttribute('aria-labelledby', title.id)
 })
 
 it('trip form saves dates and currency', async () => {
