@@ -3,7 +3,22 @@
   padding: calc(env(safe-area-inset-top) + 28px) 16px calc(env(safe-area-inset-bottom) + 48px);
   display: grid; gap: 28px;
 }
-.home-mark { text-align: center; font-size: 44px; line-height: 1; }
+.home-top { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.home-mark { flex: 1; font-size: 40px; line-height: 1; }
+.home-world { display: grid; gap: 16px; }
+
+/* laptop: plans on the left, globe on the right, like the trip page */
+@media (min-width: 1024px) {
+  .home {
+    width: min(1120px, 100%); padding-inline: 32px; column-gap: 56px; align-items: start;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+    grid-template-areas: "top top" "next world" "past world";
+  }
+  .home-top { grid-area: top; }
+  .home-next { grid-area: next; }
+  .home-past { grid-area: past; }
+  .home-world { grid-area: world; position: sticky; top: 24px; }
+}
 
 .globe-wrap { position: relative; width: min(100%, 420px); aspect-ratio: 1; margin: -8px auto -12px; touch-action: none; }
 .globe { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: transparent; }

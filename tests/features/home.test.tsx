@@ -8,6 +8,7 @@ const db = vi.hoisted(() => ({
   trips: [] as unknown[],
   stops: [] as unknown[],
   links: [] as unknown[],
+  globe: null as null | { pins: { code: string }[] },
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   remove: vi.fn(() => Promise.resolve()),
 }))
@@ -19,9 +20,13 @@ vi.mock('../../src/lib/queries', () => ({
   useSave: () => ({ mutateAsync: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, isPending: false }),
 }))
-vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
+const env = vi.hoisted(() => ({ online: true }))
+vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => env.online }))
 vi.mock('../../src/features/home/Globe', () => ({
-  Globe: ({ onCountry }: { onCountry: (c: string) => void }) => <button onClick={() => onCountry('FI')}>globe</button>,
+  Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[] }) => {
+    db.globe = p
+    return <button onClick={() => p.onCountry('FI')}>globe</button>
+  },
 }))
 
 import { HomePage } from '../../src/features/home/HomePage'
@@ -42,6 +47,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-11-05T10:00:00'))
   db.trips = []; db.stops = []; db.links = []; db.save.mockClear(); db.remove.mockClear()
+  db.globe = null; env.online = true
 })
 afterEach(() => vi.useRealTimers())
 
@@ -53,9 +59,10 @@ function europe() {
   return [sum, lap, ex, par] as Trip[]
 }
 
-it('upcoming shows the soonest top-level trip first with its countdown', () => {
+it('next up shows the soonest top-level trip first with its countdown', () => {
   db.trips = europe()
   show()
+  expect(screen.getByRole('heading', { name: 'next up' })).toBeInTheDocument()
   const cards = screen.getAllByTestId('trip-card')
   expect(cards[0]).toHaveTextContent('europe exchange 2027')
   expect(within(cards[0]).getByText('84')).toBeInTheDocument()
@@ -75,13 +82,13 @@ it('no trips shows only the empty title', () => {
   show()
   expect(screen.getByText('no trips yet')).toBeVisible()
   expect(screen.queryByTestId('trip-card')).toBeNull()
-  expect(screen.queryByText('past')).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'past trips' })).toBeNull()
 })
 
 it('past appears once a top-level trip has ended', () => {
   db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' })]
   show()
-  expect(screen.getByRole('heading', { name: 'past' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'past trips' })).toBeInTheDocument()
   expect(screen.getByText('bali')).toBeInTheDocument()
 })
 
@@ -159,11 +166,32 @@ it('choosing a country with one trip opens it', async () => {
   expect(screen.getByText('opened trip')).toBeInTheDocument()
 })
 
-it('unsorted links show on home only when any exist', () => {
-  db.trips = europe()
-  show()
-  expect(screen.queryByRole('heading', { name: 'unsorted' })).toBeNull()
+it('home has only the next up and past trips headings', () => {
+  db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' }), ...europe()]
   db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
   show()
-  expect(screen.getByRole('heading', { name: 'unsorted' })).toBeInTheDocument()
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['next up', 'past trips'])
+  expect(screen.queryByText('cafe reel')).toBeNull()
+})
+
+it('when every trip is over, next up says so', () => {
+  db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' })]
+  show()
+  expect(screen.getByText('nothing coming up')).toBeInTheDocument()
+})
+
+it('the globe gets a pin for each country with a located place', async () => {
+  db.trips = europe()
+  db.stops = [stop({ trip_id: 'lap', place: place({ country: 'FI', lat: 66.5, lng: 25.7 }) })] as Stop[]
+  show()
+  await screen.findByRole('button', { name: 'globe' })
+  expect(db.globe!.pins.map((p) => p.code)).toEqual(['FI'])
+})
+
+it('offline shows the inline pill in the header', () => {
+  env.online = false
+  show()
+  const pill = screen.getByRole('status')
+  expect(pill).toHaveTextContent('offline')
+  expect(pill).not.toHaveClass('offline-badge')
 })

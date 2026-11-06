@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useLinks, useStops, useTrips } from '../../lib/queries'
+import { useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeTotals, tripsInCountry } from '../../lib/countries'
 import { countdown, todayISO } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
@@ -12,7 +12,6 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { nextSideTrips, TripCard, TripRow } from './Upcoming'
 import { TripForm } from './TripForm'
-import { LinkCard } from '../saved/LinkCard'
 
 // maplibre is large and needs webgl; load it after the page shows
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
@@ -20,7 +19,6 @@ const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 export function HomePage() {
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
-  const unsorted = (useLinks().data ?? []).filter((l) => !l.trip_id)
   const canEdit = useCanEdit()
   const navigate = useNavigate()
   const today = todayISO()
@@ -47,21 +45,20 @@ export function HomePage() {
 
   return (
     <main className="home">
-      <OfflineBadge />
-      <h1 className="wordmark home-mark">planner</h1>
-      <Suspense fallback={<div className="globe-wrap" />}>
-        <Globe status={status} pins={pins} onCountry={pickCountry} />
-      </Suspense>
-      {trips.length > 0 && <Totals {...totals} />}
+      <header className="home-top">
+        <h1 className="wordmark home-mark">planner</h1>
+        <OfflineBadge inline />
+      </header>
 
-      <section className="home-section">
+      <section className="home-section home-next">
         <div className="section-head">
-          <h2 className="head">upcoming</h2>
+          <h2 className="head">next up</h2>
           <button type="button" className="icon-btn filled" aria-label="new trip" disabled={!canEdit} onClick={() => setAdding(true)}>
             <Icon name="plus" />
           </button>
         </div>
         {trips.length === 0 && <EmptyState title="no trips yet" />}
+        {trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
         {upcoming.map((t, i) => (
           <div key={t.id} className="stack-sm">
             <TripCard trip={t} trips={trips} today={today} />
@@ -72,16 +69,17 @@ export function HomePage() {
         ))}
       </section>
 
-      {unsorted.length > 0 && (
-        <section className="home-section">
-          <div className="section-head"><h2 className="head">unsorted</h2></div>
-          {unsorted.map((l) => <LinkCard key={l.id} link={l} trips={trips} />)}
-        </section>
-      )}
+      <div className="home-world">
+        <Suspense fallback={<div className="globe-wrap" />}>
+          <Globe status={status} pins={pins} onCountry={pickCountry} />
+        </Suspense>
+        {trips.length > 0 && <Totals {...totals} />}
+      </div>
 
+      {/* only shows once a trip has ended */}
       {past.length > 0 && (
-        <section className="home-section">
-          <div className="section-head"><h2 className="head">past</h2></div>
+        <section className="home-section home-past">
+          <div className="section-head"><h2 className="head">past trips</h2></div>
           <div className="rows">{past.map((t) => <TripRow key={t.id} trip={t} />)}</div>
         </section>
       )}
