@@ -5,6 +5,7 @@ import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
+import { SaveFailed } from '../../components/SaveFailed'
 
 export function PackingTab({ trip }: { trip: Trip }) {
   const pq = usePacking()
@@ -38,6 +39,7 @@ export function PackingTab({ trip }: { trip: Trip }) {
                 <span>{p.text}</span>
               </button>
               {canEdit && <button type="button" className="icon-btn" aria-label={`remove ${p.text}`} onClick={() => remove.mutate(p.id)}><Icon name="close" size={18} /></button>}
+              <SaveFailed table="packing" id={p.id} />
             </li>
           ))}
         </ul>

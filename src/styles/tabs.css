@@ -50,3 +50,7 @@
 .packed .pack-item > span:last-child { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--line); }
 .pack-add { background: var(--card); border: 1px solid var(--line); }
 .pack-add input::placeholder, .map-search input::placeholder { color: var(--ink-2); }
+
+.list > li:has(.save-failed) { flex-wrap: wrap; }
+.list .save-failed { padding: 0 16px 10px; }
+.link-card .save-failed { padding: 0 16px 12px; }

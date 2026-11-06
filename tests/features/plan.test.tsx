@@ -28,6 +28,7 @@ vi.mock('../../src/lib/walk', async (orig) => ({ ...(await orig<typeof import('.
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchPlaces: db.search }))
 
 import { PlanTab } from '../../src/features/plan/PlanTab'
+import { failSave, forgetPending } from '../../src/lib/pending'
 
 const lap = () => trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', base: place({ name: 'rovaniemi', lat: 66.5, lng: 25.7 }) })
 
@@ -188,4 +189,17 @@ it('a failed refresh keeps the saved plan with a retry', async () => {
   expect(screen.getByRole('alert')).toHaveTextContent("couldn't load")
   await userEvent.click(screen.getByRole('button', { name: 'retry' }))
   expect(refetch).toHaveBeenCalled()
+})
+
+afterEach(() => forgetPending())
+
+it('a stop whose save failed says so on its row', async () => {
+  const t = lap()
+  db.trips = [t]
+  db.stops = [stop({ id: 'x1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08' })]
+  failSave('stops', 'x1', { title: 'arktikum' }, false)
+  show(t)
+  expect(within(day('2027-02-08')).getByRole('alert')).toHaveTextContent("couldn't save")
+  await userEvent.click(within(day('2027-02-08')).getByRole('button', { name: 'retry' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'x1', title: 'arktikum' })
 })

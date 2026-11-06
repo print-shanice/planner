@@ -3,6 +3,7 @@ import type { Stop } from '../../lib/types'
 import { dayColor, nights } from '../../lib/dates'
 import { Pill } from '../../components/Pill'
 import { Icon } from '../../components/Icon'
+import { SaveFailed } from '../../components/SaveFailed'
 
 export type RowVariant = 'stop' | 'staying' | 'checkout'
 
@@ -47,21 +48,24 @@ export function StopRow({ stop, variant, n, colorIndex, clash, onOpen, onGrab, d
     ? <span className="num-badge num" data-testid="stop-num" style={{ background: dayColor(colorIndex) }}>{n}</span>
     : <span className="num-badge quiet"><Icon name="bed" size={16} /></span>
   return (
-    <div className={`stop-row${dragging ? ' dragging' : ''}`} style={offset ? { transform: `translateY(${offset}px)` } : undefined} data-stop={stop.id}>
-      {mark}
-      <button type="button" className="stop-main" onClick={() => onOpen?.(stop)} disabled={!onOpen}>
-        <span className="stop-title">
-          {stop.kind === 'journey' && stop.mode && <Icon name={MODE_ICON[stop.mode] ?? 'train'} size={16} />}
-          <span>{title}</span>
-        </span>
-        {sub && <span className="stop-sub muted">{sub}</span>}
-      </button>
-      {variant === 'stop' && (clash ? <Pill status="warn" label="dates clash" /> : <Pill status={stop.status} />)}
-      {onGrab && variant === 'stop' && (
-        <button type="button" className="grip" aria-label={`reorder ${stop.title}`} onPointerDown={onGrab}>
-          <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true"><g fill="currentColor">{[3, 9, 15].flatMap((y) => [<circle key={`a${y}`} cx="3" cy={y} r="1.4" />, <circle key={`b${y}`} cx="9" cy={y} r="1.4" />])}</g></svg>
+    <>
+      <div className={`stop-row${dragging ? ' dragging' : ''}`} style={offset ? { transform: `translateY(${offset}px)` } : undefined} data-stop={stop.id}>
+        {mark}
+        <button type="button" className="stop-main" onClick={() => onOpen?.(stop)} disabled={!onOpen}>
+          <span className="stop-title">
+            {stop.kind === 'journey' && stop.mode && <Icon name={MODE_ICON[stop.mode] ?? 'train'} size={16} />}
+            <span>{title}</span>
+          </span>
+          {sub && <span className="stop-sub muted">{sub}</span>}
         </button>
-      )}
-    </div>
+        {variant === 'stop' && (clash ? <Pill status="warn" label="dates clash" /> : <Pill status={stop.status} />)}
+        {onGrab && variant === 'stop' && (
+          <button type="button" className="grip" aria-label={`reorder ${stop.title}`} onPointerDown={onGrab}>
+            <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true"><g fill="currentColor">{[3, 9, 15].flatMap((y) => [<circle key={`a${y}`} cx="3" cy={y} r="1.4" />, <circle key={`b${y}`} cx="9" cy={y} r="1.4" />])}</g></svg>
+          </button>
+        )}
+      </div>
+      {variant === 'stop' && <SaveFailed table="stops" id={stop.id} />}
+    </>
   )
 }

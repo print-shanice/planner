@@ -11,6 +11,7 @@ import { Icon } from '../../components/Icon'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { LinkCard } from './LinkCard'
 import { ItemMenu } from './ItemMenu'
+import { SaveFailed } from '../../components/SaveFailed'
 
 function PlaceItem({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[] }) {
   const save = useSave('stops')
@@ -52,6 +53,7 @@ function PlaceItem({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[
           </>)}
         </ItemMenu>
       )}
+      <SaveFailed table="stops" id={stop.id} />
     </li>
   )
 }

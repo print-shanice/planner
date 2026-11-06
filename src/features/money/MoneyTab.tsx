@@ -14,6 +14,7 @@ import { Pill } from '../../components/Pill'
 import { Sheet } from '../../components/Sheet'
 import { useStopSheet } from '../stops/StopSheet'
 import { CostForm } from './CostForm'
+import { SaveFailed } from '../../components/SaveFailed'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
@@ -130,6 +131,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
                   {c.status === 'paid' && <Pill status="paid" />}
                   <span className="num">{formatMoney(c.amount, c.currency)}</span>
                 </button>
+                <SaveFailed table="costs" id={c.id} />
               </li>
             ))}
           </ul>

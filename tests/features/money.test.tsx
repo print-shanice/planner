@@ -16,6 +16,7 @@ vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () 
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ userId: 'u1', status: 'signed-in' }) }))
 
 import { MoneyTab } from '../../src/features/money/MoneyTab'
+import { failSave, forgetPending } from '../../src/lib/pending'
 
 const show = (t: any) => render(<MemoryRouter><MoneyTab trip={t} /></MemoryRouter>)
 
@@ -78,4 +79,15 @@ it('costs still loading are not "no costs yet"', () => {
   expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
   expect(screen.queryByText('no costs yet')).toBeNull()
   expect(screen.queryByTestId('money-total')).toBeNull()
+})
+
+afterEach(() => forgetPending())
+
+it('a cost whose save failed says so', () => {
+  const t = trip({ id: 'lap' })
+  db.trips = [t]
+  db.costs = [cost({ id: 'c7', trip_id: 'lap', title: 'sauna' })]
+  failSave('costs', 'c7', { amount: 12 }, false)
+  show(t)
+  expect(within(screen.getByRole('region', { name: 'all costs' })).getByRole('alert')).toHaveTextContent("couldn't save")
 })

@@ -6,6 +6,7 @@ import { embedFor, hostOf, safeUrl } from '../../lib/embed'
 import { Icon } from '../../components/Icon'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { ItemMenu } from './ItemMenu'
+import { SaveFailed } from '../../components/SaveFailed'
 import { runEmbeds } from './embedScripts'
 
 export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
@@ -63,6 +64,7 @@ export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
           </ItemMenu>
         )}
       </div>
+      <SaveFailed table="links" id={link.id} />
     </article>
   )
 }

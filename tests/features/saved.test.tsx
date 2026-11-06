@@ -15,6 +15,7 @@ vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () 
 
 import { SavedTab } from '../../src/features/saved/SavedTab'
 import { LinkForm } from '../../src/features/saved/LinkForm'
+import { failSave, forgetPending } from '../../src/lib/pending'
 
 const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
 
@@ -76,4 +77,18 @@ it('links still loading are not "nothing saved yet"', () => {
   show()
   expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
   expect(screen.queryByText('nothing saved yet')).toBeNull()
+})
+
+afterEach(() => forgetPending())
+
+it('a link whose save failed says so', () => {
+  failSave('links', 'l2', { trip_id: 'par' }, false)
+  show()
+  expect(within(screen.getAllByTestId('link-card')[0]).getByRole('alert')).toHaveTextContent("couldn't save")
+})
+
+it('a saved place whose save failed says so', () => {
+  failSave('stops', 's9', { day: '2027-02-08' }, false)
+  show()
+  expect(within(screen.getByRole('region', { name: 'saved places' })).getByRole('alert')).toHaveTextContent("couldn't save")
 })

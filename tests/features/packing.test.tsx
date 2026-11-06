@@ -11,6 +11,7 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 
 import { PackingTab } from '../../src/features/packing/PackingTab'
+import { failSave, forgetPending } from '../../src/lib/pending'
 
 it('packing: add, tick, count', async () => {
   db.packing = [
@@ -47,4 +48,16 @@ it('the list still loading shows grey rows and no add field yet', () => {
   render(<PackingTab trip={trip({ id: 'lap' })} />)
   expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
   expect(screen.queryByRole('textbox', { name: 'add to pack' })).toBeNull()
+})
+
+afterEach(() => forgetPending())
+
+it('an item whose save failed says so, and retries', async () => {
+  db.packing = [{ id: 'p2', trip_id: 'lap', text: 'passport', done: true, position: 0 }]
+  db.save.mockReset().mockResolvedValue({})
+  failSave('packing', 'p2', { done: true }, false)
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.getByRole('alert')).toHaveTextContent("couldn't save")
+  await userEvent.click(screen.getByRole('button', { name: 'retry' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'p2', done: true })
 })

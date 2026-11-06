@@ -41,7 +41,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
   function addPlace(p: Place, date: string | null) {
     const same = stops.filter((s) => (s.day ?? null) === date)
     const position = same.length ? Math.max(...same.map((s) => s.position)) + 1 : 0
-    return save.mutateAsync({ trip_id: trip.id, kind: 'place', title: p.name, day: date, position, place: p, status: 'idea' })
+    save.mutate({ trip_id: trip.id, kind: 'place', title: p.name, day: date, position, place: p, status: 'idea' })
   }
 
   function pick(d: string) {
@@ -65,11 +65,11 @@ export function PlanTab({ trip }: { trip: Trip }) {
         return (
           <DayCard key={d.date} trip={trip} date={d.date} entries={d.entries} colorIndex={idx}
             dayNumber={inTrip ? idx + 1 : null} clash={clash} canEdit={canEdit} onOpen={onOpen}
-            onAddPlace={(p, date) => { addPlace(p, date) }} />
+            onAddPlace={addPlace} />
         )
       })}
       <NoDate trip={trip} stops={undated} canAdd={canEdit && all.length === 0} onOpen={onOpen}
-        onAddPlace={(p) => { addPlace(p, null) }} />
+        onAddPlace={(p) => addPlace(p, null)} />
     </div>
   )
 }
