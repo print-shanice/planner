@@ -325,3 +325,29 @@ it('closing mid-save leaves no draft behind', async () => {
   d = screen.getByRole('dialog')
   expect(within(d).getByLabelText('title')).toHaveValue('')
 })
+
+it('closing an edit mid-save does not bring the sheet back when the save lands', async () => {
+  let finish!: () => void
+  db.save.mockImplementationOnce((_t: string, r: any) => new Promise((res) => { finish = () => res(r) }))
+  const d = await openEdit()
+  await userEvent.type(within(d).getByLabelText('name'), ' museum')
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'close' }))
+  await act(async () => { finish() })
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it('a new item that lands after its sheet closed leaves the next sheet open', async () => {
+  let finish!: () => void
+  db.save.mockImplementationOnce((_t: string, r: any) => new Promise((res) => { finish = () => res(r) }))
+  show(<><Opener kind="note" /><Opener id="s1" /></>)
+  await userEvent.click(screen.getAllByRole('button', { name: 'open' })[0])
+  let d = screen.getByRole('dialog')
+  await userEvent.type(within(d).getByLabelText('title'), 'buy gloves')
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'close' }))
+  await userEvent.click(screen.getAllByRole('button', { name: 'open' })[1])
+  await act(async () => { finish() })
+  d = screen.getByRole('dialog', { name: 'arktikum' })
+  expect(d).toBeInTheDocument()
+})

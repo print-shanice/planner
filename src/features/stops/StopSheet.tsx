@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Stop, StopKind } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { newId } from '../../lib/id'
@@ -23,14 +23,16 @@ export function blankStop(kind: StopKind, tripId: string, defaults: Partial<Stop
 
 export function StopSheetProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(null)
+  // every sheet gets its own number, never reused, so a late save can tell whether its sheet is still the one open
+  const seq = useRef(0)
   const stops = useStops().data
   const trips = useTrips().data
 
-  const openStop = useCallback((id: string) => setState((s) => ({ n: (s?.n ?? 0) + 1, mode: 'view', id })), [])
-  const editStop = useCallback((id: string) => setState((s) => ({ n: (s?.n ?? 0) + 1, mode: 'edit', id })), [])
+  const openStop = useCallback((id: string) => setState({ n: ++seq.current, mode: 'view', id }), [])
+  const editStop = useCallback((id: string) => setState({ n: ++seq.current, mode: 'edit', id }), [])
   const newStop = useCallback((kind: StopKind, tripId: string, defaults?: Partial<Stop>) => {
     const draft = blankStop(kind, tripId, defaults)
-    setState((s) => ({ n: (s?.n ?? 0) + 1, mode: 'edit', id: draft.id, draft }))
+    setState({ n: ++seq.current, mode: 'edit', id: draft.id, draft })
   }, [])
   const api = useMemo(() => ({ openStop, editStop, newStop }), [openStop, editStop, newStop])
 
@@ -46,8 +48,9 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
       <Sheet open={!!state && !!stop} title={title} onClose={close}>
         {state && stop && (state.mode === 'edit'
           ? <StopForm key={`${state.n}-edit`} stop={stop} trip={trip} isNew={!!state.draft}
-              onDone={() => (state.draft ? close() : setState({ ...state, mode: 'view' }))} />
-          : <StopView key={`${state.n}-view`} stop={stop} onClose={close} onEdit={() => setState({ ...state, n: state.n + 1, mode: 'edit' })} />)}
+              // a save can land after its sheet was closed or another one opened; only touch this sheet
+              onDone={() => setState((s) => (s?.n !== state.n ? s : state.draft ? null : { ...s, mode: 'view' }))} />
+          : <StopView key={`${state.n}-view`} stop={stop} onClose={close} onEdit={() => setState({ ...state, n: ++seq.current, mode: 'edit' })} />)}
       </Sheet>
     </Ctx.Provider>
   )

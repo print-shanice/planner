@@ -27,11 +27,25 @@ export function clearDraft(key: string): void {
 }
 export function forgetDrafts(): void { writeAll({}) }
 
+// a draft kept by an older version of a form has other fields; restoring it would leave some undefined
+function sameShape(a: unknown, b: unknown): boolean {
+  const plain = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x)
+  if (!plain(a) || !plain(b)) return true
+  const ka = Object.keys(a).sort(), kb = Object.keys(b).sort()
+  return ka.join() === kb.join() && ka.every((k) => sameShape(a[k], b[k]))
+}
+
 // form state that's kept as a draft once touched (key null: plain state); settle() drops it for good,
 // because after a save attempt the item exists, or its failed copy waits with a retry
 export function useDraft<T>(key: string | null, blank: () => T): [T, (fn: (v: T) => T) => void, () => void] {
-  const [restored] = useState(() => (key ? readDraft<T>(key) : undefined))
-  const [value, setValue] = useState<T>(() => restored ?? blank())
+  const [first] = useState(() => {
+    const empty = blank()
+    const kept = key ? readDraft<T>(key) : undefined
+    if (kept !== undefined && !sameShape(kept, empty)) { clearDraft(key!); return { empty, restored: undefined } }
+    return { empty, restored: kept }
+  })
+  const restored = first.restored
+  const [value, setValue] = useState<T>(() => restored ?? first.empty)
   const keep = useRef(restored !== undefined)
   const settled = useRef(false)
   const set = useCallback((fn: (v: T) => T) => { keep.current = true; setValue(fn) }, [])

@@ -41,3 +41,18 @@ it('forgetting drafts empties them all', () => {
   forgetDrafts()
   expect(localStorage.getItem('planner-drafts')).toBeNull()
 })
+
+it('a draft kept under an older shape of the form is dropped, not restored', () => {
+  const key = draftKey('lis', 'journey')
+  writeDraft(key, { id: 'j1', d: { title: 'kl 1691' } })
+  const h = renderHook(() => useDraft(key, () => ({ id: 'j2', d: { title: '', seats: '' } })))
+  expect(h.result.current[0]).toEqual({ id: 'j2', d: { title: '', seats: '' } })
+  expect(readDraft(key)).toBeUndefined()
+})
+
+it('a draft with a place filled in still counts as the same shape', () => {
+  const key = draftKey('lis', 'stay')
+  writeDraft(key, { id: 's1', d: { title: 'casa', place: { name: 'casa do sol', lat: 1, lng: 2 } } })
+  const h = renderHook(() => useDraft(key, () => ({ id: 's2', d: { title: '', place: null } })))
+  expect(h.result.current[0].id).toBe('s1')
+})
