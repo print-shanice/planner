@@ -156,19 +156,25 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
 .form-foot { display: flex; align-items: center; gap: 10px; width: 100%; }
 .form-foot .warn-line { margin: 0; min-width: 0; }
 
-/* fold: optional fields behind a one-word summary; folds sit together in one grouped card */
+/* fold: optional fields behind a one-word header; folds sit together in one grouped card.
+   the toggle's hit area covers the whole header, and header controls (paid or not paid) sit above it */
 .folds { border: 1px solid var(--line); border-radius: 16px; }
 .fold + .fold { border-top: 1px solid var(--line); }
-.fold summary { display: flex; align-items: center; min-height: 52px; padding: 0 16px; font-weight: 600; cursor: pointer; list-style: none; border-radius: 16px; }
-.fold summary::-webkit-details-marker { display: none; }
-.fold summary::after {
-  content: ''; margin: 0 2px 0 auto; width: 7px; height: 7px;
+.fold-head { position: relative; display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 8px 44px 8px 16px; }
+.fold-toggle { flex: 1; min-width: 0; padding: 0; border: 0; background: none; text-align: left; font-weight: 600; font-size: 16px; color: var(--ink); cursor: pointer; }
+.fold-toggle::before { content: ''; position: absolute; inset: 0; border-radius: 16px; }
+.fold-toggle:focus-visible { outline: none; }
+.fold-toggle:focus-visible::before { outline: 2px solid var(--ink); outline-offset: -2px; }
+.fold-head::after {
+  content: ''; position: absolute; right: 18px; top: 50%; width: 7px; height: 7px; pointer-events: none;
   border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2);
-  transform: translateY(-2px) rotate(45deg); transition: transform .15s;
+  transform: translateY(-70%) rotate(45deg); transition: transform .15s;
 }
-.fold[open] summary::after { transform: translateY(2px) rotate(-135deg); }
-.fold > .stack { padding: 0 16px 16px; }
-@media (prefers-reduced-motion: reduce) { .fold summary::after { transition: none; } }
+.fold[data-open] .fold-head::after { transform: translateY(-30%) rotate(-135deg); }
+.fold-extra { position: relative; z-index: 1; }
+.fold-body { padding: 0 16px 16px; }
+.fold-body[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .fold-head::after { transition: none; } }
 
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 

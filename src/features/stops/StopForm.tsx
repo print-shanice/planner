@@ -10,7 +10,7 @@ import { Icon } from '../../components/Icon'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { draftKey, useDraft } from '../../lib/drafts'
 import { PlaceField } from './PlaceField'
-import { CATEGORY_OF, checkCost, COST_PROBLEMS, costDraft, CostFields, costValues, type CostDraft } from './CostFields'
+import { CATEGORY_OF, checkCost, COST_PROBLEMS, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from './CostFields'
 import { stopTitle } from '../plan/StopRow'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: () => void }
@@ -141,16 +141,28 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   // the booking details that fit the status: a carrier once a journey is being booked, a ref once it's booked
   const showCarrier = kind === 'journey' && (d.status !== 'idea' || !!d.title.trim())
   const showRef = d.status === 'booked' || !!d.ref.trim()
+  // the booking state comes first, right under the name (a journey's mode), with what it asks for below it
+  const status = (<>
+    <Choice label="status" options={STATUSES} value={d.status} onChange={(v) => set({ status: v })} />
+    {(showCarrier || showRef) && (
+      <div className="row">
+        {showCarrier && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
+        {showRef && <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>}
+      </div>
+    )}
+  </>)
 
   return (
     <form id={formId} className="stack" onSubmit={submit} noValidate>
       {kind === 'place' && (<>
         {nameField('name')}
+        {status}
         {placeField}
         {when([['day', 'day', 'time']])}
       </>)}
       {kind === 'stay' && (<>
         {nameField('name')}
+        {status}
         {placeField}
         {when([['check-in', 'day', 'time'], ['check-out', 'end_date', 'end_time']])}
       </>)}
@@ -158,26 +170,21 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         <div className="segmented modes" role="group" aria-label="mode">
           {MODES.map((m) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m} size={16} />{m}</button>)}
         </div>
+        {status}
         <PlaceField id={`from-${id}`} label="from" value={d.origin} near={near} onChange={(p) => set({ origin: p })} />
         <PlaceField id={`to-${id}`} label="to" value={d.destination} near={near} onChange={(p) => set({ destination: p })} />
         {when([['depart', 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
       </>)}
       {kind === 'note' && (<>
         {nameField('title')}
+        {status}
         {when([['day', 'day', null]])}
         {notes}
       </>)}
 
-      <Choice label="status" options={STATUSES} value={d.status} onChange={(v) => set({ status: v })} />
-      {(showCarrier || showRef) && (
-        <div className="row">
-          {showCarrier && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
-          {showRef && <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>}
-        </div>
-      )}
-
       <div className="folds">
-        <Fold label="cost" open={!!cost.amount.trim()} reveal={costReveal}>
+        <Fold label="cost" open={!!cost.amount.trim() || cost.paid} reveal={costReveal}
+          extra={<PaymentChoice value={cost} onChange={setCost} members={members} />}>
           <CostFields value={cost} onChange={setCost} members={members} rates={rates} />
         </Fold>
         {kind === 'note'

@@ -266,16 +266,16 @@ it('home says when trips could not load, and retries', async () => {
 
 it('the trip form folds budget and more away until they have something', () => {
   render(<MemoryRouter><TripForm onDone={() => {}} /></MemoryRouter>)
-  const folds = [...document.querySelectorAll('details')].map((x) => [x.querySelector('summary')!.textContent, x.open])
-  expect(folds).toEqual([['budget', false], ['more', false]])
-  expect(screen.getByLabelText('home base').closest('details')).not.toBeNull()
-  expect(screen.getByLabelText('notes').closest('details')).not.toBeNull()
+  const folds = [...document.querySelectorAll('.fold-toggle')].map((x) => [x.textContent, x.getAttribute('aria-expanded')])
+  expect(folds).toEqual([['budget', 'false'], ['more', 'false']])
+  expect(screen.getByLabelText('home base')).not.toBeVisible()
+  expect(screen.getByLabelText('notes')).not.toBeVisible()
 })
 
 it('a trip with a budget opens with budget unfolded', () => {
   render(<MemoryRouter><TripForm trip={trip({ id: 't9', budget: 900 }) as Trip} onDone={() => {}} /></MemoryRouter>)
-  expect(screen.getByText('budget', { selector: 'summary' }).closest('details')!.open).toBe(true)
-  expect(screen.getByText('more').closest('details')!.open).toBe(false)
+  expect(screen.getByRole('button', { name: 'budget' })).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.getByRole('button', { name: 'more' })).toHaveAttribute('aria-expanded', 'false')
 })
 
 it('a failed trip save stays open with retry, and retry sends the same trip', async () => {

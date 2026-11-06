@@ -126,3 +126,12 @@ it('editing a cost keeps no draft', async () => {
   await userEvent.type(screen.getByLabelText('name'), ' x')
   expect(localStorage.getItem('planner-drafts')).toBeNull()
 })
+
+it('in the cost form, paid or not paid sits right under the name', () => {
+  render(<CostForm trip={trip({ id: 'lap' })} onDone={vi.fn()} />)
+  const name = screen.getByLabelText('name')
+  const payment = screen.getByRole('group', { name: 'payment' })
+  const amount = screen.getByLabelText('amount')
+  expect(name.compareDocumentPosition(payment) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(payment.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

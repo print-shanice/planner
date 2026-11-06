@@ -262,8 +262,8 @@ it('a new journey shows its essentials and folds the rest, with save in the foot
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog', { name: 'new journey' })
   for (const l of ['from', 'to', 'depart', 'depart time', 'arrive', 'arrive time']) expect(within(d).getByLabelText(l)).toBeInTheDocument()
-  const folds = [...d.querySelectorAll('details')].map((x) => [x.querySelector('summary')!.textContent, x.open])
-  expect(folds).toEqual([['cost', false], ['notes & links', false]])
+  const folds = [...d.querySelectorAll('.fold-toggle')].map((x) => [x.textContent, x.getAttribute('aria-expanded')])
+  expect(folds).toEqual([['cost', 'false'], ['notes & links', 'false']])
   expect(within(d).getByRole('button', { name: 'save' }).closest('.sheet-foot')).not.toBeNull()
 })
 
@@ -309,13 +309,14 @@ it('dates and times read like a calendar, and say date or time when empty', asyn
 
 it('a cost problem opens the cost fold', async () => {
   const d = await openEdit()
-  const fold = within(d).getByText('cost').closest('details')!
+  const fold = within(d).getByRole('button', { name: 'cost' })
+  await userEvent.click(fold)
   await userEvent.type(within(d).getByLabelText('amount'), 'abc')
-  act(() => { fold.open = false; fireEvent(fold, new Event('toggle')) })
-  expect(fold.open).toBe(false)
+  await userEvent.click(fold)
+  expect(fold).toHaveAttribute('aria-expanded', 'false')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(within(d).getByText('check the amount')).toBeInTheDocument()
-  expect(fold.open).toBe(true)
+  expect(fold).toHaveAttribute('aria-expanded', 'true')
 })
 
 it('closing a new note keeps its draft for that trip only', async () => {
@@ -385,4 +386,26 @@ it('a new item that lands after its sheet closed leaves the next sheet open', as
   await act(async () => { finish() })
   d = screen.getByRole('dialog', { name: 'arktikum' })
   expect(d).toBeInTheDocument()
+})
+
+it('booking status sits right under the name, before the place', async () => {
+  show(<Opener kind="stay" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  const name = within(d).getByLabelText('name')
+  const status = within(d).getByRole('group', { name: 'status' })
+  const location = within(d).getByLabelText('location')
+  expect(name.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(status.compareDocumentPosition(location) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+it('paid or not paid sits in the cost header, and paid opens the cost to say who paid', async () => {
+  show(<Opener kind="place" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  const payment = within(d).getByRole('group', { name: 'payment' })
+  expect(payment.closest('.fold-head')).toBe(within(d).getByRole('button', { name: 'cost' }).closest('.fold-head'))
+  await userEvent.click(within(payment).getByRole('button', { name: 'paid' }))
+  expect(within(d).getByRole('button', { name: 'cost' })).toHaveAttribute('aria-expanded', 'true')
+  expect(within(d).getByLabelText('paid by')).toBeVisible()
 })

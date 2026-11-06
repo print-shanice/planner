@@ -52,15 +52,24 @@ const PAYMENT = [{ value: false, label: 'not paid' }, { value: true, label: 'pai
 
 export const CATEGORY_OF: Record<StopKind, string> = { place: 'activities', stay: 'stays', journey: 'transport', note: 'other' }
 
+type PaymentProps = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[] }
+
+// paid or not paid; it sits at the top of wherever the cost is (the cost header, or under a cost's name).
+// paid picks a payer straight away: you, or else the first member
+export function PaymentChoice({ value: d, onChange, members }: PaymentProps) {
+  const people = members.filter((m) => m.user_id)
+  const me = useAuth().userId
+  const pay = (paid: boolean) => onChange(paid
+    ? { ...d, paid, paid_by: d.paid_by || (people.some((m) => m.user_id === me) ? me! : people[0]?.user_id ?? '') }
+    : { ...d, paid })
+  return <Choice label="payment" options={PAYMENT} value={d.paid} onChange={pay} />
+}
+
 type Props = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[]; rates: Rates | null }
 
 export function CostFields({ value: d, onChange, members, rates }: Props) {
   const set = (p: Partial<CostDraft>) => onChange({ ...d, ...p })
   const people = members.filter((m) => m.user_id)
-  const me = useAuth().userId
-  const pay = (paid: boolean) => set(paid
-    ? { paid, paid_by: d.paid_by || (people.some((m) => m.user_id === me) ? me! : people[0]?.user_id ?? '') }
-    : { paid })
   return (
     <fieldset className="cost-fields">
       <div className="row">
@@ -88,7 +97,6 @@ export function CostFields({ value: d, onChange, members, rates }: Props) {
           </label>
         </div>
       )}
-      <Choice label="payment" options={PAYMENT} value={d.paid} onChange={pay} />
       <div className="row">
         {d.paid && (
           <label className="field">

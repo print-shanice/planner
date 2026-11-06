@@ -145,25 +145,36 @@ it('the sheet rises above the on-screen keyboard', () => {
 
 it('a fold starts closed and opens on tap', async () => {
   render(<Fold label="booking"><label>booking ref<input /></label></Fold>)
-  const d = screen.getByText('booking').closest('details')!
-  expect(d.open).toBe(false)
-  await userEvent.click(screen.getByText('booking'))
-  expect(d.open).toBe(true)
+  const head = screen.getByRole('button', { name: 'booking' })
+  expect(head).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByLabelText('booking ref')).not.toBeVisible()
+  await userEvent.click(head)
+  expect(head).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.getByLabelText('booking ref')).toBeVisible()
 })
 
 it('a fold opens by itself when it has something in it', () => {
   const { rerender } = render(<Fold label="cost" open={false}><input /></Fold>)
-  const d = screen.getByText('cost').closest('details')!
-  expect(d.open).toBe(false)
+  const head = screen.getByRole('button', { name: 'cost' })
+  expect(head).toHaveAttribute('aria-expanded', 'false')
   rerender(<Fold label="cost" open><input /></Fold>)
-  expect(d.open).toBe(true)
+  expect(head).toHaveAttribute('aria-expanded', 'true')
 })
 
-it('a fold closed by hand opens again when revealed', () => {
+it('a fold closed by hand opens again when revealed', async () => {
   const { rerender } = render(<Fold label="cost" open><input /></Fold>)
-  const d = screen.getByText('cost').closest('details')!
-  act(() => { d.open = false; fireEvent(d, new Event('toggle')) })
-  expect(d.open).toBe(false)
+  const head = screen.getByRole('button', { name: 'cost' })
+  await userEvent.click(head)
+  expect(head).toHaveAttribute('aria-expanded', 'false')
   rerender(<Fold label="cost" open reveal={1}><input /></Fold>)
-  expect(d.open).toBe(true)
+  expect(head).toHaveAttribute('aria-expanded', 'true')
+})
+
+it('a fold can carry controls in its header that do not open or close it', async () => {
+  const pick = vi.fn()
+  render(<Fold label="cost" extra={<button type="button" onClick={pick}>paid</button>}><input /></Fold>)
+  await userEvent.click(screen.getByRole('button', { name: 'paid' }))
+  expect(pick).toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'cost' })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByRole('button', { name: 'paid' }).closest('.fold-head')).not.toBeNull()
 })

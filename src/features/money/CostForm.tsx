@@ -8,7 +8,7 @@ import { draftKey, useDraft } from '../../lib/drafts'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { Pick } from '../../components/Pick'
-import { checkCost, costDraft, CostFields, costValues, type CostDraft } from '../stops/CostFields'
+import { checkCost, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from '../stops/CostFields'
 
 type Props = { trip: Trip; cost?: Cost; onDone: () => void }
 
@@ -50,6 +50,7 @@ export function CostForm({ trip, cost, onDone }: Props) {
   return (
     <form id={formId} className="stack" onSubmit={submit} noValidate>
       <input className="title-input" aria-label="name" placeholder="name" value={title} onChange={(e) => set({ title: e.target.value })} autoFocus={!cost} />
+      <PaymentChoice value={money} onChange={(m) => set({ money: m })} members={members} />
       <CostFields value={money} onChange={(m) => set({ money: m })} members={members} rates={rates} />
       <label className="field">
         <span className="label">category</span>
