@@ -23,6 +23,9 @@
 
   --map-water: #CFE0E7;
   --map-land: #F1EFE8;
+  --globe-water: #B9D3E3;
+  --been: #C8283A;
+  --been-soft: #F3CDD2;
 
   --f-head: "Bricolage Grotesque Variable", "Hanken Grotesk Variable", system-ui, sans-serif;
   --f-body: "Hanken Grotesk Variable", system-ui, -apple-system, "Segoe UI", sans-serif;

@@ -5,11 +5,38 @@
 }
 .home-mark { text-align: center; font-size: 44px; line-height: 1; }
 
-.globe {
-  width: min(100%, 420px); aspect-ratio: 1; margin: -8px auto -12px;
-  border-radius: 50%; overflow: hidden; background: transparent;
-}
+.globe-wrap { position: relative; width: min(100%, 420px); aspect-ratio: 1; margin: -8px auto -12px; touch-action: none; }
+.globe { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: transparent; }
 .globe .maplibregl-canvas { outline: none; }
+
+.globe-pin {
+  width: 14px; height: 14px; padding: 0; border-radius: 50%;
+  border: 2px solid var(--card); background: var(--been);
+  box-shadow: 0 1px 4px rgba(22, 24, 29, .35); cursor: pointer;
+}
+.globe-pin[data-status="planned"] { background: var(--card); border-color: var(--been); }
+/* a bigger target than the dot */
+.globe-pin::after { content: ''; position: absolute; inset: -13px; border-radius: 50%; }
+.globe-pin:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+.globe-tip {
+  position: absolute; z-index: 5; width: max-content; max-width: 220px;
+  transform: translate(-50%, calc(-100% - 14px));
+  display: grid; gap: 2px; padding: 10px 14px 11px;
+  background: var(--ink); color: var(--card); border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(22, 24, 29, .24);
+  pointer-events: none; animation: tip-in .16s ease-out;
+}
+.globe-tip::after {
+  content: ''; position: absolute; bottom: -5px; left: calc(50% + var(--arrow, 0px));
+  width: 10px; height: 10px; margin-left: -5px; border-radius: 2px;
+  background: var(--ink); transform: rotate(45deg);
+}
+.globe-tip strong { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; line-height: 1.2; }
+.globe-tip strong::before { content: ''; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--been); }
+.globe-tip[data-status="planned"] strong::before { background: transparent; box-shadow: inset 0 0 0 2px var(--been-soft); }
+.globe-tip span { font-size: 13px; line-height: 1.35; color: color-mix(in srgb, var(--card) 72%, transparent); }
+@keyframes tip-in { from { opacity: 0; transform: translate(-50%, calc(-100% - 8px)); } }
 
 .totals { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; text-align: center; }
 .totals div { display: grid; gap: 2px; }

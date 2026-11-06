@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLinks, useStops, useTrips } from '../../lib/queries'
-import { countryStatus, homeTotals, tripsInCountry } from '../../lib/countries'
+import { countryName, countryStatus, globePins, homeTotals, tripsInCountry } from '../../lib/countries'
 import { countdown, todayISO } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
 import type { Trip } from '../../lib/types'
@@ -17,10 +17,6 @@ import { LinkCard } from '../saved/LinkCard'
 // maplibre is large and needs webgl; load it after the page shows
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
-const regionName = (code: string) => {
-  try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code } catch { return code }
-}
-
 export function HomePage() {
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
@@ -32,6 +28,7 @@ export function HomePage() {
   const [country, setCountry] = useState<string | null>(null)
 
   const status = useMemo(() => countryStatus(trips, stops, today), [trips, stops, today])
+  const pins = useMemo(() => globePins(trips, stops, today), [trips, stops, today])
   const totals = useMemo(() => homeTotals(trips, stops), [trips, stops])
 
   const top = trips.filter((t) => !t.parent_id)
@@ -52,8 +49,8 @@ export function HomePage() {
     <main className="home">
       <OfflineBadge />
       <h1 className="wordmark home-mark">planner</h1>
-      <Suspense fallback={<div className="globe" />}>
-        <Globe status={status} onCountry={pickCountry} />
+      <Suspense fallback={<div className="globe-wrap" />}>
+        <Globe status={status} pins={pins} onCountry={pickCountry} />
       </Suspense>
       {trips.length > 0 && <Totals {...totals} />}
 
@@ -92,7 +89,7 @@ export function HomePage() {
       <Sheet open={adding} title="new trip" onClose={() => setAdding(false)}>
         <TripForm onDone={() => setAdding(false)} />
       </Sheet>
-      <Sheet open={!!country} title={country ? regionName(country) : ''} onClose={() => setCountry(null)}>
+      <Sheet open={!!country} title={country ? countryName(country) : ''} onClose={() => setCountry(null)}>
         <div className="rows">{choices.map((t) => <TripRow key={t.id} trip={t} />)}</div>
       </Sheet>
     </main>
