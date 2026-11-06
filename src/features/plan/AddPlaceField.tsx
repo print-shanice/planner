@@ -54,7 +54,7 @@ export function AddPlaceField({ near, onPick, label = 'add a place', alwaysOpen 
           onChange={(e) => change(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer.current); run() }
-            if (e.key === 'Escape') close()
+            if (e.key === 'Escape') { e.preventDefault(); close() }
           }} />
         {(!alwaysOpen || q) && <button type="button" className="icon-btn" aria-label="cancel" onClick={close}><Icon name="close" size={18} /></button>}
       </div>

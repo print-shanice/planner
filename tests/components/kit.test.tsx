@@ -97,3 +97,24 @@ it('icons are hidden from screen readers', () => {
   const { container } = render(<Icon name="plus" />)
   expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 })
+
+it('escape closes the newest sheet first, then the one under it', async () => {
+  const closed: string[] = []
+  function Host() {
+    const [outer, setOuter] = useState(true)
+    const [inner, setInner] = useState(false)
+    return (
+      <Sheet open={outer} title="stop" onClose={() => { closed.push('stop'); setOuter(false) }}>
+        <button onClick={() => setInner(true)}>open ticket</button>
+        <Sheet open={inner} title="ticket" onClose={() => { closed.push('ticket'); setInner(false) }}><p>pass</p></Sheet>
+      </Sheet>
+    )
+  }
+  render(<Host />)
+  await userEvent.click(screen.getByRole('button', { name: 'open ticket' }))
+  await userEvent.keyboard('{Escape}')
+  expect(closed).toEqual(['ticket'])
+  expect(screen.getByRole('dialog', { name: 'stop' })).toBeInTheDocument()
+  await userEvent.keyboard('{Escape}')
+  expect(closed).toEqual(['ticket', 'stop'])
+})

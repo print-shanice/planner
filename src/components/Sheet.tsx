@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
+import { openLayer } from '../lib/layers'
 
 type Props = { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }
 
@@ -18,7 +19,6 @@ export function Sheet({ open, title, onClose, children, footer }: Props) {
     const first = el?.querySelector<HTMLElement>('input, textarea, select, button:not(.sheet-x), [href]')
     ;(first ?? el)?.focus()
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); close.current() }
       if (e.key === 'Tab' && el) {
         const items = [...el.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])')]
         if (!items.length) return
@@ -28,10 +28,12 @@ export function Sheet({ open, title, onClose, children, footer }: Props) {
       }
     }
     document.addEventListener('keydown', onKey)
+    const off = openLayer(() => close.current())
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
+      off()
       document.body.style.overflow = overflow
       before?.focus?.()
     }
