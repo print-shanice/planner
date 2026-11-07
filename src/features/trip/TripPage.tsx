@@ -21,6 +21,7 @@ import { tint } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
 import { HighlightProvider } from './highlight'
+import { OfflineBadge } from '../../components/OfflineBadge'
 import { CostForm } from '../money/CostForm'
 import { LinkForm } from '../saved/LinkForm'
 import { Icon } from '../../components/Icon'
@@ -134,7 +135,7 @@ function TripScreen() {
           // the phone map fills the screen; only the way back and the + float over it
           <div className="map-float">
             <Link to={`/trip/${trip.id}${onDay ? `?day=${onDay}` : ''}`} className="chip-pill back-chip" aria-label={`back to ${trip.name}`}><Icon name="back" size={18} /><span>{trip.name}</span></Link>
-            {plus}
+            <span className="map-float-end"><OfflineBadge inline />{plus}</span>
           </div>
         ) : <TripHeader key={trip.id} trip={trip} action={plus} />}
         <TripSummary sections={tabs} active={tab} bar={!wide} onPick={(t) => pick(t)} />

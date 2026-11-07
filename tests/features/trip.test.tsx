@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
 import type { Trip } from '../../src/lib/types'
 
-const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], tripsQ: null as null | Record<string, unknown>, save: vi.fn((r: unknown) => Promise.resolve(r)) }))
+const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], tripsQ: null as null | Record<string, unknown>, save: vi.fn((r: unknown) => Promise.resolve(r)), online: true }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => db.tripsQ ?? ({ data: db.trips, isLoading: false }),
   useStops: () => ({ data: db.stops }),
@@ -18,7 +18,7 @@ vi.mock('../../src/lib/queries', () => ({
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
-vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
+vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.online, useOnline: () => db.online }))
 vi.mock('../../src/features/map/MapTab', () => ({ MapTab: () => <p>map here</p> }))
 
 import { TripPage } from '../../src/features/trip/TripPage'
@@ -345,4 +345,11 @@ it('on a phone the map fills the screen: no header, a back chip and the + float 
   expect(float.getByRole('link', { name: 'back to the long summer' })).toHaveTextContent('the long summer')
   expect(float.getByRole('button', { name: 'add' })).toBeEnabled()
   expect(screen.getByRole('navigation', { name: 'trip sections' })).toBeInTheDocument()
+})
+
+it('offline still says so on the phone map, where the header is hidden', () => {
+  db.online = false
+  show('/trip/summer?tab=map')
+  db.online = true
+  expect(within(document.querySelector('.map-float') as HTMLElement).getByText('offline')).toBeInTheDocument()
 })

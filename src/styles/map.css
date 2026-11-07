@@ -66,3 +66,4 @@
 .maplibregl-ctrl-group { border-radius: 14px !important; box-shadow: 0 2px 8px rgba(22, 24, 29, .12) !important; }
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
 .map-tab .maplibregl-canvas:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.map-float-end { display: flex; align-items: center; gap: 8px; }
