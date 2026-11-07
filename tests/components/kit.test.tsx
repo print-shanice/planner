@@ -178,3 +178,10 @@ it('a fold can carry controls in its header that do not open or close it', async
   expect(screen.getByRole('button', { name: 'cost' })).toHaveAttribute('aria-expanded', 'false')
   expect(screen.getByRole('button', { name: 'paid' }).closest('.fold-head')).not.toBeNull()
 })
+
+it('tint follows the trip colour', async () => {
+  const { tint } = await import('../../src/components/MonthCalendar')
+  expect(tint(2)).toEqual({ '--c': 'var(--g2)' })
+  expect(tint(8)).toEqual({ '--c': 'var(--g2)' })
+  expect(tint(null)).toEqual({ '--c': 'var(--g0)' })
+})

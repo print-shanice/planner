@@ -52,6 +52,7 @@
 .row > .field { flex: 1; min-width: 0; }
 .stack { display: grid; gap: 16px; }
 .stack-sm { display: grid; gap: 6px; }
+.stack-xs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .center { text-align: center; justify-items: center; }
 .spacer { flex: 1; }
 
@@ -230,3 +231,7 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
 
 /* journey modes carry their icon */
 .segmented.modes button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* everything you can press answers as you press it */
+button:not(:disabled):active, a:active { filter: brightness(0.94); }
+.icon-btn.filled:not(:disabled):active, .btn.primary:not(:disabled):active { filter: brightness(1.25); }

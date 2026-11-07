@@ -5,7 +5,7 @@ import { fmtDay } from '../lib/dates'
 import { Icon } from './Icon'
 import { CountryFlag } from './CountryFlag'
 
-export const tint = (_color: number | null | undefined) => ({ '--c': 'var(--g0)' }) as CSSProperties
+export const tint = (color: number | null | undefined) => ({ '--c': `var(--g${((color ?? 0) % 6 + 6) % 6})` }) as CSSProperties
 const WEEKDAYS = ['m', 't', 'w', 't', 'f', 's', 's']
 export const dayLabel = (d: string) => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
 

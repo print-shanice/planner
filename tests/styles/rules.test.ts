@@ -54,3 +54,24 @@ it('icon buttons and the grip are 44px targets', () => {
 it('search boxes show focus, since their input hides its own outline', () => {
   expect(ruleFor('.search-box:focus-within')).toMatch(/outline:\s*2px solid var\(--ink\)/)
 })
+
+const hsl = (hex: string) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min
+  let h = 0
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return { h: (h * 60 + 360) % 360, l }
+}
+
+it('trip colours are six hues you can tell apart', () => {
+  const gs = ['--g0', '--g1', '--g2', '--g3', '--g4', '--g5'].map((g) => [g, hsl(token(g))] as const)
+  for (const [a, x] of gs) for (const [b, y] of gs) {
+    if (a >= b) continue
+    const hue = Math.min(Math.abs(x.h - y.h), 360 - Math.abs(x.h - y.h))
+    expect(hue >= 30 || Math.abs(x.l - y.l) >= 0.2, `${a} vs ${b}`).toBe(true)
+  }
+})
+
+it('stack-xs is a real style, so stacked lines never run together', () => {
+  expect(ruleFor('.stack-xs')).toMatch(/flex-direction:\s*column/)
+})
