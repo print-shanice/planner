@@ -201,6 +201,13 @@ export function Globe({ status, pins, onCountry }: Props) {
       m = new maplibregl.Map({
         container: box.current, style, center: middleOf(latest.current.pins), zoom: START_ZOOM, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM,
         attributionControl: false, scrollZoom: false, dragRotate: false, pitchWithRotate: false,
+        // one finger scrolls the page past the globe; two fingers turn it
+        cooperativeGestures: true,
+        locale: {
+          'CooperativeGesturesHandler.MobileHelpText': 'use two fingers to turn the globe',
+          'CooperativeGesturesHandler.WindowsHelpText': 'pinch to zoom',
+          'CooperativeGesturesHandler.MacHelpText': 'pinch to zoom',
+        },
         renderWorldCopies: false,
       })
     } catch {

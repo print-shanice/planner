@@ -628,3 +628,13 @@ describe('pins zoomed out', () => {
     expect(m.flyTo.mock.calls[0][0].center).toEqual([2.5, 46])
   })
 })
+
+it('one finger scrolls past the globe on a phone; two fingers turn it', () => {
+  const { m } = show()
+  expect(m.opts.cooperativeGestures).toBe(true)
+  expect(m.opts.locale['CooperativeGesturesHandler.MobileHelpText']).toBe('use two fingers to turn the globe')
+  const css = require('node:fs').readFileSync('src/styles/home.css', 'utf8')
+  const rule = css.match(/\.globe \{[^}]*\}/)![0]
+  expect(rule).not.toMatch(/touch-action:\s*none/)
+  expect(rule).toMatch(/touch-action:\s*pan-y/)
+})
