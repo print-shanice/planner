@@ -12,11 +12,9 @@ import { Icon } from '../../components/Icon'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { LinkCard } from './LinkCard'
 import { ItemMenu } from './ItemMenu'
-import { SectionHeading } from '../../components/SectionHeading'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Sheet } from '../../components/Sheet'
 import { CountryFlag } from '../../components/CountryFlag'
-import { LinkForm } from './LinkForm'
 import { useStopSheet } from '../stops/StopSheet'
 import { TripForm } from '../home/TripForm'
 
@@ -71,8 +69,6 @@ function PlaceItem({ stop, trip, trips, pick }: { stop: Stop; trip: Trip; trips:
 const has = (q: string, ...xs: (string | null | undefined)[]) => xs.some((x) => x?.toLowerCase().includes(q))
 
 export function SavedTab({ trip, view }: { trip: Trip; view?: 'ideas' | 'links' }) {
-  const sheet = useStopSheet()
-  const [adding, setAdding] = useState(false)
   const tq = useTrips()
   const lq = useLinks()
   const sq = useStops()
@@ -119,8 +115,6 @@ export function SavedTab({ trip, view }: { trip: Trip; view?: 'ideas' | 'links' 
         <button type="button" aria-pressed={side === 'ideas'} onClick={() => switchTo('ideas')}>ideas</button>
         <button type="button" aria-pressed={side === 'links'} onClick={() => switchTo('links')}>links</button>
       </div>}
-      <SectionHeading action={side === 'links' ? 'add link' : 'add idea'} disabled={!canEdit}
-        onAction={() => side === 'links' ? setAdding(true) : sheet?.newStop('place', trip.id, { saved: true, day: null })} />
       <div className="saved-tools">
         <label className="search-box">
           <Icon name="search" size={18} />
@@ -156,9 +150,6 @@ export function SavedTab({ trip, view }: { trip: Trip; view?: 'ideas' | 'links' 
         mine.length === 0 ? <EmptyState title={q ? 'nothing found' : 'no links yet'} />
           : mine.map((l) => <LinkCard key={l.id} link={l} trips={trips} pick={pick(l.id)} />)
       )}
-      <Sheet open={adding} title="new link" onClose={() => setAdding(false)}>
-        <LinkForm tripId={trip.id} onDone={() => setAdding(false)} />
-      </Sheet>
       <Sheet open={!!dating} title="edit trip" onClose={() => setDating(null)}>
         {dating && <TripForm key={dating.id} trip={dating} onDone={() => setDating(null)} onDeleted={() => setDating(null)} />}
       </Sheet>

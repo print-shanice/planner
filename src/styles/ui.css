@@ -235,3 +235,13 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
 /* everything you can press answers as you press it */
 button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .icon-btn.filled:not(:disabled):active, .btn.primary:not(:disabled):active { filter: brightness(1.25); }
+
+/* the + menu: one row per kind of thing */
+.add-options { list-style: none; margin: 0 -4px; padding: 0; }
+.add-options li + li { border-top: 1px solid var(--line); }
+.add-option {
+  width: 100%; display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 8px 4px;
+  border: 0; background: none; color: var(--ink); font-size: 16px; font-weight: 600; text-align: left; cursor: pointer; border-radius: 12px;
+}
+.add-option:hover { background: var(--ground); }
+.add-icon { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--soft); }

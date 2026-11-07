@@ -2,6 +2,7 @@ const P: Record<string, string> = {
   plus: 'M12 5v14M5 12h14',
   back: 'M15 5l-7 7 7 7',
   next: 'M9 5l7 7-7 7',
+  arrow: 'M4 12h16M14 6l6 6-6 6',
   chevron: 'M6 9l6 6 6-6',
   close: 'M6 6l12 12M18 6L6 18',
   plan: 'M4 6h16M4 12h16M4 18h10',

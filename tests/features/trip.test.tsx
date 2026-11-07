@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 import type { Trip } from '../../src/lib/types'
 
-const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], tripsQ: null as null | Record<string, unknown> }))
+const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], tripsQ: null as null | Record<string, unknown>, save: vi.fn((r: unknown) => Promise.resolve(r)) }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => db.tripsQ ?? ({ data: db.trips, isLoading: false }),
   useStops: () => ({ data: db.stops }),
@@ -14,7 +14,7 @@ vi.mock('../../src/lib/queries', () => ({
   useFiles: () => ({ data: [] }),
   useMembers: () => ({ data: [{ email: 'shanice@x.com', user_id: 'u1', name: 'shanice', color: 0 }] }),
   useRates: () => ({ data: null }),
-  useSave: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
@@ -113,14 +113,6 @@ it('unknown trip shows not found', () => {
   expect(screen.getByRole('link', { name: 'all trips' })).toHaveAttribute('href', '/')
 })
 
-it('stay from the add menu opens a new stay with the trip dates', async () => {
-  show('/trip/summer')
-  await userEvent.click(screen.getByRole('button', { name: 'stay' }))
-  const d = await screen.findByRole('dialog', { name: 'new stay' })
-  expect(within(d).getByLabelText('check-in')).toHaveValue('2027-06-26')
-  expect(within(d).getByLabelText('check-out')).toHaveValue('2027-07-13')
-})
-
 const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
 
 beforeEach(() => { db.tripsQ = null })
@@ -147,12 +139,6 @@ it('a trip that could not load offers retry and the way home', () => {
   expect(screen.queryByText('trip not found')).toBeNull()
 })
 
-for (const view of ['packing', 'map']) {
-  it(`hides the general add button in ${view}`, () => {
-    show(`/trip/summer?tab=${view}`)
-    expect(screen.queryByRole('button', { name: 'add' })).toBeNull()
-  })
-}
 
 
 const sections = () => within(screen.getByRole('navigation', { name: 'trip sections' }))
@@ -171,12 +157,12 @@ it('phones show four sections in a bar at the bottom', () => {
   expect(sections().getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-it('laptops show plan, money and saved as a switch, with the map always beside', () => {
+it('laptops show plan, money and saved as a switch, with the map always beside', async () => {
   wide(true)
   show('/trip/summer')
   expect(screen.getByRole('navigation', { name: 'trip sections' })).toHaveClass('section-switch')
   expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'money', 'saved'])
-  expect(screen.getByText('map here')).toBeInTheDocument()
+  expect(await screen.findByText('map here')).toBeInTheDocument()
 })
 
 it('old links land on the new sections', () => {
@@ -263,4 +249,87 @@ it('the people beside the back arrow open the trip settings', async () => {
   expect(edit.querySelectorAll('.avatar')).toHaveLength(1)
   await userEvent.click(edit)
   expect(screen.getByRole('dialog', { name: 'edit trip' })).toBeInTheDocument()
+})
+
+const header = () => within(document.querySelector('.trip-header') as HTMLElement)
+const OPTIONS = ['place', 'stay', 'journey', 'note', 'cost', 'link', 'side trip']
+
+for (const path of ['/trip/summer', '/trip/summer?tab=money', '/trip/summer?tab=saved&view=links', '/trip/summer?tab=saved&view=packing', '/trip/summer?tab=map']) {
+  it(`one + in the trip header, and no other add buttons (${path})`, () => {
+    show(path)
+    expect(header().getByRole('button', { name: 'add' })).toBeEnabled()
+    expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
+    for (const name of ['add cost', 'add link', 'add idea', 'add note', 'add a place', 'stay', 'journey', 'side trip']) {
+      expect(screen.queryByRole('button', { name })).toBeNull()
+    }
+  })
+}
+
+it('the + lists the seven things you can add, titled with the day you are on', async () => {
+  show('/trip/summer?day=2027-06-28')
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  const d = screen.getByRole('dialog', { name: 'add to mon 28 jun' })
+  expect(within(d).getAllByRole('button').filter((b) => b.textContent).map((b) => b.textContent)).toEqual(OPTIONS)
+})
+
+it('away from the plan the + is just "add"', async () => {
+  show('/trip/summer?tab=money')
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  expect(screen.getByRole('dialog', { name: 'add' })).toBeInTheDocument()
+})
+
+for (const [option, form] of [['place', 'new place'], ['stay', 'new stay'], ['journey', 'new journey'], ['note', 'new note'], ['cost', 'new cost'], ['link', 'new link'], ['side trip', 'new side trip']]) {
+  it(`"${option}" closes the menu and opens its form`, async () => {
+    show('/trip/summer?day=2027-06-28')
+    await userEvent.click(header().getByRole('button', { name: 'add' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'add to mon 28 jun' })).getByRole('button', { name: option }))
+    expect(screen.queryByRole('dialog', { name: 'add to mon 28 jun' })).toBeNull()
+    expect(await screen.findByRole('dialog', { name: form })).toBeInTheDocument()
+  })
+}
+
+it('a stay starts on the day you are on and runs to the end of the trip', async () => {
+  show('/trip/summer?day=2027-06-28')
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'stay' }))
+  const d = await screen.findByRole('dialog', { name: 'new stay' })
+  expect(within(d).getByLabelText('check-in')).toHaveValue('2027-06-28')
+  expect(within(d).getByLabelText('check-out')).toHaveValue('2027-07-13')
+})
+
+it('a stay added without a day starts with the trip', async () => {
+  show('/trip/summer?tab=money')
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'stay' }))
+  expect(within(await screen.findByRole('dialog', { name: 'new stay' })).getByLabelText('check-in')).toHaveValue('2027-06-26')
+})
+
+it('a place added on a day is set to that day', async () => {
+  show('/trip/summer?day=2027-06-28')
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'place' }))
+  expect(within(await screen.findByRole('dialog', { name: 'new place' })).getByLabelText('day')).toHaveValue('2027-06-28')
+})
+
+async function addPlace(path: string) {
+  db.save.mockClear()
+  show(path)
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'place' }))
+  const d = await screen.findByRole('dialog', { name: 'new place' })
+  await userEvent.type(within(d).getByRole('textbox', { name: /name/ }), 'kotisaari')
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  return db.save.mock.calls.at(-1)?.[0] as Record<string, unknown>
+}
+
+it('a place added from saved is an idea', async () => {
+  expect(await addPlace('/trip/summer?tab=saved')).toEqual(expect.objectContaining({ kind: 'place', saved: true, day: null }))
+})
+
+it('a place added to a trip without dates waits under no date, not as an idea', async () => {
+  db.trips = [trip({ id: 'someday', name: 'someday', start_date: null, end_date: null })] as Trip[]
+  const row = await addPlace('/trip/someday')
+  expect(row).toEqual(expect.objectContaining({ kind: 'place', day: null }))
+  expect(row.saved).toBeFalsy()
+  expect(screen.queryByRole('button', { name: 'add a place' })).toBeNull()
 })

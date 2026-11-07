@@ -10,11 +10,11 @@ import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { Pick } from '../../components/Pick'
 import { checkCost, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from '../stops/CostFields'
 
-type Props = { trip: Trip; cost?: Cost; onDone: () => void }
+type Props = { trip: Trip; cost?: Cost; day?: string | null; onDone: () => void }
 
 type Draft = { id: string; title: string; category: string; date: string; money: CostDraft }
 
-export function CostForm({ trip, cost, onDone }: Props) {
+export function CostForm({ trip, cost, day, onDone }: Props) {
   const members = useMembers().data ?? []
   const rates = useRates().data ?? null
   const save = useSave('costs')
@@ -22,7 +22,7 @@ export function CostForm({ trip, cost, onDone }: Props) {
   const canEdit = useCanEdit()
   // a new cost is kept as a draft for this trip, with one id, so saving again after a failure sends the same row
   const [form, update, settle] = useDraft<Draft>(cost ? null : draftKey(trip.id, 'cost'), () => ({
-    id: cost?.id ?? newId(), title: cost?.title ?? '', category: cost?.category ?? 'food', date: cost?.date ?? '',
+    id: cost?.id ?? newId(), title: cost?.title ?? '', category: cost?.category ?? 'food', date: cost?.date ?? day ?? '',
     money: costDraft(cost, trip.currency, rates),
   }))
   const { id, title, category, date, money } = form

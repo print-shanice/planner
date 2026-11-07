@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { Place, Stop, Trip } from '../../lib/types'
-import { useCosts, useRates, useSave, useStops, useTrips } from '../../lib/queries'
+import type { Stop, Trip } from '../../lib/types'
+import { useCosts, useRates, useStops, useTrips } from '../../lib/queries'
 import { formatMoney, totals } from '../../lib/money'
 import { useCanEdit } from '../../lib/offline'
 import { daysBetween, fmtDay, groupByDay, todayISO, tripDays } from '../../lib/dates'
@@ -29,7 +29,6 @@ export function PlanTab({ trip, view }: { trip: Trip; view?: 'calendar' | 'itine
   const allStops = sq.data ?? []
   const load = loadState(tq, sq)
   const canEdit = useCanEdit()
-  const save = useSave('stops')
   const costs = useCosts().data ?? []
   const rates = useRates().data ?? null
 
@@ -64,12 +63,6 @@ export function PlanTab({ trip, view }: { trip: Trip; view?: 'calendar' | 'itine
     else setAdjusting(trips.find((t) => t.id === c.b.id) ?? null)
   }
 
-  function addPlace(p: Place, date: string | null) {
-    const same = stops.filter((s) => (s.day ?? null) === date)
-    const position = same.length ? Math.max(...same.map((s) => s.position)) + 1 : 0
-    save.mutate({ trip_id: trip.id, kind: 'place', title: p.name, day: date, position, place: p, status: 'idea' })
-  }
-
   function goDay(d: string) {
     if (!validDay(d) || !canOpen(d)) return
     setParams((p) => { const n = new URLSearchParams(p); n.set('day', d); if (view) n.set('tab', 'itinerary'); n.delete('map'); return n })
@@ -94,7 +87,7 @@ export function PlanTab({ trip, view }: { trip: Trip; view?: 'calendar' | 'itine
           {sub && <p className="muted num">{sub}</p>}
         </header>
         <DayCard trip={trip} date={selected} entries={entries} colorIndex={0} trips={trips} bare
-          clash={clash} canEdit={canEdit} onOpen={onOpen} onAddPlace={addPlace} />
+          clash={clash} canEdit={canEdit} onOpen={onOpen} />
         {datedKids.filter(c => c.start_date! <= selected && (c.end_date ?? c.start_date!) >= selected).map(c =>
           <FoldRow key={c.id} trip={c} clash={clash.has(c.id)} />)}
       </> : <>
@@ -106,8 +99,8 @@ export function PlanTab({ trip, view }: { trip: Trip; view?: 'calendar' | 'itine
         )}
         {all.length > 0
           ? <TripCalendar trip={trip} children={datedKids} planned={plannedDays} onDay={goDay} />
-          : <NoDate trip={trip} stops={undated} sideTrips={undatedKids} canAdd={canEdit} canEdit={canEdit}
-              onOpen={onOpen} onAddPlace={(p) => addPlace(p, null)} onSetDates={setAdjusting} />}
+          : <NoDate stops={undated} sideTrips={undatedKids} canEdit={canEdit}
+              onOpen={onOpen} onSetDates={setAdjusting} />}
       </>}
       <Sheet open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}

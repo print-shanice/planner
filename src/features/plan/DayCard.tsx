@@ -9,7 +9,6 @@ import { CountryFlag } from '../../components/CountryFlag'
 import { Link } from 'react-router-dom'
 import { StopRow } from './StopRow'
 import { WalkLeg } from './WalkLeg'
-import { AddPlaceField } from './AddPlaceField'
 
 type Props = {
   trip: Trip
@@ -21,7 +20,6 @@ type Props = {
   clash: Set<string>
   canEdit: boolean
   onOpen?: (s: Stop) => void
-  onAddPlace: (p: Place, date: string | null) => void
   // on its own page the day has its heading above, so the card drops its own
   bare?: boolean
 }
@@ -30,12 +28,7 @@ type Props = {
 const placeIn = (s: Stop): Place | null => (s.kind === 'journey' ? s.origin : s.place)
 const placeOut = (s: Stop): Place | null => (s.kind === 'journey' ? s.destination : s.place)
 
-export function nearFor(entries: DayEntry[], trip: Trip) {
-  for (const e of entries) if (e.stop && hasPoint(placeOut(e.stop))) { const p = placeOut(e.stop)!; return { lat: p.lat!, lng: p.lng! } }
-  return hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null
-}
-
-export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, onAddPlace, bare }: Props) {
+export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, bare }: Props) {
   const save = useSave('stops')
   const box = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
@@ -108,7 +101,6 @@ export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, cla
       </header>}
       <div className="day-body">
         {items}
-        {canEdit && <AddPlaceField near={nearFor(entries, trip)} onPick={(p) => onAddPlace(p, date)} />}
       </div>
     </section>
   )

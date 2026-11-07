@@ -97,7 +97,8 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         ? Math.max(-1, ...allStops.filter((s) => s.trip_id === stop.trip_id && s.id !== id && (s.day ?? null) === day).map((s) => s.position)) + 1
         : stop.position
       if (isNew) {
-        await save.mutateAsync({ ...row, id, trip_id: stop.trip_id, kind, position })
+        // an idea added from saved stays saved
+        await save.mutateAsync({ ...row, id, trip_id: stop.trip_id, kind, position, ...(stop.saved ? { saved: true } : {}) })
       } else {
         const was = toRow(initial, kind) as Record<string, unknown>
         const changed: Record<string, unknown> = {}

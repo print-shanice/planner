@@ -19,8 +19,12 @@ import { TripHeader } from './TripHeader'
 import { PHONE_TABS, readTab, SAVED_VIEWS, WIDE_TABS, type SavedView, type Tab } from './tabs'
 import { tint } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
+import { AddSheet, type AddKind } from './AddSheet'
+import { CostForm } from '../money/CostForm'
+import { LinkForm } from '../saved/LinkForm'
+import { Icon } from '../../components/Icon'
+import { dayLabel } from '../../components/MonthCalendar'
 
-type AddKind = 'stay' | 'journey' | 'side trip'
 
 const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapTab })))
 
@@ -33,21 +37,25 @@ function Panel({ tab, view, trip }: { tab: Tab; view: SavedView; trip: Trip }) {
   }
 }
 
-export function AddForms({ kind, trip, onClose }: { kind: AddKind | null; trip: Trip; onClose: () => void }) {
+// each kind opens its own form once the add menu has closed, so sheets never stack
+export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | null; trip: Trip; day: string | null; idea: boolean; onClose: () => void }) {
   const sheet = useStopSheet()
-  const [params] = useSearchParams()
-  const requested = params.get('day')
-  const day = validDay(requested) ? requested : trip.start_date
+  const start = day ?? trip.start_date
   useEffect(() => {
-    if (kind === 'stay' || kind === 'journey') {
-      const defaults = kind === 'stay' ? { day, end_date: trip.end_date }
-        : { day }
-      sheet?.newStop(kind, trip.id, defaults)
-      onClose()
-    }
+    if (kind === 'stay') sheet?.newStop('stay', trip.id, { day: start, end_date: trip.end_date })
+    else if (kind === 'journey' || kind === 'note') sheet?.newStop(kind, trip.id, { day: start })
+    else if (kind === 'place') sheet?.newStop('place', trip.id, day ? { day } : { saved: idea, day: null })
+    else return
+    onClose()
   }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
+      <Sheet open={kind === 'cost'} title="new cost" onClose={onClose}>
+        <CostForm trip={trip} day={day} onDone={onClose} />
+      </Sheet>
+      <Sheet open={kind === 'link'} title="new link" onClose={onClose}>
+        <LinkForm tripId={trip.id} onDone={onClose} />
+      </Sheet>
       <Sheet open={kind === 'side trip'} title="new side trip" onClose={onClose}>
         <TripForm parentId={trip.id} onDone={onClose} />
       </Sheet>
@@ -60,7 +68,6 @@ export function TripPage() {
 }
 
 function TripScreen() {
-  const stopSheet = useStopSheet()
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
   const tq = useTrips()
@@ -69,6 +76,7 @@ function TripScreen() {
   const wide = useWide()
   const canEdit = useCanEdit()
   const [kind, setKind] = useState<AddKind | null>(null)
+  const [menu, setMenu] = useState(false)
   const main = useRef<HTMLElement>(null)
   const scrolls = useRef<Record<string, number>>({})
   const scroller = () => (wide ? main.current : null)
@@ -103,6 +111,7 @@ function TripScreen() {
   const { tab, view } = readTab(params, wide)
   const tabs = wide ? WIDE_TABS : PHONE_TABS
   const day = params.get('day')
+  const onDay = validDay(day) ? day : null
   // the day stays when you switch sections; each section keeps its own scroll
   function pick(next: Tab, nextView: SavedView = view) {
     scrolls.current[`${tab}/${view}`] = scroller()?.scrollTop ?? window.scrollY
@@ -118,7 +127,9 @@ function TripScreen() {
   return (
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`} style={tint(trip.color)}>
       <section className="trip-main" ref={main}>
-        <TripHeader key={trip.id} trip={trip} />
+        <TripHeader key={trip.id} trip={trip} action={
+          <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}><Icon name="plus" /></button>
+        } />
         <TripSummary sections={tabs} active={tab} bar={!wide} onPick={(t) => pick(t)} />
         {tab !== 'plan' && (
           <section id="trip-section" className="trip-inline-section" aria-label={tab}>
@@ -131,17 +142,13 @@ function TripScreen() {
           </section>
         )}
         <div className="trip-panel" hidden={tab !== 'plan'}>
-          <div className="itinerary-actions" aria-label="add to itinerary">
-            {(['stay', 'journey', 'side trip'] as const).map((action) => (
-              <button key={action} type="button" className="btn ghost" disabled={!canEdit} onClick={() => setKind(action)}>{action}</button>
-            ))}
-            <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => stopSheet?.newStop('note', trip.id, { day: validDay(day) ? day : trip.start_date })}>add note</button>
-          </div>
           <PlanTab key={trip.id} trip={trip} view={validDay(day) ? 'itinerary' : 'calendar'} />
         </div>
       </section>
       {wide && <aside className="trip-map"><Suspense fallback={null}><MapTab trip={trip} /></Suspense></aside>}
-      <AddForms kind={kind} trip={trip} onClose={() => setKind(null)} />
+      <AddSheet open={menu} title={tab === 'plan' && onDay ? `add to ${dayLabel(onDay)}` : 'add'} onClose={() => setMenu(false)}
+        onPick={(k) => { setMenu(false); setKind(k) }} />
+      <AddForms kind={kind} trip={trip} day={tab === 'plan' ? onDay : null} idea={tab === 'saved'} onClose={() => setKind(null)} />
     </div>
   )
 }

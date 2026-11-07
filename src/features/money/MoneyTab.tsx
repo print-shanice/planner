@@ -15,14 +15,12 @@ import { Pill } from '../../components/Pill'
 import { Sheet } from '../../components/Sheet'
 import { useStopSheet } from '../stops/StopSheet'
 import { CostForm } from './CostForm'
-import { SectionHeading } from '../../components/SectionHeading'
 import { SaveFailed } from '../../components/SaveFailed'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
 export function MoneyTab({ trip }: { trip: Trip }) {
   const canEdit = useCanEdit()
-  const [adding, setAdding] = useState(false)
   const tq = useTrips()
   const cq = useCosts()
   const trips = tq.data ?? []
@@ -60,7 +58,6 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   return (
     <div className="money stack">
       <LoadState load={load} />
-      <SectionHeading action="add cost" disabled={!canEdit} onAction={() => setAdding(true)} />
       <div className="money-head">
         <div className="stack-xs">
           <p className="money-total num head" data-testid="money-total">{show(total)}</p>
@@ -145,9 +142,6 @@ export function MoneyTab({ trip }: { trip: Trip }) {
 
       {rates && <p className="footnote muted">{`ecb rates, ${fmtDay(rates.date)}`}{t.leftOut > 0 ? ` · ${t.leftOut} not converted` : ''}</p>}
 
-      <Sheet open={adding} title="new cost" onClose={() => setAdding(false)}>
-        <CostForm trip={trip} onDone={() => setAdding(false)} />
-      </Sheet>
       <Sheet open={!!editing} title="edit cost" onClose={() => setEditing(null)}>
         {editing && <CostForm key={editing.id} trip={trip} cost={editing} onDone={() => setEditing(null)} />}
       </Sheet>

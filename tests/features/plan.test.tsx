@@ -127,21 +127,14 @@ it('a parent day deep link still includes nested plans', () => {
   expect(screen.getAllByRole('link', { name: /side trip.*open trip/ }).length).toBeGreaterThan(0)
 })
 
-it('empty long-trip dates can add directly to the parent and retain its stay', async () => {
+it('an empty day in a long trip still shows the stay around it', () => {
   const t = trip({ id: 'exchange', start_date: '2027-01-01', end_date: '2027-07-01' })
   db.trips = [t]
   db.stops = [stop({ trip_id: t.id, kind: 'stay', title: 'home base', day: t.start_date, end_date: t.end_date })]
-  const cafe = place({ name: 'local cafe' })
-  db.search.mockResolvedValue([cafe])
   showAt('/trip/exchange?day=2027-04-12')
   expect(screen.getByText('staying at home base')).toBeInTheDocument()
-  const d = day('2027-04-12')
-  await userEvent.click(within(d).getByRole('button', { name: 'add a place' }))
-  await userEvent.type(within(d).getByRole('searchbox'), 'cafe{Enter}')
-  await userEvent.click(await within(d).findByRole('button', { name: /local cafe/ }))
-  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: t.id, day: '2027-04-12', place: cafe }))
+  expect(within(day('2027-04-12')).queryByRole('button', { name: 'add a place' })).toBeNull()
 })
-
 it('timed stops sort chronologically, flexible plans follow and every stop is numbered', () => {
   const t = lap(); db.trips = [t]
   db.stops = [stop({ trip_id: t.id, title: 'lunch', day: '2027-02-08', time: '13:00', position: 0 }), stop({ trip_id: t.id, title: 'breakfast', day: '2027-02-08', time: '09:00', position: 1 }), stop({ trip_id: t.id, title: 'walk', day: '2027-02-08', time: null, position: 2 })]

@@ -106,3 +106,4 @@
 .section-action:hover:not(:disabled) { background: var(--line); }
 .section-action:disabled { opacity: .45; cursor: default; }
 .section-content > .stack > .section-heading { padding-bottom: 0; }
+.trip-title-row .icon-btn.filled { flex: none; width: 44px; height: 44px; border-radius: 50%; }
