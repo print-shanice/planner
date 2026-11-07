@@ -29,6 +29,8 @@ type Props = {
   focus: Place | null
   // the stop lit in the plan beside the map
   highlight?: string | null
+  // how much of the top and bottom other things cover (the phone's floating bar, chips and places sheet)
+  inset?: { top: number; bottom: number }
   onPick: (id: string) => void
   onEmpty: (p: { lng: number; lat: number }) => void
   onCenter?: (p: { lng: number; lat: number }) => void
@@ -67,15 +69,15 @@ function boundsOf(d: Data): LngLatBoundsLike | null {
   return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]]
 }
 
-export function TripMap({ data, fitKey, fallback, focus, highlight, onPick, onEmpty, onCenter }: Props) {
+export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPick, onEmpty, onCenter }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const ready = useRef(false)
   const fitted = useRef<string | null>(null)
   const cb = useRef({ onPick, onEmpty, onCenter })
   cb.current = { onPick, onEmpty, onCenter }
-  const latest = useRef({ data, fallback })
-  latest.current = { data, fallback }
+  const latest = useRef({ data, fallback, inset })
+  latest.current = { data, fallback, inset }
   const fitKeyRef = useRef(fitKey)
   fitKeyRef.current = fitKey
 
@@ -132,7 +134,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, onPick, onEm
   function push() {
     const m = map.current
     if (!m || !ready.current) return
-    const { data: d, fallback: fb } = latest.current
+    const { data: d, fallback: fb, inset: cover } = latest.current
     ;(m.getSource('pins') as GeoJSONSource).setData(paint(d.pins))
     ;(m.getSource('pin-labels') as GeoJSONSource).setData(d.pins)
     ;(m.getSource('lines') as GeoJSONSource).setData(paint(d.lines))
@@ -140,7 +142,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, onPick, onEm
     if (fitted.current !== fitKeyRef.current) {
       fitted.current = fitKeyRef.current
       const b = boundsOf(d)
-      if (b) m.fitBounds(b, { padding: { top: 150, bottom: 90, left: 40, right: 40 }, maxZoom: 14, duration: 0 })
+      if (b) m.fitBounds(b, { padding: { top: cover?.top ?? 150, bottom: cover?.bottom ?? 90, left: 40, right: 40 }, maxZoom: 14, duration: 0 })
       else if (fb && fb.lat != null && fb.lng != null) m.jumpTo({ center: [fb.lng, fb.lat], zoom: 11 })
       else m.jumpTo({ center: [10, 50], zoom: 3.5 })
     }

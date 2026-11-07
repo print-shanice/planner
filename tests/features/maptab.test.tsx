@@ -12,8 +12,8 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse }))
 vi.mock('../../src/features/map/TripMap', () => ({
-  TripMap: ({ onPick, onEmpty, highlight }: { onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null }) => (
-    <div data-highlight={highlight ?? ''}>
+  TripMap: ({ onPick, onEmpty, highlight, inset }: { onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
+    <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
     </div>
@@ -151,4 +151,16 @@ describe('on a laptop, plan and map light each other up', () => {
     expect(document.activeElement).toBe(row.querySelector('button'))
     row.remove()
   })
+})
+
+it('on a phone the map fits the day inside what the floating bar, chips and sheet leave visible', () => {
+  show('/?day=2027-02-08', true)
+  const [top, bottom] = (document.querySelector('[data-inset]') as HTMLElement).dataset.inset!.split(',').map(Number)
+  expect(top).toBeGreaterThanOrEqual(190)
+  expect(bottom).toBeGreaterThanOrEqual(280)
+})
+
+it('on a laptop the map keeps its usual margins', () => {
+  show('/?day=2027-02-08')
+  expect((document.querySelector('[data-inset]') as HTMLElement).dataset.inset).toBe('')
 })

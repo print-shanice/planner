@@ -16,6 +16,9 @@ import { useHighlight } from '../trip/highlight'
 
 type Card = { place: Place; stopId?: string; seq: number }
 
+// on a phone the floating bar and chips cover the top, the places sheet and tab bar the bottom
+const PHONE_INSET = { top: 200, bottom: 300 }
+
 export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean }) {
   const tq = useTrips()
   const sq = useStops()
@@ -67,7 +70,7 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
 
   return (
     <div className="map-tab">
-      <TripMap data={data} highlight={lit.id} fitKey={`${trip.id}|${filter}`} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
+      <TripMap data={data} highlight={lit.id} inset={phone ? PHONE_INSET : undefined} fitKey={`${trip.id}|${filter}`} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
         onPick={pick} onEmpty={empty} onCenter={(c) => { center.current = c }} />
       <div className="map-top">
         <div className="map-search">
