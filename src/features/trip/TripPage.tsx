@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -16,7 +16,7 @@ import { SavedTab } from '../saved/SavedTab'
 import { PackingTab } from '../packing/PackingTab'
 import { TripSummary } from './TripSummary'
 import { TripHeader } from './TripHeader'
-import { PHONE_TABS, WIDE_TABS, type Tab } from './tabs'
+import { PHONE_TABS, readTab, SAVED_VIEWS, WIDE_TABS, type SavedView, type Tab } from './tabs'
 import { tint } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 
@@ -24,14 +24,12 @@ type AddKind = 'stay' | 'journey' | 'side trip'
 
 const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapTab })))
 
-function Panel({ tab, trip }: { tab: Tab; trip: Trip }) {
+function Panel({ tab, view, trip }: { tab: Tab; view: SavedView; trip: Trip }) {
   switch (tab) {
     case 'map': return <Suspense fallback={null}><MapTab trip={trip} /></Suspense>
-    case 'cost': return <MoneyTab trip={trip} />
-    case 'ideas':
-    case 'links': return <SavedTab key={`${trip.id}-${tab}`} trip={trip} view={tab} />
-    case 'packing': return <PackingTab trip={trip} />
-    default: return <PlanTab trip={trip} />
+    case 'money': return <MoneyTab trip={trip} />
+    case 'saved': return view === 'packing' ? <PackingTab trip={trip} /> : <SavedTab key={`${trip.id}-${view}`} trip={trip} view={view} />
+    default: return null
   }
 }
 
@@ -71,6 +69,17 @@ function TripScreen() {
   const wide = useWide()
   const canEdit = useCanEdit()
   const [kind, setKind] = useState<AddKind | null>(null)
+  const main = useRef<HTMLElement>(null)
+  const scrolls = useRef<Record<string, number>>({})
+  const scroller = () => (wide ? main.current : null)
+  const where = `${readTab(params, wide).tab}/${readTab(params, wide).view}`
+  useLayoutEffect(() => {
+    const y = scrolls.current[where]
+    if (y == null) return
+    const el = scroller()
+    if (el) el.scrollTop = y
+    else window.scrollTo(0, y)
+  }, [where]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const trip = trips?.find((t) => t.id === id)
   if (!trip) {
@@ -91,43 +100,44 @@ function TripScreen() {
     )
   }
 
-  const requestedTab = params.get('tab')
-  const asked = (requestedTab === 'saved' ? 'ideas' : requestedTab === 'money' ? 'cost' : requestedTab as Tab) || (validDay(params.get('day')) ? 'itinerary' : 'plan')
+  const { tab, view } = readTab(params, wide)
   const tabs = wide ? WIDE_TABS : PHONE_TABS
-  const tab: Tab = tabs.includes(asked) ? asked : 'plan'
   const day = params.get('day')
+  // the day stays when you switch sections; each section keeps its own scroll
+  function pick(next: Tab, nextView: SavedView = view) {
+    scrolls.current[`${tab}/${view}`] = scroller()?.scrollTop ?? window.scrollY
+    setParams((p) => {
+      const n = new URLSearchParams(p)
+      n.delete('view'); n.delete('map')
+      if (next === 'plan') n.delete('tab')
+      else n.set('tab', next)
+      if (next === 'saved') n.set('view', nextView)
+      return n
+    })
+  }
   return (
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`} style={tint(trip.color)}>
-      <section className="trip-main">
+      <section className="trip-main" ref={main}>
         <TripHeader key={trip.id} trip={trip} />
-        <div className="section-nav-row">
-          <TripSummary sections={tabs}
-            active={tab} onPick={(view) => {
-              const next = new URLSearchParams(params)
-              if (view === 'plan') { next.delete('tab'); next.delete('day') }
-              else next.set('tab', view)
-              setParams(next)
-            }} />
-        </div>
-        {tab !== 'plan' && tab !== 'itinerary' && (
+        <TripSummary sections={tabs} active={tab} bar={!wide} onPick={(t) => pick(t)} />
+        {tab !== 'plan' && (
           <section id="trip-section" className="trip-inline-section" aria-label={tab}>
-            {(tab === 'packing' || tab === 'map') && <header className="section-heading">
-              <h2 className="head">{tab}</h2>
-            </header>}
-            <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} trip={trip} /></div>
+            {tab === 'saved' && (
+              <div className="segmented saved-switch" role="group" aria-label="saved">
+                {SAVED_VIEWS.map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => pick('saved', v)}>{v}</button>)}
+              </div>
+            )}
+            <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} view={view} trip={trip} /></div>
           </section>
         )}
-        <div className="trip-panel" hidden={tab !== 'plan' && tab !== 'itinerary'}>
-          <header className="itinerary-heading">
-            <h2 className="head">{tab === 'itinerary' ? 'itinerary' : 'calendar'}</h2>
-            <div className="itinerary-actions" aria-label="add to itinerary">
-              {(['stay', 'journey', 'side trip'] as const).map((action) => (
-                <button key={action} type="button" className="btn ghost" disabled={!canEdit} onClick={() => setKind(action)}>{action}</button>
-              ))}
-              <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => stopSheet?.newStop('note', trip.id, { day: validDay(day) ? day : trip.start_date })}>add note</button>
-            </div>
-          </header>
-          <PlanTab key={trip.id} trip={trip} view={tab === 'itinerary' || validDay(day) ? 'itinerary' : 'calendar'} />
+        <div className="trip-panel" hidden={tab !== 'plan'}>
+          <div className="itinerary-actions" aria-label="add to itinerary">
+            {(['stay', 'journey', 'side trip'] as const).map((action) => (
+              <button key={action} type="button" className="btn ghost" disabled={!canEdit} onClick={() => setKind(action)}>{action}</button>
+            ))}
+            <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => stopSheet?.newStop('note', trip.id, { day: validDay(day) ? day : trip.start_date })}>add note</button>
+          </div>
+          <PlanTab key={trip.id} trip={trip} view={validDay(day) ? 'itinerary' : 'calendar'} />
         </div>
       </section>
       {wide && <aside className="trip-map"><Suspense fallback={null}><MapTab trip={trip} /></Suspense></aside>}

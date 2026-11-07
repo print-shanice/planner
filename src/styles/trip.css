@@ -8,11 +8,14 @@
 }
 .back-link:hover { color: var(--ink); background: var(--soft); }
 .back-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-title-row { display: flex; align-items: flex-start; gap: 8px; }
-.trip-title { flex: 1; min-width: 0; }
-.trip-title h1 { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; }
-.trip-title-content { display: flex; align-items: flex-start; gap: 8px; }
-.trip-flags { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 3px; flex: none; padding-top: 5px; font-size: 20px; line-height: 1.2; }
+.trip-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.trip-title-row { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+.trip-title-row h1 { flex: 1; min-width: 0; font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; }
+.one-line, .one-line > span, .one-line .title-btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.one-line .title-btn { max-width: 100%; }
+.trip-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; }
+.trip-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-flags { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 4px; flex: none; font-size: 16px; line-height: 1; }
 .trip-flags-more { font-family: var(--f-body); font-size: 12px; font-weight: 600; color: var(--ink-2); }
 /* with side trips or a parent, the title opens the trip family */
 .title-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; letter-spacing: inherit; text-align: left; border-radius: 8px; }
@@ -35,14 +38,15 @@
 .tree-link[aria-current="page"] .tree-name { font-weight: 800; }
 .tree-toggle .icon { transition: transform .15s; }
 .tree-toggle[aria-expanded="false"] .icon { transform: rotate(-90deg); }
-.avatars { display: flex; padding-top: 6px; }
+.avatars { display: flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: flex-end; padding: 0 2px; border: 0; background: none; border-radius: 999px; cursor: pointer; }
+.avatars:disabled { cursor: default; }
 .avatar {
-  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--soft); color: var(--ink); font-size: 13px; font-weight: 700; border: 2px solid var(--ground);
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--soft); color: var(--card); font-size: 13px; font-weight: 700; border: 2px solid var(--ground);
 }
 .avatar + .avatar { margin-left: -8px; }
 
-.trip-panel { padding: 8px 16px 24px; }
+.trip-panel { padding: 16px 16px 24px; }
 
 .trip-wide { display: grid; grid-template-columns: minmax(420px, 1fr) minmax(0, 1.15fr); height: 100dvh; }
 .trip-wide .trip-main { width: 100%; overflow: auto; }
@@ -51,8 +55,7 @@
 .trip-wait { width: min(720px, 100%); margin: 0 auto; padding: calc(env(safe-area-inset-top) + 64px) 16px 24px; }
 
 /* saved: ideas or links, each with its own search, and a select mode to delete several */
-.saved-switch { justify-self: start; }
-.saved-switch button { min-width: 88px; }
+.saved-switch button { flex: 1; }
 .saved-tools { display: flex; align-items: center; gap: 8px; }
 .saved-tools .search-box { flex: 1; min-width: 0; background: var(--soft); }
 .saved-tools .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
@@ -62,31 +65,37 @@
 .pick { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--ink); cursor: pointer; }
 .site-icon { flex: none; width: 20px; height: 20px; border-radius: 5px; object-fit: contain; }
 
-/* Section navigation stays quiet; the calendar is always one tap away. */
-.section-nav-row { padding: 12px 16px 0; }
-.section-nav { display: flex; border-bottom: 1px solid var(--line); }
-.section-nav button {
-  flex: 1; min-width: 0; min-height: 48px; padding: 8px 4px; border: 0; border-bottom: 2px solid transparent;
-  background: none; color: var(--ink-2); font-weight: 600; cursor: pointer;
+/* phones: four sections in a bar at the bottom */
+.tab-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: space-around;
+  padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px); background: color-mix(in srgb, var(--card) 94%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line);
 }
-.section-nav button:hover { color: var(--ink); background: var(--soft); }
-.section-nav button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
-.trip-inline-section { margin: 0 16px 24px; }
+.tab-bar button {
+  flex: 1; max-width: 96px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  border: 0; background: none; color: var(--ink-3); font-size: 11px; font-weight: 600; border-radius: 14px; cursor: pointer;
+}
+.tab-bar button[aria-pressed="true"] { color: var(--ink); font-weight: 800; }
+.tab-bar button[aria-pressed="true"] .icon { stroke-width: 2.3; }
+/* laptops: the same sections as a switch under the title */
+.section-switch { display: flex; gap: 4px; margin: 4px 16px 0; padding: 4px; background: var(--soft); border-radius: 999px; }
+.section-switch button {
+  flex: 1; min-height: 40px; border: 0; border-radius: 999px; background: none; color: var(--ink-2); font-weight: 600; cursor: pointer;
+}
+.section-switch button[aria-pressed="true"] { background: var(--card); color: var(--ink); font-weight: 800; box-shadow: 0 1px 2px rgba(22, 24, 29, 0.12); }
+.trip-inline-section { margin: 0 16px 24px; padding-top: 16px; }
+.trip-inline-section > .saved-switch { margin-bottom: 16px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0 12px; }
 .section-heading h2, .itinerary-heading h2 { font-size: 22px; font-weight: 700; }
 .section-content { padding-bottom: 20px; }
 .itinerary-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 16px 0 12px; }
 .itinerary-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 .itinerary-actions .btn { padding-inline: 10px; font-size: 14px; }
-.trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 24px); }
+.trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
 .trip-phone.tab-is-map .section-content { height: 40dvh; }
 
 .section-content .empty { padding-block: 20px; }
 
-@media (max-width: 420px) { .section-nav button { font-size: 12px; padding-inline: 2px; } }
-
-.trip-title-content > .title-btn { min-width: 0; flex: 1; }
-.trip-title-content > span:not(.trip-flags), .title-btn > span { min-width: 0; overflow-wrap: anywhere; }
 
 .section-action {
   flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px;

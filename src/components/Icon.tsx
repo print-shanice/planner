@@ -5,6 +5,7 @@ const P: Record<string, string> = {
   chevron: 'M6 9l6 6 6-6',
   close: 'M6 6l12 12M18 6L6 18',
   plan: 'M4 6h16M4 12h16M4 18h10',
+  calendar: 'M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM4 10h16M9 3v4M15 3v4',
   map: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
   money: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM6 10v4M18 10v4',
   saved: 'M6 3h12v18l-6-4-6 4z',

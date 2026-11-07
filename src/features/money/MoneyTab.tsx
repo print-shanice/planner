@@ -60,7 +60,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   return (
     <div className="money stack">
       <LoadState load={load} />
-      <SectionHeading title="cost" action="add cost" disabled={!canEdit} onAction={() => setAdding(true)} />
+      <SectionHeading action="add cost" disabled={!canEdit} onAction={() => setAdding(true)} />
       <div className="money-head">
         <div className="stack-xs">
           <p className="money-total num head" data-testid="money-total">{show(total)}</p>

@@ -11,3 +11,6 @@ afterEach(() => {
 // jsdom has no object urls
 URL.createObjectURL ??= (() => 'blob:test') as typeof URL.createObjectURL
 URL.revokeObjectURL ??= (() => {}) as typeof URL.revokeObjectURL
+
+// jsdom has no scrolling; the trip page restores each section's scroll position
+window.scrollTo = (() => {}) as typeof window.scrollTo

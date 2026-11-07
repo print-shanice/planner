@@ -119,7 +119,7 @@ export function SavedTab({ trip, view }: { trip: Trip; view?: 'ideas' | 'links' 
         <button type="button" aria-pressed={side === 'ideas'} onClick={() => switchTo('ideas')}>ideas</button>
         <button type="button" aria-pressed={side === 'links'} onClick={() => switchTo('links')}>links</button>
       </div>}
-      <SectionHeading title={side} action={side === 'links' ? 'add link' : 'add idea'} disabled={!canEdit}
+      <SectionHeading action={side === 'links' ? 'add link' : 'add idea'} disabled={!canEdit}
         onAction={() => side === 'links' ? setAdding(true) : sheet?.newStop('place', trip.id, { saved: true, day: null })} />
       <div className="saved-tools">
         <label className="search-box">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { ancestors, countryName, descendants } from '../../lib/countries'
@@ -12,7 +12,7 @@ import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
 
-export function TripHeader({ trip }: { trip: Trip }) {
+export function TripHeader({ trip, action }: { trip: Trip; action?: ReactNode }) {
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
   const members = useMembers().data ?? []
@@ -37,8 +37,8 @@ export function TripHeader({ trip }: { trip: Trip }) {
   const countries = destinations.length ? destinations : codes(planned.map(s => s.destination?.country))
   const flags = countries.length > 0 && (
     <span className="trip-flags" title={countries.map(countryName).join(', ')}>
-      {countries.slice(0, 2).map(code => <CountryFlag key={code} code={code} />)}
-      {countries.length > 2 && <span className="trip-flags-more" aria-label={countries.slice(2).map(countryName).join(', ')}>+{countries.length - 2}</span>}
+      {countries.slice(0, 4).map(code => <CountryFlag key={code} code={code} />)}
+      {countries.length > 4 && <span className="trip-flags-more" aria-label={countries.slice(4).map(countryName).join(', ')}>+{countries.length - 4}</span>}
     </span>
   )
   const n = nights(trip.start_date, trip.end_date)
@@ -49,28 +49,25 @@ export function TripHeader({ trip }: { trip: Trip }) {
   return (
     <header className="trip-header">
       <OfflineBadge />
-      <Link to={up ? `/trip/${up.id}` : '/'} className="back-link" aria-label={`back to ${upName}`}>
-        <Icon name="back" />{up && <CountryFlag code={up.base?.country} />}<span>{upName}</span>
-      </Link>
-        <div className="trip-title-row">
-          <div className="stack-xs trip-title">
-            <h1 className="head trip-title-content">
-              {flags}
-              {family ? (
-                <button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
-                  <span>{trip.name}</span><Icon name="chevron" size={22} />
-                </button>
-              ) : <span>{trip.name}</span>}
-            </h1>
-            {when && <p className="muted num">{when}</p>}
-          </div>
-          <div className="avatars" aria-label="members">
-            {members.map((m) => <span key={m.email} className="avatar" title={m.name}>{(m.name || m.email).slice(0, 1)}</span>)}
-          </div>
-          <button type="button" className="icon-btn" aria-label="edit trip" disabled={!canEdit} onClick={() => setEditing(true)}>
-            <Icon name="edit" />
-          </button>
-        </div>
+      <div className="trip-top">
+        <Link to={up ? `/trip/${up.id}` : '/'} className="back-link" aria-label={`back to ${upName}`}>
+          <Icon name="back" />{up && <CountryFlag code={up.base?.country} />}<span>{upName}</span>
+        </Link>
+        <button type="button" className="avatars" aria-label="edit trip" disabled={!canEdit} onClick={() => setEditing(true)}>
+          {members.map((m) => <span key={m.email} className="avatar" style={{ background: `var(--g${(m.color ?? 0) % 6})` }} title={m.name}>{(m.name || m.email).slice(0, 1)}</span>)}
+        </button>
+      </div>
+      <div className="trip-title-row">
+        <h1 className="head one-line">
+          {family ? (
+            <button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
+              <span>{trip.name}</span><Icon name="chevron" size={22} />
+            </button>
+          ) : <span>{trip.name}</span>}
+        </h1>
+        {action}
+      </div>
+      {(flags || when) && <p className="trip-meta muted num">{flags}{flags && when && <span aria-hidden="true">·</span>}{when && <span>{when}</span>}</p>}
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
         <TripTree trips={trips} current={trip.id} onPick={() => setTree(false)} />
       </Sheet>
