@@ -34,7 +34,7 @@ export function stayDays(s: Stop): string[] {
   return range(s.day, s.end_date)
 }
 
-export type DayEntry = { kind: 'stop' | 'staying' | 'checkout' | 'sidetrip'; stop?: Stop; trip?: Trip }
+export type DayEntry = { kind: 'stop' | 'checkin' | 'staying' | 'checkout' | 'sidetrip'; stop?: Stop; trip?: Trip }
 
 function stopDays(s: Stop): string[] {
   return s.kind === 'stay' ? stayDays(s) : s.day ? [s.day] : []
@@ -65,7 +65,7 @@ export function groupByDay(t: Trip, stops: Stop[], children: Trip[]) {
   }
   for (const d of visibleDays(t, stops, children)) days.set(d, [])
   const undated: Stop[] = []
-  const rank = { sidetrip: 0, checkout: 1, staying: 2, stop: 3 }
+  const rank = { sidetrip: 0, checkout: 1, staying: 2, stop: 3, checkin: 3 }
 
   for (const c of children) if (c.start_date) push(c.start_date, { kind: 'sidetrip', trip: c })
   for (const s of [...stops].sort(byOrder)) {
@@ -73,7 +73,7 @@ export function groupByDay(t: Trip, stops: Stop[], children: Trip[]) {
     if (s.kind === 'stay') {
       const ds = stayDays(s)
       ds.forEach((d, i) => {
-        const kind = i === 0 ? 'stop' : i === ds.length - 1 ? 'checkout' : 'staying'
+        const kind = i === 0 ? 'checkin' : i === ds.length - 1 ? 'checkout' : 'staying'
         // "staying at" only joins days that are already shown
         if (kind !== 'staying' || days.has(d)) push(d, { kind, stop: s })
       })
@@ -100,9 +100,9 @@ export function countdown(t: Trip, today: string): { kind: 'upcoming' | 'ongoing
   return { kind: 'done', days: 0 }
 }
 
-export function dayColor(index: number): string {
-  void index
-  return 'var(--g0)'
+// a trip's colour, for its numbers and pins
+export function dayColor(color: number | null | undefined): string {
+  return `var(--g${(((color ?? 0) % 6) + 6) % 6})`
 }
 
 export function todayISO(): string {

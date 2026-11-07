@@ -7,6 +7,15 @@ export function hasPoint(p: Place | null | undefined): p is Place & { lat: numbe
   return !!p && typeof p.lat === 'number' && typeof p.lng === 'number'
 }
 
+// two points this close are one place (an airport and its station's platform), not a walk
+export function tooClose(a: Place, b: Place): boolean {
+  if (!hasPoint(a) || !hasPoint(b)) return false
+  const rad = Math.PI / 180
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2
+  return 2 * 6371000 * Math.asin(Math.sqrt(h)) < 150
+}
+
 export function walkKey(a: Place, b: Place): string | null {
   if (!hasPoint(a) || !hasPoint(b)) return null
   return `walk:${r5(a.lat)},${r5(a.lng)};${r5(b.lat)},${r5(b.lng)}`

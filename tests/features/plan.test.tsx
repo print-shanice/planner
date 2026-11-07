@@ -9,6 +9,7 @@ const db = vi.hoisted(() => ({
   stopsQ: null as null | Record<string, unknown>,
   trips: [] as unknown[],
   stops: [] as unknown[],
+  costs: [] as unknown[],
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   walk: vi.fn(() => Promise.resolve(530)),
   search: vi.fn(),
@@ -17,7 +18,7 @@ const db = vi.hoisted(() => ({
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useStops: () => db.stopsQ ?? ({ data: db.stops }),
-  useCosts: () => ({ data: [] }),
+  useCosts: () => ({ data: db.costs }),
   useFiles: () => ({ data: [] }),
   useMembers: () => ({ data: [] }),
   useRates: () => ({ data: null }),
@@ -156,7 +157,7 @@ it('timed stops sort chronologically, flexible plans follow and every stop is nu
   showAt('/trip/lap?day=2027-02-08')
   expect(within(day('2027-02-08')).getAllByTestId('stop-num').map(n => n.textContent)).toEqual(['1', '2', '3'])
   expect([...day('2027-02-08').querySelectorAll('.stop-title')].map(n => n.textContent)).toEqual(['breakfast', 'lunch', 'walk'])
-  expect(screen.getByText('any time')).toBeInTheDocument()
+  expect(screen.queryByText('any time')).toBeNull()
 })
 
 it('tapping a day in the calendar changes only the chosen day', async () => {
@@ -267,4 +268,96 @@ it('the week moves on and back across months', async () => {
   await userEvent.click(cal().getByRole('button', { name: 'previous week' }))
   await userEvent.click(cal().getByRole('button', { name: 'thu 28 jan' }))
   expect(day('2027-01-28')).toBeInTheDocument()
+})
+
+describe('a calm day', () => {
+  const at = (lat: number, lng: number, o: Partial<import('../../src/lib/types').Place> = {}) => place({ lat, lng, ...o })
+  const rows = () => [...day('2027-02-08').querySelectorAll('.stop-row')] as HTMLElement[]
+
+  it('a timed place shows its time once, and its line under says what and where', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, title: 'arktikum', day: '2027-02-08', time: '10:00', category: 'museum', place: at(66.5, 25.7, { city: 'rovaniemi' }) })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(within(day('2027-02-08')).getAllByText('10:00')).toHaveLength(1)
+    expect(within(day('2027-02-08')).getByText('museum · rovaniemi')).toBeInTheDocument()
+  })
+
+  it('untimed stops follow with no "any time" heading, marked "any" when the day has times', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, title: 'lunch', day: '2027-02-08', time: '13:00' }), stop({ trip_id: t.id, title: 'walk', day: '2027-02-08', time: null, position: 1 })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(screen.queryByText('any time')).toBeNull()
+    expect(within(rows()[1]).getByText('any')).toBeInTheDocument()
+  })
+
+  it('a day with no times shows no "any"', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, title: 'walk', day: '2027-02-08', time: null })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(screen.queryByText('any')).toBeNull()
+  })
+
+  it('a walk shows between every pair of located places, timed to untimed too', async () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, title: 'a', day: '2027-02-08', time: '10:00', place: at(66.50, 25.70) }),
+      stop({ trip_id: t.id, title: 'b', day: '2027-02-08', time: null, position: 1, place: at(66.51, 25.72) })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(await within(day('2027-02-08')).findByText('9 min walk')).toBeInTheDocument()
+  })
+
+  it('no walk between two places under 150 m apart', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, kind: 'journey', title: 'flight', day: '2027-02-08', time: '07:00', origin: at(53.4, -6.2), destination: at(52.31, 4.76) }),
+      stop({ trip_id: t.id, kind: 'journey', title: 'train', day: '2027-02-08', time: '15:00', origin: at(52.3101, 4.7601), destination: at(51.44, 5.47) })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(db.walk).not.toHaveBeenCalled()
+  })
+
+  it('a journey reads like a ticket: both ends in full, when it lands, mode, ref and status', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, kind: 'journey', mode: 'flight', title: 'flight to amsterdam', day: '2027-02-08', time: '07:10', end_time: '14:35', ref: 'KL934', status: 'booked',
+      origin: at(53.4, -6.2, { name: 'dublin airport', city: 'dublin' }), destination: at(52.31, 4.76, { name: 'schiphol', city: 'amsterdam' }) })]
+    showAt('/trip/lap?day=2027-02-08')
+    const ticket = within(day('2027-02-08').querySelector('.journey-ticket') as HTMLElement)
+    expect(ticket.getByText('dublin airport')).toBeInTheDocument()
+    expect(ticket.getByText('schiphol')).toBeInTheDocument()
+    expect(ticket.getByText('lands 14:35')).toBeInTheDocument()
+    expect(ticket.getByText(/KL934/)).toBeInTheDocument()
+    expect(ticket.getByText('booked')).toBeInTheDocument()
+    expect(within(day('2027-02-08')).getAllByText('07:10')).toHaveLength(1)
+  })
+
+  it('a train says it arrives', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, kind: 'journey', mode: 'train', day: '2027-02-08', time: '15:30', end_time: '16:50', origin: at(52.31, 4.76, { name: 'schiphol' }), destination: at(51.44, 5.47, { name: 'eindhoven centraal' }) })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(within(day('2027-02-08')).getByText('arrives 16:50')).toBeInTheDocument()
+  })
+
+  it('a stay starting that day is a quiet check-in strip, and numbering skips it', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, kind: 'stay', title: 'cabin', day: '2027-02-08', end_date: '2027-02-10' }),
+      stop({ trip_id: t.id, title: 'museum', day: '2027-02-08', time: '10:00' }),
+      stop({ trip_id: t.id, kind: 'note', title: 'buy snacks', day: '2027-02-08', time: '12:00' })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(within(day('2027-02-08')).getByText('check in · cabin')).toBeInTheDocument()
+    expect(within(day('2027-02-08')).getAllByTestId('stop-num').map((n) => n.textContent)).toEqual(['1', '2'])
+  })
+
+  it('the day heading only says which day of the trip it is', () => {
+    const t = lap(); db.trips = [t]
+    db.stops = [stop({ id: 'm', trip_id: t.id, title: 'museum', day: '2027-02-08' })]
+    db.costs = [{ id: 'c', trip_id: t.id, stop_id: 'm', title: 'museum', amount: 3442, currency: 'EUR', eur_rate: null, category: 'other', date: '2027-02-08', status: 'paid', paid_by: null, split: 'even' }]
+    showAt('/trip/lap?day=2027-02-08')
+    db.costs = []
+    expect(screen.getByText('day 2 of 5')).toBeInTheDocument()
+    expect(screen.getByText('day 2 of 5').textContent).toBe('day 2 of 5')
+  })
+
+  it('stop numbers wear the trip colour', () => {
+    const t = { ...lap(), color: 3 }; db.trips = [t]
+    db.stops = [stop({ trip_id: t.id, title: 'museum', day: '2027-02-08' })]
+    showAt('/trip/lap?day=2027-02-08')
+    expect(within(day('2027-02-08')).getByTestId('stop-num').style.background).toBe('var(--g3)')
+  })
 })

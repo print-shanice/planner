@@ -25,7 +25,7 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
   for (const date of dates) {
     if (!showDay(date)) continue
     const entries = agendaForDay(trip, trips, stops, date)
-    const color = dayColor(0)
+    const color = dayColor(trip.color)
     let n = 0
     const path: [number, number][] = []
     for (const e of entries) {

@@ -3,7 +3,7 @@ import { validDay } from '../../lib/agenda'
 import { useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
-import { dayColor, daysBetween, fmtDay } from '../../lib/dates'
+import { dayColor, fmtDay } from '../../lib/dates'
 import { reversePlace } from '../../lib/photon'
 import { loadState } from '../../lib/load'
 import { LoadNotice } from '../../components/States'
@@ -57,7 +57,7 @@ export function MapTab({ trip }: { trip: Trip }) {
           <button type="button" className="chip-pill" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>all days</button>
           {days.map((d) => (
             <button key={d} type="button" className="chip-pill" aria-pressed={filter === d} onClick={() => setFilter(d)}>
-              <span className="dot" style={{ background: dayColor(trip.start_date ? daysBetween(trip.start_date, d) : 0) }} />
+              <span className="dot" style={{ background: dayColor(trip.color) }} />
               {fmtDay(d, { weekday: 'short', day: 'numeric' }).replace(',', '')}
             </button>
           ))}

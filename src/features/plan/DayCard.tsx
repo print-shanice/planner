@@ -2,12 +2,12 @@ import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import type { DayEntry } from '../../lib/dates'
 import { fmtDay } from '../../lib/dates'
 import type { Place, Stop, Trip } from '../../lib/types'
-import { hasPoint } from '../../lib/walk'
+import { hasPoint, tooClose } from '../../lib/walk'
 import { positionsAfterMove } from '../../lib/order'
 import { useSave } from '../../lib/queries'
 import { CountryFlag } from '../../components/CountryFlag'
 import { Link } from 'react-router-dom'
-import { StopRow } from './StopRow'
+import { StopRow, type RowVariant } from './StopRow'
 import { WalkLeg } from './WalkLeg'
 
 type Props = {
@@ -67,27 +67,23 @@ export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, cla
   const items: JSX.Element[] = []
   let n = 0
   let prev: Stop | null = null
-  let flexible = false
+  const timed = entries.some((e) => e.kind === 'stop' && e.stop?.time)
   for (const e of entries) {
     // side trips never reach a day card: the plan folds them into their own row
     if (!e.stop) continue
     const s = e.stop
-    if (e.kind === 'stop' && !s.time && !flexible) {
-      items.push(<h4 className="agenda-anytime" key="anytime">any time</h4>)
-      flexible = true
-      prev = null
-    }
     const owner = trips?.find(t => t.id === s.trip_id)
     if (owner && owner.id !== trip.id) items.push(<Link className="agenda-owner" key={`owner-${s.id}-${e.kind}`} to={`/trip/${owner.id}`}><CountryFlag code={owner.base?.country} />{owner.name} · open trip</Link>)
+    // a walk between every pair of located places, unless they're really one place
     const a = prev ? placeOut(prev) : null, b = placeIn(s)
-    if (prev && hasPoint(a) && hasPoint(b)) items.push(<WalkLeg key={`w-${prev.id}-${s.id}-${e.kind}`} from={a} to={b} />)
+    if (prev && hasPoint(a) && hasPoint(b) && !tooClose(a, b)) items.push(<WalkLeg key={`w-${prev.id}-${s.id}-${e.kind}`} from={a} to={b} />)
     const isNum = e.kind === 'stop'
     if (isNum) n += 1
     items.push(
-      <StopRow key={`${s.id}-${e.kind}`} stop={s} variant={e.kind as 'stop' | 'staying' | 'checkout'} n={isNum ? n : undefined}
-        colorIndex={colorIndex} clash={clash.has(s.id)} onOpen={onOpen}
+      <StopRow key={`${s.id}-${e.kind}`} stop={s} variant={e.kind as RowVariant} n={isNum ? n : undefined}
+        colorIndex={colorIndex} clash={clash.has(s.id)} onOpen={onOpen} any={timed && isNum && !s.time}
         onGrab={canEdit && isNum && !s.time && numbered.every(x => x.trip_id === trip.id && !x.time) && numbered.length > 1 ? (ev) => grab(ev, s) : undefined}
-        dragging={drag?.id === s.id && e.kind === 'stop'} offset={drag?.id === s.id && e.kind === 'stop' ? drag.dy : 0} />,
+        dragging={drag?.id === s.id && isNum} offset={drag?.id === s.id && isNum ? drag.dy : 0} />,
     )
     prev = s
   }

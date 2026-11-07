@@ -32,3 +32,23 @@ it('rejects impossible dates and does not match places by name alone', () => {
   expect(samePlace(place({ osm_id: 'node:1' }), place({ osm_id: 'node:1' }))).toBe(true)
   expect(samePlace(place({ lat: null, lng: null }), place({ lat: null, lng: null }))).toBe(false)
 })
+
+it('a stay starting that day is a check-in, not a numbered stop', () => {
+  const t = trip({ id: 'p' })
+  const s = stop({ trip_id: 'p', kind: 'stay', day: '2027-04-12', end_date: '2027-04-15' })
+  const a = stop({ trip_id: 'p', day: '2027-04-12', time: '10:00' })
+  expect(agendaForDay(t, [t], [s, a], '2027-04-12')).toEqual([{ kind: 'stop', stop: a }, { kind: 'checkin', stop: s }])
+})
+
+it('the map numbers stops like the plan, skipping a check-in', () => {
+  const t = trip({ id: 'p' })
+  const stops = [stop({ id: 'flat', trip_id: 'p', kind: 'stay', day: '2027-04-12', end_date: '2027-04-15', time: '09:00', place: place() }),
+    stop({ id: 'museum', trip_id: 'p', day: '2027-04-12', time: '11:00', place: place() })]
+  expect(mapFeatures(t, [t], stops, '2027-04-12').pins.features.map(f => [f.properties.id, f.properties.number])).toEqual([['museum', 1]])
+})
+
+it('stop numbers wear the trip colour', () => {
+  const t = trip({ id: 'p', color: 2 })
+  const stops = [stop({ trip_id: 'p', day: '2027-04-12', place: place() })]
+  expect(mapFeatures(t, [t], stops, '2027-04-12').pins.features[0].properties.color).toBe('var(--g2)')
+})

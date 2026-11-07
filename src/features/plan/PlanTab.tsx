@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
-import { useCosts, useRates, useStops, useTrips } from '../../lib/queries'
-import { formatMoney, totals } from '../../lib/money'
+import { useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { daysBetween, fmtDay, groupByDay, todayISO, tripDays } from '../../lib/dates'
 import { agendaForDay, validDay } from '../../lib/agenda'
@@ -30,8 +29,6 @@ export function PlanTab({ trip }: { trip: Trip }) {
   const load = loadState(tq, sq)
   const canEdit = useCanEdit()
   const wide = useWide()
-  const costs = useCosts().data ?? []
-  const rates = useRates().data ?? null
 
   const stops = useMemo(() => allStops.filter((s) => s.trip_id === trip.id), [allStops, trip.id])
   const children = useMemo(() => trips.filter((t) => t.parent_id === trip.id), [trips, trip.id])
@@ -69,11 +66,8 @@ export function PlanTab({ trip }: { trip: Trip }) {
     setParams((p) => { const n = new URLSearchParams(p); n.set('day', d); n.delete('map'); return n })
   }
 
-  const dayCosts = selected ? costs.filter((c) => c.date === selected || (c.stop_id && entries.some((e) => e.kind === 'stop' && e.stop?.id === c.stop_id))) : []
-  const spend = totals(dayCosts, trip.currency, rates)
   const sub = [
     selected && trip.start_date && inTrip(selected) ? `day ${daysBetween(trip.start_date, selected) + 1} of ${all.length}` : '',
-    spend.paid + spend.planned > 0 ? formatMoney(spend.paid + spend.planned, trip.currency) : '',
   ].filter(Boolean).join(' · ')
 
   return (
@@ -92,7 +86,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
           <h2 className="head">{fmtDay(selected, { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '')}</h2>
           {sub && <p className="muted num">{sub}</p>}
         </header>
-        <DayCard trip={trip} date={selected} entries={entries} colorIndex={0} trips={trips} bare
+        <DayCard trip={trip} date={selected} entries={entries} colorIndex={trip.color} trips={trips} bare
           clash={clash} canEdit={canEdit} onOpen={onOpen} />
         {datedKids.filter(c => c.start_date! <= selected && (c.end_date ?? c.start_date!) >= selected).map(c =>
           <FoldRow key={c.id} trip={c} clash={clash.has(c.id)} />)}

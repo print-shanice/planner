@@ -26,7 +26,7 @@ it('reversed stay is one day', () => {
 
 it('stay entries: check in, staying, check out', () => {
   const g = groupByDay(t, [stop({ id: 's', kind: 'stay', day: '2027-02-07', end_date: '2027-02-09' })], [])
-  expect(g.days[0].entries[0]).toMatchObject({ kind: 'stop' })
+  expect(g.days[0].entries[0]).toMatchObject({ kind: 'checkin' })
   expect(g.days[1].entries[0]).toMatchObject({ kind: 'staying' })
   expect(g.days[2].entries[0]).toMatchObject({ kind: 'checkout' })
 })
@@ -71,9 +71,10 @@ it('countdown', () => {
   expect(countdown(trip({ start_date: null }), '2027-03-01')).toEqual({ kind: 'undated', days: 0 })
 })
 
-it('dayColor uses one consistent route colour', () => {
+it('dayColor is the trip colour', () => {
   expect(dayColor(0)).toBe('var(--g0)')
-  expect(dayColor(7)).toBe('var(--g0)')
+  expect(dayColor(7)).toBe('var(--g1)')
+  expect(dayColor(null)).toBe('var(--g0)')
 })
 
 it('fmtRange is short and lowercase', async () => {

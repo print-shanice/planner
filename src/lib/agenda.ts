@@ -16,13 +16,14 @@ export function agendaForDay(trip: Trip, trips: Trip[], stops: Stop[], day: stri
   const entries: DayEntry[] = []
   for (const stop of stops) {
     if (!ids.has(stop.trip_id) || !stop.day) continue
-    if (stop.day === day) entries.push({ kind: 'stop', stop })
+    if (stop.day === day) entries.push({ kind: stop.kind === 'stay' ? 'checkin' : 'stop', stop })
     else if (stop.kind === 'stay' && stop.day < day && stop.end_date && stop.end_date >= day) {
       entries.push({ kind: stop.end_date === day ? 'checkout' : 'staying', stop })
     }
   }
   return entries.sort((a, b) => {
-    const context = Number(a.kind === 'stop') - Number(b.kind === 'stop')
+    const inline = (k: DayEntry['kind']) => k === 'stop' || k === 'checkin'
+    const context = Number(inline(a.kind)) - Number(inline(b.kind))
     return context || agendaOrder(a.stop!, b.stop!)
   })
 }

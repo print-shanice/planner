@@ -31,3 +31,11 @@ it('a failed walk is null and not cached', async () => {
   expect(await walkSeconds(place(), place({ lat: 51 }))).toBeNull()
   expect(Object.keys(localStorage).filter((k) => k.startsWith('walk:'))).toEqual([])
 })
+
+it('places under 150 m apart are too close for a walk', async () => {
+  const { tooClose } = await import('../../src/lib/walk')
+  // schiphol airport and its station
+  expect(tooClose(place({ lat: 52.3105, lng: 4.7683 }), place({ lat: 52.3092, lng: 4.7622 }))).toBe(false)
+  expect(tooClose(place({ lat: 52.31, lng: 4.76 }), place({ lat: 52.3105, lng: 4.7605 }))).toBe(true)
+  expect(tooClose(place({ lat: 52.31, lng: 4.76 }), place({ lat: 52.31, lng: 4.76 }))).toBe(true)
+})
