@@ -21,6 +21,12 @@ it('unknown currency without rate is left out, never NaN', () => {
   expect(t.byCategory.food.planned).toBeCloseTo(143.98)
 })
 
+it('formatMoney rounds to whole units when asked', () => {
+  expect(formatMoney(23.98, 'EUR', { whole: true })).toBe('€24')
+  expect(formatMoney(12.5, 'EUR', { whole: true })).toBe('€13')
+  expect(formatMoney(-0.4, 'EUR', { whole: true })).toBe('€0')
+})
+
 it('formatMoney', () => {
   expect(formatMoney(206.5, 'SGD')).toBe('S$207')
   expect(formatMoney(12.5, 'EUR')).toBe('€12.50')

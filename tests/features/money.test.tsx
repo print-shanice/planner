@@ -37,8 +37,8 @@ it('over budget shows the amber line', () => {
   db.trips = [t]
   db.costs = [cost({ trip_id: 'lap', amount: 120, currency: 'EUR' })]
   show(t)
-  expect(screen.getByText('of €100 budget')).toBeInTheDocument()
-  expect(screen.getByText('over by €20')).toHaveClass('warn-line')
+  expect(screen.getByText('of €100')).toBeInTheDocument()
+  expect(screen.getByText('€20 over budget')).toHaveClass('warn-line')
 })
 
 it('settle up hidden without paid costs', () => {
@@ -46,7 +46,7 @@ it('settle up hidden without paid costs', () => {
   db.trips = [t]
   db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'estimate' })]
   show(t)
-  expect(screen.queryByRole('heading', { name: 'settle up' })).toBeNull()
+  expect(screen.queryByRole('region', { name: 'settle up' })).toBeNull()
 })
 
 it('settle up says who owes whom, with you for me', () => {
@@ -54,8 +54,7 @@ it('settle up says who owes whom, with you for me', () => {
   db.trips = [t]
   db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even' })]
   show(t)
-  expect(screen.getByRole('heading', { name: 'settle up' })).toBeInTheDocument()
-  expect(screen.getByText('you owe kai €20')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'settle up' })).getByText('you owe kai €20')).toBeInTheDocument()
 })
 
 it('side trips are included and listed by trip', () => {
@@ -134,4 +133,62 @@ it('in the cost form, paid or not paid sits right under the name', () => {
   const amount = screen.getByLabelText('amount')
   expect(name.compareDocumentPosition(payment) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(payment.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+it('the budget line says what is left', () => {
+  const t = trip({ id: 'lap', currency: 'EUR', budget: 100 })
+  db.trips = [t]
+  db.costs = [cost({ trip_id: 'lap', amount: 40 })]
+  show(t)
+  expect(screen.getByText('of €100 · €60 left')).toBeInTheDocument()
+})
+
+it('with side trips, a switch says whether the total includes them', async () => {
+  const t = trip({ id: 'eu', name: 'europe', currency: 'EUR' })
+  db.trips = [t, trip({ id: 'lap', parent_id: 'eu', name: 'lapland' })]
+  db.costs = [cost({ trip_id: 'eu', amount: 10 }), cost({ trip_id: 'lap', amount: 30 })]
+  show(t)
+  const scope = within(screen.getByRole('group', { name: 'covers' }))
+  expect(scope.getAllByRole('button').map((b) => b.textContent)).toEqual(['this trip', 'with side trips'])
+  expect(scope.getByRole('button', { name: 'with side trips' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByTestId('money-total')).toHaveTextContent('€40')
+  await userEvent.click(scope.getByRole('button', { name: 'this trip' }))
+  expect(screen.getByTestId('money-total')).toHaveTextContent('€10')
+  expect(screen.queryByRole('region', { name: 'by trip' })).toBeNull()
+})
+
+it('a trip without side trips has no switch', () => {
+  const t = trip({ id: 'solo' })
+  db.trips = [t]
+  db.costs = [cost({ trip_id: 'solo', amount: 10 })]
+  show(t)
+  expect(screen.queryByRole('group', { name: 'covers' })).toBeNull()
+})
+
+it('settle-up sits near the top, before the breakdowns', () => {
+  const t = trip({ id: 'lap', currency: 'EUR' })
+  db.trips = [t]
+  db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even' })]
+  show(t)
+  const settle = screen.getByRole('region', { name: 'settle up' })
+  const cats = screen.getByRole('region', { name: 'by category' })
+  expect(settle.compareDocumentPosition(cats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+it('an even split everyone has paid is all square', () => {
+  const t = trip({ id: 'lap', currency: 'EUR' })
+  db.trips = [t]
+  db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even' }), cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u1', split: 'even' })]
+  show(t)
+  expect(within(screen.getByRole('region', { name: 'settle up' })).getByText('all square')).toBeInTheDocument()
+})
+
+it('totals round to whole amounts; a single cost keeps its own', () => {
+  const t = trip({ id: 'lap', currency: 'EUR' })
+  db.trips = [t]
+  db.costs = [cost({ trip_id: 'lap', title: 'sim card', amount: 23.98, currency: 'EUR' })]
+  show(t)
+  expect(screen.getByTestId('money-total')).toHaveTextContent(/^€24$/)
+  expect(within(screen.getByRole('region', { name: 'by category' })).getByText('€24')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'all costs' })).getByText('€23.98')).toBeInTheDocument()
 })

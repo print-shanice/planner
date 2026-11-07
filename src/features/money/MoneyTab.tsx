@@ -32,15 +32,17 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   const sheet = useStopSheet()
   const [cur, setCur] = useState(trip.currency || 'EUR')
   const [editing, setEditing] = useState<Cost | null>(null)
+  const [withKids, setWithKids] = useState(true)
 
-  const ids = useMemo(() => new Set(descendants(trip.id, trips)), [trip.id, trips])
+  const kids = trips.filter((x) => x.parent_id === trip.id)
+  const scoped = withKids || !kids.length
+  const ids = useMemo(() => new Set(scoped ? descendants(trip.id, trips) : [trip.id]), [trip.id, trips, scoped])
   const costs = useMemo(() => allCosts.filter((c) => ids.has(c.trip_id)), [allCosts, ids])
   const t = totals(costs, cur, rates)
   const total = t.paid + t.planned
   const budget = trip.budget != null ? convert(trip.budget, trip.currency, cur, rates) : null
   const scale = Math.max(total, budget ?? 0) || 1
   const over = budget != null && total > budget + 0.004 ? total - budget : 0
-  const kids = trips.filter((x) => x.parent_id === trip.id)
   const name = (id: string) => (id === userId ? 'you' : members.find((m) => m.user_id === id)?.name || 'someone')
 
   const settle = useMemo(() => {
@@ -53,15 +55,22 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
 
   const sorted = [...costs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || a.title.localeCompare(b.title))
-  const show = (v: number) => formatMoney(v, cur)
+  const show = (v: number) => formatMoney(v, cur, { whole: true })
+  const left = budget != null && !over ? budget - total : null
 
   return (
     <div className="money stack">
       <LoadState load={load} />
+      {kids.length > 0 && (
+        <div className="segmented money-scope" role="group" aria-label="covers">
+          <button type="button" aria-pressed={!withKids} onClick={() => setWithKids(false)}>this trip</button>
+          <button type="button" aria-pressed={withKids} onClick={() => setWithKids(true)}>with side trips</button>
+        </div>
+      )}
       <div className="money-head">
         <div className="stack-xs">
           <p className="money-total num head" data-testid="money-total">{show(total)}</p>
-          <p className="muted">{budget != null ? `of ${show(budget)} budget` : 'in total'}</p>
+          <p className="muted num">{budget != null ? [`of ${show(budget)}`, left != null ? `${show(left)} left` : ''].filter(Boolean).join(' · ') : 'in total'}</p>
         </div>
         <select aria-label="show in" className="input cur-select" value={cur} onChange={(e) => setCur(e.target.value)}>
           {currencyList(rates).map((c) => <option key={c} value={c}>{c}</option>)}
@@ -79,25 +88,20 @@ export function MoneyTab({ trip }: { trip: Trip }) {
           <span><i className="key planned" />planned {show(t.planned)}</span>
         </div>
       )}
-      {over > 0 && <p className="warn-line">over by {show(over)}</p>}
+      {over > 0 && <p className="warn-line">{show(over)} over budget</p>}
 
-      {costs.length === 0 && <EmptyState title="no costs yet" />}
-
-      {Object.keys(t.byCategory).length > 0 && (
-        <section className="block" aria-label="by category">
-          <h3 className="head">by category</h3>
-          <ul className="list">
-            {CATEGORIES.filter(([k]) => t.byCategory[k]).map(([k, l]) => (
-              <li key={k}><span>{l}</span><span className="num">{show(t.byCategory[k].paid + t.byCategory[k].planned)}</span></li>
-            ))}
-            {Object.keys(t.byCategory).filter((k) => !LABEL[k]).map((k) => (
-              <li key={k}><span>{k}</span><span className="num">{show(t.byCategory[k].paid + t.byCategory[k].planned)}</span></li>
-            ))}
-          </ul>
+      {settle && (
+        <section className="settle-box" aria-label="settle up">
+          <p className="label">settle up</p>
+          {settle.length === 0
+            ? <p className="settle-line">all square</p>
+            : settle.map((x) => <p key={`${x.from}-${x.to}`} className="settle-line num">{`${name(x.from)} ${x.from === userId ? 'owe' : 'owes'} ${name(x.to)} ${show(convert(x.eur, 'EUR', cur, rates) ?? x.eur)}`}</p>)}
         </section>
       )}
 
-      {kids.length > 0 && costs.length > 0 && (
+      {costs.length === 0 && <EmptyState title="no costs yet" />}
+
+      {scoped && kids.length > 0 && costs.length > 0 && (
         <section className="block" aria-label="by trip">
           <h3 className="head">by trip</h3>
           <ul className="list">
@@ -110,12 +114,17 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         </section>
       )}
 
-      {settle && (
-        <section className="block" aria-label="settle up">
-          <h3 className="head">settle up</h3>
-          {settle.length === 0
-            ? <p className="muted">all square</p>
-            : <ul className="list">{settle.map((x) => <li key={`${x.from}-${x.to}`}><span>{`${name(x.from)} ${x.from === userId ? 'owe' : 'owes'} ${name(x.to)} ${show(convert(x.eur, 'EUR', cur, rates) ?? x.eur)}`}</span></li>)}</ul>}
+      {Object.keys(t.byCategory).length > 0 && (
+        <section className="block" aria-label="by category">
+          <h3 className="head">by category</h3>
+          <ul className="list">
+            {CATEGORIES.filter(([k]) => t.byCategory[k]).map(([k, l]) => (
+              <li key={k}><span>{l}</span><span className="num">{show(t.byCategory[k].paid + t.byCategory[k].planned)}</span></li>
+            ))}
+            {Object.keys(t.byCategory).filter((k) => !LABEL[k]).map((k) => (
+              <li key={k}><span>{k}</span><span className="num">{show(t.byCategory[k].paid + t.byCategory[k].planned)}</span></li>
+            ))}
+          </ul>
         </section>
       )}
 
