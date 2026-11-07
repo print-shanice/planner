@@ -160,12 +160,25 @@ it('phones show four sections in a bar at the bottom', () => {
   expect(sections().getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-it('laptops show plan, money and saved as a switch, with the map always beside', async () => {
+it('laptops show one quiet row of tabs, with the map always beside', async () => {
   wide(true)
   show('/trip/summer')
-  expect(screen.getByRole('navigation', { name: 'trip sections' })).toHaveClass('section-switch')
-  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'money', 'saved'])
+  expect(screen.getByRole('navigation', { name: 'trip sections' })).toHaveClass('section-tabs')
+  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'money', 'ideas', 'links', 'packing'])
   expect(await screen.findByText('map here')).toBeInTheDocument()
+})
+
+it('on a laptop ideas, links and packing are tabs of their own, with no second switch', async () => {
+  wide(true)
+  show('/trip/summer')
+  await userEvent.click(sections().getByRole('button', { name: 'links' }))
+  expect(loc().searchParams.get('tab')).toBe('saved')
+  expect(loc().searchParams.get('view')).toBe('links')
+  expect(sections().getByRole('button', { name: 'links' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.queryByRole('group', { name: 'saved' })).toBeNull()
+  expect(screen.getByRole('searchbox', { name: 'search links' })).toBeInTheDocument()
+  await userEvent.click(sections().getByRole('button', { name: 'packing' }))
+  expect(screen.getByRole('textbox', { name: 'add to pack' })).toBeInTheDocument()
 })
 
 it('old links land on the new sections', () => {

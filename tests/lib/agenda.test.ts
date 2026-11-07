@@ -1,4 +1,4 @@
-import { agendaForDay, validDay, samePlace } from '../../src/lib/agenda'
+import { agendaForDay, chosenDay, validDay, samePlace } from '../../src/lib/agenda'
 import { trip, stop, place } from '../factories'
 import { mapFeatures } from '../../src/features/map/features'
 
@@ -51,4 +51,15 @@ it('stop numbers wear the trip colour', () => {
   const t = trip({ id: 'p', color: 2 })
   const stops = [stop({ trip_id: 'p', day: '2027-04-12', place: place() })]
   expect(mapFeatures(t, [t], stops, '2027-04-12').pins.features[0].properties.color).toBe('var(--g2)')
+})
+
+it("the chosen day: the link's day if it can open, else today inside the trip, else the first day", () => {
+  const t = trip({ id: 'p', start_date: '2027-02-07', end_date: '2027-02-11' })
+  expect(chosenDay(t, [t], [], '2027-02-09', '2026-11-08')).toBe('2027-02-09')
+  expect(chosenDay(t, [t], [], '2027-02-30', '2026-11-08')).toBe('2027-02-07')
+  expect(chosenDay(t, [t], [], null, '2027-02-10')).toBe('2027-02-10')
+  expect(chosenDay(t, [t], [], '2027-03-20', '2026-11-08')).toBe('2027-02-07')
+  // a plan left outside changed dates still opens
+  expect(chosenDay(t, [t], [stop({ trip_id: 'p', day: '2027-02-01' })], '2027-02-01', '2026-11-08')).toBe('2027-02-01')
+  expect(chosenDay(trip({ id: 'u', start_date: null, end_date: null }), [], [], null, '2026-11-08')).toBeNull()
 })

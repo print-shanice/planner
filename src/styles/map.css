@@ -67,3 +67,6 @@
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
 .map-tab .maplibregl-canvas:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
 .map-float-end { display: flex; align-items: center; gap: 8px; }
+/* laptops: the map follows the plan's day; this zooms out to every place */
+.whole-trip { position: absolute; left: 12px; bottom: 12px; z-index: 2; color: var(--ink-2); }
+.whole-trip[aria-pressed="true"] .icon { color: inherit; }

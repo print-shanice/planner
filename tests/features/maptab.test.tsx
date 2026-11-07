@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { Link, MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
 const db = vi.hoisted(() => ({ trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown }))
@@ -12,8 +12,8 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse }))
 vi.mock('../../src/features/map/TripMap', () => ({
-  TripMap: ({ onPick, onEmpty, highlight, inset }: { onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
-    <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''}>
+  TripMap: ({ onPick, onEmpty, highlight, inset, fitKey }: { fitKey?: string; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
+    <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''} data-fit={fitKey}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
     </div>
@@ -73,8 +73,8 @@ it('a pin opens its card with one primary action', async () => {
   expect(within(card).getByRole('link', { name: 'open in google maps' })).toBeInTheDocument()
 })
 
-it('filter chips list all days, each busy day and saved', () => {
-  show()
+it('on a phone, filter chips list all days, each busy day and saved', () => {
+  show('/', true)
   const chips = screen.getByRole('group', { name: 'show' })
   expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['all', 'mon 8', 'saved'])
 })
@@ -163,4 +163,43 @@ it('on a phone the map fits the day inside what the floating bar, chips and shee
 it('on a laptop the map keeps its usual margins', () => {
   show('/?day=2027-02-08')
   expect((document.querySelector('[data-inset]') as HTMLElement).dataset.inset).toBe('')
+})
+
+describe('on a laptop the map follows the plan', () => {
+  const fit = () => (document.querySelector('[data-fit]') as HTMLElement).dataset.fit
+
+  it('has no day chips', () => {
+    show('/?day=2027-02-08')
+    expect(screen.queryByRole('group', { name: 'show' })).toBeNull()
+  })
+
+  it('shows the day picked in the plan, or the plan\'s own first day', () => {
+    show('/?day=2027-02-08')
+    expect(fit()).toBe('lap|2027-02-08')
+  })
+
+  it('without a day in the link, it shows the same day the plan opens on', () => {
+    show('/')
+    expect(fit()).toBe('lap|2027-02-07')
+  })
+
+  it('"whole trip" zooms out to every place, and back', async () => {
+    show('/?day=2027-02-08')
+    const whole = screen.getByRole('button', { name: 'whole trip' })
+    expect(whole).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(whole)
+    expect(fit()).toBe('lap|all')
+    expect(whole).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(whole)
+    expect(fit()).toBe('lap|2027-02-08')
+  })
+
+  it('picking another day in the plan comes back from the whole trip to that day', async () => {
+    render(<MemoryRouter initialEntries={['/?day=2027-02-08']}><Link to="/?day=2027-02-09">tue</Link><MapTab trip={lap} /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: 'whole trip' }))
+    expect(fit()).toBe('lap|all')
+    await userEvent.click(screen.getByRole('link', { name: 'tue' }))
+    expect(fit()).toBe('lap|2027-02-09')
+    expect(screen.getByRole('button', { name: 'whole trip' })).toHaveAttribute('aria-pressed', 'false')
+  })
 })

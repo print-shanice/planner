@@ -1,9 +1,9 @@
 import { useSearchParams } from 'react-router-dom'
-import { validDay } from '../../lib/agenda'
-import { useMemo, useRef, useState } from 'react'
+import { chosenDay, validDay } from '../../lib/agenda'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
-import { dayColor, fmtDay } from '../../lib/dates'
+import { dayColor, fmtDay, todayISO } from '../../lib/dates'
 import { reversePlace } from '../../lib/photon'
 import { loadState } from '../../lib/load'
 import { LoadNotice } from '../../components/States'
@@ -13,6 +13,7 @@ import { TripMap } from './TripMap'
 import { PlaceCard } from './PlaceCard'
 import { PlacesSheet, type PlaceItem } from './PlacesSheet'
 import { useHighlight } from '../trip/highlight'
+import { Icon } from '../../components/Icon'
 
 type Card = { place: Place; stopId?: string; seq: number }
 
@@ -27,7 +28,13 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
   const load = loadState(tq, sq)
   const [params, setParams] = useSearchParams()
   const selected = params.get('day')
-  const filter: Filter = params.get('map') === 'saved' ? 'saved' : validDay(selected) ? selected : 'all'
+  // on a laptop the map has no chips of its own: it shows the plan's day, or the whole trip
+  const [whole, setWhole] = useState(false)
+  const planDay = phone ? null : chosenDay(trip, trips, stops, selected, todayISO())
+  useEffect(() => { setWhole(false) }, [planDay])
+  const filter: Filter = phone
+    ? (params.get('map') === 'saved' ? 'saved' : validDay(selected) ? selected : 'all')
+    : whole || !planDay ? 'all' : planDay
   const setFilter = (value: Filter) => setParams(p => { const n = new URLSearchParams(p); n.delete('map'); if (value === 'saved') n.set('map', 'saved'); else if (value === 'all') n.delete('day'); else n.set('day', value); return n })
   // a link with ?pin= opens that place's card (from a stop's "map" button)
   const [card, setCard] = useState<Card | null>(() => {
@@ -76,7 +83,7 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
         <div className="map-search">
           <AddPlaceField alwaysOpen label="search" near={center.current} onPick={(p) => setCard({ place: p, seq: ++seq.current })} />
         </div>
-        <div className="map-chips" role="group" aria-label="show">
+        {phone ? <div className="map-chips" role="group" aria-label="show">
           <button type="button" className="chip-pill" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>all</button>
           {days.map((d) => (
             <button key={d} type="button" className="chip-pill" aria-pressed={filter === d} onClick={() => setFilter(d)}>
@@ -85,10 +92,15 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
             </button>
           ))}
           <button type="button" className="chip-pill" aria-pressed={filter === 'saved'} onClick={() => setFilter('saved')}>saved</button>
-        </div>
+        </div> : null}
         {load.state === 'loading' && <span className="chip-pill quiet" role="status" aria-label="loading">loading</span>}
         {(load.state === 'failed' || load.stale) && <LoadNotice onRetry={load.retry} />}
       </div>
+      {!phone && planDay && !card && (
+        <button type="button" className="chip-pill whole-trip" aria-pressed={whole} onClick={() => setWhole(!whole)}>
+          <Icon name="globe" size={16} /><span>whole trip</span>
+        </button>
+      )}
       {phone && !card && <PlacesSheet items={items} title={listTitle} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={pick} />}
       {card && (
         <div className="map-bottom">

@@ -1,5 +1,5 @@
 import type { Place, Stop, Trip } from './types'
-import type { DayEntry } from './dates'
+import { tripDays, type DayEntry } from './dates'
 import { descendants } from './countries'
 
 export function validDay(day: string | null): day is string {
@@ -34,4 +34,16 @@ export function samePlace(a: Place | null, b: Place | null): boolean {
   return a.lat != null && a.lng != null && b.lat != null && b.lng != null
     && a.name.trim().toLowerCase() === b.name.trim().toLowerCase()
     && Math.abs(a.lat - b.lat) < 0.0001 && Math.abs(a.lng - b.lng) < 0.0001
+}
+
+// the day a trip's plan (and the laptop map beside it) shows: the link's day if it can open,
+// else today while the trip is on, else its first day (or its first planned day without dates)
+export function chosenDay(trip: Trip, trips: Trip[], stops: Stop[], requested: string | null, today: string): string | null {
+  const all = tripDays(trip)
+  const inTrip = (d: string) => all.length > 0 && d >= all[0] && d <= all[all.length - 1]
+  const family = new Set(descendants(trip.id, trips))
+  const planned = [...new Set(stops.filter((s) => family.has(s.trip_id) && s.day).map((s) => s.day!))].sort()
+  const canOpen = (d: string) => !all.length || inTrip(d) || planned.includes(d)
+  if (validDay(requested) && canOpen(requested)) return requested
+  return inTrip(today) ? today : all[0] ?? planned[0] ?? null
 }

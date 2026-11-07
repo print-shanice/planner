@@ -4,7 +4,7 @@ import type { Stop, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { daysBetween, fmtDay, groupByDay, todayISO, tripDays } from '../../lib/dates'
-import { agendaForDay, validDay } from '../../lib/agenda'
+import { agendaForDay, chosenDay, validDay } from '../../lib/agenda'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { descendants } from '../../lib/countries'
 import { loadState } from '../../lib/load'
@@ -47,8 +47,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
   const family = new Set(descendants(trip.id, trips))
   const plannedDays = [...new Set(allStops.filter(s => family.has(s.trip_id) && s.day).map(s => s.day!))].sort()
   const canOpen = (d: string) => !all.length || inTrip(d) || plannedDays.includes(d)
-  const fallbackDay = inTrip(todayISO()) ? todayISO() : all[0] ?? plannedDays[0] ?? null
-  const selected = validDay(requested) && canOpen(requested) ? requested : fallbackDay
+  const selected = chosenDay(trip, trips, allStops, requested, todayISO())
   const datedKids = useMemo(() => children.filter((c) => c.start_date), [children])
   const undatedKids = useMemo(() => children.filter((c) => !c.start_date).sort((a, b) => a.name.localeCompare(b.name)), [children])
 

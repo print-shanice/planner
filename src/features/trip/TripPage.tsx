@@ -14,7 +14,7 @@ import { PlanTab } from '../plan/PlanTab'
 import { MoneyTab } from '../money/MoneyTab'
 import { SavedTab } from '../saved/SavedTab'
 import { PackingTab } from '../packing/PackingTab'
-import { TripSummary } from './TripSummary'
+import { TripSummary, type Section } from './TripSummary'
 import { TripHeader } from './TripHeader'
 import { PHONE_TABS, readTab, SAVED_VIEWS, WIDE_TABS, type SavedView, type Tab } from './tabs'
 import { tint } from '../../components/MonthCalendar'
@@ -138,10 +138,14 @@ function TripScreen() {
             <span className="map-float-end"><OfflineBadge inline />{plus}</span>
           </div>
         ) : <TripHeader key={trip.id} trip={trip} action={plus} />}
-        <TripSummary sections={tabs} active={tab} bar={!wide} onPick={(t) => pick(t)} />
+        <TripSummary bar={!wide} onPick={(x) => pick(x.tab, x.view)}
+          sections={wide
+            ? tabs.flatMap((t): Section[] => t === 'saved' ? SAVED_VIEWS.map((v) => ({ label: v, tab: t, view: v })) : [{ label: t, tab: t }])
+            : tabs.map((t) => ({ label: t, tab: t }))}
+          active={wide && tab === 'saved' ? view : tab} />
         {tab !== 'plan' && (
           <section id="trip-section" className="trip-inline-section" aria-label={tab}>
-            {tab === 'saved' && (
+            {tab === 'saved' && !wide && (
               <div className="segmented saved-switch" role="group" aria-label="saved">
                 {SAVED_VIEWS.map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => pick('saved', v)}>{v}</button>)}
               </div>
