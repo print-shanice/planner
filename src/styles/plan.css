@@ -124,10 +124,14 @@
 .clash-row strong { font-weight: 700; }
 .clash-row .notice-text span { font-weight: 500; }
 
-/* one day on its own page: a strip of nearby days, then the date, then the day itself */
-.day-strip { display: flex; gap: 4px; margin: 4px 0 0; }
+/* one day on its own page: a scrollable strip of trip dates, then the date, then the day itself */
+.day-strip {
+  display: flex; gap: 4px; margin: 4px 0 0; padding: 4px 2px 8px; overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent; scroll-snap-type: x proximity;
+}
+
 .day-strip button {
-  flex: 1; min-width: 0; min-height: 60px; display: grid; place-items: center; gap: 0; padding: 6px 0;
+  flex: 0 0 52px; min-width: 44px; min-height: 76px; scroll-snap-align: center; display: grid; place-items: center; gap: 0; padding: 6px 0;
   border: 0; border-radius: 16px; background: transparent; color: var(--ink-2); font-size: 12px;
 }
 .day-strip button strong { font-family: var(--f-head); font-size: 20px; color: var(--ink); }

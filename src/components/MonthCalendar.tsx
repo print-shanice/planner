@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { monthWeeks, weekBars, type Span } from '../lib/calendar'
 import { fmtDay } from '../lib/dates'
 import { Icon } from './Icon'
@@ -35,6 +35,7 @@ type Props = {
 }
 
 function Week({ week, p }: { week: (string | null)[]; p: Props }) {
+  const navigate = useNavigate()
   const owners = week.map((d) => (d ? p.ribbon(d) : undefined))
   const bars = weekBars(week, p.bars)
   // a week only makes room for the bars it has
@@ -69,7 +70,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         if (p.onDay && pickable) {
           return (
             <button key={d} type="button" className="cal-day" {...attrs} aria-label={dayLabel(d)}
-              aria-pressed={p.selected === d} onClick={() => p.onDay!(d)}>
+              aria-pressed={p.selected === d} onClick={() => st?.trip ? navigate(`/trip/${st.trip.id}`) : p.onDay!(d)}>
               {n}
             </button>
           )
@@ -78,6 +79,11 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
       })}
       {bars.map((b) => {
         if (p.linkBars && b.span.trip) {
+          // Keep one label, including when a trip began before the visible month.
+          const labelDay = (p.week ? [p.week] : monthWeeks(p.month))
+            .map((days) => days.filter((d) => d && d >= b.span.start && d <= b.span.end))
+            .sort((a, c) => c.length - a.length)[0]?.[0]
+          if (!labelDay || !week.includes(labelDay)) return null
           return (
             <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} className="cal-label" title={b.span.name}
               style={{ gridColumn: `${b.from + 1} / ${b.to + 2}`, gridRow: b.lane + 2, ...tint(b.span.color) }}>

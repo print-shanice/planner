@@ -72,3 +72,26 @@ it('removing an item can be undone', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'undo' }))
   expect(db.remove).not.toHaveBeenCalled()
 })
+
+it('selects and deletes multiple packing items locally', async () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: true, position: 0 }, { id: 'p2', trip_id: 'lap', text: 'passport', done: false, position: 1 }]
+  db.remove.mockReset().mockResolvedValue(undefined)
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  await userEvent.click(screen.getByRole('button', { name: 'select' }))
+  await userEvent.click(screen.getByRole('button', { name: 'select all' }))
+  await userEvent.click(screen.getByRole('button', { name: 'delete 2' }))
+  await userEvent.click(screen.getByRole('button', { name: 'tap again to delete' }))
+  expect(db.remove.mock.calls.map(c => c[0]).sort()).toEqual(['p1', 'p2'])
+})
+
+it('edits a packing item without changing packed status', async () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: true, position: 0 }]
+  db.save.mockReset().mockResolvedValue({})
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  await userEvent.click(screen.getByRole('button', { name: 'edit gloves' }))
+  const input = screen.getByRole('textbox', { name: 'packing item' })
+  await userEvent.clear(input)
+  await userEvent.type(input, 'warm gloves')
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'p1', text: 'warm gloves' })
+})

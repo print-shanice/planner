@@ -173,3 +173,13 @@ it('a new link keeps its draft per trip and says when it could not save', async 
   expect(db.save.mock.calls[1][0].id).toBe(db.save.mock.calls[0][0].id)
   expect(done).toHaveBeenCalled()
 })
+
+it('edits a link locally and sends only changed fields', async () => {
+  await showLinks()
+  await userEvent.click(within(screen.getAllByTestId('link-card')[1]).getByRole('button', { name: 'more' }))
+  await userEvent.click(screen.getByRole('button', { name: 'edit link' }))
+  const dialog = screen.getByRole('dialog', { name: 'edit link' })
+  await userEvent.type(within(dialog).getByLabelText('title'), 'flights')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'l1', title: 'flights' })
+})

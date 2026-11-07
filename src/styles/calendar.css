@@ -77,7 +77,7 @@ button.cal-day:is(:not([data-ribbon]), [data-ribbon="on"]):hover .cal-n { backgr
 }
 .cal-day[data-planned][aria-pressed="true"]::after { background: var(--ink); }
 
-/* inside a trip: a side trip's days are coloured squares, labelled once per week with its flag and name */
+/* inside a trip: a side trip's days are coloured squares, labelled once per visible month with its flag and name */
 .cal-day[data-side]::before {
   content: ''; position: absolute; inset: 2px 0; background: color-mix(in srgb, var(--c) 16%, var(--card));
 }

@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
+import type { Link } from '../../lib/types'
 import { useSave } from '../../lib/queries'
 import { newId } from '../../lib/id'
 import { hostOf } from '../../lib/embed'
@@ -7,10 +8,10 @@ import { FormFooter, useSubmit } from '../../components/FormFooter'
 
 type Draft = { id: string; url: string; title: string; note: string }
 
-export function LinkForm({ tripId, onDone }: { tripId: string | null; onDone: () => void }) {
+export function LinkForm({ tripId, link, onDone }: { tripId: string | null; link?: Link; onDone: () => void }) {
   const save = useSave('links')
   // kept as a draft for this trip, with one id, so saving again after a failure sends the same row
-  const [form, update, settle] = useDraft<Draft>(draftKey(tripId, 'link'), () => ({ id: newId(), url: '', title: '', note: '' }))
+  const [form, update, settle] = useDraft<Draft>(link ? null : draftKey(tripId, 'link'), () => ({ id: link?.id ?? newId(), url: link?.url ?? '', title: link?.title ?? '', note: link?.note ?? '' }))
   const { id, url, title, note } = form
   const set = (p: Partial<Draft>) => update((v) => ({ ...v, ...p }))
   const [problem, setProblem] = useState<string | null>(null)
@@ -25,7 +26,9 @@ export function LinkForm({ tripId, onDone }: { tripId: string | null; onDone: ()
     setProblem(null)
     settle()
     void run(async () => {
-      await save.mutateAsync({ id, trip_id: tripId, url: u, title: title.trim() || hostOf(u), note: note.trim() })
+      await save.mutateAsync(link
+        ? { id, ...(u !== link.url ? { url: u } : {}), ...(title.trim() !== link.title ? { title: title.trim() || hostOf(u) } : {}), ...(note.trim() !== link.note ? { note: note.trim() } : {}) }
+        : { id, trip_id: tripId, url: u, title: title.trim() || hostOf(u), note: note.trim() })
       onDone()
     })
   }

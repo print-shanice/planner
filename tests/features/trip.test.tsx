@@ -1,13 +1,13 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { trip } from '../factories'
+import { trip, stop, place } from '../factories'
 import type { Trip } from '../../src/lib/types'
 
-const db = vi.hoisted(() => ({ trips: [] as unknown[], tripsQ: null as null | Record<string, unknown> }))
+const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], tripsQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => db.tripsQ ?? ({ data: db.trips, isLoading: false }),
-  useStops: () => ({ data: [] }),
+  useStops: () => ({ data: db.stops }),
   useCosts: () => ({ data: [] }),
   useLinks: () => ({ data: [] }),
   usePacking: () => ({ data: [] }),
@@ -39,6 +39,7 @@ function show(path: string) {
 }
 
 beforeEach(() => {
+  db.stops = []
   db.trips = [
     trip({ id: 'eu2027', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13' }),
     trip({ id: 'summer', parent_id: 'eu2027', name: 'the long summer', start_date: '2027-06-26', end_date: '2027-07-13' }),
@@ -48,7 +49,7 @@ beforeEach(() => {
 it('a side trip says what it belongs to and its back arrow goes up to that trip', () => {
   show('/trip/summer')
   expect(screen.getByRole('link', { name: 'back to europe exchange 2027' })).toHaveAttribute('href', '/trip/eu2027')
-  expect(screen.getByText('side trip of europe exchange 2027')).toBeInTheDocument()
+  expect(screen.queryByText('side trip of europe exchange 2027')).toBeNull()
   expect(screen.getByRole('heading', { level: 1, name: 'the long summer' })).toBeInTheDocument()
   expect(screen.getByText('26 jun – 13 jul · 17 nights')).toBeInTheDocument()
 })
@@ -59,13 +60,17 @@ it('a top trip goes back to all trips', () => {
   expect(screen.queryByText(/side trip of/)).toBeNull()
 })
 
-it('a day or a section goes back to the trip overview', async () => {
-  show('/trip/summer?day=2027-06-28')
-  const back = screen.getByRole('link', { name: 'back to the long summer' })
-  expect(back).toHaveAttribute('href', '/trip/summer')
-  await userEvent.click(back)
-  expect(screen.getByTestId('loc')).toHaveTextContent(/^\/trip\/summer$/)
-  expect(screen.getByTestId('calendar')).toBeInTheDocument()
+it('keeps the full trip header when selecting itinerary dates', async () => {
+  show('/trip/summer?tab=itinerary')
+  expect(screen.getByRole('heading', { level: 1, name: 'the long summer' })).toBeVisible()
+  await userEvent.click(screen.getByRole('button', { name: 'mon 28 jun' }))
+  expect(screen.getByRole('heading', { level: 1, name: 'the long summer' })).toBeVisible()
+  expect(screen.getByText('26 jun – 13 jul · 17 nights')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'edit trip' })).toBeVisible()
+  expect(screen.getByRole('link', { name: 'back to europe exchange 2027' })).toHaveAttribute('href', '/trip/eu2027')
+  expect(screen.getByTestId('day-2027-06-28')).toBeVisible()
+  await userEvent.click(screen.getByRole('button', { name: 'calendar' }))
+  expect(screen.getByTestId('calendar')).toBeVisible()
 })
 
 function family() {
@@ -114,35 +119,27 @@ it('a trip on its own has a plain title', () => {
   expect(screen.queryByRole('button', { name: 'solo trip' })).toBeNull()
 })
 
-it('add menu has exactly the six options', async () => {
+it('itinerary actions are named and there is no global add button', async () => {
   show('/trip/summer')
-  await userEvent.click(screen.getByRole('button', { name: 'add' }))
-  const menu = screen.getByRole('dialog', { name: 'add' })
-  const names = within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t)
-  expect(names).toEqual(['stay', 'journey', 'note', 'cost', 'link', 'side trip'])
-})
-
-it('side trip opens the trip form for a child', async () => {
-  show('/trip/summer')
-  await userEvent.click(screen.getByRole('button', { name: 'add' }))
+  expect(screen.queryByRole('button', { name: 'add' })).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: 'side trip' }))
   expect(screen.getByRole('dialog', { name: 'new side trip' })).toBeInTheDocument()
 })
 
-it('the summary tiles open their section, kept in the url', async () => {
+it('sections switch content while keeping the trip header', async () => {
   show('/trip/summer')
-  await userEvent.click(screen.getByRole('link', { name: /money/ }))
-  expect(screen.getByTestId('loc')).toHaveTextContent('/trip/summer?tab=money')
-  expect(screen.getByRole('heading', { level: 1, name: 'money' })).toBeInTheDocument()
-  expect(screen.queryByTestId('calendar')).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: /cost/ }))
+  expect(screen.getByTestId('loc')).toHaveTextContent('/trip/summer?tab=cost')
+  expect(screen.getByRole('heading', { level: 1, name: 'the long summer' })).toBeInTheDocument()
+  expect(screen.getByTestId('calendar')).not.toBeVisible()
 })
 
-it('there is one add control, summary tiles and no tab bar on a phone', () => {
+it('there is one add control and persistent section buttons', () => {
   show('/trip/summer')
-  expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: 'add' })).toBeNull()
   expect(screen.queryByRole('tablist')).toBeNull()
-  const tiles = within(screen.getByRole('navigation', { name: 'trip sections' })).getAllByRole('link')
-  expect(tiles.map((t) => t.querySelector('.tile-label')?.textContent)).toEqual(['map', 'money', 'saved', 'packing'])
+  const sections = within(screen.getByRole('navigation', { name: 'trip sections' }))
+  expect(sections.getAllByRole('button').map((b) => b.textContent)).toEqual(['calendar', 'itinerary', 'map', 'cost', 'ideas', 'links', 'packing'])
 })
 
 it('unknown trip shows not found', () => {
@@ -153,21 +150,20 @@ it('unknown trip shows not found', () => {
 
 it('stay from the add menu opens a new stay with the trip dates', async () => {
   show('/trip/summer')
-  await userEvent.click(screen.getByRole('button', { name: 'add' }))
   await userEvent.click(screen.getByRole('button', { name: 'stay' }))
   const d = await screen.findByRole('dialog', { name: 'new stay' })
   expect(within(d).getByLabelText('check-in')).toHaveValue('2027-06-26')
   expect(within(d).getByLabelText('check-out')).toHaveValue('2027-07-13')
 })
 
-it('cost and link from the add menu open their forms', async () => {
+it('cost and links own their add forms', async () => {
   show('/trip/summer')
-  await userEvent.click(screen.getByRole('button', { name: 'add' }))
   await userEvent.click(screen.getByRole('button', { name: 'cost' }))
+  await userEvent.click(screen.getByRole('button', { name: 'add cost' }))
   expect(await screen.findByRole('dialog', { name: 'new cost' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'close' }))
-  await userEvent.click(screen.getByRole('button', { name: 'add' }))
-  await userEvent.click(screen.getByRole('button', { name: 'link' }))
+  await userEvent.click(screen.getByRole('button', { name: 'links' }))
+  await userEvent.click(screen.getByRole('button', { name: 'add link' }))
   expect(await screen.findByRole('dialog', { name: 'new link' })).toBeInTheDocument()
 })
 
@@ -195,4 +191,72 @@ it('a trip that could not load offers retry and the way home', () => {
   expect(screen.getByRole('alert')).toHaveTextContent("couldn't load")
   expect(screen.getByRole('link', { name: 'all trips' })).toBeInTheDocument()
   expect(screen.queryByText('trip not found')).toBeNull()
+})
+
+for (const view of ['packing', 'map']) {
+  it(`hides the general add button in ${view}`, () => {
+    show(`/trip/summer?tab=${view}`)
+    expect(screen.queryByRole('button', { name: 'add' })).toBeNull()
+  })
+}
+
+it('switches directly between ideas and links without losing the trip header', async () => {
+  show('/trip/summer?tab=ideas')
+  expect(screen.getByRole('searchbox', { name: 'search ideas' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'links' }))
+  expect(screen.getByTestId('calendar')).not.toBeVisible()
+  expect(screen.getByRole('searchbox', { name: 'search links' })).toBeInTheDocument()
+  expect(screen.queryByRole('searchbox', { name: 'search ideas' })).toBeNull()
+  expect(screen.getByRole('heading', { name: 'the long summer' })).toBeInTheDocument()
+})
+
+it('calendar is an explicit way back from any section', async () => {
+  show('/trip/summer?day=2027-06-28')
+  await userEvent.click(screen.getByRole('button', { name: 'ideas' }))
+  expect(screen.getByTestId('day-2027-06-28')).not.toBeVisible()
+  expect(screen.getByRole('searchbox', { name: 'search ideas' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: /hide/ })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'calendar' }))
+  expect(screen.queryByRole('searchbox')).toBeNull()
+  expect(screen.getByTestId('calendar')).toBeVisible()
+  expect(screen.getByTestId('loc')).toHaveTextContent(/^\/trip\/summer$/)
+})
+
+it('creates ideas in ideas and notes from the itinerary', async () => {
+  show('/trip/summer?tab=ideas')
+  await userEvent.click(screen.getByRole('button', { name: 'add idea' }))
+  expect(screen.getByRole('dialog', { name: 'new place' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'close' }))
+  await userEvent.click(screen.getByRole('button', { name: 'calendar' }))
+  await userEvent.click(screen.getByRole('button', { name: 'add note' }))
+  expect(screen.getByRole('dialog', { name: 'new note' })).toBeInTheDocument()
+})
+
+it('calendar and itinerary are separate tabs and a calendar day opens itinerary', async () => {
+  show('/trip/summer')
+  await userEvent.click(screen.getByRole('button', { name: 'itinerary' }))
+  expect(screen.getByTestId('day-2027-06-26')).toBeVisible()
+  await userEvent.click(screen.getByRole('button', { name: 'calendar' }))
+  expect(screen.getByTestId('calendar')).toBeVisible()
+  await userEvent.click(screen.getByRole('button', { name: 'mon 28 jun' }))
+  expect(screen.getByRole('button', { name: 'itinerary' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByTestId('day-2027-06-28')).toBeVisible()
+})
+
+it('shows unique destination flags from the side trip without its parent country or saved ideas', () => {
+  db.trips = [trip({ id: 'parent', name: 'exchange', base: place({ country: 'NL' }) }), trip({ id: 'lap', name: 'lapland', parent_id: 'parent', base: null })]
+  db.stops = [stop({ trip_id: 'lap', place: place({ country: 'FI' }) }), stop({ trip_id: 'lap', place: place({ country: 'fi' }) }), stop({ trip_id: 'lap', place: place({ country: 'SE' }) }), stop({ trip_id: 'lap', place: place({ country: 'FR' }), saved: true, day: null })]
+  show('/trip/lap')
+  const title = screen.getByRole('heading', { level: 1, name: /lapland/ })
+  expect(within(title).getAllByRole('img').map(flag => flag.getAttribute('aria-label'))).toEqual(['Finland', 'Sweden'])
+  expect(screen.queryByText(/side trip of/)).toBeNull()
+})
+
+it('caps multi-country titles at two flags and a compact remaining count', () => {
+  db.trips = [trip({ id: 'europe', name: 'europe exchange', base: place({ country: 'NL' }) })]
+  db.stops = ['FI', 'SE', 'FR'].map(country => stop({ trip_id: 'europe', place: place({ country }) }))
+  show('/trip/europe')
+  const heading = screen.getByRole('heading', { name: /europe exchange/ })
+  expect(within(heading).getAllByRole('img')).toHaveLength(2)
+  expect(within(heading).getByText('+2')).toBeInTheDocument()
 })

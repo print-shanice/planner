@@ -115,12 +115,11 @@ it('a day opens as its own page with the date, its day number and nothing from t
   expect(screen.queryByTestId('calendar')).toBeNull()
 })
 
-it('a date opens a single agenda without changing the parent, including nested plans', async () => {
+it('a parent day deep link still includes nested plans', () => {
   const t = lap()
   db.trips = [t, trip({ id: 'child', parent_id: t.id, name: 'side trip', start_date: '2027-02-08', end_date: '2027-02-09' })]
   db.stops = [stop({ trip_id: t.id, title: 'parent museum', day: '2027-02-08' }), stop({ trip_id: 'child', title: 'child cafe', day: '2027-02-08' })]
-  showAt('/trip/lap')
-  await userEvent.click(cal().getByRole('button', { name: 'mon 8 feb' }))
+  showAt('/trip/lap?day=2027-02-08')
   expect(loc()).toBe('/trip/lap?day=2027-02-08')
   expect(screen.getAllByTestId(/^day-/)).toHaveLength(1)
   expect(within(day('2027-02-08')).getByText('parent museum')).toBeInTheDocument()
@@ -223,4 +222,27 @@ it('a selected stay check-out remains visible', () => {
   db.stops = [stop({ trip_id: t.id, kind: 'stay', title: 'hostel', day: '2027-02-07', end_date: '2027-02-09' })]
   showAt('/trip/lap?day=2027-02-09')
   expect(screen.getByText('check out · hostel')).toBeInTheDocument()
+})
+
+it('labels a side trip once across weeks and opens its overview from a highlighted day', async () => {
+  const t = lap()
+  db.trips = [t, trip({ id: 'child', parent_id: t.id, name: 'winter escape', start_date: '2027-02-07', end_date: '2027-02-10', base: place({ country: 'FI' }) })]
+  db.stops = []
+  showAt('/trip/lap')
+  expect(cal().getAllByRole('link', { name: /winter escape/ })).toHaveLength(1)
+  await userEvent.click(cal().getByRole('button', { name: 'tue 9 feb' }))
+  expect(loc()).toBe('/trip/child')
+})
+
+it('lets the date strip reach every day across months, not just the selected week', async () => {
+  db.trips = [trip({ id: 'long', start_date: '2027-01-28', end_date: '2027-03-03' })]
+  db.stops = []
+  showAt('/trip/long?day=2027-01-28')
+  const strip = within(screen.getByRole('navigation', { name: 'days' }))
+  expect(strip.getAllByRole('button')).toHaveLength(35)
+  await userEvent.click(strip.getByRole('button', { name: 'wed 3 mar' }))
+  expect(loc()).toBe('/trip/long?day=2027-03-03')
+  expect(strip.getByRole('button', { name: 'wed 3 mar' })).toHaveAttribute('aria-current', 'date')
+  await userEvent.click(strip.getByRole('button', { name: 'thu 28 jan' }))
+  expect(day('2027-01-28')).toBeInTheDocument()
 })

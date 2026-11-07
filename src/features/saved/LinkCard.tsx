@@ -7,6 +7,8 @@ import { Icon } from '../../components/Icon'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { ItemMenu } from './ItemMenu'
 import { SaveFailed } from '../../components/SaveFailed'
+import { Sheet } from '../../components/Sheet'
+import { LinkForm } from './LinkForm'
 import { runEmbeds } from './embedScripts'
 
 // the website's own icon, from its domain; the plain link icon if it can't load
@@ -20,6 +22,7 @@ export function SiteIcon({ url }: { url: string }) {
 type Pick = { on: boolean; onToggle: () => void }
 
 export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pick?: Pick }) {
+  const [editing, setEditing] = useState(false)
   const href = safeUrl(link.url) ?? undefined
   const e = href ? embedFor(href) : { kind: 'link' as const }
   const box = useRef<HTMLDivElement>(null)
@@ -62,7 +65,8 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
         </a>
         {canEdit && !pick && (
           <ItemMenu title={title}>
-            {() => (<>
+            {(close) => (<>
+              <button type="button" className="btn ghost" onClick={() => { close(); setEditing(true) }}>edit link</button>
               <label className="field">
                 <span className="label">move to trip</span>
                 <select value={link.trip_id ?? ''} onChange={(ev) => save.mutate({ id: link.id, trip_id: ev.target.value || null })}>
@@ -75,6 +79,9 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
           </ItemMenu>
         )}
       </div>
+      <Sheet open={editing} title="edit link" onClose={() => setEditing(false)}>
+        <LinkForm tripId={link.trip_id} link={link} onDone={() => setEditing(false)} />
+      </Sheet>
       <SaveFailed table="links" id={link.id} />
     </article>
   )

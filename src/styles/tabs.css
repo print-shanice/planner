@@ -54,3 +54,9 @@
 .list > li:has(.save-failed) { flex-wrap: wrap; }
 .list .save-failed { padding: 0 16px 10px; }
 .link-card .save-failed { padding: 0 16px 12px; }
+
+.packing-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pack-add-row, .pack-edit { display: flex; align-items: center; gap: 8px; }
+.pack-add-row input, .pack-edit input { min-width: 0; flex: 1; }
+.pack-edit { flex: 1; padding: 8px; flex-wrap: wrap; }
+.pack-edit input { flex-basis: 120px; }

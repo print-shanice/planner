@@ -4,7 +4,7 @@ import type { Place, Stop, Trip } from '../../lib/types'
 import { useCosts, useRates, useSave, useStops, useTrips } from '../../lib/queries'
 import { formatMoney, totals } from '../../lib/money'
 import { useCanEdit } from '../../lib/offline'
-import { daysBetween, fmtDay, groupByDay, tripDays } from '../../lib/dates'
+import { daysBetween, fmtDay, groupByDay, todayISO, tripDays } from '../../lib/dates'
 import { agendaForDay, validDay } from '../../lib/agenda'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { descendants } from '../../lib/countries'
@@ -15,12 +15,12 @@ import { TripForm } from '../home/TripForm'
 import { ClashRow } from '../trip/ClashRow'
 import { FoldRow } from './FoldRow'
 import { TripCalendar } from './TripCalendar'
-import { dayLabel } from '../../components/MonthCalendar'
+import { DayStrip } from './DayStrip'
 import { DayCard } from './DayCard'
 import { NoDate } from './NoDate'
 import { useStopSheet } from '../stops/StopSheet'
 
-export function PlanTab({ trip }: { trip: Trip }) {
+export function PlanTab({ trip, view }: { trip: Trip; view?: 'calendar' | 'itinerary' }) {
   const sheet = useStopSheet()
   const onOpen = sheet ? (s: Stop) => sheet.openStop(s.id) : undefined
   const tq = useTrips()
@@ -50,7 +50,8 @@ export function PlanTab({ trip }: { trip: Trip }) {
   const family = new Set(descendants(trip.id, trips))
   const plannedDays = [...new Set(allStops.filter(s => family.has(s.trip_id) && s.day).map(s => s.day!))].sort()
   const canOpen = (d: string) => !all.length || inTrip(d) || plannedDays.includes(d)
-  const selected = validDay(requested) && canOpen(requested) ? requested : null
+  const fallbackDay = view === 'itinerary' ? (inTrip(todayISO()) ? todayISO() : all[0] ?? plannedDays[0] ?? null) : null
+  const selected = view === 'calendar' ? null : validDay(requested) && canOpen(requested) ? requested : fallbackDay
   const datedKids = useMemo(() => children.filter((c) => c.start_date), [children])
   const undatedKids = useMemo(() => children.filter((c) => !c.start_date).sort((a, b) => a.name.localeCompare(b.name)), [children])
 
@@ -71,11 +72,10 @@ export function PlanTab({ trip }: { trip: Trip }) {
 
   function goDay(d: string) {
     if (!validDay(d) || !canOpen(d)) return
-    setParams((p) => { const n = new URLSearchParams(p); n.set('day', d); n.delete('map'); return n })
+    setParams((p) => { const n = new URLSearchParams(p); n.set('day', d); if (view) n.set('tab', 'itinerary'); n.delete('map'); return n })
   }
 
-  const days = all.length ? all : plannedDays
-  const at = selected ? days.indexOf(selected) : -1
+  const days = [...new Set([...all, ...plannedDays])].sort()
   const dayCosts = selected ? costs.filter((c) => c.date === selected || (c.stop_id && entries.some((e) => e.kind === 'stop' && e.stop?.id === c.stop_id))) : []
   const spend = totals(dayCosts, trip.currency, rates)
   const sub = [
@@ -88,13 +88,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
       <LoadState load={load} />
       {mine.map((c) => <ClashRow key={`${c.a.id}-${c.b.id}`} clash={c} canEdit={canEdit} onAdjust={adjust} />)}
       {selected ? <>
-        <nav className="day-strip" aria-label="days">
-          {days.slice(Math.max(0, at - 3), Math.max(0, at - 3) + 7).map(d => (
-            <button type="button" key={d} aria-label={dayLabel(d)} aria-current={d === selected ? 'date' : undefined} onClick={() => goDay(d)}>
-              <span>{fmtDay(d, { weekday: 'short' })}</span><strong className="num">{+d.slice(8)}</strong>
-            </button>
-          ))}
-        </nav>
+        <DayStrip days={days} selected={selected} onPick={goDay} />
         <header className="day-title">
           <h1 className="head">{fmtDay(selected, { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '')}</h1>
           {sub && <p className="muted num">{sub}</p>}
