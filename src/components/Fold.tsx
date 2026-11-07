@@ -10,7 +10,7 @@ export function Fold({ label, open = false, reveal = 0, extra, children }: Props
   const [isOpen, setOpen] = useState(open)
   useEffect(() => { if (open || reveal) setOpen(true) }, [open, reveal])
   return (
-    <div className="fold" data-open={isOpen ? '' : undefined}>
+    <div className="form-fold" data-open={isOpen ? '' : undefined}>
       <div className="fold-head">
         <button type="button" className="fold-toggle" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen(!isOpen)}>{label}</button>
         {extra && <div className="fold-extra">{extra}</div>}

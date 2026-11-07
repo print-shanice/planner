@@ -160,7 +160,7 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
 /* fold: optional fields behind a one-word header; folds sit together in one grouped card.
    the toggle's hit area covers the whole header, and header controls (paid or not paid) sit above it */
 .folds { border: 1px solid var(--line); border-radius: 16px; }
-.fold + .fold { border-top: 1px solid var(--line); }
+.form-fold + .form-fold { border-top: 1px solid var(--line); }
 .fold-head { position: relative; display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 8px 44px 8px 16px; }
 .fold-toggle { flex: 1; min-width: 0; padding: 0; border: 0; background: none; text-align: left; font-weight: 600; font-size: 16px; color: var(--ink); cursor: pointer; }
 .fold-toggle::before { content: ''; position: absolute; inset: 0; border-radius: 16px; }
@@ -171,7 +171,7 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
   border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2);
   transform: translateY(-70%) rotate(45deg); transition: transform .15s;
 }
-.fold[data-open] .fold-head::after { transform: translateY(-30%) rotate(-135deg); }
+.form-fold[data-open] .fold-head::after { transform: translateY(-30%) rotate(-135deg); }
 .fold-extra { position: relative; z-index: 1; }
 .fold-body { padding: 0 16px 16px; }
 .fold-body[hidden] { display: none; }
@@ -255,3 +255,55 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 @media (prefers-reduced-motion: reduce) {
   .pulse, .bone { animation: none; }
 }
+
+/* forms read as quiet rows, like a phone's calendar: a label on the left, the value on the right,
+   no pills and no boxes inside boxes */
+.sheet form.stack { gap: 14px; }
+.sheet .title-input { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; }
+.sheet .choice {
+  display: flex; flex-wrap: nowrap; gap: 0; min-height: 48px; align-items: center; padding: 0 6px;
+  border: 1px solid var(--line); border-radius: 16px;
+}
+.sheet .choice-chip {
+  flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; border: 0; border-radius: 12px; background: none;
+  color: var(--ink-3); font-weight: 600;
+}
+.sheet .choice-chip .dot { display: none; }
+.sheet .choice-chip[aria-pressed="true"], .sheet .choice-chip.warn[aria-pressed="true"], .sheet .choice-chip.ok[aria-pressed="true"] {
+  border: 0; background: var(--soft); font-weight: 800;
+}
+.sheet .choice-chip[aria-pressed="true"] .dot { display: inline-block; }
+.sheet .choice-chip.warn[aria-pressed="true"] { color: var(--warn); background: var(--warn-bg); }
+.sheet .choice-chip.ok[aria-pressed="true"] { color: var(--ok); background: var(--ok-bg); }
+/* a field is a row: label left, value right */
+.sheet form .field:not(:has(textarea)):not(:has(.search-box)):not(:has(.place-chip)) {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 6px 0 16px;
+  border: 1px solid var(--line); border-radius: 16px;
+}
+.sheet form .field .label { font-size: 15px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.sheet form .field:not(:has(textarea)) input, .sheet form .field:not(:has(textarea)) select {
+  flex: 1; min-width: 0; max-width: 60%; min-height: 40px; border: 0; background: none; text-align: right; text-align-last: right;
+  font-size: 16px; font-weight: 600; color: var(--ink); padding: 0 10px;
+}
+.sheet form .field select { background-image: none; padding-right: 10px; }
+.sheet form .row:has(> .field) { flex-direction: column; align-items: stretch; gap: 14px; }
+.sheet form .field:has(textarea) .label { padding-left: 4px; }
+.sheet .field .search-box { min-height: 48px; border: 1px solid var(--line); border-radius: 16px; background: none; }
+.sheet .when-row { min-height: 48px; padding: 4px 6px 4px 16px; }
+.sheet .when-label { font-size: 15px; }
+.sheet .pick { background: none; min-height: 40px; padding: 0 10px; }
+.sheet .pick.date { min-width: 0; }
+/* optional things: plain rows that say "add" until they hold something */
+.sheet .folds { border-radius: 16px; }
+.sheet .fold-head { min-height: 48px; padding: 4px 40px 4px 16px; }
+.sheet .fold-toggle { font-size: 15px; color: var(--ink-2); flex: none; }
+.sheet .form-fold:not([data-open]) .fold-head:not(:has(.fold-extra))::before {
+  content: 'add'; position: absolute; right: 40px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-weight: 600; pointer-events: none;
+}
+.sheet .fold-extra { margin-left: auto; }
+.sheet .fold-extra .choice { border: 0; min-height: 0; padding: 0; gap: 4px; }
+.sheet .fold-extra .choice-chip { flex: none; min-height: 36px; padding: 0 10px; }
+.sheet .fold-body { gap: 10px; padding: 0 12px 12px; }
+.sheet .cost-fields { gap: 10px; }
+.sheet form .field .search-box input { max-width: none; text-align: left; text-align-last: left; padding: 0; font-weight: 500; }
+.sheet form .row > .field.currency-field { flex: none !important; }

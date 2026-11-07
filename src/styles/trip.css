@@ -118,3 +118,8 @@
 .trip-phone .trip-bar.stuck .trip-meta { display: none; }
 .trip-phone .trip-bar.stuck .trip-header { padding-bottom: 0; gap: 2px; }
 .trip-phone .trip-bar.stuck .trip-title-row .icon-btn.filled { width: 40px; height: 40px; }
+
+/* switching sections never shifts anything: the active tab only changes colour and underline,
+   and the column keeps room for its scrollbar */
+.section-tabs button, .section-tabs button[aria-pressed="true"], .saved-switch button, .saved-switch button[aria-pressed="true"] { font-weight: 700; }
+.trip-wide .trip-main { scrollbar-gutter: stable; }
