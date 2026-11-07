@@ -125,21 +125,9 @@
 .clash-row .notice-text span { font-weight: 500; }
 
 /* one day on its own page: a scrollable strip of trip dates, then the date, then the day itself */
-.day-strip {
-  display: flex; gap: 4px; margin: 4px 0 0; padding: 4px 2px 8px; overflow-x: auto;
-  scrollbar-width: thin; scrollbar-color: var(--line) transparent; scroll-snap-type: x proximity;
-}
 
-.day-strip button {
-  flex: 0 0 52px; min-width: 44px; min-height: 76px; scroll-snap-align: center; display: grid; place-items: center; gap: 0; padding: 6px 0;
-  border: 0; border-radius: 16px; background: transparent; color: var(--ink-2); font-size: 12px;
-}
-.day-strip button strong { font-family: var(--f-head); font-size: 20px; color: var(--ink); }
-.day-strip button:hover { background: var(--soft); }
-.day-strip button[aria-current] { background: var(--ink); color: var(--card); }
-.day-strip button[aria-current] strong { color: inherit; }
-.day-title { display: grid; gap: 2px; padding: 8px 0 0; }
-.day-title h1 { font-size: 30px; font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; }
+.day-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 20px 0 4px; }
+.day-title h2 { font-size: 24px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
 .day-title .muted { font-size: 14px; }
 /* the day without its card: rows straight on the page */
 .day.bare { border: 0; border-radius: 0; background: none; }

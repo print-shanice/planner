@@ -33,7 +33,7 @@ it('offline: trip from the persisted cache renders and edit controls are disable
       </MemoryRouter>
     </PersistQueryClientProvider>,
   )
-  expect(await screen.findByRole('heading', { level: 1, name: 'monday 8 february' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 2, name: 'monday 8 february' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'back to all trips' })).toBeInTheDocument()
   expect(screen.getByText('arktikum')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'add' })).toBeDisabled()

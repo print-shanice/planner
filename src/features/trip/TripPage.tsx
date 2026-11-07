@@ -142,7 +142,7 @@ function TripScreen() {
           </section>
         )}
         <div className="trip-panel" hidden={tab !== 'plan'}>
-          <PlanTab key={trip.id} trip={trip} view={validDay(day) ? 'itinerary' : 'calendar'} />
+          <PlanTab key={trip.id} trip={trip} />
         </div>
       </section>
       {wide && <aside className="trip-map"><Suspense fallback={null}><MapTab trip={trip} /></Suspense></aside>}

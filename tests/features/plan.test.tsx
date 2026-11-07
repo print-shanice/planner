@@ -72,47 +72,62 @@ beforeEach(() => {
   db.save.mockClear(); db.walk.mockClear(); db.search.mockReset()
 })
 
-it('overview is the calendar: dated side trips are flagged bars, undated ones and day lists stay off it', () => {
+it('the calendar flags dated side trips; undated ones and loose ideas stay off the plan', () => {
   const t = lap()
   db.trips = [t,
     trip({ id: 'child', parent_id: t.id, name: 'day trip', start_date: '2027-02-08', end_date: '2027-02-09', base: place({ country: 'FR' }) }),
     trip({ id: 'later', parent_id: t.id, name: 'someday', start_date: null, end_date: null })]
   db.stops = [stop({ trip_id: t.id, title: 'loose idea', day: null })]
+  db.wide = true
   show(t)
-  expect(screen.queryByTestId(/^day-/)).toBeNull()
-  expect(screen.queryByTestId('fold')).toBeNull()
+  expect(day('2027-02-07')).toBeInTheDocument()
   expect(screen.queryByText('someday')).toBeNull()
   expect(screen.queryByText('loose idea')).toBeNull()
-  expect(screen.queryByText('your days')).toBeNull()
-  expect(screen.queryByLabelText('jump to date')).toBeNull()
   const label = cal().getByRole('link', { name: /day trip/ })
   expect(label).toHaveAttribute('href', '/trip/child')
   expect(label.textContent).toContain('🇫🇷')
   expect(screen.queryByTestId('cal-bar')).toBeNull()
-  // the side trip's days are coloured squares, not a pill under them
   expect(cal().getByRole('button', { name: 'mon 8 feb' })).toHaveAttribute('data-side', 'start')
   expect(cal().getByRole('button', { name: 'tue 9 feb' })).toHaveAttribute('data-side', 'end')
   expect(cal().getByRole('button', { name: 'wed 10 feb' })).not.toHaveAttribute('data-side')
 })
 
-it('the trip calendar is a whole month on a phone, without city bars, and marks days with plans', () => {
+it('phones fold the calendar to the chosen week; the chevron opens the whole month', async () => {
   const t = lap(); db.trips = [t]
   db.stops = [stop({ trip_id: t.id, title: 'museum', day: '2027-02-09' }),
     stop({ trip_id: t.id, kind: 'stay', title: 'cabin', day: '2027-02-07', end_date: '2027-02-11', place: place({ city: 'rovaniemi' }) })]
-  show(t)
-  expect(screen.queryByRole('button', { name: 'whole month' })).toBeNull()
-  expect(cal().getByText('27')).toBeInTheDocument()
+  showAt('/trip/lap?day=2027-02-09')
+  expect(cal().getAllByRole('button', { name: /feb/ }).map((b) => b.getAttribute('aria-label'))).toEqual(['mon 8 feb', 'tue 9 feb', 'wed 10 feb', 'thu 11 feb'])
+  expect(cal().getByRole('button', { name: 'tue 9 feb' })).toHaveAttribute('aria-pressed', 'true')
+  expect(cal().getByRole('button', { name: 'tue 9 feb' })).toHaveAttribute('data-planned', 'true')
   expect(screen.queryByTestId('cal-city')).toBeNull()
-  expect(cal().getByRole('button', { name: /tue 9 feb/ })).toHaveAttribute('data-planned', 'true')
-  expect(cal().getByRole('button', { name: /wed 10 feb/ })).not.toHaveAttribute('data-planned')
+  await userEvent.click(cal().getByRole('button', { name: 'whole month' }))
+  expect(cal().getByRole('button', { name: 'sun 7 feb' })).toBeInTheDocument()
+  expect(cal().getByText('27')).toBeInTheDocument()
 })
 
-it('a day opens as its own page with the date, its day number and nothing from the overview', () => {
+it('laptops always show the whole month', () => {
+  const t = lap(); db.trips = [t]; db.stops = []
+  db.wide = true
+  showAt('/trip/lap?day=2027-02-09')
+  expect(screen.queryByRole('button', { name: 'whole month' })).toBeNull()
+  expect(cal().getByText('27')).toBeInTheDocument()
+})
+
+it('the chosen day shows under the calendar with its date and day number', () => {
   const t = lap(); db.trips = [t]; db.stops = [stop({ trip_id: t.id, title: 'museum', day: '2027-02-08' })]
   showAt('/trip/lap?day=2027-02-08')
-  expect(screen.getByRole('heading', { name: 'monday 8 february' })).toBeInTheDocument()
+  expect(screen.getByTestId('calendar')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: 'monday 8 february' })).toBeInTheDocument()
   expect(screen.getByText(/day 2 of 5/)).toBeInTheDocument()
-  expect(screen.queryByTestId('calendar')).toBeNull()
+  expect(within(day('2027-02-08')).getByText('museum')).toBeInTheDocument()
+})
+
+it('without a day in the link, the plan opens on the first day of the trip', () => {
+  const t = lap(); db.trips = [t]; db.stops = []
+  showAt('/trip/lap')
+  expect(screen.getByRole('heading', { level: 2, name: 'sunday 7 february' })).toBeInTheDocument()
+  expect(cal().getByRole('button', { name: 'sun 7 feb' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 it('a parent day deep link still includes nested plans', () => {
@@ -144,18 +159,28 @@ it('timed stops sort chronologically, flexible plans follow and every stop is nu
   expect(screen.getByText('any time')).toBeInTheDocument()
 })
 
-it('date navigation changes only the selected day and returns to overview', async () => {
+it('tapping a day in the calendar changes only the chosen day', async () => {
   const t = lap(); db.trips = [t]; db.stops = []
   showAt('/trip/lap?day=2027-02-08')
-  await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /tue 9 feb/ }))
+  await userEvent.click(cal().getByRole('button', { name: 'tue 9 feb' }))
   expect(loc()).toBe('/trip/lap?day=2027-02-09')
   expect(screen.getAllByTestId(/^day-/)).toHaveLength(1)
+  expect(screen.getByRole('heading', { level: 2, name: 'tuesday 9 february' })).toBeInTheDocument()
 })
 
-it('invalid and out-of-range dates show the overview safely', () => {
+it('invalid and out-of-range dates fall back to the first day', () => {
   const t = lap(); db.trips = [t]; db.stops = []
   showAt('/trip/lap?day=2027-02-30')
   expect(screen.getByTestId('calendar')).toBeInTheDocument()
+  expect(day('2027-02-07')).toBeInTheDocument()
+})
+
+it('a trip with no dates shows "no date" and no calendar', () => {
+  db.trips = [trip({ id: 'some', start_date: null, end_date: null })]
+  db.stops = [stop({ trip_id: 'some', title: 'loose', day: null })]
+  showAt('/trip/some')
+  expect(screen.queryByTestId('calendar')).toBeNull()
+  expect(screen.getByRole('region', { name: 'no date' })).toHaveTextContent('loose')
 })
 
 it('undated trips retain their unscheduled places', () => {
@@ -188,6 +213,7 @@ afterEach(() => forgetPending())
 
 it('choosing a date clears the saved-map override', async () => {
   const t = lap(); db.trips = [t]; db.stops = []
+  db.wide = true
   showAt('/trip/lap?map=saved')
   await userEvent.click(cal().getByRole('button', { name: 'mon 8 feb' }))
   expect(loc()).toBe('/trip/lap?day=2027-02-08')
@@ -221,21 +247,24 @@ it('labels a side trip once across weeks and opens its overview from a highlight
   const t = lap()
   db.trips = [t, trip({ id: 'child', parent_id: t.id, name: 'winter escape', start_date: '2027-02-07', end_date: '2027-02-10', base: place({ country: 'FI' }) })]
   db.stops = []
+  db.wide = true
   showAt('/trip/lap')
   expect(cal().getAllByRole('link', { name: /winter escape/ })).toHaveLength(1)
   await userEvent.click(cal().getByRole('button', { name: 'tue 9 feb' }))
-  expect(loc()).toBe('/trip/child')
+  expect(loc()).toBe('/trip/child?day=2027-02-09')
 })
 
-it('lets the date strip reach every day across months, not just the selected week', async () => {
+it('the week moves on and back across months', async () => {
   db.trips = [trip({ id: 'long', start_date: '2027-01-28', end_date: '2027-03-03' })]
   db.stops = []
   showAt('/trip/long?day=2027-01-28')
-  const strip = within(screen.getByRole('navigation', { name: 'days' }))
-  expect(strip.getAllByRole('button')).toHaveLength(35)
-  await userEvent.click(strip.getByRole('button', { name: 'wed 3 mar' }))
-  expect(loc()).toBe('/trip/long?day=2027-03-03')
-  expect(strip.getByRole('button', { name: 'wed 3 mar' })).toHaveAttribute('aria-current', 'date')
-  await userEvent.click(strip.getByRole('button', { name: 'thu 28 jan' }))
+  expect(cal().getByText('january')).toBeInTheDocument()
+  await userEvent.click(cal().getByRole('button', { name: 'next week' }))
+  expect(cal().getByRole('button', { name: 'mon 1 feb' })).toBeInTheDocument()
+  expect(cal().getByText('february')).toBeInTheDocument()
+  await userEvent.click(cal().getByRole('button', { name: 'wed 3 feb' }))
+  expect(loc()).toBe('/trip/long?day=2027-02-03')
+  await userEvent.click(cal().getByRole('button', { name: 'previous week' }))
+  await userEvent.click(cal().getByRole('button', { name: 'thu 28 jan' }))
   expect(day('2027-01-28')).toBeInTheDocument()
 })

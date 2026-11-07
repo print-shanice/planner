@@ -70,7 +70,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         if (p.onDay && pickable) {
           return (
             <button key={d} type="button" className="cal-day" {...attrs} aria-label={dayLabel(d)}
-              aria-pressed={p.selected === d} onClick={() => st?.trip ? navigate(`/trip/${st.trip.id}`) : p.onDay!(d)}>
+              aria-pressed={p.selected === d} onClick={() => st?.trip ? navigate(`/trip/${st.trip.id}?day=${d}`) : p.onDay!(d)}>
               {n}
             </button>
           )
