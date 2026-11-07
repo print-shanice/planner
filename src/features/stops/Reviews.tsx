@@ -2,9 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 import type { Review, Stop } from '../../lib/types'
 import { useAuth } from '../../lib/auth'
 import { useCanEdit } from '../../lib/offline'
-import { useMembers, useReviews, useSave, useStops } from '../../lib/queries'
+import { useMembers, useReviews, useSave, useStops, useTrips } from '../../lib/queries'
 import { samePlace } from '../../lib/agenda'
-import { fmtDay } from '../../lib/dates'
+import { countdown, fmtDay, todayISO } from '../../lib/dates'
 import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
 import { saveError } from '../../lib/errors'
@@ -62,7 +62,10 @@ export function Reviews({ stop }: { stop: Stop }) {
   const members = useMembers().data ?? []
   const { userId } = useAuth()
   const editable = useCanEdit()
+  const trip = useTrips().data?.find(t => t.id === stop.trip_id)
   const load = loadState(query)
+  // reviews only open once the stop's trip is over
+  if (!trip || countdown(trip, todayISO()).kind !== 'done') return null
   const mine = query.data?.find(r => r.stop_id === stop.id && r.author_id === userId)
   const history = (query.data ?? []).filter(r => {
     const visit = stops.find(s => s.id === r.stop_id)

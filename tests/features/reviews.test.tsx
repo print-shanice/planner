@@ -1,17 +1,38 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Reviews } from '../../src/features/stops/Reviews'
-import { stop, place } from '../factories'
-import type { Review } from '../../src/lib/types'
-const db = vi.hoisted(() => ({ reviews: [] as Review[], save: vi.fn(), editable: true }))
+import { stop, place, trip } from '../factories'
+import type { Review, Trip } from '../../src/lib/types'
+const db = vi.hoisted(() => ({ reviews: [] as Review[], trips: [] as Trip[], save: vi.fn(), editable: true }))
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ userId: 'me' }) }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.editable }))
 vi.mock('../../src/lib/queries', () => ({
-  useReviews: () => ({ data: db.reviews }), useStops: () => ({ data: [] }), useMembers: () => ({ data: [] }),
+  useReviews: () => ({ data: db.reviews }), useStops: () => ({ data: [] }), useTrips: () => ({ data: db.trips }), useMembers: () => ({ data: [] }),
   useSave: () => ({ mutateAsync: db.save, isPending: false }),
 }))
 const s = stop({ id: 'visit', place: place() })
-beforeEach(() => { db.reviews = []; db.editable = true; db.save.mockReset().mockResolvedValue({}) })
+beforeEach(() => {
+  db.reviews = []; db.editable = true; db.save.mockReset().mockResolvedValue({})
+  db.trips = [trip({ id: 't0', start_date: '2027-02-07', end_date: '2027-02-11' })]
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2027-02-12T10:00:00'))
+})
+afterEach(() => vi.useRealTimers())
+it('stays hidden until the trip is over', () => {
+  vi.setSystemTime(new Date('2027-02-11T22:00:00'))
+  db.reviews = [{ id: 'old', stop_id: s.id, author_id: 'you', comments: 'loved it', rating: 5, return_choice: 'yes', outcome: 'done' }]
+  const ui = render(<Reviews stop={s} />)
+  expect(screen.queryByRole('region', { name: 'reviews' })).toBeNull()
+  expect(screen.queryByText('loved it')).toBeNull()
+  vi.setSystemTime(new Date('2027-02-12T08:00:00'))
+  ui.rerender(<Reviews stop={{ ...s }} />)
+  expect(screen.getByRole('region', { name: 'reviews' })).toBeInTheDocument()
+})
+it('stays hidden for a trip without dates', () => {
+  db.trips = [trip({ id: 't0', start_date: null, end_date: null })]
+  render(<Reviews stop={s} />)
+  expect(screen.queryByRole('region', { name: 'reviews' })).toBeNull()
+})
 it('saves a personal rating, return decision and comments without changing the stop', async () => {
   render(<Reviews stop={s} />)
   await userEvent.selectOptions(screen.getByLabelText('rating'), '4')
