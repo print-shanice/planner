@@ -245,3 +245,13 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 }
 .add-option:hover { background: var(--ground); }
 .add-icon { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--soft); }
+
+/* waiting: a soft pulse, and a short word saying what for */
+@keyframes pulse { 50% { opacity: 0.55; } }
+.pulse { animation: pulse 1.2s ease-in-out infinite; }
+.btn[aria-busy="true"]:disabled { opacity: 1; cursor: progress; }
+.pending { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.pending-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: none; }
+@media (prefers-reduced-motion: reduce) {
+  .pulse, .bone { animation: none; }
+}

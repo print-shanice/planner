@@ -15,7 +15,7 @@ import { PlacesSheet, type PlaceItem } from './PlacesSheet'
 import { useHighlight } from '../trip/highlight'
 import { Icon } from '../../components/Icon'
 
-type Card = { place: Place; stopId?: string; seq: number }
+type Card = { place: Place; stopId?: string; seq: number; looking?: boolean }
 
 // on a phone the floating bar and chips cover the top, the places sheet and tab bar the bottom
 const PHONE_INSET = { top: 200, bottom: 300 }
@@ -70,9 +70,9 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
   async function empty(p: { lng: number; lat: number }) {
     if (card) { setCard(null); return }
     const mine = ++seq.current
-    setCard({ place: { name: '', lat: p.lat, lng: p.lng }, seq: mine })
-    const found = await reversePlace(p.lat, p.lng)
-    if (found && seq.current === mine) setCard({ place: found, seq: mine })
+    setCard({ place: { name: '', lat: p.lat, lng: p.lng }, seq: mine, looking: true })
+    const found = await reversePlace(p.lat, p.lng).catch(() => null)
+    if (seq.current === mine) setCard(found ? { place: found, seq: mine } : { place: { name: '', lat: p.lat, lng: p.lng }, seq: mine })
   }
 
   return (
@@ -104,7 +104,7 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
       {phone && !card && <PlacesSheet items={items} title={listTitle} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={pick} />}
       {card && (
         <div className="map-bottom">
-          <PlaceCard key={card.seq} trip={trip} place={card.place} stop={stop} defaultDay={filter !== 'all' && filter !== 'saved' ? filter : null}
+          <PlaceCard key={card.seq} trip={trip} place={card.place} stop={stop} looking={card.looking} defaultDay={filter !== 'all' && filter !== 'saved' ? filter : null}
             onClose={() => setCard(null)} onDone={() => setCard(null)} />
         </div>
       )}

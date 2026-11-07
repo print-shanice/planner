@@ -185,3 +185,29 @@ it('tint follows the trip colour', async () => {
   expect(tint(8)).toEqual({ '--c': 'var(--g2)' })
   expect(tint(null)).toEqual({ '--c': 'var(--g0)' })
 })
+
+describe('waiting looks the same everywhere', () => {
+  it('a busy button says what it is doing, pulses and cannot be pressed again', async () => {
+    const { Button } = await import('../../src/components/Button')
+    const onClick = vi.fn()
+    render(<Button variant="primary" busy="signing in" onClick={onClick}>sign in</Button>)
+    const b = screen.getByRole('button', { name: /^signing in/ })
+    expect(b).toHaveAttribute('aria-busy', 'true')
+    expect(b).toBeDisabled()
+    expect(b).toHaveClass('pulse')
+    expect(b).toHaveTextContent('signing in…')
+  })
+
+  it('a button that is not busy is just itself', async () => {
+    const { Button } = await import('../../src/components/Button')
+    render(<Button busy={false}>sign in</Button>)
+    expect(screen.getByRole('button', { name: 'sign in' })).not.toHaveAttribute('aria-busy')
+  })
+
+  it('a pending line says what it is waiting for, out loud too', async () => {
+    const { Pending } = await import('../../src/components/Pending')
+    render(<Pending label="searching" />)
+    expect(screen.getByRole('status')).toHaveTextContent('searching')
+    expect(screen.getByRole('status')).toHaveClass('pending')
+  })
+})

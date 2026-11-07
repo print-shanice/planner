@@ -480,3 +480,22 @@ it('files are added only from "ticket", with no second add button', async () => 
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   expect(within(screen.getByRole('dialog')).queryByText('add file')).toBeNull()
 })
+
+it('opening a ticket says "opening…" until it shows', async () => {
+  db.files = [{ id: 'f1', stop_id: 's1', path: 'lap/s1/b-qr.png', name: 'qr.png', mime: 'image/png' }]
+  tickets.open.mockReturnValueOnce(new Promise(() => {}))
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'qr.png' }))
+  expect(within(screen.getByRole('dialog')).getByText('opening…')).toBeInTheDocument()
+})
+
+it('uploading a ticket says so on the card', async () => {
+  const { supabase } = await import('../../src/lib/supabase') as any
+  supabase.storage.from = () => ({ remove: db.storageRemove, upload: () => new Promise(() => {}) })
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  await userEvent.upload(within(d).getByLabelText('add file'), new File(['x'], 'pass.pdf', { type: 'application/pdf' }))
+  expect(within(d).getByText('uploading…')).toBeInTheDocument()
+})

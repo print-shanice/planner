@@ -5,6 +5,7 @@ import { newId } from '../../lib/id'
 import { supabase } from '../../lib/supabase'
 import { Icon } from '../../components/Icon'
 import { Sheet } from '../../components/Sheet'
+import { Pending } from '../../components/Pending'
 import { keepTickets, openTicket } from '../../lib/ticketCache'
 
 const MAX = 20 * 1024 * 1024
@@ -23,6 +24,7 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [viewing, setViewing] = useState<{ file: FileRow; url: string } | null>(null)
+  const [opening, setOpening] = useState<string | null>(null)
   const key = files.map((f) => f.id).join()
 
   // keep a device copy of every ticket on a stop that has been opened, for use without signal
@@ -31,9 +33,10 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
 
   async function view(f: FileRow) {
     setProblem(null)
+    setOpening(f.id)
     try { setViewing({ file: f, url: await openTicket(f) }) } catch (e) {
       setProblem((e as Error).message === 'not saved offline' ? 'not saved offline' : "couldn't open, try again")
-    }
+    } finally { setOpening(null) }
   }
 
   async function upload(list: FileList | null) {
@@ -61,13 +64,14 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
     await remove.mutateAsync(f.id)
   }
 
-  if (!files.length && (!canEdit || pickerRef)) return pickerRef && canEdit ? <input ref={input} type="file" accept="image/*,application/pdf" multiple hidden aria-label="add file" onChange={(e) => { upload(e.target.files); e.target.value = '' }} /> : null
+  if (!files.length && !busy && (!canEdit || pickerRef)) return pickerRef && canEdit ? <input ref={input} type="file" accept="image/*,application/pdf" multiple hidden aria-label="add file" onChange={(e) => { upload(e.target.files); e.target.value = '' }} /> : null
   return (
     <section className="files" aria-label="files">
       {files.map((f) => (
         <div key={f.id} className="file-row">
           <Icon name="file" size={18} />
-          <button type="button" className="file-name" onClick={() => view(f)}>{f.name}</button>
+          <button type="button" className="file-name" aria-busy={opening === f.id || undefined} onClick={() => view(f)}>{f.name}</button>
+          {opening === f.id && <span className="muted pulse">opening…</span>}
           {canEdit && <button type="button" className="icon-btn" aria-label={`remove ${f.name}`} onClick={() => drop(f)}><Icon name="trash" size={18} /></button>}
         </div>
       ))}
@@ -81,6 +85,7 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
             onChange={(e) => { upload(e.target.files); e.target.value = '' }} />
         </label>
       ))}
+      {busy && <Pending label="uploading…" />}
       {problem && <p className="warn-line">{problem}</p>}
       <Sheet open={!!viewing} title={viewing?.file.name ?? ''} onClose={() => setViewing(null)}>
         {viewing && (

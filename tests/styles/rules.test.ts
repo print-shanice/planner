@@ -75,3 +75,9 @@ it('trip colours are six hues you can tell apart', () => {
 it('stack-xs is a real style, so stacked lines never run together', () => {
   expect(ruleFor('.stack-xs')).toMatch(/flex-direction:\s*column/)
 })
+
+it('the pulse holds still for people who ask for less motion', () => {
+  const css = read('src/styles/ui.css')
+  expect(css).toMatch(/@keyframes pulse/)
+  expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.pulse/)
+})

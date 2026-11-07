@@ -2,13 +2,13 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, cost } from '../factories'
 
-const db = vi.hoisted(() => ({ save: vi.fn(), trips: [] as any[], costs: [] as any[], stops: [] as any[], costsQ: null as null | Record<string, unknown> }))
+const db = vi.hoisted(() => ({ ratesQ: null as null | Record<string, unknown>, save: vi.fn(), trips: [] as any[], costs: [] as any[], stops: [] as any[], costsQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useCosts: () => db.costsQ ?? ({ data: db.costs }),
   useStops: () => ({ data: db.stops }),
   useMembers: () => ({ data: [{ email: 's@x.com', user_id: 'u1', name: 'shanice', color: 0 }, { email: 'k@x.com', user_id: 'u2', name: 'kai', color: 1 }] }),
-  useRates: () => ({ data: { date: '2026-11-04', rates: { SGD: 1.4398, GBP: 0.85 } } }),
+  useRates: () => db.ratesQ ?? ({ data: { date: '2026-11-04', rates: { SGD: 1.4398, GBP: 0.85 } } }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
@@ -191,4 +191,14 @@ it('totals round to whole amounts; a single cost keeps its own', () => {
   expect(screen.getByTestId('money-total')).toHaveTextContent(/^€24$/)
   expect(within(screen.getByRole('region', { name: 'by category' })).getByText('€24')).toBeInTheDocument()
   expect(within(screen.getByRole('region', { name: 'all costs' })).getByText('€23.98')).toBeInTheDocument()
+})
+
+it('while exchange rates load, money says so instead of leaving costs out', () => {
+  db.ratesQ = { data: undefined, isLoading: true, status: 'pending', fetchStatus: 'fetching' }
+  const t = trip({ id: 'lap', currency: 'EUR' })
+  db.trips = [t]
+  db.costs = [cost({ trip_id: 'lap', amount: 20, currency: 'GBP' })]
+  show(t)
+  db.ratesQ = null
+  expect(screen.getByRole('status')).toHaveTextContent('loading rates')
 })

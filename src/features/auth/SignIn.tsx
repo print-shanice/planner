@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
+import { Button } from '../../components/Button'
 
 export function SignIn() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<'sending' | 'signing in' | false>(false)
   const [code, setCode] = useState('')
 
   // the emailed code works where the link can't: an iphone home-screen app keeps its own storage
@@ -14,14 +15,14 @@ export function SignIn() {
     if (!sent) return
     const token = code.replace(/\s+/g, '')
     if (!token) return
-    setBusy(true)
+    setBusy('signing in')
     setError(null)
     try {
       const { error } = await supabase.auth.verifyOtp({ email: sent, token, type: 'email' })
-      if (error) setError("that code didn't work")
+      // a code that worked stays "signing in…" until the planner opens in its place
+      if (error) { setError("that code didn't work"); setBusy(false) }
     } catch {
       setError("couldn't sign in, try again")
-    } finally {
       setBusy(false)
     }
   }
@@ -30,7 +31,7 @@ export function SignIn() {
     e.preventDefault()
     const value = email.trim()
     if (!value) return
-    setBusy(true)
+    setBusy('sending')
     setError(null)
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -59,7 +60,7 @@ export function SignIn() {
             <span className="label">code</span>
             <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} />
           </label>
-          <button className="btn primary" type="submit" disabled={busy}>sign in</button>
+          <Button variant="primary" type="submit" busy={busy}>sign in</Button>
           {error && <p className="warn-line">{error}</p>}
         </form>
       ) : (
@@ -68,7 +69,7 @@ export function SignIn() {
             <span className="label">email</span>
             <input type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </label>
-          <button className="btn primary" type="submit" disabled={busy}>send link</button>
+          <Button variant="primary" type="submit" busy={busy}>send link</Button>
           {error && <p className="warn-line">{error}</p>}
         </form>
       )}

@@ -30,8 +30,8 @@ export function FormFooter({ form, problem, saving, failed, children }: Props) {
         {line && <p className="warn-line" role="alert">{line}</p>}
         {children}
         <span className="spacer" />
-        <Button variant="primary" type="submit" form={form} disabled={saving || !canEdit}>
-          {saving ? 'saving…' : failed ? 'retry' : 'save'}
+        <Button variant="primary" type="submit" form={form} disabled={!canEdit} busy={saving && 'saving'}>
+          {failed ? 'retry' : 'save'}
         </Button>
       </div>
     </SheetFooter>

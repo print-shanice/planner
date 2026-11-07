@@ -381,3 +381,12 @@ it('hovering or focusing a stop lights it for the map, and leaving clears it', a
   act(() => { (row.querySelector('.stop-main') as HTMLElement).focus() })
   expect(screen.getByTestId('lit')).toHaveTextContent('s1')
 })
+
+it('a walk being worked out shows a quiet pulsing leg', () => {
+  db.walk.mockReturnValueOnce(new Promise(() => {}))
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, title: 'a', day: '2027-02-08', time: '10:00', place: place({ lat: 66.50, lng: 25.70 }) }),
+    stop({ trip_id: t.id, title: 'b', day: '2027-02-08', time: '11:00', place: place({ lat: 66.51, lng: 25.72 }) })]
+  showAt('/trip/lap?day=2027-02-08')
+  expect(day('2027-02-08').querySelector('.leg.pulse')).not.toBeNull()
+})

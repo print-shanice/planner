@@ -45,7 +45,7 @@ function Account() {
         {email && <p className="muted">{email}</p>}
       </div>
       {failed && <p className="warn-line">couldn't sign out</p>}
-      <Button className="block" disabled={!online || busy} onClick={out}>sign out</Button>
+      <Button className="block" disabled={!online} busy={busy && 'signing out'} onClick={out}>sign out</Button>
     </div>
   )
 }

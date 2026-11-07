@@ -6,15 +6,17 @@ import { fmtDay, tripDays } from '../../lib/dates'
 import { gmapsUrl } from '../../lib/gmaps'
 import { Icon } from '../../components/Icon'
 import { Button } from '../../components/Button'
+import { Pending } from '../../components/Pending'
 import { useStopSheet } from '../stops/StopSheet'
 import { stopTitle } from '../plan/StopRow'
 import { saveError } from '../../lib/errors'
 
-type Props = { trip: Trip; place: Place; stop?: Stop; defaultDay?: string | null; onClose: () => void; onDone?: () => void }
+// looking: a tap on the map is still being turned into a place name
+type Props = { trip: Trip; place: Place; stop?: Stop; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
 
 const KIND: Record<string, string> = { place: 'place', stay: 'stay', journey: 'journey', note: 'note' }
 
-export function PlaceCard({ trip, place, stop, defaultDay, onClose, onDone }: Props) {
+export function PlaceCard({ trip, place, stop, defaultDay, looking, onClose, onDone }: Props) {
   const stops = useStops().data ?? []
   const save = useSave('stops')
   const canEdit = useCanEdit()
@@ -39,10 +41,10 @@ export function PlaceCard({ trip, place, stop, defaultDay, onClose, onDone }: Pr
     : save.mutateAsync({ trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: null, position: lastOn(null), place, saved: true, status: 'idea' })))
 
   return (
-    <section className="place-card" aria-label={title}>
+    <section className="place-card" aria-label={looking ? 'finding the place' : title}>
       <div className="place-card-head">
         <div className="stack-xs">
-          <h3 className="head">{title}</h3>
+          {looking ? <h3 className="head"><Pending label="finding the place" /></h3> : <h3 className="head">{title}</h3>}
           {sub && <p className="muted">{sub}</p>}
         </div>
         <button type="button" className="icon-btn" aria-label="close" onClick={onClose}><Icon name="close" size={18} /></button>

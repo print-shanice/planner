@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
@@ -202,4 +202,16 @@ describe('on a laptop the map follows the plan', () => {
     expect(fit()).toBe('lap|2027-02-09')
     expect(screen.getByRole('button', { name: 'whole trip' })).toHaveAttribute('aria-pressed', 'false')
   })
+})
+
+it('tapping the map says it is finding the place, then names it', async () => {
+  let found!: (v: unknown) => void
+  db.reverse.mockReturnValue(new Promise((r) => { found = r }))
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
+  expect(screen.getByText('finding the place')).toBeInTheDocument()
+  expect(screen.queryByText('dropped pin')).toBeNull()
+  await act(async () => { found({ name: 'Rovaniemi Church', lat: 66.5, lng: 25.7 }) })
+  expect(screen.getByRole('region', { name: 'Rovaniemi Church' })).toBeInTheDocument()
+  expect(screen.queryByText('finding the place')).toBeNull()
 })

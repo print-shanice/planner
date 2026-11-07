@@ -16,6 +16,7 @@ import { Sheet } from '../../components/Sheet'
 import { useStopSheet } from '../stops/StopSheet'
 import { CostForm } from './CostForm'
 import { SaveFailed } from '../../components/SaveFailed'
+import { Pending } from '../../components/Pending'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
@@ -27,7 +28,8 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   const allCosts = cq.data ?? []
   const load = loadState(tq, cq)
   const members = useMembers().data ?? []
-  const rates = useRates().data ?? null
+  const rq = useRates()
+  const rates = rq.data ?? null
   const { userId } = useAuth()
   const sheet = useStopSheet()
   const [cur, setCur] = useState(trip.currency || 'EUR')
@@ -149,6 +151,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         </section>
       )}
 
+      {!rates && rq.isLoading && <p className="footnote"><Pending label="loading rates" /></p>}
       {rates && <p className="footnote muted">{`ecb rates, ${fmtDay(rates.date)}`}{t.leftOut > 0 ? ` · ${t.leftOut} not converted` : ''}</p>}
 
       <Sheet open={!!editing} title="edit cost" onClose={() => setEditing(null)}>

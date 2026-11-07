@@ -70,3 +70,6 @@
 /* laptops: the map follows the plan's day; this zooms out to every place */
 .whole-trip { position: absolute; left: 12px; bottom: 12px; z-index: 2; color: var(--ink-2); }
 .whole-trip[aria-pressed="true"] .icon { color: inherit; }
+/* the map's own "loading map", over its blank canvas */
+.map-loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 0 14px; border-radius: 999px; background: var(--card); box-shadow: 0 2px 8px rgba(22, 24, 29, .1); }
+.leg.pulse { color: var(--ink-3); }

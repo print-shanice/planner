@@ -22,6 +22,7 @@ import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
 import { HighlightProvider } from './highlight'
 import { OfflineBadge } from '../../components/OfflineBadge'
+import { Pending } from '../../components/Pending'
 import { CostForm } from '../money/CostForm'
 import { LinkForm } from '../saved/LinkForm'
 import { Icon } from '../../components/Icon'
@@ -30,9 +31,12 @@ import { dayLabel } from '../../components/MonthCalendar'
 
 const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapTab })))
 
+// the map's code is a big download; say so while it comes
+const MapWait = () => <div className="map-tab"><Pending label="loading map" className="map-loading" /></div>
+
 function Panel({ tab, view, trip }: { tab: Tab; view: SavedView; trip: Trip }) {
   switch (tab) {
-    case 'map': return <Suspense fallback={null}><MapTab trip={trip} phone /></Suspense>
+    case 'map': return <Suspense fallback={<MapWait />}><MapTab trip={trip} phone /></Suspense>
     case 'money': return <MoneyTab trip={trip} />
     case 'saved': return view === 'packing' ? <PackingTab trip={trip} /> : <SavedTab key={`${trip.id}-${view}`} trip={trip} view={view} />
     default: return null
@@ -157,7 +161,7 @@ function TripScreen() {
           <PlanTab key={trip.id} trip={trip} />
         </div>
       </section>
-      {wide && <aside className="trip-map"><Suspense fallback={null}><MapTab trip={trip} /></Suspense></aside>}
+      {wide && <aside className="trip-map"><Suspense fallback={<MapWait />}><MapTab trip={trip} /></Suspense></aside>}
       <AddSheet open={menu} title={tab === 'plan' && onDay ? `add to ${dayLabel(onDay)}` : 'add'} onClose={() => setMenu(false)}
         onPick={(k) => { setMenu(false); setKind(k) }} />
       <AddForms kind={kind} trip={trip} day={tab === 'plan' ? onDay : null} idea={tab === 'saved'} onClose={() => setKind(null)} />

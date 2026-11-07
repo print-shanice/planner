@@ -366,3 +366,16 @@ it('offline still says so on the phone map, where the header is hidden', () => {
   db.online = true
   expect(within(document.querySelector('.map-float') as HTMLElement).getByText('offline')).toBeInTheDocument()
 })
+
+it('the map says it is loading while its code arrives', async () => {
+  // a fresh copy of the page, so the map's code hasn't been loaded by an earlier test
+  vi.resetModules()
+  const { TripPage: Fresh } = await import('../../src/features/trip/TripPage')
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { enabled: false } } })}>
+      <MemoryRouter initialEntries={['/trip/summer?tab=map']}><Routes><Route path="/trip/:id" element={<Fresh />} /></Routes></MemoryRouter>
+    </QueryClientProvider>,
+  )
+  expect(screen.getByText('loading map')).toBeInTheDocument()
+  expect(await screen.findByText('map here')).toBeInTheDocument()
+})

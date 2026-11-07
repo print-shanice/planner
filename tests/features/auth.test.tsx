@@ -126,3 +126,56 @@ it('signing in lets the cache be saved again after a sign out', async () => {
   expect(await screen.findByText('inside')).toBeVisible()
   expect(persistPaused()).toBe(false)
 })
+
+describe('sign-in says when it is waiting', () => {
+  const never = () => new Promise(() => {})
+
+  it('while checking who you are, the wordmark pulses instead of a blank screen', () => {
+    auth.getSession.mockReturnValue(never())
+    ui()
+    expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+    expect(screen.getByText('planner')).toHaveClass('pulse')
+  })
+
+  it('sending the code says "sending…" and cannot be sent twice', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: null }, error: null })
+    auth.signInWithOtp.mockReturnValue(never())
+    ui()
+    await userEvent.type(await screen.findByLabelText('email'), 'a@b.co')
+    await userEvent.click(screen.getByRole('button', { name: 'send link' }))
+    const b = screen.getByRole('button', { name: /^sending/ })
+    expect(b).toHaveAttribute('aria-busy', 'true')
+    expect(b).toBeDisabled()
+  })
+
+  async function toCode() {
+    auth.getSession.mockResolvedValue({ data: { session: null }, error: null })
+    auth.signInWithOtp.mockResolvedValue({ error: null })
+    ui()
+    await userEvent.type(await screen.findByLabelText('email'), 'a@b.co')
+    await userEvent.click(screen.getByRole('button', { name: 'send link' }))
+    await userEvent.type(await screen.findByLabelText('code'), '123456')
+  }
+
+  it('the code says "signing in…" while it is checked', async () => {
+    await toCode()
+    auth.verifyOtp.mockReturnValue(never())
+    await userEvent.click(screen.getByRole('button', { name: 'sign in' }))
+    expect(screen.getByRole('button', { name: /^signing in/ })).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('a code that worked keeps saying "signing in…" until the planner opens', async () => {
+    await toCode()
+    auth.verifyOtp.mockResolvedValue({ error: null })
+    await userEvent.click(screen.getByRole('button', { name: 'sign in' }))
+    expect(screen.getByRole('button', { name: /^signing in/ })).toBeDisabled()
+  })
+
+  it('a wrong code lets you try again', async () => {
+    await toCode()
+    auth.verifyOtp.mockResolvedValue({ error: { message: 'Token has expired or is invalid' } })
+    await userEvent.click(screen.getByRole('button', { name: 'sign in' }))
+    expect(await screen.findByText("that code didn't work")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'sign in' })).toBeEnabled()
+  })
+})

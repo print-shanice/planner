@@ -352,3 +352,11 @@ it('a trip without a name asks for one', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(screen.getByText('add a name')).toBeInTheDocument()
 })
+
+it('signing out says so while it happens', async () => {
+  env.signOut.mockReturnValueOnce(new Promise(() => {}))
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'account' }))
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'account' })).getByRole('button', { name: 'sign out' }))
+  expect(screen.getByRole('button', { name: /^signing out/ })).toHaveAttribute('aria-busy', 'true')
+})

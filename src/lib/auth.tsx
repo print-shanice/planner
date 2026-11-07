@@ -76,7 +76,8 @@ export function Asleep() {
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { status } = useAuth()
-  if (status === 'loading') return null
+  // checking who you are: the wordmark breathes instead of a blank screen
+  if (status === 'loading') return <main className="center-screen" role="status" aria-label="loading"><h1 className="wordmark big pulse">planner</h1></main>
   if (status === 'asleep') return <Asleep />
   if (status === 'signed-out') return <SignIn />
   return <>{children}</>

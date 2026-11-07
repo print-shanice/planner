@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Pending } from '../../components/Pending'
 import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type StyleSpecification } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { FeatureCollection } from 'geojson'
@@ -73,6 +74,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const ready = useRef(false)
+  const [drawn, setDrawn] = useState(false)
   const fitted = useRef<string | null>(null)
   const cb = useRef({ onPick, onEmpty, onCenter })
   cb.current = { onPick, onEmpty, onCenter }
@@ -113,6 +115,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
       m.addLayer({ id: 'pin-numbers', type: 'symbol', source: 'pin-labels', layout: { 'text-field': ['to-string', ['get', 'number']], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true }, paint: { 'text-color': card } })
       m.addLayer({ id: 'focus', type: 'circle', source: 'focus', paint: { 'circle-radius': 9, 'circle-color': ink, 'circle-stroke-color': card, 'circle-stroke-width': 3 } })
       ready.current = true
+      setDrawn(true)
       push()
     })
 
@@ -163,5 +166,8 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
     m.setFilter('halo', ['==', ['get', 'id'], highlight ?? ''])
   }, [highlight])
 
-  return <div ref={box} className="trip-map-canvas" />
+  return <>
+    <div ref={box} className="trip-map-canvas" />
+    {!drawn && <Pending label="loading map" className="map-loading" />}
+  </>
 }

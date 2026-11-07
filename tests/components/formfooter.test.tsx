@@ -34,6 +34,7 @@ it('two quick submits send one save', async () => {
   fireEvent.submit(form)
   expect(send).toHaveBeenCalledTimes(1)
   expect(screen.getByRole('button', { name: 'saving…' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'saving…' })).toHaveAttribute('aria-busy', 'true')
   await act(async () => { done() })
   expect(screen.getByRole('button', { name: 'save' })).toBeEnabled()
 })
