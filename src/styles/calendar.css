@@ -76,4 +76,19 @@ button.cal-day:is(:not([data-ribbon]), [data-ribbon="on"]):hover .cal-n { backgr
   border-radius: 50%; background: var(--ink-3);
 }
 .cal-day[data-planned][aria-pressed="true"]::after { background: var(--ink); }
-.cal-bar:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* inside a trip: a side trip's days are coloured squares, labelled once per week with its flag and name */
+.cal-day[data-side]::before {
+  content: ''; position: absolute; inset: 2px 0; background: color-mix(in srgb, var(--c) 16%, var(--card));
+}
+.cal-day[data-side][data-side-edge*="l"]::before { left: 2px; border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.cal-day[data-side][data-side-edge*="r"]::before { right: 2px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+.cal-day[data-side] .cal-n { color: var(--c); font-weight: 700; }
+.cal .cal-day[data-side][aria-pressed="true"] .cal-n { background: var(--c); color: var(--card); }
+.cal-label {
+  min-width: 0; padding: 0 4px; display: flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 700; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--c); text-decoration: none;
+}
+.cal-label:hover { text-decoration: underline; }
+.cal-label:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 4px; }

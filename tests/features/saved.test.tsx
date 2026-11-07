@@ -32,25 +32,65 @@ beforeEach(() => {
 })
 
 const show = () => render(<MemoryRouter><SavedTab trip={lap} /></MemoryRouter>)
+const showLinks = async () => { show(); await userEvent.click(screen.getByRole('button', { name: /^links/ })) }
 
-it('lists this trip’s links newest first with a youtube player and a plain card', () => {
-  show()
+it('lists this trip’s links newest first with a youtube player and a plain card', async () => {
+  await showLinks()
   const cards = screen.getAllByTestId('link-card')
   expect(cards).toHaveLength(2)
   expect(cards[0].querySelector('iframe')?.getAttribute('src')).toBe('https://www.youtube-nocookie.com/embed/abc')
   expect(within(cards[1]).getByText('skyscanner.net')).toBeInTheDocument()
 })
 
-it('saved places are listed below the links', () => {
+it('saved splits into ideas and links, ideas first', async () => {
   show()
-  expect(within(screen.getByRole('region', { name: 'saved places' })).getByText('kotisaari')).toBeInTheDocument()
+  expect(within(screen.getByRole('list', { name: 'ideas' })).getByText('kotisaari')).toBeInTheDocument()
+  expect(screen.queryAllByTestId('link-card')).toHaveLength(0)
+  await userEvent.click(screen.getByRole('button', { name: /^links/ }))
+  expect(screen.getAllByTestId('link-card')).toHaveLength(2)
+  expect(screen.queryByText('kotisaari')).toBeNull()
+})
+
+it('each side has its own search', async () => {
+  db.stops.push(stop({ trip_id: 'lap', title: 'sauna night', day: null }))
+  show()
+  await userEvent.type(screen.getByRole('searchbox', { name: 'search ideas' }), 'sauna')
+  expect(screen.getByText('sauna night')).toBeInTheDocument()
+  expect(screen.queryByText('kotisaari')).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: /^links/ }))
+  await userEvent.type(screen.getByRole('searchbox', { name: 'search links' }), 'aurora')
+  expect(screen.getAllByTestId('link-card')).toHaveLength(1)
+})
+
+it('links show their website icon', async () => {
+  await showLinks()
+  const icon = screen.getAllByTestId('link-card')[1].querySelector('img.site-icon')
+  expect(icon?.getAttribute('src')).toContain('skyscanner.net')
+})
+
+it('several links can be picked and deleted together', async () => {
+  await showLinks()
+  await userEvent.click(screen.getByRole('button', { name: 'select' }))
+  await userEvent.click(screen.getByRole('checkbox', { name: 'aurora tips' }))
+  await userEvent.click(screen.getByRole('checkbox', { name: 'skyscanner.net' }))
+  await userEvent.click(screen.getByRole('button', { name: 'delete 2' }))
+  await userEvent.click(screen.getByRole('button', { name: 'tap again to delete' }))
+  expect(db.remove.mock.calls.map((c) => c[0]).sort()).toEqual(['l1', 'l2'])
+})
+
+it('select all picks every idea shown', async () => {
+  db.stops.push(stop({ id: 'u2', trip_id: 'lap', title: 'husky ride', day: null }))
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'select' }))
+  await userEvent.click(screen.getByRole('button', { name: 'select all' }))
+  expect(screen.getByRole('button', { name: 'delete 2' })).toBeInTheDocument()
 })
 
 it('undated plans and undated side trips wait under "no date"', async () => {
   db.trips = [lap, trip({ id: 'kid', parent_id: 'lap', name: 'someday sauna', start_date: null, end_date: null })]
   db.stops = [stop({ id: 'u1', trip_id: 'lap', title: 'husky ride', day: null })]
   show()
-  const box = within(screen.getByRole('region', { name: 'no date' }))
+  const box = within(screen.getByRole('list', { name: 'ideas' }))
   expect(box.getByText('husky ride')).toBeInTheDocument()
   expect(box.getByRole('link', { name: /someday sauna/ })).toHaveAttribute('href', '/trip/kid')
   await userEvent.click(box.getByRole('button', { name: 'set dates' }))
@@ -58,7 +98,7 @@ it('undated plans and undated side trips wait under "no date"', async () => {
 })
 
 it('a link can move to another trip', async () => {
-  show()
+  await showLinks()
   await userEvent.click(within(screen.getAllByTestId('link-card')[1]).getByRole('button', { name: 'more' }))
   await userEvent.selectOptions(screen.getByLabelText('move to trip'), 'par')
   expect(db.save).toHaveBeenCalledWith({ id: 'l1', trip_id: 'par' })
@@ -66,7 +106,7 @@ it('a link can move to another trip', async () => {
 
 it('a saved place can go onto a day', async () => {
   show()
-  await userEvent.click(within(screen.getByRole('region', { name: 'saved places' })).getByRole('button', { name: 'more' }))
+  await userEvent.click(within(screen.getByRole('list', { name: 'ideas' })).getByRole('button', { name: 'more' }))
   await userEvent.selectOptions(screen.getByLabelText('add to day'), '2027-02-09')
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 's9', day: '2027-02-09', saved: false }))
 })
@@ -93,16 +133,16 @@ it('links still loading are not "nothing saved yet"', () => {
 
 afterEach(() => forgetPending())
 
-it('a link whose save failed says so', () => {
+it('a link whose save failed says so', async () => {
   failSave('links', 'l2', { trip_id: 'par' }, false)
-  show()
+  await showLinks()
   expect(within(screen.getAllByTestId('link-card')[0]).getByRole('alert')).toHaveTextContent("couldn't save")
 })
 
 it('a saved place whose save failed says so', () => {
   failSave('stops', 's9', { day: '2027-02-08' }, false)
   show()
-  expect(within(screen.getByRole('region', { name: 'saved places' })).getByRole('alert')).toHaveTextContent("couldn't save")
+  expect(within(screen.getByRole('list', { name: 'ideas' })).getByRole('alert')).toHaveTextContent("couldn't save")
 })
 
 it('saving a link again after it failed sends the same new row, not a second one', async () => {

@@ -87,3 +87,15 @@
 .add-option:hover { background: var(--ground); }
 
 .trip-wait { width: min(720px, 100%); margin: 0 auto; padding: calc(env(safe-area-inset-top) + 64px) 16px 24px; }
+
+/* saved: ideas or links, each with its own search, and a select mode to delete several */
+.saved-switch { justify-self: start; }
+.saved-switch button { min-width: 88px; }
+.saved-tools { display: flex; align-items: center; gap: 8px; }
+.saved-tools .search-box { flex: 1; min-width: 0; background: var(--soft); }
+.saved-tools .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
+.saved-tools .search-box:focus-within { box-shadow: 0 0 0 2px var(--ink); }
+.pick-bar { display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 0; }
+.pick-bar .muted { flex: 1; font-size: 14px; }
+.pick { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--ink); cursor: pointer; }
+.site-icon { flex: none; width: 20px; height: 20px; border-radius: 5px; object-fit: contain; }

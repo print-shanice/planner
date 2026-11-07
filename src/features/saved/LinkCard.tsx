@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Link, Trip } from '../../lib/types'
 import { useRemove, useSave } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -9,7 +9,17 @@ import { ItemMenu } from './ItemMenu'
 import { SaveFailed } from '../../components/SaveFailed'
 import { runEmbeds } from './embedScripts'
 
-export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
+// the website's own icon, from its domain; the plain link icon if it can't load
+export function SiteIcon({ url }: { url: string }) {
+  const host = hostOf(url)
+  const [failed, setFailed] = useState(false)
+  if (!host || failed) return <Icon name="link" size={18} />
+  return <img className="site-icon" src={`https://icons.duckduckgo.com/ip3/${host}.ico`} alt="" width={20} height={20} loading="lazy" onError={() => setFailed(true)} />
+}
+
+type Pick = { on: boolean; onToggle: () => void }
+
+export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pick?: Pick }) {
   const href = safeUrl(link.url) ?? undefined
   const e = href ? embedFor(href) : { kind: 'link' as const }
   const box = useRef<HTMLDivElement>(null)
@@ -41,15 +51,16 @@ export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
         </blockquote>
       )}
       <div className="link-foot">
+        {pick && <input type="checkbox" className="pick" aria-label={title} checked={pick.on} onChange={pick.onToggle} />}
         <a href={href} target="_blank" rel="noopener noreferrer" className="link-text">
-          {e.kind === 'link' && <Icon name="link" size={18} />}
+          <SiteIcon url={link.url} />
           <span className="stack-xs">
             {link.title ? <span className="link-title">{link.title}</span> : null}
             <span className="muted">{hostOf(link.url)}</span>
             {link.note && <span className="muted link-note">{link.note}</span>}
           </span>
         </a>
-        {canEdit && (
+        {canEdit && !pick && (
           <ItemMenu title={title}>
             {() => (<>
               <label className="field">

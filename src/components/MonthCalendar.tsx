@@ -39,8 +39,10 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
   const bars = weekBars(week, p.bars)
   // a week only makes room for the bars it has
   const lanes = bars.reduce((n, b) => Math.max(n, b.lane + 1), 0)
+  // inside a trip a side trip colours its days' squares instead of drawing a bar under them
+  const side = (d: string | null) => (p.linkBars && d ? bars.find((b) => b.span.start <= d && b.span.end >= d)?.span : undefined)
   return (
-    <div className="cal-week" style={{ gridTemplateRows: `44px${lanes ? ` repeat(${lanes}, 20px)` : ''}` }}>
+    <div className={`cal-week${p.linkBars ? ' squares' : ''}`} style={{ gridTemplateRows: `44px${lanes ? ` repeat(${lanes}, ${p.linkBars ? 18 : 20}px)` : ''}` }}>
       {week.map((d, i) => {
         if (!d) return <span key={i} className="cal-day" style={{ gridColumn: i + 1 }} />
         const t = owners[i]
@@ -53,11 +55,14 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           if (owners[i - 1] !== t) edge += 'l'
           if (owners[i + 1] !== t) edge += 'r'
         }
+        const st = side(d)
+        const sideAt = st ? (st.start === st.end ? 'one' : d === st.start ? 'start' : d === st.end ? 'end' : 'on') : undefined
+        const sideEdge = st ? `${side(week[i - 1] ?? null) !== st ? 'l' : ''}${side(week[i + 1] ?? null) !== st ? 'r' : ''}` : ''
         const attrs = {
-          'data-day': d, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
+          'data-day': d, 'data-side': sideAt, 'data-side-edge': sideEdge || undefined, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
           'aria-current': d === p.today ? ('date' as const) : undefined,
           'data-planned': p.marked?.(d) || undefined,
-          style: { gridColumn: i + 1, ...(t ? tint(t.color) : {}) },
+          style: { gridColumn: i + 1, ...(t ? tint(t.color) : st ? tint(st.color) : {}) },
         }
         const n = <span className="cal-n num">{+d.slice(8)}</span>
         const pickable = p.canPick?.(d) ?? true
@@ -72,16 +77,21 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         return <span key={d} className="cal-day" {...attrs} data-out={(p.onDay && !pickable) || undefined}>{n}</span>
       })}
       {bars.map((b) => {
+        if (p.linkBars && b.span.trip) {
+          return (
+            <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} className="cal-label" title={b.span.name}
+              style={{ gridColumn: `${b.from + 1} / ${b.to + 2}`, gridRow: b.lane + 2, ...tint(b.span.color) }}>
+              <CountryFlag code={b.span.trip.base?.country} /> {b.span.name}
+            </Link>
+          )
+        }
         const props = {
           className: `cal-bar${b.span.trip ? '' : ' city'}`, 'data-testid': b.span.trip ? 'cal-bar' : 'cal-city',
-          'data-starts': b.starts || undefined, 'data-ends': b.ends || undefined, title: b.span.name,
-          ...(p.linkBars ? {} : { 'aria-hidden': true }),
+          'data-starts': b.starts || undefined, 'data-ends': b.ends || undefined, title: b.span.name, 'aria-hidden': true,
           style: { gridColumn: `${b.from + 1} / ${b.to + 2}`, gridRow: b.lane + 2, ...(b.span.trip ? tint(b.span.color) : {}) },
         }
         return b.span.trip
-          ? <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} tabIndex={p.linkBars ? undefined : -1} {...props}>
-              {p.linkBars && b.starts && <CountryFlag code={b.span.trip.base?.country} />}{p.linkBars && b.starts ? ' ' : ''}{b.span.name}
-            </Link>
+          ? <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} tabIndex={-1} {...props}>{b.span.name}</Link>
           : <span key={b.span.id} {...props}>{b.span.name}</span>
       })}
     </div>

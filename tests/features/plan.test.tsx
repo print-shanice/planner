@@ -85,9 +85,14 @@ it('overview is the calendar: dated side trips are flagged bars, undated ones an
   expect(screen.queryByText('loose idea')).toBeNull()
   expect(screen.queryByText('your days')).toBeNull()
   expect(screen.queryByLabelText('jump to date')).toBeNull()
-  const bar = cal().getByRole('link', { name: /day trip/ })
-  expect(bar).toHaveAttribute('href', '/trip/child')
-  expect(bar.textContent).toContain('🇫🇷')
+  const label = cal().getByRole('link', { name: /day trip/ })
+  expect(label).toHaveAttribute('href', '/trip/child')
+  expect(label.textContent).toContain('🇫🇷')
+  expect(screen.queryByTestId('cal-bar')).toBeNull()
+  // the side trip's days are coloured squares, not a pill under them
+  expect(cal().getByRole('button', { name: 'mon 8 feb' })).toHaveAttribute('data-side', 'start')
+  expect(cal().getByRole('button', { name: 'tue 9 feb' })).toHaveAttribute('data-side', 'end')
+  expect(cal().getByRole('button', { name: 'wed 10 feb' })).not.toHaveAttribute('data-side')
 })
 
 it('the trip calendar is a whole month on a phone, without city bars, and marks days with plans', () => {
