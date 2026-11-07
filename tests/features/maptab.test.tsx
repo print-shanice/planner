@@ -34,7 +34,7 @@ beforeEach(() => {
   db.reverse.mockReset()
 })
 
-const show = () => render(<MemoryRouter><MapTab trip={lap} /></MemoryRouter>)
+const show = (path = '/', phone = false) => render(<MemoryRouter initialEntries={[path]}><MapTab trip={lap} phone={phone} /></MemoryRouter>)
 
 it('adding from a place card inserts at the end of the chosen day', async () => {
   db.reverse.mockResolvedValue({ name: 'Rovaniemi Church', address: 'Yliopistonkatu 2', lat: 66.5079, lng: 25.7287 })
@@ -76,7 +76,7 @@ it('a pin opens its card with one primary action', async () => {
 it('filter chips list all days, each busy day and saved', () => {
   show()
   const chips = screen.getByRole('group', { name: 'show' })
-  expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['all days', expect.stringContaining('8'), 'saved'])
+  expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['all', 'mon 8', 'saved'])
 })
 
 const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
@@ -87,4 +87,39 @@ it('the map says it is loading places', () => {
   db.stopsQ = loading
   show()
   expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
+})
+
+describe('the places sheet on a phone', () => {
+  const sheet = () => screen.getByRole('region', { name: 'places' })
+
+  it('lists the chosen day\'s numbered places in order, under the day and a count', () => {
+    show('/?day=2027-02-08', true)
+    expect(within(sheet()).getByText('monday 8 · 2 places')).toBeInTheDocument()
+    expect(within(sheet()).getAllByRole('button', { name: /arktikum|church/ }).map((b) => b.textContent)).toEqual([expect.stringMatching(/^1arktikum/), expect.stringMatching(/^2church/)])
+  })
+
+  it('opens and closes from its handle', async () => {
+    show('/?day=2027-02-08', true)
+    const handle = within(sheet()).getByRole('button', { name: 'places list' })
+    expect(handle).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(handle)
+    expect(handle).toHaveAttribute('aria-expanded', 'false')
+    expect(within(sheet()).queryByRole('button', { name: /arktikum/ })).toBeNull()
+  })
+
+  it('tapping a row opens that place\'s card', async () => {
+    show('/?day=2027-02-08', true)
+    await userEvent.click(within(sheet()).getByRole('button', { name: /arktikum/ }))
+    expect(screen.getByRole('region', { name: 'arktikum' })).toBeInTheDocument()
+  })
+
+  it('all days counts every place', () => {
+    show('/', true)
+    expect(within(sheet()).getByText('2 places')).toBeInTheDocument()
+  })
+
+  it('laptops have no sheet; the plan beside is the list', () => {
+    show('/?day=2027-02-08')
+    expect(screen.queryByRole('region', { name: 'places' })).toBeNull()
+  })
 })

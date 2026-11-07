@@ -1,6 +1,36 @@
-.trip-phone.tab-is-map { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(env(safe-area-inset-bottom) + 62px); }
-.trip-phone.tab-is-map .trip-main { flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%; }
-.trip-phone.tab-is-map .trip-panel { flex: 1; min-height: 0; position: relative; }
+/* phones: the map fills the screen between the top and the tab bar */
+.trip-phone.tab-is-map { height: 100dvh; padding: 0; overflow: hidden; }
+.trip-phone.tab-is-map .trip-main { position: fixed; inset: 0; width: 100%; }
+.trip-phone.tab-is-map .trip-inline-section { position: absolute; inset: 0; margin: 0; padding: 0; }
+.trip-phone.tab-is-map .section-content { height: 100%; padding: 0; }
+.map-float {
+  position: fixed; top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; z-index: 4;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none;
+}
+.map-float > * { pointer-events: auto; }
+.back-chip { height: 44px; min-width: 0; max-width: 70%; padding: 0 14px 0 8px; color: var(--ink); text-decoration: none; }
+.back-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-phone .map-top { top: calc(env(safe-area-inset-top) + 66px); }
+.trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 80px); }
+/* the credits stay visible above everything that covers the bottom of the map */
+.trip-phone .map-tab .maplibregl-ctrl-bottom-right { top: calc(env(safe-area-inset-top) + 168px); bottom: auto; }
+
+/* the map's places, as a sheet you pull up above the tab bar */
+.places-sheet {
+  position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 68px); z-index: 3;
+  max-height: 45dvh; overflow: auto; padding: 0 16px 8px; background: var(--card);
+  border-radius: 24px 24px 0 0; box-shadow: 0 -4px 20px rgba(22, 24, 29, .10);
+}
+.places-handle { display: block; width: 100%; height: 26px; border: 0; background: none; cursor: pointer; }
+.places-handle .grab { display: block; width: 38px; height: 5px; margin: 10px auto 0; border-radius: 3px; background: var(--line); }
+.places-title { padding: 0 0 8px; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.places-list { list-style: none; margin: 0; padding: 0; }
+.places-row {
+  width: 100%; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0;
+  border: 0; border-top: 1px solid var(--line); background: none; color: inherit; text-align: left; cursor: pointer;
+}
+.places-name { font-weight: 600; }
+.places-row .muted { font-size: 13px; }
 .map-tab { position: relative; height: 100%; min-height: 320px; overflow: hidden; background: var(--map-land); }
 .trip-map .map-tab { height: 100dvh; }
 .map-tab .trip-map-canvas { position: absolute; inset: 0; }

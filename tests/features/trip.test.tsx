@@ -258,9 +258,9 @@ const header = () => within(document.querySelector('.trip-header') as HTMLElemen
 const OPTIONS = ['place', 'stay', 'journey', 'note', 'cost', 'link', 'side trip']
 
 for (const path of ['/trip/summer', '/trip/summer?tab=money', '/trip/summer?tab=saved&view=links', '/trip/summer?tab=saved&view=packing', '/trip/summer?tab=map']) {
-  it(`one + in the trip header, and no other add buttons (${path})`, () => {
+  it(`one + on every section, and no other add buttons (${path})`, () => {
     show(path)
-    expect(header().getByRole('button', { name: 'add' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'add' })).toBeEnabled()
     expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
     for (const name of ['add cost', 'add link', 'add idea', 'add note', 'add a place', 'stay', 'journey', 'side trip']) {
       expect(screen.queryByRole('button', { name })).toBeNull()
@@ -335,4 +335,14 @@ it('a place added to a trip without dates waits under no date, not as an idea', 
   expect(row).toEqual(expect.objectContaining({ kind: 'place', day: null }))
   expect(row.saved).toBeFalsy()
   expect(screen.queryByRole('button', { name: 'add a place' })).toBeNull()
+})
+
+it('on a phone the map fills the screen: no header, a back chip and the + float over it', () => {
+  show('/trip/summer?tab=map&day=2027-06-28')
+  expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
+  const float = within(document.querySelector('.map-float') as HTMLElement)
+  expect(float.getByRole('link', { name: 'back to the long summer' })).toHaveAttribute('href', '/trip/summer?day=2027-06-28')
+  expect(float.getByRole('link', { name: 'back to the long summer' })).toHaveTextContent('the long summer')
+  expect(float.getByRole('button', { name: 'add' })).toBeEnabled()
+  expect(screen.getByRole('navigation', { name: 'trip sections' })).toBeInTheDocument()
 })

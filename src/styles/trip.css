@@ -92,7 +92,6 @@
 .itinerary-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 .itinerary-actions .btn { padding-inline: 10px; font-size: 14px; }
 .trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
-.trip-phone.tab-is-map .section-content { height: 40dvh; }
 
 .section-content .empty { padding-block: 20px; }
 

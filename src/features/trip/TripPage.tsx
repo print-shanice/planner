@@ -30,7 +30,7 @@ const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapT
 
 function Panel({ tab, view, trip }: { tab: Tab; view: SavedView; trip: Trip }) {
   switch (tab) {
-    case 'map': return <Suspense fallback={null}><MapTab trip={trip} /></Suspense>
+    case 'map': return <Suspense fallback={null}><MapTab trip={trip} phone /></Suspense>
     case 'money': return <MoneyTab trip={trip} />
     case 'saved': return view === 'packing' ? <PackingTab trip={trip} /> : <SavedTab key={`${trip.id}-${view}`} trip={trip} view={view} />
     default: return null
@@ -112,6 +112,8 @@ function TripScreen() {
   const tabs = wide ? WIDE_TABS : PHONE_TABS
   const day = params.get('day')
   const onDay = validDay(day) ? day : null
+  const phoneMap = !wide && tab === 'map'
+  const plus = <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}><Icon name="plus" /></button>
   // the day stays when you switch sections; each section keeps its own scroll
   function pick(next: Tab, nextView: SavedView = view) {
     scrolls.current[`${tab}/${view}`] = scroller()?.scrollTop ?? window.scrollY
@@ -127,9 +129,13 @@ function TripScreen() {
   return (
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`} style={tint(trip.color)}>
       <section className="trip-main" ref={main}>
-        <TripHeader key={trip.id} trip={trip} action={
-          <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}><Icon name="plus" /></button>
-        } />
+        {phoneMap ? (
+          // the phone map fills the screen; only the way back and the + float over it
+          <div className="map-float">
+            <Link to={`/trip/${trip.id}${onDay ? `?day=${onDay}` : ''}`} className="chip-pill back-chip" aria-label={`back to ${trip.name}`}><Icon name="back" size={18} /><span>{trip.name}</span></Link>
+            {plus}
+          </div>
+        ) : <TripHeader key={trip.id} trip={trip} action={plus} />}
         <TripSummary sections={tabs} active={tab} bar={!wide} onPick={(t) => pick(t)} />
         {tab !== 'plan' && (
           <section id="trip-section" className="trip-inline-section" aria-label={tab}>
