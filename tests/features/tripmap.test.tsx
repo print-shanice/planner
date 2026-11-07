@@ -32,3 +32,12 @@ it('the map says it is loading until its first draw', () => {
   act(() => { mk.maps.at(-1).fire('load') })
   expect(screen.queryByText('loading map')).toBeNull()
 })
+
+it('the map says where it is looking as soon as it has drawn', () => {
+  const onCenter = vi.fn()
+  render(<TripMap data={{ pins: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} onCenter={onCenter} />)
+  const m = mk.maps.at(-1)
+  m.getZoom = () => 11
+  act(() => { m.fire('load') })
+  expect(onCenter).toHaveBeenCalledWith({ lng: 0, lat: 0, zoom: 11 })
+})

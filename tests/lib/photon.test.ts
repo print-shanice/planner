@@ -49,3 +49,12 @@ it('reverse keeps the tapped point', async () => {
   const p = await reversePlace(66.5, 25.72)
   expect(p).toMatchObject({ name: 'Arktikum', lat: 66.5, lng: 25.72 })
 })
+
+it('search near a map view favours places in that view', async () => {
+  const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(fixture)))
+  await searchPlaces('cafe', { lat: 48.85, lng: 2.35, zoom: 12.4 })
+  const url = String(spy.mock.calls[0][0])
+  expect(url).toContain('&lat=48.85&lon=2.35')
+  expect(url).toContain('&zoom=12')
+  expect(url).toContain('&location_bias_scale=0.5')
+})

@@ -34,7 +34,7 @@ type Props = {
   inset?: { top: number; bottom: number }
   onPick: (id: string) => void
   onEmpty: (p: { lng: number; lat: number }) => void
-  onCenter?: (p: { lng: number; lat: number }) => void
+  onCenter?: (p: { lng: number; lat: number; zoom: number }) => void
 }
 
 const root = () => getComputedStyle(document.documentElement)
@@ -129,7 +129,10 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
       m.on('mouseenter', l, () => { m.getCanvas().style.cursor = 'pointer' })
       m.on('mouseleave', l, () => { m.getCanvas().style.cursor = '' })
     }
-    m.on('moveend', () => { const c = m.getCenter(); cb.current.onCenter?.({ lng: c.lng, lat: c.lat }) })
+    const report = () => { const c = m.getCenter(); cb.current.onCenter?.({ lng: c.lng, lat: c.lat, zoom: m.getZoom() }) }
+    m.on('moveend', report)
+    // and once it first draws, before anyone has moved it
+    m.on('load', report)
 
     return () => { ready.current = false; m.remove(); map.current = null }
   }, [])

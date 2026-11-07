@@ -8,7 +8,7 @@ const WAIT = 350
 
 // one place search for the map and the forms: it says "searching" from the moment there's enough
 // to search for, keeps only the latest answer, and never says "nothing found" while still looking
-export function usePlaceSearch(near?: { lat: number; lng: number } | null) {
+export function usePlaceSearch(near?: { lat: number; lng: number; zoom?: number } | null) {
   const [q, setQ] = useState('')
   const [results, setResults] = useState<Place[] | null>(null)
   const [failed, setFailed] = useState(false)

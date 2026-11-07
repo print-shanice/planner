@@ -3,7 +3,7 @@ import type { Place } from '../../lib/types'
 import { SearchStatus, usePlaceSearch } from './usePlaceSearch'
 import { Icon } from '../../components/Icon'
 
-type Props = { near?: { lat: number; lng: number } | null; onPick: (p: Place) => void; label?: string; alwaysOpen?: boolean }
+type Props = { near?: { lat: number; lng: number; zoom?: number } | null; onPick: (p: Place) => void; label?: string; alwaysOpen?: boolean }
 
 export function AddPlaceField({ near, onPick, label = 'add a place', alwaysOpen = false }: Props) {
   const [open, setOpen] = useState(alwaysOpen)

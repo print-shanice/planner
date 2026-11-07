@@ -3,19 +3,20 @@ import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
-const db = vi.hoisted(() => ({ trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown }))
+const db = vi.hoisted(() => ({ search: vi.fn(), trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useStops: () => db.stopsQ ?? ({ data: db.stops }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
-vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse }))
+vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse, searchPlaces: db.search }))
 vi.mock('../../src/features/map/TripMap', () => ({
-  TripMap: ({ onPick, onEmpty, highlight, inset, fitKey }: { fitKey?: string; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
+  TripMap: ({ onPick, onEmpty, onCenter, highlight, inset, fitKey }: { fitKey?: string; onCenter?: (v: { lat: number; lng: number; zoom: number }) => void; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
     <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''} data-fit={fitKey}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
+      <button onClick={() => onCenter?.({ lat: 48.85, lng: 2.35, zoom: 12 })}>move map to paris</button>
     </div>
   ),
 }))
@@ -214,4 +215,21 @@ it('tapping the map says it is finding the place, then names it', async () => {
   await act(async () => { found({ name: 'Rovaniemi Church', lat: 66.5, lng: 25.7 }) })
   expect(screen.getByRole('region', { name: 'Rovaniemi Church' })).toBeInTheDocument()
   expect(screen.queryByText('finding the place')).toBeNull()
+})
+
+it('the map search looks near where the map is showing', async () => {
+  db.search.mockResolvedValue([])
+  show('/', true)
+  await userEvent.click(screen.getByRole('button', { name: 'move map to paris' }))
+  await userEvent.type(screen.getByRole('searchbox', { name: 'search' }), 'cafe{Enter}')
+  expect(db.search).toHaveBeenLastCalledWith('cafe', { lat: 48.85, lng: 2.35, zoom: 12 })
+})
+
+it('before the map says where it is, search looks near the day\'s places', async () => {
+  db.search.mockResolvedValue([])
+  show('/?day=2027-02-08', true)
+  await userEvent.type(screen.getByRole('searchbox', { name: 'search' }), 'cafe{Enter}')
+  const near = db.search.mock.lastCall?.[1]
+  expect(near.lat).toBeCloseTo(66.5, 1)
+  expect(near.lng).toBeCloseTo(25.705, 2)
 })

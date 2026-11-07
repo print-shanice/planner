@@ -34,9 +34,11 @@ async function getJson(url: string): Promise<unknown> {
   return r.json()
 }
 
-export async function searchPlaces(q: string, near?: { lat: number; lng: number }): Promise<Place[]> {
+// near a map view (with its zoom), results lean harder towards what's on screen
+export async function searchPlaces(q: string, near?: { lat: number; lng: number; zoom?: number }): Promise<Place[]> {
   let url = `${PHOTON}/api?q=${encodeURIComponent(q.trim())}&limit=6&lang=en`
   if (near) url += `&lat=${near.lat}&lon=${near.lng}`
+  if (near?.zoom != null) url += `&zoom=${Math.round(near.zoom)}&location_bias_scale=0.5`
   return parsePhoton(await getJson(url))
 }
 

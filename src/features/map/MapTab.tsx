@@ -10,12 +10,20 @@ import { LoadNotice } from '../../components/States'
 import { AddPlaceField } from '../plan/AddPlaceField'
 import { busyDays, mapFeatures, type Filter } from './features'
 import { TripMap } from './TripMap'
+import { hasPoint } from '../../lib/walk'
 import { PlaceCard } from './PlaceCard'
 import { PlacesSheet, type PlaceItem } from './PlacesSheet'
 import { useHighlight } from '../trip/highlight'
 import { Icon } from '../../components/Icon'
 
 type Card = { place: Place; stopId?: string; seq: number; looking?: boolean }
+
+// the middle of what the map shows, for searching before the map has said where it's looking
+function middleOf(d: ReturnType<typeof mapFeatures>): { lat: number; lng: number } | null {
+  const pts = d.pins.features.map((f) => f.geometry.coordinates)
+  if (!pts.length) return null
+  return { lng: pts.reduce((a, p) => a + p[0], 0) / pts.length, lat: pts.reduce((a, p) => a + p[1], 0) / pts.length }
+}
 
 // on a phone the floating bar and chips cover the top, the places sheet and tab bar the bottom
 const PHONE_INSET = { top: 200, bottom: 300 }
@@ -43,7 +51,8 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
   })
   const [listOpen, setListOpen] = useState(true)
   const lit = useHighlight()
-  const center = useRef<{ lat: number; lng: number } | null>(null)
+  // where the map is looking, so a search finds places there (state, so the search box always has the latest)
+  const [view, setView] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const seq = useRef(0)
 
   const data = useMemo(() => mapFeatures(trip, trips, stops, filter), [trip, trips, stops, filter])
@@ -78,10 +87,10 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
   return (
     <div className="map-tab">
       <TripMap data={data} highlight={lit.id} inset={phone ? PHONE_INSET : undefined} fitKey={`${trip.id}|${filter}`} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
-        onPick={pick} onEmpty={empty} onCenter={(c) => { center.current = c }} />
+        onPick={pick} onEmpty={empty} onCenter={setView} />
       <div className="map-top">
         <div className="map-search">
-          <AddPlaceField alwaysOpen label="search" near={center.current} onPick={(p) => setCard({ place: p, seq: ++seq.current })} />
+          <AddPlaceField alwaysOpen label="search" near={view ?? middleOf(data) ?? (hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null)} onPick={(p) => setCard({ place: p, seq: ++seq.current })} />
         </div>
         {phone ? <div className="map-chips" role="group" aria-label="show">
           <button type="button" className="chip-pill" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>all</button>
