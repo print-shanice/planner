@@ -34,11 +34,16 @@ beforeEach(() => {
 const show = () => render(<MemoryRouter><SavedTab trip={lap} /></MemoryRouter>)
 const showLinks = async () => { show(); await userEvent.click(screen.getByRole('button', { name: /^links/ })) }
 
-it('lists this trip’s links newest first with a youtube player and a plain card', async () => {
+it('links are tidy rows, newest first: title above its site, the note after, no players', async () => {
+  db.links[1].note = 'watch before'
   await showLinks()
   const cards = screen.getAllByTestId('link-card')
   expect(cards).toHaveLength(2)
-  expect(cards[0].querySelector('iframe')?.getAttribute('src')).toBe('https://www.youtube-nocookie.com/embed/abc')
+  expect(document.querySelector('iframe, blockquote')).toBeNull()
+  const first = within(cards[0])
+  expect(first.getByText('aurora tips')).toHaveClass('link-title')
+  expect(first.getByText('youtu.be · watch before')).toBeInTheDocument()
+  expect(first.getByRole('link')).toHaveAttribute('target', '_blank')
   expect(within(cards[1]).getByText('skyscanner.net')).toBeInTheDocument()
 })
 

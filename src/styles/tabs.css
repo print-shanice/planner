@@ -27,39 +27,43 @@
 .cost-name .muted { font-size: 13px; }
 
 /* saved */
-.link-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.link-card .video { aspect-ratio: 16 / 9; background: var(--soft); }
-.link-card iframe { width: 100%; height: 100%; border: 0; display: block; }
-.link-card blockquote { margin: 0 !important; min-width: 0 !important; max-width: none !important; width: 100% !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
-.link-card blockquote > a, .link-card blockquote section > a { display: block; padding: 16px; color: var(--ink-2); }
+/* links: rows in one card, like home's lists */
+.link-list { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--card); }
+.link-card + .link-card { border-top: 1px solid var(--line); }
+.site-icon, .link-text > .icon { flex: none; }
 .link-foot { display: flex; align-items: center; gap: 8px; padding: 10px 8px 10px 16px; }
 .link-text { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .link-title { font-weight: 600; }
 .link-text .muted { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.link-note { white-space: normal !important; }
 .saved-place { justify-content: flex-start !important; }
 .saved-name { flex: 1; min-width: 0; }
 .saved-name > :first-child { font-weight: 600; }
 .saved-name .muted { font-size: 13px; }
 
-/* packing */
-.pack-list > li { padding: 0 6px 0 0; }
-.pack-item { flex: 1; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px 0 16px; border: 0; background: none; text-align: left; }
-.tick { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; color: var(--card); flex: none; }
+/* packing: a tick and a name; packed things sink */
+.pack-count { display: grid; gap: 8px; }
+.pack-count p { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.pack-meter { height: 6px; border-radius: 4px; background: var(--soft); overflow: hidden; }
+.pack-meter > span { display: block; height: 100%; background: var(--ink); border-radius: 4px; transition: width .2s; }
+.pack-list > li { display: flex; align-items: center; gap: 4px; min-height: 52px; padding: 0 12px 0 14px; background: var(--card); touch-action: pan-y; }
+.pack-tick { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-left: -10px; cursor: pointer; }
+.pack-tick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pack-tick:has(input:focus-visible) .tick { outline: 2px solid var(--ink); outline-offset: 2px; }
+.tick { width: 22px; height: 22px; border-radius: 7px; border: 1.6px solid var(--ink-3); display: grid; place-items: center; color: var(--card); flex: none; }
 .packed .tick { background: var(--ink); border-color: var(--ink); }
-.packed .pack-item > span:last-child { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--line); }
-.pack-add { background: var(--card); border: 1px solid var(--line); }
-.pack-add input::placeholder, .map-search input::placeholder { color: var(--ink-2); }
+.pack-name { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 16px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.packed .pack-name { color: var(--ink-3); text-decoration: line-through; }
+.pack-add form { flex: 1; display: flex; align-items: center; gap: 12px; color: var(--ink-3); }
+.pack-add input { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; font-size: 16px; color: var(--ink); outline: none; }
+.pack-add input::placeholder, .map-search input::placeholder { color: var(--ink-3); }
+.pack-add:focus-within { box-shadow: inset 0 0 0 2px var(--ink); }
+.pack-edit { flex: 1; display: grid; gap: 8px; padding: 10px 0; }
+.pack-edit .row { display: flex; align-items: center; gap: 8px; }
 
 .list > li:has(.save-failed) { flex-wrap: wrap; }
 .list .save-failed { padding: 0 16px 10px; }
 .link-card .save-failed { padding: 0 16px 12px; }
 
-.packing-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.pack-add-row, .pack-edit { display: flex; align-items: center; gap: 8px; }
-.pack-add-row input, .pack-edit input { min-width: 0; flex: 1; }
-.pack-edit { flex: 1; padding: 8px; flex-wrap: wrap; }
-.pack-edit input { flex-basis: 120px; }
 
 /* money: what the total covers, and who owes whom near the top */
 .money-scope button { flex: 1; }

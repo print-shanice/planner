@@ -1,14 +1,14 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { trip } from '../factories'
 
-const db = vi.hoisted(() => ({ packing: [] as any[], save: vi.fn(), remove: vi.fn(), packingQ: null as null | Record<string, unknown> }))
+const db = vi.hoisted(() => ({ packing: [] as any[], save: vi.fn(), remove: vi.fn(), packingQ: null as null | Record<string, unknown>, canEdit: true }))
 vi.mock('../../src/lib/queries', () => ({
   usePacking: () => db.packingQ ?? ({ data: db.packing }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, mutate: db.remove, isPending: false }),
 }))
-vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
+vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => true }))
 
 import { PackingTab } from '../../src/features/packing/PackingTab'
 import { ToastProvider } from '../../src/components/Toast'
@@ -27,10 +27,8 @@ it('packing: add, tick, count', async () => {
   await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'wool socks{Enter}')
   expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'wool socks', done: false, position: 4 })
   expect(screen.getByRole('textbox', { name: 'add to pack' })).toHaveValue('')
-  await userEvent.click(screen.getByRole('button', { name: 'passport' }))
+  await userEvent.click(screen.getByRole('checkbox', { name: 'passport' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'p2', done: true })
-  await userEvent.click(screen.getByRole('button', { name: 'remove thermal gloves' }))
-  expect(db.remove).toHaveBeenCalledWith('p1')
 })
 
 it('an empty list shows just the field', () => {
@@ -67,21 +65,11 @@ it('removing an item can be undone', async () => {
   db.packing = [{ id: 'p1', trip_id: 'lap', text: 'thermal gloves', done: false, position: 0 }]
   db.remove.mockReset().mockResolvedValue(undefined)
   render(<ToastProvider><PackingTab trip={trip({ id: 'lap' })} /></ToastProvider>)
-  await userEvent.click(screen.getByRole('button', { name: 'remove thermal gloves' }))
+  await userEvent.click(screen.getByRole('button', { name: 'edit thermal gloves' }))
+  await userEvent.click(screen.getByRole('button', { name: 'remove' }))
   expect(screen.getByRole('status')).toHaveTextContent('removed')
   await userEvent.click(screen.getByRole('button', { name: 'undo' }))
   expect(db.remove).not.toHaveBeenCalled()
-})
-
-it('selects and deletes multiple packing items locally', async () => {
-  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: true, position: 0 }, { id: 'p2', trip_id: 'lap', text: 'passport', done: false, position: 1 }]
-  db.remove.mockReset().mockResolvedValue(undefined)
-  render(<PackingTab trip={trip({ id: 'lap' })} />)
-  await userEvent.click(screen.getByRole('button', { name: 'select' }))
-  await userEvent.click(screen.getByRole('button', { name: 'select all' }))
-  await userEvent.click(screen.getByRole('button', { name: 'delete 2' }))
-  await userEvent.click(screen.getByRole('button', { name: 'tap again to delete' }))
-  expect(db.remove.mock.calls.map(c => c[0]).sort()).toEqual(['p1', 'p2'])
 })
 
 it('edits a packing item without changing packed status', async () => {
@@ -94,4 +82,64 @@ it('edits a packing item without changing packed status', async () => {
   await userEvent.type(input, 'warm gloves')
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'p1', text: 'warm gloves' })
+})
+
+beforeEach(() => { db.canEdit = true })
+
+it('a row is just the tick and the name; there is no select mode', () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  const row = within(screen.getByRole('list', { name: 'packing' }).querySelector('li') as HTMLElement)
+  expect(row.getAllByRole('checkbox')).toHaveLength(1)
+  expect(row.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['edit gloves'])
+  expect(screen.queryByRole('button', { name: 'select' })).toBeNull()
+})
+
+it('packed things sink below what is still to pack', () => {
+  db.packing = [{ id: 'a', trip_id: 'lap', text: 'passport', done: true, position: 0 }, { id: 'b', trip_id: 'lap', text: 'rain jacket', done: false, position: 1 }, { id: 'c', trip_id: 'lap', text: 'adapter', done: false, position: 2 }]
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.getAllByRole('checkbox').map((c) => c.getAttribute('aria-label'))).toEqual(['rain jacket', 'adapter', 'passport'])
+})
+
+it('the count comes with a meter in ink', () => {
+  db.packing = [{ id: 'a', trip_id: 'lap', text: 'passport', done: true, position: 0 }, { id: 'b', trip_id: 'lap', text: 'jacket', done: false, position: 1 }]
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
+  expect((document.querySelector('.pack-meter > span') as HTMLElement).style.width).toBe('50%')
+})
+
+it('a long swipe left removes an item, with undo', async () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
+  db.remove.mockReset().mockResolvedValue(undefined)
+  render(<ToastProvider><PackingTab trip={trip({ id: 'lap' })} /></ToastProvider>)
+  const li = screen.getByRole('list', { name: 'packing' }).querySelector('li') as HTMLElement
+  fireEvent.pointerDown(li, { clientX: 300, pointerId: 1 })
+  fireEvent.pointerMove(li, { clientX: 200, pointerId: 1 })
+  fireEvent.pointerUp(li, { clientX: 200, pointerId: 1 })
+  expect(screen.getByRole('status')).toHaveTextContent('removed')
+})
+
+it('a short swipe does nothing', () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
+  render(<ToastProvider><PackingTab trip={trip({ id: 'lap' })} /></ToastProvider>)
+  const li = screen.getByRole('list', { name: 'packing' }).querySelector('li') as HTMLElement
+  fireEvent.pointerDown(li, { clientX: 300, pointerId: 1 })
+  fireEvent.pointerUp(li, { clientX: 260, pointerId: 1 })
+  expect(screen.getByRole('status')).not.toHaveTextContent('removed')
+})
+
+it('adding sits as the last row of the list', () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  const items = screen.getByRole('list', { name: 'packing' }).querySelectorAll('li')
+  expect(within(items[items.length - 1]).getByRole('textbox', { name: 'add to pack' })).toBeInTheDocument()
+})
+
+it('offline nothing in packing can be changed', () => {
+  db.canEdit = false
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.getByRole('checkbox', { name: 'gloves' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'edit gloves' })).toBeDisabled()
+  expect(screen.queryByRole('textbox', { name: 'add to pack' })).toBeNull()
 })
