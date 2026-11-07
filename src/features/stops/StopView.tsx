@@ -1,4 +1,5 @@
-import { useState, type MouseEvent } from 'react'
+import { useRef, useState, type MouseEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Cost, Member, Stop } from '../../lib/types'
 import { useCosts, useFiles, useMembers, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -15,6 +16,7 @@ import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { FilesSection, filesOf } from './FilesSection'
 import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
+import { stopSub } from '../plan/StopRow'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
 
@@ -54,6 +56,9 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   const saveCost = useSave('costs')
   const remove = useRemove('stops')
   const [problem, setProblem] = useState<string | null>(null)
+  const [moving, setMoving] = useState(false)
+  const picker = useRef<{ open: () => void }>(null)
+  const navigate = useNavigate()
   const linked = costs.find((c) => c.stop_id === stop.id)
   const maps = gmapsUrl(stop)
   const address = stop.place ? [stop.place.name, stop.place.address].filter(Boolean).join(', ') : ''
@@ -107,35 +112,37 @@ export function StopView({ stop, onEdit, onClose }: Props) {
     facts.push(day(stop.day, stop.time ? [stop.time, stop.end_time].filter(Boolean).join('–') : null) || null)
   }
 
+  // the place on its day's map, with its card open
+  const showOnMap = () => {
+    const q = new URLSearchParams({ tab: 'map', ...(stop.day ? { day: stop.day } : {}), pin: stop.id })
+    onClose()
+    navigate(`/trip/${stop.trip_id}?${q}`)
+  }
+  const what = stop.kind === 'place' ? stopSub(stop) : ''
+
   return (
     <div className="stack stop-view">
-      <div className="facts">
-        {stop.status !== 'idea' && <div><Pill status={stop.status} /></div>}
-        {facts.filter(Boolean).map((f) => <p key={f}>{f}</p>)}
-        {address && stop.kind !== 'journey' && (
-          <div className="fact-copy"><span className="copy-text muted">{address}</span><Copy text={address} label="copy address" /></div>
-        )}
-        {stop.ref && (
-          <div className="fact-copy"><span className="muted">ref</span><span className="copy-text keep-case num">{stop.ref}</span><Copy text={stop.ref} label="copy ref" /></div>
-        )}
-        {linked && <p className="num">{costLine(linked, members)}</p>}
-        {safeUrl(stop.url) && <a href={safeUrl(stop.url)!} target="_blank" rel="noopener noreferrer" className="fact-link"><Icon name="ext" size={16} /><span>{hostOf(stop.url)}</span></a>}
-        {stop.notes && stop.kind !== 'note' && <p className="notes">{stop.notes}</p>}
-        {stop.kind === 'note' && stop.notes && <p className="notes">{stop.notes}</p>}
+      {(stop.status !== 'idea' || what) && (
+        <div className="stop-kicker">
+          {stop.status !== 'idea' && <Pill status={stop.status} />}
+          {what && <p className="muted">{what}</p>}
+        </div>
+      )}
+      <div className="stop-actions" role="group" aria-label="actions">
+        <button type="button" className="stop-action" onClick={showOnMap}><span className="ico"><Icon name="map" /></span>map</button>
+        {maps
+          ? <a className="stop-action" href={maps} target="_blank" rel="noopener noreferrer"><span className="ico"><Icon name="ext" /></span>directions</a>
+          : <button type="button" className="stop-action" disabled><span className="ico"><Icon name="ext" /></span>directions</button>}
+        <button type="button" className="stop-action" aria-expanded={moving} disabled={!canEdit} onClick={() => setMoving(!moving)}><span className="ico"><Icon name="calendar" /></span>move</button>
+        <button type="button" className="stop-action" disabled={!canEdit} onClick={() => picker.current?.open()}><span className="ico"><Icon name="upload" /></span>ticket</button>
       </div>
 
-      {(stop.kind === 'place' || stop.kind === 'stay') && <Reviews stop={stop} />}
-
-      <FilesSection stop={stop} canEdit={canEdit} />
-
-      {maps && <a className="btn ghost block" href={maps} target="_blank" rel="noopener noreferrer"><Icon name="map" size={18} /><span>open in google maps</span></a>}
-
-      {canEdit && (
+      {moving && canEdit && (
         <div className="move">
           {stop.day && siblings.length > 1 && (
             <div className="row">
-              <button type="button" className="icon-btn" aria-label="move up" disabled={at <= 0} onClick={() => shift(at - 1)}><Icon name="up" size={18} /></button>
-              <button type="button" className="icon-btn" aria-label="move down" disabled={at >= siblings.length - 1} onClick={() => shift(at + 1)}><Icon name="down" size={18} /></button>
+              <button type="button" className="btn ghost small" disabled={at <= 0} onClick={() => shift(at - 1)}><Icon name="up" size={18} /><span>earlier</span></button>
+              <button type="button" className="btn ghost small" disabled={at >= siblings.length - 1} onClick={() => shift(at + 1)}><Icon name="down" size={18} /><span>later</span></button>
             </div>
           )}
           <label className="field">
@@ -150,6 +157,23 @@ export function StopView({ stop, onEdit, onClose }: Props) {
           </label>
         </div>
       )}
+
+      <div className="facts">
+        {facts.filter(Boolean).map((f) => <p key={f} className="fact"><Icon name="calendar" size={18} /><span>{f}</span></p>)}
+        {address && stop.kind !== 'journey' && (
+          <div className="fact fact-copy"><Icon name="pin" size={18} /><span className="copy-text">{address}</span><Copy text={address} label="copy address" /></div>
+        )}
+        {linked && <p className="fact num"><Icon name="money" size={18} /><span>{costLine(linked, members)}</span></p>}
+        {stop.ref && (
+          <div className="fact fact-copy"><Icon name="note" size={18} /><span className="muted">ref</span><span className="copy-text keep-case num">{stop.ref}</span><Copy text={stop.ref} label="copy ref" /></div>
+        )}
+        {safeUrl(stop.url) && <a href={safeUrl(stop.url)!} target="_blank" rel="noopener noreferrer" className="fact fact-link"><Icon name="link" size={18} /><span>{hostOf(stop.url)}</span></a>}
+        {stop.notes && <p className="notes">{stop.notes}</p>}
+      </div>
+
+      {(stop.kind === 'place' || stop.kind === 'stay') && <Reviews stop={stop} />}
+
+      <FilesSection stop={stop} canEdit={canEdit} pickerRef={picker} />
 
       {problem && <p className="warn-line" role="alert">{problem}</p>}
       <div className="row form-actions">

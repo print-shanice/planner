@@ -123,3 +123,8 @@ describe('the places sheet on a phone', () => {
     expect(screen.queryByRole('region', { name: 'places' })).toBeNull()
   })
 })
+
+it('a link with a pin opens that place\'s card', () => {
+  show('/?day=2027-02-08&pin=s1', true)
+  expect(screen.getByRole('region', { name: 'arktikum' })).toBeInTheDocument()
+})

@@ -1,6 +1,6 @@
 import { render, screen, within, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place, cost } from '../factories'
 
@@ -145,7 +145,7 @@ it('the view offers the maps link and copy for the ref', async () => {
   show(<Opener id="s1" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog', { name: 'arktikum' })
-  expect(within(d).getByRole('link', { name: 'open in google maps' })).toHaveAttribute('href', expect.stringContaining('google.com/maps/search'))
+  expect(within(d).getByRole('link', { name: 'directions' })).toHaveAttribute('href', expect.stringContaining('google.com/maps/search'))
   expect(within(d).getByRole('button', { name: 'copy ref' })).toBeInTheDocument()
 })
 
@@ -172,6 +172,7 @@ it('moving to another trip moves its cost too', async () => {
   db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1' })]
   show(<Opener id="s1" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'move' }))
   await userEvent.selectOptions(within(screen.getByRole('dialog')).getByLabelText('move to another trip'), 'par')
   expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', trip_id: 'par' })
   expect(db.save).toHaveBeenCalledWith('costs', { id: 'c1', trip_id: 'par' })
@@ -409,4 +410,73 @@ it('paid or not paid sits in the cost header, and paid opens the cost to say who
   await userEvent.click(within(payment).getByRole('button', { name: 'paid' }))
   expect(within(d).getByRole('button', { name: 'cost' })).toHaveAttribute('aria-expanded', 'true')
   expect(within(d).getByLabelText('paid by')).toBeVisible()
+})
+
+describe('a stop reads like a place card', () => {
+  function Where() { const l = useLocation(); return <output data-testid="loc">{l.pathname + l.search}</output> }
+  beforeEach(() => {
+    db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', time: '10:00', status: 'to_book', category: 'museum', place: place({ name: 'Arktikum', address: 'Pohjoisranta 4', city: 'rovaniemi' }) })]
+  })
+  const open = async () => {
+    show(<><Opener id="s1" /><Where /></>)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    return within(screen.getByRole('dialog', { name: 'arktikum' }))
+  }
+
+  it('status, what and where, then four round actions', async () => {
+    const d = await open()
+    expect(d.getByText('to book')).toHaveClass('pill', 'warn')
+    expect(d.getByText('museum · rovaniemi')).toBeInTheDocument()
+    const acts = within(d.getByRole('group', { name: 'actions' }))
+    expect(acts.getAllByRole('button').concat(acts.getAllByRole('link')).map((a) => a.textContent).sort()).toEqual(['directions', 'map', 'move', 'ticket'])
+    expect([...d.getByRole('group', { name: 'actions' }).children].map((a) => a.textContent)).toEqual(['map', 'directions', 'move', 'ticket'])
+  })
+
+  it('"map" closes the card and shows the place on that day\'s map', async () => {
+    const d = await open()
+    await userEvent.click(d.getByRole('button', { name: 'map' }))
+    const u = new URL('http://x' + screen.getByTestId('loc').textContent)
+    expect(u.pathname).toBe('/trip/lap')
+    expect(Object.fromEntries(u.searchParams)).toEqual({ tab: 'map', day: '2027-02-08', pin: 's1' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('"move" opens in the same sheet, never a second one', async () => {
+    const d = await open()
+    const move = d.getByRole('button', { name: 'move' })
+    expect(d.queryByLabelText('move to another day')).toBeNull()
+    await userEvent.click(move)
+    expect(move).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(d.getByLabelText('move to another day')).toHaveValue('2027-02-08')
+    expect(d.getByLabelText('move to another trip')).toBeInTheDocument()
+  })
+
+  it('"ticket" opens the file picker', async () => {
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
+    const d = await open()
+    await userEvent.click(d.getByRole('button', { name: 'ticket' }))
+    expect(click).toHaveBeenCalled()
+    click.mockRestore()
+  })
+
+  it('when and where follow as rows', async () => {
+    const d = await open()
+    expect(d.getByText('mon 8 feb · 10:00')).toBeInTheDocument()
+    expect(d.getByText('Arktikum, Pohjoisranta 4')).toBeInTheDocument()
+  })
+
+  it('offline, move and ticket are off', async () => {
+    db.canEdit = false
+    const d = await open()
+    expect(d.getByRole('button', { name: 'move' })).toBeDisabled()
+    expect(d.getByRole('button', { name: 'ticket' })).toBeDisabled()
+    expect(d.getByRole('button', { name: 'map' })).toBeEnabled()
+  })
+})
+
+it('files are added only from "ticket", with no second add button', async () => {
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  expect(within(screen.getByRole('dialog')).queryByText('add file')).toBeNull()
 })

@@ -131,19 +131,31 @@
 .place-chip { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 4px 6px 12px; border-radius: 14px; background: var(--soft); color: var(--ink-2); }
 .place-chip .result-text { flex: 1; min-width: 0; }
 .stop-view { gap: 18px; }
-.facts { display: grid; gap: 6px; }
-.facts p { font-size: 16px; }
-.fact-copy { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.stop-kicker { display: grid; justify-items: start; gap: 6px; margin-top: -6px; }
+.stop-kicker .muted { font-size: 15px; }
+/* the four things you'd do with a place, as big round buttons */
+.stop-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stop-action {
+  display: grid; justify-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--ink-2);
+  font-size: 12.5px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.stop-action .ico { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--ink); }
+.stop-action[aria-expanded="true"] .ico { background: var(--ink); color: var(--card); }
+.stop-action:disabled { opacity: .45; cursor: default; }
+.facts { display: grid; }
+.fact { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.fact > .icon { flex: none; margin-top: 1px; color: var(--ink-2); }
+.fact-copy { align-items: center; padding: 3px 0; }
 .fact-copy .copy-text { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .fact-copy > .icon-btn { margin-left: -4px; }
-.fact-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--ink-2); text-decoration: none; font-weight: 600; }
+.fact-link { align-items: center; color: var(--ink-2); text-decoration: none; font-weight: 600; }
 .notes { white-space: pre-wrap; color: var(--ink-2); }
 .files { display: grid; gap: 4px; }
 .file-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 12px; background: var(--ground); }
 .file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; text-decoration: none; }
 .file-add { justify-self: start; cursor: pointer; }
 .file-add.busy { opacity: .5; }
-.move { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.move { display: grid; gap: 12px; padding: 14px; border-radius: 16px; background: var(--ground); border: 1px solid var(--line); }
 .file-name { border: 0; background: none; text-align: left; padding: 10px 0; color: inherit; }
 .ticket { display: grid; gap: 12px; }
 .ticket img { width: 100%; height: auto; border-radius: 12px; background: var(--ground); }

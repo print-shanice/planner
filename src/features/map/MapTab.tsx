@@ -25,7 +25,11 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
   const selected = params.get('day')
   const filter: Filter = params.get('map') === 'saved' ? 'saved' : validDay(selected) ? selected : 'all'
   const setFilter = (value: Filter) => setParams(p => { const n = new URLSearchParams(p); n.delete('map'); if (value === 'saved') n.set('map', 'saved'); else if (value === 'all') n.delete('day'); else n.set('day', value); return n })
-  const [card, setCard] = useState<Card | null>(null)
+  // a link with ?pin= opens that place's card (from a stop's "map" button)
+  const [card, setCard] = useState<Card | null>(() => {
+    const s = stops.find((x) => x.id === params.get('pin'))
+    return s ? { place: s.place ?? s.destination ?? s.origin ?? { name: s.title, lat: null, lng: null }, stopId: s.id, seq: 0 } : null
+  })
   const [listOpen, setListOpen] = useState(true)
   const center = useRef<{ lat: number; lng: number } | null>(null)
   const seq = useRef(0)
