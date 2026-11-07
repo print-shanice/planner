@@ -64,3 +64,8 @@ button.cal-day:is(:not([data-ribbon]), [data-ribbon="on"]):hover .cal-n { backgr
   .cal { padding: 18px 18px 14px; }
   .cal-n { width: 38px; height: 38px; }
 }
+
+/* phones: folded to one week; the chevron opens the whole month */
+.cal-fold .icon { transition: transform .15s; }
+.cal-fold[aria-expanded="true"] .icon { transform: rotate(180deg); }
+.cal.folded .cal-head { padding-bottom: 2px; }

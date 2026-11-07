@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { countdown, fmtRange } from '../../lib/dates'
-import { monthTree, openingMonth, ribbonDay, tripSpan, type Span } from '../../lib/calendar'
+import { monthTree, openingMonth, ribbonDay, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { MonthCalendar, tint } from '../../components/MonthCalendar'
 
 const spans = (ts: Trip[]) => ts.map(tripSpan).filter((x): x is Span => !!x)
@@ -32,7 +32,10 @@ export function Calendar({ trips, today }: { trips: Trip[]; today: string }) {
 
   return (
     <div className="cal-wrap">
-      {m && <MonthCalendar month={m} onMonth={setMonth} today={today} ribbon={(d) => ribbonDay(d, tops)} bars={sides} />}
+      {m && (
+        <MonthCalendar month={m} onPrev={() => setMonth(shiftMonth(m, -1))} onNext={() => setMonth(shiftMonth(m, 1))}
+          today={today} ribbon={(d) => ribbonDay(d, tops)} bars={sides} />
+      )}
       {rows.length > 0 && (
         <div className="rows">
           {rows.map(({ trip: t, depth }) => {

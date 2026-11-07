@@ -12,6 +12,7 @@ const db = vi.hoisted(() => ({
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   walk: vi.fn(() => Promise.resolve(530)),
   search: vi.fn(),
+  wide: false,
 }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
@@ -23,6 +24,7 @@ vi.mock('../../src/lib/queries', () => ({
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
+vi.mock('../../src/lib/useWide', () => ({ useWide: () => db.wide }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/walk', async (orig) => ({ ...(await orig<typeof import('../../src/lib/walk')>()), walkSeconds: db.walk }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchPlaces: db.search }))
@@ -62,8 +64,12 @@ function showAt(path: string) {
   )
 }
 const loc = () => screen.getByTestId('loc').textContent
+const cal = () => within(screen.getByTestId('calendar'))
+// on a phone the calendar starts folded to one week
+const wholeMonth = () => userEvent.click(cal().getByRole('button', { name: 'whole month' }))
 
 beforeEach(() => {
+  db.wide = false
   db.save.mockClear(); db.walk.mockClear(); db.search.mockReset()
 })
 
@@ -197,10 +203,11 @@ it("the parent's own plans on a side-trip day still show", () => {
   expect(screen.getByTestId('fold')).toBeInTheDocument()
 })
 
-it('the trip calendar shows its side trips and the city you sleep in', () => {
+it('the trip calendar shows its side trips and the city you sleep in', async () => {
   db.trips = feb()
   db.stops = [stop({ trip_id: 'eu', kind: 'stay', title: 'hotel v', day: '2027-02-02', end_date: '2027-02-04', place: place({ name: 'hotel v', city: 'amsterdam' }) })] as Stop[]
   show(db.trips[0] as Trip)
+  await wholeMonth()
   const cal = screen.getByTestId('calendar')
   expect(within(cal).getByText('february')).toBeInTheDocument()
   expect(within(cal).getAllByTestId('cal-bar').map((b) => b.textContent)).toEqual(['lapland', 'lapland'])
@@ -212,19 +219,44 @@ it('the trip calendar shows its side trips and the city you sleep in', () => {
   expect(screen.queryByRole('button', { name: 'mon 15 feb' })).toBeNull()
 })
 
-it('a short trip without side trips keeps just its days', () => {
+it('a short side trip has its calendar too', () => {
   const t = lap()
   db.trips = [t]
   db.stops = []
   show(t)
-  expect(screen.queryByTestId('calendar')).toBeNull()
+  expect(cal().getByText('february')).toBeInTheDocument()
+  expect(screen.getByTestId('calendar').querySelector('[data-day="2027-02-07"]')).toHaveAttribute('data-ribbon', 'start')
+})
+
+it('on a phone the calendar folds to one week, moves by week and opens to the whole month', async () => {
+  db.trips = feb()
+  db.stops = []
+  show(db.trips[0] as Trip)
+  const days = () => [...screen.getByTestId('calendar').querySelectorAll('[data-day]')].map((d) => d.getAttribute('data-day'))
+  expect(days()).toEqual(['2027-02-01', '2027-02-02', '2027-02-03', '2027-02-04', '2027-02-05', '2027-02-06', '2027-02-07'])
+  expect(cal().getByRole('button', { name: 'whole month' })).toHaveAttribute('aria-expanded', 'false')
+  expect(cal().getByRole('button', { name: 'previous week' })).toBeDisabled()
+  await userEvent.click(cal().getByRole('button', { name: 'next week' }))
+  expect(days()[0]).toBe('2027-02-08')
+  expect(cal().getByRole('button', { name: 'next week' })).toBeDisabled()
+  await wholeMonth()
+  expect(days()).toHaveLength(28)
+  expect(cal().getByRole('button', { name: 'whole month' })).toHaveAttribute('aria-expanded', 'true')
+})
+
+it('on a laptop the calendar always shows the whole month', () => {
+  db.wide = true
+  db.trips = feb()
+  db.stops = []
+  show(db.trips[0] as Trip)
+  expect(screen.getByTestId('calendar').querySelectorAll('[data-day]')).toHaveLength(28)
+  expect(screen.queryByRole('button', { name: 'whole month' })).toBeNull()
 })
 
 it('tapping a day selects it and puts it in the url', async () => {
   db.trips = feb()
   db.stops = []
   showAt('/trip/eu')
-  const cal = () => within(screen.getByTestId('calendar'))
   await userEvent.click(cal().getByRole('button', { name: 'fri 5 feb' }))
   expect(loc()).toBe('/trip/eu?day=2027-02-05')
   expect(cal().getByRole('button', { name: 'fri 5 feb' })).toHaveAttribute('aria-pressed', 'true')
@@ -235,10 +267,11 @@ it('tapping a day inside a side trip opens the side trip on that day', async () 
   db.trips = feb()
   db.stops = []
   showAt('/trip/eu')
-  await userEvent.click(within(screen.getByTestId('calendar')).getByRole('button', { name: 'mon 8 feb' }))
+  await userEvent.click(cal().getByRole('button', { name: 'next week' }))
+  await userEvent.click(cal().getByRole('button', { name: 'mon 8 feb' }))
   expect(loc()).toBe('/trip/lap?day=2027-02-08')
-  // lapland is short, so it has no calendar; its chip shows the day
-  expect(screen.queryByTestId('calendar')).toBeNull()
+  // lapland opens on that week with the day picked
+  expect(cal().getByRole('button', { name: 'mon 8 feb' })).toHaveAttribute('aria-pressed', 'true')
   expect(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: 'mon 8 feb' })).toHaveAttribute('aria-current', 'true')
 })
 

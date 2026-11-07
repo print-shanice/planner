@@ -110,7 +110,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
           <p>{trip.notes}</p>
         </details>
       )}
-      {wantsCalendar(trip, children) && (
+      {wantsCalendar(trip) && (
         <TripCalendar trip={trip} stops={stops} children={children} selected={selected} onDay={goDay} />
       )}
       <DayChips items={items} selected={selected} />

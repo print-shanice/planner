@@ -17,6 +17,12 @@ export function monthWeeks(m: string): (string | null)[][] {
   return Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7))
 }
 
+// the monday-first week a day sits in, every day filled (a folded calendar shows one)
+export function weekOf(d: string): string[] {
+  const lead = (new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7
+  return Array.from({ length: 7 }, (_, i) => addDays(d, i - lead))
+}
+
 const end = (t: Trip) => t.end_date ?? t.start_date!
 const byStart = (a: Trip, b: Trip) =>
   a.start_date!.localeCompare(b.start_date!) || end(b).localeCompare(end(a)) || a.name.localeCompare(b.name)

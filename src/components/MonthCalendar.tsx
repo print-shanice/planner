@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { monthWeeks, shiftMonth, weekBars, type Span } from '../lib/calendar'
+import { monthWeeks, weekBars, type Span } from '../lib/calendar'
 import { fmtDay } from '../lib/dates'
 import { Icon } from './Icon'
 
@@ -9,11 +9,15 @@ const WEEKDAYS = ['m', 't', 'w', 't', 'f', 's', 's']
 export const dayLabel = (d: string) => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
 
 type Props = {
+  // the month in the title
   month: string
-  onMonth: (m: string) => void
-  // the first and last month you can move to
-  min?: string
-  max?: string
+  // one folded week instead of the whole month
+  week?: string[]
+  // move back or on by a month (a week when folded); missing means you can't
+  onPrev?: () => void
+  onNext?: () => void
+  // phones fold the calendar to a week; this opens it to the whole month and back
+  fold?: { open: boolean; onToggle: () => void }
   today: string
   // the trip whose ribbon a day sits on
   ribbon: (d: string) => Span | undefined
@@ -78,25 +82,30 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
 export function MonthCalendar(p: Props) {
   const m = p.month
   const name = fmtDay(`${m}-01`, { month: 'long', year: 'numeric' })
+  const step = p.week ? 'week' : 'month'
+  const weeks = p.week ? [p.week] : monthWeeks(m)
   return (
-    <div className="cal" data-testid="calendar" role="group" aria-label={name}>
+    <div className={`cal${p.week ? ' folded' : ''}`} data-testid="calendar" role="group" aria-label={name}>
       <div className="cal-head">
         <p className="cal-title head" aria-live="polite">
           <span className="cal-month">{fmtDay(`${m}-01`, { month: 'long' })}</span>{' '}
           <span className="cal-year">{m.slice(0, 4)}</span>
         </p>
-        <button type="button" className="icon-btn" aria-label="previous month" disabled={!!p.min && m <= p.min}
-          onClick={() => p.onMonth(shiftMonth(m, -1))}>
+        <button type="button" className="icon-btn" aria-label={`previous ${step}`} disabled={!p.onPrev} onClick={p.onPrev}>
           <Icon name="back" />
         </button>
-        <button type="button" className="icon-btn" aria-label="next month" disabled={!!p.max && m >= p.max}
-          onClick={() => p.onMonth(shiftMonth(m, 1))}>
+        <button type="button" className="icon-btn" aria-label={`next ${step}`} disabled={!p.onNext} onClick={p.onNext}>
           <Icon name="next" />
         </button>
+        {p.fold && (
+          <button type="button" className="icon-btn cal-fold" aria-label="whole month" aria-expanded={p.fold.open} onClick={p.fold.onToggle}>
+            <Icon name="chevron" />
+          </button>
+        )}
       </div>
-      <div className="cal-grid" key={m} aria-hidden={p.onDay ? undefined : true}>
+      <div className="cal-grid" key={p.week ? p.week[0] : m} aria-hidden={p.onDay ? undefined : true}>
         <div className="cal-weekdays" aria-hidden="true">{WEEKDAYS.map((d, i) => <span key={i}>{d}</span>)}</div>
-        {monthWeeks(m).map((w, i) => <Week key={i} week={w} p={p} />)}
+        {weeks.map((w, i) => <Week key={i} week={w} p={p} />)}
       </div>
     </div>
   )

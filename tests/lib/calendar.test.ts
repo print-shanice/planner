@@ -1,4 +1,4 @@
-import { citySpans, monthTree, monthWeeks, openingMonth, planItems, ribbonDay, shiftMonth, tripSpan, weekBars, type Span } from '../../src/lib/calendar'
+import { citySpans, weekOf, monthTree, monthWeeks, openingMonth, planItems, ribbonDay, shiftMonth, tripSpan, weekBars, type Span } from '../../src/lib/calendar'
 import { groupByDay } from '../../src/lib/dates'
 import type { Trip } from '../../src/lib/types'
 import { place, stop, trip } from '../factories'
@@ -110,4 +110,10 @@ it("folds a side trip's days into one row unless the parent has its own plans th
   // day cards no longer carry the side trip
   const first = items.find((i) => i.kind === 'day' && i.date === '2027-02-09')
   expect(first?.kind === 'day' && first.entries.some((e) => e.kind === 'sidetrip')).toBe(false)
+})
+
+it('gives the monday-first week a day sits in', () => {
+  expect(weekOf('2027-06-01')).toEqual(['2027-05-31', '2027-06-01', '2027-06-02', '2027-06-03', '2027-06-04', '2027-06-05', '2027-06-06'])
+  expect(weekOf('2027-06-06')[0]).toBe('2027-05-31')
+  expect(weekOf('2027-06-07')[0]).toBe('2027-06-07')
 })
