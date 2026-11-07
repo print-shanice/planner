@@ -85,6 +85,16 @@ function TripScreen() {
   const [menu, setMenu] = useState(false)
   const main = useRef<HTMLElement>(null)
   const scrolls = useRef<Record<string, number>>({})
+  // once the page scrolls, the bar tightens up (a smaller title, no dates line)
+  const sentinel = useRef<HTMLSpanElement>(null)
+  const [stuck, setStuck] = useState(false)
+  useEffect(() => {
+    const el = sentinel.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => setStuck(!e.isIntersecting), { root: wide ? main.current : null })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [wide, !!trips, params.get('tab')]) // eslint-disable-line react-hooks/exhaustive-deps
   const scroller = () => (wide ? main.current : null)
   const where = `${readTab(params, wide).tab}/${readTab(params, wide).view}`
   useLayoutEffect(() => {
@@ -132,28 +142,38 @@ function TripScreen() {
       return n
     })
   }
+  const sectionNav = (
+    <TripSummary bar={!wide} onPick={(x) => pick(x.tab, x.view)}
+      sections={wide
+        ? tabs.flatMap((t): Section[] => t === 'saved' ? SAVED_VIEWS.map((v) => ({ label: v, tab: t, view: v })) : [{ label: t, tab: t }])
+        : tabs.map((t) => ({ label: t, tab: t }))}
+      active={wide && tab === 'saved' ? view : tab} />
+  )
   return (
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`} style={tint(trip.color)}>
       <section className="trip-main" ref={main}>
+        <span ref={sentinel} className="trip-bar-sentinel" aria-hidden="true" />
         {phoneMap ? (
           // the phone map fills the screen; only the way back and the + float over it
           <div className="map-float">
             <Link to={`/trip/${trip.id}${onDay ? `?day=${onDay}` : ''}`} className="chip-pill back-chip" aria-label={`back to ${trip.name}`}><Icon name="back" size={18} /><span>{trip.name}</span></Link>
             <span className="map-float-end"><OfflineBadge inline />{plus}</span>
           </div>
-        ) : <TripHeader key={trip.id} trip={trip} action={plus} />}
-        <TripSummary bar={!wide} onPick={(x) => pick(x.tab, x.view)}
-          sections={wide
-            ? tabs.flatMap((t): Section[] => t === 'saved' ? SAVED_VIEWS.map((v) => ({ label: v, tab: t, view: v })) : [{ label: t, tab: t }])
-            : tabs.map((t) => ({ label: t, tab: t }))}
-          active={wide && tab === 'saved' ? view : tab} />
-        {tab !== 'plan' && (
-          <section id="trip-section" className="trip-inline-section" aria-label={tab}>
+        ) : (
+          // the name, the + and the way around stay at the top while the page scrolls
+          <div className={`trip-bar${stuck ? ' stuck' : ''}`}>
+            <TripHeader key={trip.id} trip={trip} action={plus} />
+            {wide && sectionNav}
             {tab === 'saved' && !wide && (
               <div className="segmented saved-switch" role="group" aria-label="saved">
                 {SAVED_VIEWS.map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => pick('saved', v)}>{v}</button>)}
               </div>
             )}
+          </div>
+        )}
+        {!wide && sectionNav}
+        {tab !== 'plan' && (
+          <section id="trip-section" className="trip-inline-section" aria-label={tab}>
             <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} view={view} trip={trip} /></div>
           </section>
         )}

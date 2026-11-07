@@ -81,3 +81,9 @@ it('the pulse holds still for people who ask for less motion', () => {
   expect(css).toMatch(/@keyframes pulse/)
   expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.pulse/)
 })
+
+it('the trip bar sticks to the top with a solid background', () => {
+  expect(ruleFor('.trip-bar')).toMatch(/position:\s*sticky/)
+  expect(ruleFor('.trip-bar')).toMatch(/top:\s*0/)
+  expect(ruleFor('.trip-bar')).toMatch(/background:\s*var\(--ground\)/)
+})

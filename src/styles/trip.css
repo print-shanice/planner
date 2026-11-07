@@ -108,3 +108,13 @@
 .section-action:disabled { opacity: .45; cursor: default; }
 .section-content > .stack > .section-heading { padding-bottom: 0; }
 .trip-title-row .icon-btn.filled { flex: none; width: 44px; height: 44px; border-radius: 50%; }
+
+.trip-bar { /* the trip's name, + and navigation stay at the top while the page scrolls */ position: sticky; top: 0; z-index: 15; background: var(--ground); padding-bottom: 8px; transition: box-shadow .15s; }
+.trip-bar.stuck { box-shadow: 0 1px 0 var(--line); }
+.trip-bar > .saved-switch { margin: 4px 16px 0; }
+.trip-bar-sentinel { display: block; height: 0; }
+/* phones: once scrolled, a smaller title and no dates line, so the bar takes less room */
+.trip-phone .trip-bar.stuck .trip-title-row h1 { font-size: 24px; }
+.trip-phone .trip-bar.stuck .trip-meta { display: none; }
+.trip-phone .trip-bar.stuck .trip-header { padding-bottom: 0; gap: 2px; }
+.trip-phone .trip-bar.stuck .trip-title-row .icon-btn.filled { width: 40px; height: 40px; }

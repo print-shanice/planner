@@ -379,3 +379,22 @@ it('the map says it is loading while its code arrives', async () => {
   expect(screen.getByText('loading map')).toBeInTheDocument()
   expect(await screen.findByText('map here')).toBeInTheDocument()
 })
+
+describe('the trip header stays at the top', () => {
+  it('on a laptop the name and the tabs sit together in one sticky bar', () => {
+    wide(true)
+    show('/trip/summer')
+    const bar = document.querySelector('.trip-bar') as HTMLElement
+    expect(within(bar).getByRole('heading', { level: 1, name: 'the long summer' })).toBeInTheDocument()
+    expect(within(bar).getByRole('navigation', { name: 'trip sections' })).toBeInTheDocument()
+    expect(within(bar).getByRole('button', { name: 'add' })).toBeInTheDocument()
+  })
+
+  it('on a phone the name, the + and saved\'s switch stay up top; the tab bar stays at the bottom', () => {
+    show('/trip/summer?tab=saved')
+    const bar = document.querySelector('.trip-bar') as HTMLElement
+    expect(within(bar).getByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(within(bar).getByRole('group', { name: 'saved' })).toBeInTheDocument()
+    expect(within(bar).queryByRole('navigation', { name: 'trip sections' })).toBeNull()
+  })
+})
