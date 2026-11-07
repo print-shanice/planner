@@ -13,6 +13,7 @@ import { Icon } from '../../components/Icon'
 import { Button } from '../../components/Button'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { FilesSection, filesOf } from './FilesSection'
+import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
@@ -103,7 +104,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
     facts.push(stop.day ? `depart ${day(stop.day, stop.time)}` : null)
     facts.push(stop.end_date || stop.end_time ? `arrive ${day(stop.end_date, stop.end_time)}` : null)
   } else {
-    facts.push(day(stop.day, stop.time) || null)
+    facts.push(day(stop.day, stop.time ? [stop.time, stop.end_time].filter(Boolean).join('–') : null) || null)
   }
 
   return (
@@ -122,6 +123,8 @@ export function StopView({ stop, onEdit, onClose }: Props) {
         {stop.notes && stop.kind !== 'note' && <p className="notes">{stop.notes}</p>}
         {stop.kind === 'note' && stop.notes && <p className="notes">{stop.notes}</p>}
       </div>
+
+      {(stop.kind === 'place' || stop.kind === 'stay') && <Reviews stop={stop} />}
 
       <FilesSection stop={stop} canEdit={canEdit} />
 

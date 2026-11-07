@@ -38,16 +38,17 @@ function toRow(d: Draft, kind: Stop['kind']): Partial<Stop> {
     title: d.title.trim(), day: d.day || null, time: d.time || null, status: d.status,
     ref: d.ref.trim(), url: d.url.trim(), notes: d.notes,
   }
-  if (kind === 'place') return { ...base, place: d.place }
+  if (kind === 'place') return { ...base, place: d.place, end_time: d.end_time || null }
   if (kind === 'stay') return { ...base, place: d.place, end_date: d.end_date || null, end_time: d.end_time || null }
   if (kind === 'journey') return { ...base, mode: d.mode, origin: d.origin, destination: d.destination, end_date: d.end_date || null, end_time: d.end_time || null }
-  return base
+  return { ...base, end_time: d.end_time || null }
 }
 
 function problemOf(d: Draft, kind: Stop['kind']): string | null {
   if (kind === 'journey') { if (!d.origin && !d.destination) return 'add where it starts or ends' }
   else if (!d.title.trim()) return 'add a name'
   if (kind === 'stay' && d.day && d.end_date && d.end_date < d.day) return 'check-out is before check-in'
+  if ((kind === 'place' || kind === 'note') && d.end_time && (!d.time || d.end_time <= d.time)) return 'end time must be after start time'
   return null
 }
 
@@ -159,6 +160,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {status}
         {placeField}
         {when([['day', 'day', 'time']])}
+        <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />
       </>)}
       {kind === 'stay' && (<>
         {nameField('name')}
@@ -178,7 +180,8 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       {kind === 'note' && (<>
         {nameField('title')}
         {status}
-        {when([['day', 'day', null]])}
+        {when([['day', 'day', 'time']])}
+        <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />
         {notes}
       </>)}
 

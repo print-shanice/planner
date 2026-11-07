@@ -22,7 +22,7 @@ export function TripCalendar({ trip, stops, children, selected, onDay }: Props) 
   // the day the calendar is looking at: its month, or its week when folded
   const [anchor, setAnchor] = useState(() => (selected && inTrip(selected) ? selected : inTrip(today) ? today : start))
   // phones start folded to one week so the plan stays in view
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const folded = !wide && !open
 
   const own = useMemo(() => tripSpan(trip)!, [trip])

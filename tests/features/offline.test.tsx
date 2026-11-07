@@ -28,7 +28,7 @@ it('offline: trip from the persisted cache renders and edit controls are disable
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, networkMode: 'offlineFirst', staleTime: 60_000 } } })
   render(
     <PersistQueryClientProvider client={client} persistOptions={{ persister }}>
-      <MemoryRouter initialEntries={['/trip/t1']}>
+      <MemoryRouter initialEntries={['/trip/t1?day=2027-02-08']}>
         <Routes><Route path="/trip/:id" element={<TripPage />} /></Routes>
       </MemoryRouter>
     </PersistQueryClientProvider>,

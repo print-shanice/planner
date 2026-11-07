@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
+import { validDay } from '../../lib/agenda'
 import { useWide } from '../../lib/useWide'
 import { loadState } from '../../lib/load'
 import type { Trip } from '../../lib/types'
@@ -35,10 +36,13 @@ function Panel({ tab, trip }: { tab: Tab; trip: Trip }) {
 
 export function AddForms({ kind, trip, onClose }: { kind: AddKind | null; trip: Trip; onClose: () => void }) {
   const sheet = useStopSheet()
+  const [params] = useSearchParams()
+  const requested = params.get('day')
+  const day = validDay(requested) ? requested : trip.start_date
   useEffect(() => {
     if (kind === 'stay' || kind === 'journey' || kind === 'note') {
-      const defaults = kind === 'stay' ? { day: trip.start_date, end_date: trip.end_date }
-        : kind === 'journey' ? { day: trip.start_date } : {}
+      const defaults = kind === 'stay' ? { day, end_date: trip.end_date }
+        : kind === 'journey' ? { day } : { day }
       sheet?.newStop(kind, trip.id, defaults)
       onClose()
     }
@@ -95,7 +99,7 @@ function TripScreen() {
   const asked = (params.get('tab') as Tab) || 'plan'
   const tabs = wide ? WIDE_TABS : PHONE_TABS
   const tab: Tab = tabs.includes(asked) ? asked : 'plan'
-  const setTab = (t: Tab) => setParams(t === 'plan' ? {} : { tab: t }, { replace: true })
+  const setTab = (t: Tab) => setParams(p => { const n = new URLSearchParams(p); if (t === 'plan') n.delete('tab'); else n.set('tab', t); return n }, { replace: true })
 
   const add = (
     <button type="button" className={wide ? 'icon-btn filled' : 'fab'} aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>

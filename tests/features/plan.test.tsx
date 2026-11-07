@@ -66,327 +66,130 @@ function showAt(path: string) {
 const loc = () => screen.getByTestId('loc').textContent
 const cal = () => within(screen.getByTestId('calendar'))
 // on a phone the calendar starts folded to one week
-const wholeMonth = () => userEvent.click(cal().getByRole('button', { name: 'whole month' }))
+
 
 beforeEach(() => {
   db.wide = false
   db.save.mockClear(); db.walk.mockClear(); db.search.mockReset()
 })
 
-it('numbers every stop and skips walking across an unlocated stop', async () => {
+it('overview shows subtrips with explicit open trip links and no day cards', () => {
   const t = lap()
-  db.trips = [t]
-  db.stops = [
-    stop({ trip_id: 'lap', title: 'arktikum', day: '2027-02-08', position: 0, place: place({ lat: 66.5, lng: 25.72 }) }),
-    stop({ trip_id: 'lap', kind: 'note', title: 'buy gloves', day: '2027-02-08', position: 1, place: null }),
-    stop({ trip_id: 'lap', title: 'santa village', day: '2027-02-08', position: 2, place: place({ lat: 66.54, lng: 25.84 }) }),
-  ] as Stop[]
-  show(t)
-  const d = day('2027-02-08')
-  expect(within(d).getAllByTestId('stop-num').map((n) => n.textContent)).toEqual(['1', '2', '3'])
-  expect(within(d).queryByText(/min walk/)).toBeNull()
-  expect(db.walk).not.toHaveBeenCalled()
-})
-
-it('shows walking time between two located stops', async () => {
-  const t = lap()
-  db.trips = [t]
-  db.stops = [
-    stop({ trip_id: 'lap', title: 'arktikum', day: '2027-02-08', position: 0, place: place({ lat: 66.5, lng: 25.72 }) }),
-    stop({ trip_id: 'lap', title: 'santa village', day: '2027-02-08', position: 1, place: place({ lat: 66.54, lng: 25.84 }) }),
-  ] as Stop[]
-  show(t)
-  expect(await within(day('2027-02-08')).findByText('9 min walk')).toBeInTheDocument()
-})
-
-it('stay shows on every covered day', () => {
-  const t = lap()
-  db.trips = [t]
-  db.stops = [stop({ trip_id: 'lap', kind: 'stay', title: 'arctic hostel', day: '2027-02-07', end_date: '2027-02-09', status: 'booked' })] as Stop[]
-  show(t)
-  expect(within(day('2027-02-07')).getByText('arctic hostel')).toBeInTheDocument()
-  expect(within(day('2027-02-07')).getByTestId('stop-num')).toHaveTextContent('1')
-  expect(within(day('2027-02-07')).getByText('booked')).toHaveClass('ok')
-  expect(within(day('2027-02-08')).getByText('staying at arctic hostel')).toBeInTheDocument()
-  expect(within(day('2027-02-08')).queryByTestId('stop-num')).toBeNull()
-  expect(within(day('2027-02-09')).getByText('check out · arctic hostel')).toBeInTheDocument()
-})
-
-it('a clashing stay is flagged in words', () => {
-  const t = lap()
-  db.trips = [t]
-  db.stops = [
-    stop({ trip_id: 'lap', kind: 'stay', title: 'a', day: '2027-02-07', end_date: '2027-02-09' }),
-    stop({ trip_id: 'lap', kind: 'stay', title: 'b', day: '2027-02-08', end_date: '2027-02-10' }),
-  ] as Stop[]
-  show(t)
-  expect(within(day('2027-02-07')).getByText('dates clash')).toHaveClass('warn')
-})
-
-it('a journey shows its mode and times', () => {
-  const t = lap()
-  db.trips = [t]
-  db.stops = [stop({ trip_id: 'lap', kind: 'journey', title: 'fly to rovaniemi', day: '2027-02-07', mode: 'flight', time: '14:10', end_time: '18:20' })] as Stop[]
-  show(t)
-  expect(within(day('2027-02-07')).getByText('flight · 14:10–18:20')).toBeInTheDocument()
-})
-
-it('adding a place puts it at the end of that day', async () => {
-  const t = lap()
-  db.trips = [t]
-  db.stops = [
-    stop({ trip_id: 'lap', title: 'one', day: '2027-02-08', position: 0 }),
-    stop({ trip_id: 'lap', title: 'two', day: '2027-02-08', position: 1 }),
-  ] as Stop[]
-  const arktikum = { name: 'Arktikum', address: 'Pohjoisranta 4, Rovaniemi', city: 'Rovaniemi', country: 'FI', lat: 66.5079, lng: 25.7287 }
-  db.search.mockResolvedValue([arktikum])
-  show(t)
-  const d = day('2027-02-08')
-  await userEvent.click(within(d).getByRole('button', { name: 'add a place' }))
-  await userEvent.type(within(d).getByRole('searchbox'), 'arktikum{Enter}')
-  await userEvent.click(await within(d).findByRole('button', { name: /Arktikum/ }))
-  expect(db.search).toHaveBeenCalledWith('arktikum', { lat: 66.5, lng: 25.7 })
-  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({
-    trip_id: 'lap', kind: 'place', title: 'Arktikum', day: '2027-02-08', position: 2, place: arktikum,
-  }))
-})
-
-it('failed search offers retry', async () => {
-  const t = lap()
-  db.trips = [t]
-  db.stops = []
-  db.search.mockRejectedValueOnce(new Error('503')).mockResolvedValueOnce([])
-  show(t)
-  const d = day('2027-02-07')
-  await userEvent.click(within(d).getByRole('button', { name: 'add a place' }))
-  await userEvent.type(within(d).getByRole('searchbox'), 'x{Enter}')
-  expect(await within(d).findByText("search isn't responding")).toBeInTheDocument()
-  await userEvent.click(within(d).getByRole('button', { name: 'retry' }))
-  expect(db.search).toHaveBeenCalledTimes(2)
-})
-
-it('a dateless trip still renders its undated stops', () => {
-  const t = trip({ id: 'someday', name: 'japan someday', start_date: null, end_date: null })
-  db.trips = [t]
-  db.stops = [stop({ trip_id: 'someday', title: 'fushimi inari', day: null })] as Stop[]
-  show(t)
-  const nd = screen.getByRole('region', { name: 'no date' })
-  expect(within(nd).getByText('fushimi inari')).toBeInTheDocument()
-  expect(within(nd).getByRole('button', { name: 'add a place' })).toBeInTheDocument()
-})
-
-const feb = () => {
-  const eu = trip({ id: 'eu', name: 'europe', start_date: '2027-02-01', end_date: '2027-02-14', base: place({ name: 'eindhoven', city: 'eindhoven' }) })
-  const kid = trip({ id: 'lap', parent_id: 'eu', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', color: 1 })
-  return [eu, kid] as Trip[]
-}
-
-it("a side trip's days fold into one row that opens it", () => {
-  db.trips = feb()
-  db.stops = []
-  show(db.trips[0] as Trip)
-  const fold = screen.getByTestId('fold')
-  expect(fold).toHaveAttribute('href', '/trip/lap')
-  expect(fold).toHaveTextContent('lapland')
-  expect(fold).toHaveTextContent('7 – 11 feb · 5 days')
-  expect(screen.queryByTestId('day-2027-02-08')).toBeNull()
-  expect(screen.queryByTestId('day-2027-02-07')).toBeNull()
-  expect(day('2027-02-06')).toBeInTheDocument()
-  expect(day('2027-02-12')).toBeInTheDocument()
-})
-
-it("the parent's own plans on a side-trip day still show", () => {
-  db.trips = feb()
-  db.stops = [stop({ trip_id: 'eu', title: 'pay rent', day: '2027-02-09' })] as Stop[]
-  show(db.trips[0] as Trip)
-  expect(within(day('2027-02-09')).getByText('pay rent')).toBeInTheDocument()
-  expect(screen.getByTestId('fold')).toBeInTheDocument()
-})
-
-it('the trip calendar shows its side trips and the city you sleep in', async () => {
-  db.trips = feb()
-  db.stops = [stop({ trip_id: 'eu', kind: 'stay', title: 'hotel v', day: '2027-02-02', end_date: '2027-02-04', place: place({ name: 'hotel v', city: 'amsterdam' }) })] as Stop[]
-  show(db.trips[0] as Trip)
-  await wholeMonth()
-  const cal = screen.getByTestId('calendar')
-  expect(within(cal).getByText('february')).toBeInTheDocument()
-  expect(within(cal).getAllByTestId('cal-bar').map((b) => b.textContent)).toEqual(['lapland', 'lapland'])
-  expect(within(cal).getAllByTestId('cal-city').map((b) => b.textContent)).toEqual(['eindhoven', 'amsterdam', 'eindhoven', 'eindhoven'])
-  // only this trip's months
-  expect(screen.getByRole('button', { name: 'previous month' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: 'next month' })).toBeDisabled()
-  // days outside the trip can't be picked
-  expect(screen.queryByRole('button', { name: 'mon 15 feb' })).toBeNull()
-})
-
-it('a short side trip has its calendar too', () => {
-  const t = lap()
-  db.trips = [t]
+  db.trips = [t, trip({ id: 'child', parent_id: t.id, name: 'day trip' })]
   db.stops = []
   show(t)
-  expect(cal().getByText('february')).toBeInTheDocument()
-  expect(screen.getByTestId('calendar').querySelector('[data-day="2027-02-07"]')).toHaveAttribute('data-ribbon', 'start')
+  expect(screen.queryByTestId(/^day-/)).toBeNull()
+  expect(screen.getByRole('link', { name: /day trip.*open trip/ })).toHaveAttribute('href', '/trip/child')
 })
 
-it('on a phone the calendar folds to one week, moves by week and opens to the whole month', async () => {
-  db.trips = feb()
-  db.stops = []
-  show(db.trips[0] as Trip)
-  const days = () => [...screen.getByTestId('calendar').querySelectorAll('[data-day]')].map((d) => d.getAttribute('data-day'))
-  expect(days()).toEqual(['2027-02-01', '2027-02-02', '2027-02-03', '2027-02-04', '2027-02-05', '2027-02-06', '2027-02-07'])
-  expect(cal().getByRole('button', { name: 'whole month' })).toHaveAttribute('aria-expanded', 'false')
-  expect(cal().getByRole('button', { name: 'previous week' })).toBeDisabled()
-  await userEvent.click(cal().getByRole('button', { name: 'next week' }))
-  expect(days()[0]).toBe('2027-02-08')
-  expect(cal().getByRole('button', { name: 'next week' })).toBeDisabled()
-  await wholeMonth()
-  expect(days()).toHaveLength(28)
-  expect(cal().getByRole('button', { name: 'whole month' })).toHaveAttribute('aria-expanded', 'true')
-})
-
-it('on a laptop the calendar always shows the whole month', () => {
-  db.wide = true
-  db.trips = feb()
-  db.stops = []
-  show(db.trips[0] as Trip)
-  expect(screen.getByTestId('calendar').querySelectorAll('[data-day]')).toHaveLength(28)
-  expect(screen.queryByRole('button', { name: 'whole month' })).toBeNull()
-})
-
-it('tapping a day selects it and puts it in the url', async () => {
-  db.trips = feb()
-  db.stops = []
-  showAt('/trip/eu')
-  await userEvent.click(cal().getByRole('button', { name: 'fri 5 feb' }))
-  expect(loc()).toBe('/trip/eu?day=2027-02-05')
-  expect(cal().getByRole('button', { name: 'fri 5 feb' })).toHaveAttribute('aria-pressed', 'true')
-  expect(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: 'fri 5 feb' })).toHaveAttribute('aria-current', 'true')
-})
-
-it('tapping a day inside a side trip opens the side trip on that day', async () => {
-  db.trips = feb()
-  db.stops = []
-  showAt('/trip/eu')
-  await userEvent.click(cal().getByRole('button', { name: 'next week' }))
+it('a date opens a single agenda without changing the parent, including nested plans', async () => {
+  const t = lap()
+  db.trips = [t, trip({ id: 'child', parent_id: t.id, name: 'side trip', start_date: '2027-02-08', end_date: '2027-02-09' })]
+  db.stops = [stop({ trip_id: t.id, title: 'parent museum', day: '2027-02-08' }), stop({ trip_id: 'child', title: 'child cafe', day: '2027-02-08' })]
+  showAt('/trip/lap')
   await userEvent.click(cal().getByRole('button', { name: 'mon 8 feb' }))
   expect(loc()).toBe('/trip/lap?day=2027-02-08')
-  // lapland opens on that week with the day picked
-  expect(cal().getByRole('button', { name: 'mon 8 feb' })).toHaveAttribute('aria-pressed', 'true')
-  expect(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: 'mon 8 feb' })).toHaveAttribute('aria-current', 'true')
-})
-
-it('long trips list only busy days, and the calendar opens any day', async () => {
-  const t = trip({ id: 'eu', name: 'europe', start_date: '2027-01-28', end_date: '2027-07-13' })
-  db.trips = [t]
-  db.stops = [stop({ trip_id: 'eu', title: 'museum', day: '2027-03-02' })] as Stop[]
-  showAt('/trip/eu')
   expect(screen.getAllByTestId(/^day-/)).toHaveLength(1)
-  expect(screen.queryByLabelText('pick a date')).toBeNull()
-  expect(within(screen.getByTestId('calendar')).getByText('january')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: 'sat 30 jan' }))
-  expect(day('2027-01-30')).toBeInTheDocument()
+  expect(within(day('2027-02-08')).getByText('parent museum')).toBeInTheDocument()
+  expect(within(day('2027-02-08')).getByText('child cafe')).toBeInTheDocument()
+  expect(screen.getAllByRole('link', { name: /side trip.*open trip/ }).length).toBeGreaterThan(0)
 })
 
-it('opening a trip at a day shows that month and that day', () => {
-  const t = trip({ id: 'eu', name: 'europe', start_date: '2027-01-28', end_date: '2027-07-13' })
+it('empty long-trip dates can add directly to the parent and retain its stay', async () => {
+  const t = trip({ id: 'exchange', start_date: '2027-01-01', end_date: '2027-07-01' })
   db.trips = [t]
-  db.stops = []
-  showAt('/trip/eu?day=2027-03-05')
-  expect(within(screen.getByTestId('calendar')).getByText('march')).toBeInTheDocument()
-  expect(within(screen.getByTestId('calendar')).getByRole('button', { name: 'fri 5 mar' })).toHaveAttribute('aria-pressed', 'true')
-  expect(day('2027-03-05')).toBeInTheDocument()
+  db.stops = [stop({ trip_id: t.id, kind: 'stay', title: 'home base', day: t.start_date, end_date: t.end_date })]
+  const cafe = place({ name: 'local cafe' })
+  db.search.mockResolvedValue([cafe])
+  showAt('/trip/exchange?day=2027-04-12')
+  expect(screen.getByText('staying at home base')).toBeInTheDocument()
+  const d = day('2027-04-12')
+  await userEvent.click(within(d).getByRole('button', { name: 'add a place' }))
+  await userEvent.type(within(d).getByRole('searchbox'), 'cafe{Enter}')
+  await userEvent.click(await within(d).findByRole('button', { name: /local cafe/ }))
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: t.id, day: '2027-04-12', place: cafe }))
 })
 
-it('undated side trips are always listed, with set dates', async () => {
-  const [eu] = feb()
-  const rome = trip({ id: 'rome', parent_id: 'eu', name: 'someday rome', start_date: null, end_date: null })
-  db.trips = [eu, rome]
-  db.stops = []
-  show(eu)
-  const nd = screen.getByRole('region', { name: 'no date' })
-  expect(within(nd).getByRole('link', { name: /someday rome/ })).toHaveAttribute('href', '/trip/rome')
-  await userEvent.click(within(nd).getByRole('button', { name: 'set dates' }))
-  expect(within(screen.getByRole('dialog', { name: 'edit trip' })).getByDisplayValue('someday rome')).toBeInTheDocument()
+it('timed stops sort chronologically, flexible plans follow and every stop is numbered', () => {
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, title: 'lunch', day: '2027-02-08', time: '13:00', position: 0 }), stop({ trip_id: t.id, title: 'breakfast', day: '2027-02-08', time: '09:00', position: 1 }), stop({ trip_id: t.id, title: 'walk', day: '2027-02-08', time: null, position: 2 })]
+  showAt('/trip/lap?day=2027-02-08')
+  expect(within(day('2027-02-08')).getAllByTestId('stop-num').map(n => n.textContent)).toEqual(['1', '2', '3'])
+  expect([...day('2027-02-08').querySelectorAll('.stop-title')].map(n => n.textContent)).toEqual(['breakfast', 'lunch', 'walk'])
+  expect(screen.getByText('any time')).toBeInTheDocument()
 })
 
-it('day chips name the month, and a folded side trip gets one chip', () => {
-  db.trips = feb()
-  db.stops = []
-  show(db.trips[0] as Trip)
-  const chips = within(screen.getByRole('navigation', { name: 'days' })).getAllByRole('button').map((b) => b.textContent)
-  expect(chips.slice(0, 2)).toEqual(['mon1feb', 'tue2feb'])
-  expect(chips).toContain('lapland')
-  expect(chips).not.toContain('mon8feb')
+it('date navigation changes only the selected day and returns to overview', async () => {
+  const t = lap(); db.trips = [t]; db.stops = []
+  showAt('/trip/lap?day=2027-02-08')
+  await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /tue 9 feb/ }))
+  expect(loc()).toBe('/trip/lap?day=2027-02-09')
+  await userEvent.click(screen.getByRole('button', { name: 'trip overview' }))
+  expect(screen.getByTestId('calendar')).toBeInTheDocument()
+  expect(screen.queryByTestId(/^day-/)).toBeNull()
 })
 
-it('month headings split a plan that spans months', () => {
-  const t = trip({ id: 'nye', name: 'new year', start_date: '2026-12-28', end_date: '2027-01-03' })
-  db.trips = [t]
-  db.stops = []
+it('invalid and out-of-range dates show the overview safely', () => {
+  const t = lap(); db.trips = [t]; db.stops = []
+  showAt('/trip/lap?day=2027-02-30')
+  expect(screen.getByTestId('calendar')).toBeInTheDocument()
+})
+
+it('undated trips retain their unscheduled places', () => {
+  const t = trip({ id: 'idea', start_date: null, end_date: null }); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, title: 'saved museum', day: null })]
   show(t)
-  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['december 2026', 'january 2027'])
+  expect(screen.getByText('saved museum')).toBeInTheDocument()
 })
 
-const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
-
-beforeEach(() => { db.stopsQ = null })
-
-it('stops still loading show grey rows instead of empty days', () => {
-  const t = lap()
-  db.trips = [t]
-  db.stopsQ = loading
-  show(t)
-  expect(screen.getByRole('status', { name: 'loading' })).toBeInTheDocument()
-  expect(screen.queryByTestId('day-2027-02-07')).toBeNull()
-})
-
-it('a failed refresh keeps the saved plan with a retry', async () => {
-  const t = lap()
-  db.trips = [t]
+it('failed refresh retains the selected agenda and offers retry', async () => {
+  const t = lap(); db.trips = [t]
   const refetch = vi.fn()
-  db.stopsQ = { data: [stop({ trip_id: 'lap', title: 'arktikum', day: '2027-02-08' })], status: 'error', fetchStatus: 'idle', refetch }
-  show(t)
-  expect(screen.getByText('arktikum')).toBeInTheDocument()
-  expect(screen.getByRole('alert')).toHaveTextContent("couldn't load")
+  db.stopsQ = { data: [stop({ trip_id: t.id, title: 'museum', day: '2027-02-08' })], status: 'error', fetchStatus: 'idle', refetch }
+  showAt('/trip/lap?day=2027-02-08')
+  expect(screen.getByText('museum')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'retry' }))
   expect(refetch).toHaveBeenCalled()
 })
 
+it('failed stop saves remain visible in the agenda', async () => {
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ id: 'failed', trip_id: t.id, title: 'museum', day: '2027-02-08' })]
+  failSave('stops', 'failed', { title: 'museum' }, false)
+  showAt('/trip/lap?day=2027-02-08')
+  expect(within(day('2027-02-08')).getByRole('alert')).toHaveTextContent("couldn't save")
+})
+
+beforeEach(() => { db.stopsQ = null })
 afterEach(() => forgetPending())
 
-it('a stop whose save failed says so on its row', async () => {
-  const t = lap()
-  db.trips = [t]
-  db.stops = [stop({ id: 'x1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08' })]
-  failSave('stops', 'x1', { title: 'arktikum' }, false)
-  show(t)
-  expect(within(day('2027-02-08')).getByRole('alert')).toHaveTextContent("couldn't save")
-  await userEvent.click(within(day('2027-02-08')).getByRole('button', { name: 'retry' }))
-  expect(db.save).toHaveBeenCalledWith({ id: 'x1', title: 'arktikum' })
+it('choosing a date clears the saved-map override', async () => {
+  const t = lap(); db.trips = [t]; db.stops = []
+  showAt('/trip/lap?map=saved')
+  await userEvent.click(cal().getByRole('button', { name: 'mon 8 feb' }))
+  expect(loc()).toBe('/trip/lap?day=2027-02-08')
 })
 
-it('overlapping side trips show one clash row naming both, and adjust dates opens the later trip', async () => {
-  const eu = trip({ id: 'eu', name: 'euro summer', start_date: '2027-06-01', end_date: '2027-07-01' })
-  const rome = trip({ id: 'rome', parent_id: 'eu', name: 'rome', start_date: '2027-06-12', end_date: '2027-06-16', color: 1 })
-  const flo = trip({ id: 'flo', parent_id: 'eu', name: 'florence', start_date: '2027-06-14', end_date: '2027-06-18', color: 2 })
-  db.trips = [eu, rome, flo]
-  db.stops = []
-  show(eu)
-  const row = screen.getByText('rome and florence · 14 – 16 jun').closest('.notice') as HTMLElement
-  expect(row).toHaveTextContent('dates clash')
-  // the folded side-trip rows carry the pill too
-  expect(screen.getAllByText('dates clash').filter((el) => el.classList.contains('pill'))).toHaveLength(2)
-  await userEvent.click(within(row).getByRole('button', { name: 'adjust dates' }))
-  const sheet = screen.getByRole('dialog', { name: 'edit trip' })
-  expect(within(sheet).getByDisplayValue('florence')).toBeInTheDocument()
+it('existing plans outside changed trip dates remain accessible', async () => {
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, title: 'earlier arrival', day: '2027-02-01' })]
+  showAt('/trip/lap')
+  await userEvent.click(screen.getByRole('button', { name: /mon,? 1 feb.*open day/ }))
+  expect(screen.getByText('earlier arrival')).toBeInTheDocument()
 })
 
-it('a side trip sees its clash too', () => {
-  const eu = trip({ id: 'eu', name: 'euro summer', start_date: '2027-06-01', end_date: '2027-07-01' })
-  const rome = trip({ id: 'rome', parent_id: 'eu', name: 'rome', start_date: '2027-06-12', end_date: '2027-06-16' })
-  const flo = trip({ id: 'flo', parent_id: 'eu', name: 'florence', start_date: '2027-06-14', end_date: '2027-06-18' })
-  db.trips = [eu, rome, flo]
-  db.stops = []
-  show(rome)
-  expect(screen.getByText('rome and florence · 14 – 16 jun')).toBeInTheDocument()
+it('walking legs skip an unlocated note', () => {
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, day: '2027-02-08', position: 0, place: place() }),
+    stop({ trip_id: t.id, day: '2027-02-08', kind: 'note', position: 1, place: null }),
+    stop({ trip_id: t.id, day: '2027-02-08', position: 2, place: place() })]
+  showAt('/trip/lap?day=2027-02-08')
+  expect(db.walk).not.toHaveBeenCalled()
+})
+
+it('a selected stay check-out remains visible', () => {
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, kind: 'stay', title: 'hostel', day: '2027-02-07', end_date: '2027-02-09' })]
+  showAt('/trip/lap?day=2027-02-09')
+  expect(screen.getByText('check out · hostel')).toBeInTheDocument()
 })

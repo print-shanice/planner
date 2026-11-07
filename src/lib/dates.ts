@@ -101,7 +101,8 @@ export function countdown(t: Trip, today: string): { kind: 'upcoming' | 'ongoing
 }
 
 export function dayColor(index: number): string {
-  return `var(--g${((index % 6) + 6) % 6})`
+  void index
+  return 'var(--g0)'
 }
 
 export function todayISO(): string {

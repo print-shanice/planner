@@ -26,7 +26,7 @@ export function stopSub(s: Stop): string {
     return [s.time, n ? `${n} ${n === 1 ? 'night' : 'nights'}` : ''].filter(Boolean).join(' · ')
   }
   if (s.kind === 'note') return (s.notes ?? '').split('\n')[0]
-  return [s.time, s.place?.city ?? s.place?.address].filter(Boolean).join(' · ')
+  return [s.time ? [s.time, s.end_time].filter(Boolean).join('–') : null, s.place?.city ?? s.place?.address].filter(Boolean).join(' · ')
 }
 
 type Props = {
@@ -50,7 +50,7 @@ export function StopRow({ stop, variant, n, colorIndex, clash, onOpen, onGrab, d
   return (
     <>
       <div className={`stop-row${dragging ? ' dragging' : ''}`} style={offset ? { transform: `translateY(${offset}px)` } : undefined} data-stop={stop.id}>
-        {mark}
+        <div className="agenda-marker">{stop.time && variant === 'stop' && <span className="num agenda-time">{stop.time}</span>}{mark}</div>
         <button type="button" className="stop-main" onClick={() => onOpen?.(stop)} disabled={!onOpen}>
           <span className="stop-title">
             {stop.kind === 'journey' && stop.mode && <Icon name={MODE_ICON[stop.mode] ?? 'train'} size={16} />}

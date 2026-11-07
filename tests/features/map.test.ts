@@ -23,7 +23,7 @@ it('pins carry the plan numbers and day colours', () => {
   const byId = Object.fromEntries(pins.features.map((f) => [f.properties.id, f.properties]))
   expect(byId.a).toMatchObject({ number: 1, color: 'var(--g0)' })
   expect(byId.b).toMatchObject({ number: 3, color: 'var(--g0)' })
-  expect(byId.c).toMatchObject({ number: 1, color: 'var(--g1)' })
+  expect(byId.c).toMatchObject({ number: 1, color: 'var(--g0)' })
   expect(byId.n).toBeUndefined()
   expect(pins.features.find((f) => f.properties.id === 'a')!.geometry.coordinates).toEqual([25.7, 66.5])
 })

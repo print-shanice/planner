@@ -5,7 +5,7 @@ import { fetchRates } from './rates'
 import { newId } from './id'
 import { failSave, failureOf, forgetFailure, overlay, savedFields, usePending } from './pending'
 import type { Rates } from './money'
-import type { Cost, FileRow, Link, Member, PackingItem, Stop, TableName, Trip } from './types'
+import type { Cost, FileRow, Link, Member, Review, PackingItem, Stop, TableName, Trip } from './types'
 
 export const keys = {
   trips: ['trips'],
@@ -15,6 +15,7 @@ export const keys = {
   packing: ['packing'],
   files: ['files'],
   members: ['members'],
+  reviews: ['reviews'],
 } as const satisfies Record<TableName, readonly string[]>
 
 export const TABLES = Object.keys(keys) as TableName[]
@@ -38,6 +39,8 @@ export const useLinks = () => useTable<Link>('links')
 export const usePacking = () => useTable<PackingItem>('packing')
 export const useFiles = () => useTable<FileRow>('files')
 export const useMembers = () => useTable<Member>('members')
+
+export const useReviews = () => useTable<Review>('reviews')
 
 export function useRates() {
   return useQuery<Rates>({ queryKey: ['rates'], queryFn: fetchRates, staleTime: 6 * 60 * 60 * 1000, retry: 0 })

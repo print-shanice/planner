@@ -4,7 +4,7 @@ import type { Trip } from '../../lib/types'
 import { ancestors } from '../../lib/countries'
 import { fmtRange } from '../../lib/dates'
 import { Icon } from '../../components/Icon'
-import { tint } from '../../components/MonthCalendar'
+import { CountryFlag } from '../../components/CountryFlag'
 
 // side trips in date order, the undated ones last
 const order = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
@@ -22,9 +22,9 @@ export function TripTree({ trips, current, onPick }: { trips: Trip[]; current: s
     const expanded = open.has(t.id)
     return (
       <li key={t.id}>
-        <div className="tree-row" style={{ paddingLeft: depth * 22, ...tint(t.color) }}>
+        <div className="tree-row" style={{ paddingLeft: Math.min(depth, 3) * 16 }}>
           <Link to={`/trip/${t.id}`} className="tree-link" aria-current={t.id === current ? 'page' : undefined} onClick={onPick}>
-            <span className="dot" />
+            <CountryFlag code={t.base?.country} />
             <span className="tree-name">{t.name}</span>
             <span className="muted num">{t.start_date ? fmtRange(t.start_date, t.end_date) : 'no dates'}</span>
           </Link>

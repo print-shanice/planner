@@ -99,4 +99,15 @@ export type Member = {
   color: number
 }
 
-export type TableName = 'trips' | 'stops' | 'costs' | 'links' | 'packing' | 'files' | 'members'
+export type Review = {
+  id: string
+  stop_id: string
+  author_id: string
+  rating: number | null
+  return_choice: 'yes' | 'maybe' | 'no' | null
+  outcome: 'planned' | 'done' | 'skipped'
+  comments: string
+  created_at?: string
+}
+
+export type TableName = 'trips' | 'stops' | 'costs' | 'links' | 'packing' | 'files' | 'members' | 'reviews'

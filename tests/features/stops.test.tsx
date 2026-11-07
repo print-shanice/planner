@@ -17,6 +17,7 @@ vi.mock('../../src/lib/queries', async () => {
   return {
     keys: { trips: ['trips'], stops: ['stops'], costs: ['costs'], files: ['files'] },
     useTrips: read('trips'), useStops: read('stops'), useCosts: read('costs'), useFiles: read('files'), useMembers: read('members'),
+    useReviews: () => ({ data: [] }),
     useRates: () => ({ data: { date: '2026-11-04', rates: { SGD: 1.5, GBP: 0.85, USD: 1.08, CHF: 0.94, JPY: 165 } } }),
     useSave: (t: string) => ({ mutateAsync: (r: any) => db.save(t, r), mutate: (r: any) => db.save(t, r), isPending: false }),
     useRemove: (t: string) => ({ mutateAsync: (id: string) => db.remove(t, id), isPending: false }),

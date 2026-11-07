@@ -71,9 +71,9 @@ it('countdown', () => {
   expect(countdown(trip({ start_date: null }), '2027-03-01')).toEqual({ kind: 'undated', days: 0 })
 })
 
-it('dayColor cycles through the six group colours', () => {
+it('dayColor uses one consistent route colour', () => {
   expect(dayColor(0)).toBe('var(--g0)')
-  expect(dayColor(7)).toBe('var(--g1)')
+  expect(dayColor(7)).toBe('var(--g0)')
 })
 
 it('fmtRange is short and lowercase', async () => {

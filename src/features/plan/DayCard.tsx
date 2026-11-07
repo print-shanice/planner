@@ -1,16 +1,19 @@
 import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import type { DayEntry } from '../../lib/dates'
-import { dayColor, fmtDay } from '../../lib/dates'
+import { fmtDay } from '../../lib/dates'
 import type { Place, Stop, Trip } from '../../lib/types'
 import { hasPoint } from '../../lib/walk'
 import { positionsAfterMove } from '../../lib/order'
 import { useSave } from '../../lib/queries'
+import { CountryFlag } from '../../components/CountryFlag'
+import { Link } from 'react-router-dom'
 import { StopRow } from './StopRow'
 import { WalkLeg } from './WalkLeg'
 import { AddPlaceField } from './AddPlaceField'
 
 type Props = {
   trip: Trip
+  trips?: Trip[]
   date: string
   entries: DayEntry[]
   colorIndex: number
@@ -30,7 +33,7 @@ export function nearFor(entries: DayEntry[], trip: Trip) {
   return hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null
 }
 
-export function DayCard({ trip, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, onAddPlace }: Props) {
+export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, onAddPlace }: Props) {
   const save = useSave('stops')
   const box = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
@@ -69,10 +72,18 @@ export function DayCard({ trip, date, entries, colorIndex, dayNumber, clash, can
   const items: JSX.Element[] = []
   let n = 0
   let prev: Stop | null = null
+  let flexible = false
   for (const e of entries) {
     // side trips never reach a day card: the plan folds them into their own row
     if (!e.stop) continue
     const s = e.stop
+    if (e.kind === 'stop' && !s.time && !flexible) {
+      items.push(<h4 className="agenda-anytime" key="anytime">any time</h4>)
+      flexible = true
+      prev = null
+    }
+    const owner = trips?.find(t => t.id === s.trip_id)
+    if (owner && owner.id !== trip.id) items.push(<Link className="agenda-owner" key={`owner-${s.id}-${e.kind}`} to={`/trip/${owner.id}`}><CountryFlag code={owner.base?.country} />{owner.name} · open trip</Link>)
     const a = prev ? placeOut(prev) : null, b = placeIn(s)
     if (prev && hasPoint(a) && hasPoint(b)) items.push(<WalkLeg key={`w-${prev.id}-${s.id}-${e.kind}`} from={a} to={b} />)
     const isNum = e.kind === 'stop'
@@ -80,7 +91,7 @@ export function DayCard({ trip, date, entries, colorIndex, dayNumber, clash, can
     items.push(
       <StopRow key={`${s.id}-${e.kind}`} stop={s} variant={e.kind as 'stop' | 'staying' | 'checkout'} n={isNum ? n : undefined}
         colorIndex={colorIndex} clash={clash.has(s.id)} onOpen={onOpen}
-        onGrab={canEdit && isNum && numbered.length > 1 ? (ev) => grab(ev, s) : undefined}
+        onGrab={canEdit && isNum && !s.time && numbered.every(x => x.trip_id === trip.id && !x.time) && numbered.length > 1 ? (ev) => grab(ev, s) : undefined}
         dragging={drag?.id === s.id && e.kind === 'stop'} offset={drag?.id === s.id && e.kind === 'stop' ? drag.dy : 0} />,
     )
     prev = s
@@ -89,7 +100,7 @@ export function DayCard({ trip, date, entries, colorIndex, dayNumber, clash, can
   return (
     <section className="day" id={`day-${date}`} data-testid={`day-${date}`} ref={box}>
       <header className="day-head">
-        <span className="day-bar" style={{ background: dayColor(colorIndex) }} />
+        <span className="day-bar" style={{ background: 'var(--ink)' }} />
         <h3 className="head">{fmtDay(date, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</h3>
         {dayNumber != null && <span className="muted num">day {dayNumber}</span>}
       </header>

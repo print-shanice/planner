@@ -10,7 +10,7 @@ import { Sheet } from '../../components/Sheet'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
-import { tint } from '../../components/MonthCalendar'
+import { CountryFlag } from '../../components/CountryFlag'
 
 export function TripHeader({ trip }: { trip: Trip }) {
   const trips = useTrips().data ?? []
@@ -31,7 +31,7 @@ export function TripHeader({ trip }: { trip: Trip }) {
       <nav aria-label="breadcrumb" className="crumbs">
         <Link to="/" aria-label="all trips" className="icon-btn crumb-home"><Icon name="back" /></Link>
         {path.map((p) => (
-          <span key={p.id} className="crumb" style={tint(p.color)}><Link to={`/trip/${p.id}`}><span className="dot" />{p.name}</Link></span>
+          <span key={p.id} className="crumb"><Link to={`/trip/${p.id}`}><CountryFlag code={p.base?.country} />{p.name}</Link></span>
         ))}
       </nav>
       <div className="trip-title-row">
@@ -39,7 +39,7 @@ export function TripHeader({ trip }: { trip: Trip }) {
           <h1 className="head">
             {family ? (
               <button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
-                {trip.name}<Icon name="chevron" size={22} />
+                <CountryFlag code={trip.base?.country} />{trip.name}<Icon name="chevron" size={22} />
               </button>
             ) : trip.name}
           </h1>

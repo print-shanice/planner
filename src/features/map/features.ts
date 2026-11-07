@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson'
 import type { Place, Stop, Trip } from '../../lib/types'
-import { dayColor, daysBetween, groupByDay } from '../../lib/dates'
+import { dayColor } from '../../lib/dates'
+import { agendaForDay } from '../../lib/agenda'
 import { descendants } from '../../lib/countries'
 import { hasPoint } from '../../lib/walk'
 
@@ -19,34 +20,31 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
   const saved: Feature<Point, SavedProps>[] = []
   const showDay = (d: string) => filter === 'all' || filter === d
 
-  for (const t of trips.filter((x) => ids.has(x.id))) {
-    const mine = stops.filter((s) => s.trip_id === t.id)
-    const kids = trips.filter((x) => x.parent_id === t.id)
-    const { days, undated } = groupByDay(t, mine, kids)
-    for (const { date, entries } of days) {
-      const color = dayColor(trip.start_date ? daysBetween(trip.start_date, date) : 0)
-      let n = 0
-      const path: [number, number][] = []
-      for (const e of entries) {
-        if (e.kind !== 'stop' || !e.stop) continue
-        n += 1
-        const s = e.stop
-        if (s.kind === 'journey') {
-          if (showDay(date) && hasPoint(s.origin) && hasPoint(s.destination)) {
-            lines.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [xy(s.origin), xy(s.destination)] }, properties: { kind: 'journey', color, mode: s.mode ?? 'train', day: date } })
-          }
-          continue
-        }
-        if (!hasPoint(s.place) || !showDay(date)) continue
-        pins.push({ type: 'Feature', geometry: { type: 'Point', coordinates: xy(s.place) }, properties: { id: s.id, number: n, color, day: date } })
-        path.push(xy(s.place))
+  const mine = stops.filter(s => ids.has(s.trip_id))
+  const dates = [...new Set(mine.flatMap(s => s.day ? [s.day] : []))].sort()
+  for (const date of dates) {
+    if (!showDay(date)) continue
+    const entries = agendaForDay(trip, trips, stops, date)
+    const color = dayColor(0)
+    let n = 0
+    const path: [number, number][] = []
+    for (const e of entries) {
+      if (e.kind !== 'stop' || !e.stop) continue
+      n += 1
+      const s = e.stop
+      if (s.kind === 'journey') {
+        if (hasPoint(s.origin) && hasPoint(s.destination)) lines.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [xy(s.origin), xy(s.destination)] }, properties: { kind: 'journey', color, mode: s.mode ?? 'train', day: date } })
+        continue
       }
-      if (path.length > 1) lines.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: path }, properties: { kind: 'day', color, day: date } })
+      if (!hasPoint(s.place)) continue
+      pins.push({ type: 'Feature', geometry: { type: 'Point', coordinates: xy(s.place) }, properties: { id: s.id, number: n, color, day: date } })
+      path.push(xy(s.place))
     }
-    if (filter === 'all' || filter === 'saved') {
-      for (const s of undated) {
-        if (s.kind !== 'journey' && hasPoint(s.place)) saved.push({ type: 'Feature', geometry: { type: 'Point', coordinates: xy(s.place) }, properties: { id: s.id, saved: s.saved } })
-      }
+    if (path.length > 1) lines.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: path }, properties: { kind: 'day', color, day: date } })
+  }
+  if (filter === 'all' || filter === 'saved') {
+    for (const s of mine.filter(s => filter === 'saved' ? s.saved : !s.day)) {
+      if (s.kind !== 'journey' && hasPoint(s.place)) saved.push({ type: 'Feature', geometry: { type: 'Point', coordinates: xy(s.place) }, properties: { id: s.id, saved: s.saved } })
     }
   }
   if (filter === 'saved') return { pins: fc<Point, PinProps>([]), lines: fc<LineString, LineProps>([]), saved: fc(saved) }

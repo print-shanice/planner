@@ -1,3 +1,5 @@
+import { useSearchParams } from 'react-router-dom'
+import { validDay } from '../../lib/agenda'
 import { useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
@@ -18,7 +20,10 @@ export function MapTab({ trip }: { trip: Trip }) {
   const trips = tq.data ?? []
   const stops = sq.data ?? []
   const load = loadState(tq, sq)
-  const [filter, setFilter] = useState<Filter>('all')
+  const [params, setParams] = useSearchParams()
+  const selected = params.get('day')
+  const filter: Filter = params.get('map') === 'saved' ? 'saved' : validDay(selected) ? selected : 'all'
+  const setFilter = (value: Filter) => setParams(p => { const n = new URLSearchParams(p); n.delete('map'); if (value === 'saved') n.set('map', 'saved'); else if (value === 'all') n.delete('day'); else n.set('day', value); return n })
   const [card, setCard] = useState<Card | null>(null)
   const center = useRef<{ lat: number; lng: number } | null>(null)
   const seq = useRef(0)
