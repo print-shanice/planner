@@ -27,6 +27,8 @@ type Props = {
   fitKey: string
   fallback: Place | null
   focus: Place | null
+  // the stop lit in the plan beside the map
+  highlight?: string | null
   onPick: (id: string) => void
   onEmpty: (p: { lng: number; lat: number }) => void
   onCenter?: (p: { lng: number; lat: number }) => void
@@ -65,7 +67,7 @@ function boundsOf(d: Data): LngLatBoundsLike | null {
   return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]]
 }
 
-export function TripMap({ data, fitKey, fallback, focus, onPick, onEmpty, onCenter }: Props) {
+export function TripMap({ data, fitKey, fallback, focus, highlight, onPick, onEmpty, onCenter }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const ready = useRef(false)
@@ -102,6 +104,8 @@ export function TripMap({ data, fitKey, fallback, focus, onPick, onEmpty, onCent
       m.addLayer({ id: 'journeys', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['!=', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2.5 } })
       m.addLayer({ id: 'flights', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['==', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2, 'line-dasharray': [2, 2] } })
       m.addLayer({ id: 'saved', type: 'symbol', source: 'saved', layout: { 'icon-image': 'bookmark', 'icon-allow-overlap': true, 'icon-anchor': 'bottom' } })
+      // the stop lit in the plan beside: a soft ring in its colour
+      m.addLayer({ id: 'halo', type: 'circle', source: 'pins', filter: ['==', ['get', 'id'], ''], paint: { 'circle-radius': 20, 'circle-color': ['get', 'color'], 'circle-opacity': 0.25 } })
       m.addLayer({ id: 'pins', type: 'circle', source: 'pins', paint: { 'circle-radius': 12, 'circle-color': ['get', 'color'], 'circle-stroke-color': card, 'circle-stroke-width': 2 } })
       // numbers sit on their own source: if the font can't load, the pins still show
       m.addLayer({ id: 'pin-numbers', type: 'symbol', source: 'pin-labels', layout: { 'text-field': ['to-string', ['get', 'number']], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true }, paint: { 'text-color': card } })
@@ -150,6 +154,12 @@ export function TripMap({ data, fitKey, fallback, focus, onPick, onEmpty, onCent
     src?.setData({ type: 'FeatureCollection', features: focus && focus.lat != null && focus.lng != null ? [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [focus.lng, focus.lat] } }] : [] })
     if (focus && focus.lat != null && focus.lng != null) m.easeTo({ center: [focus.lng, focus.lat], zoom: Math.max(m.getZoom(), 13), duration: 500 })
   }, [focus])
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current || !m.getLayer('halo')) return
+    m.setFilter('halo', ['==', ['get', 'id'], highlight ?? ''])
+  }, [highlight])
 
   return <div ref={box} className="trip-map-canvas" />
 }

@@ -8,6 +8,7 @@ import { useSave } from '../../lib/queries'
 import { CountryFlag } from '../../components/CountryFlag'
 import { Link } from 'react-router-dom'
 import { StopRow, type RowVariant } from './StopRow'
+import { useHighlight } from '../trip/highlight'
 import { WalkLeg } from './WalkLeg'
 
 type Props = {
@@ -30,6 +31,7 @@ const placeOut = (s: Stop): Place | null => (s.kind === 'journey' ? s.destinatio
 
 export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, bare }: Props) {
   const save = useSave('stops')
+  const lit = useHighlight()
   const box = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
 
@@ -81,7 +83,7 @@ export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, cla
     if (isNum) n += 1
     items.push(
       <StopRow key={`${s.id}-${e.kind}`} stop={s} variant={e.kind as RowVariant} n={isNum ? n : undefined}
-        colorIndex={colorIndex} clash={clash.has(s.id)} onOpen={onOpen} any={timed && isNum && !s.time}
+        colorIndex={colorIndex} clash={clash.has(s.id)} onOpen={onOpen} any={timed && isNum && !s.time} onLight={lit.set}
         onGrab={canEdit && isNum && !s.time && numbered.every(x => x.trip_id === trip.id && !x.time) && numbered.length > 1 ? (ev) => grab(ev, s) : undefined}
         dragging={drag?.id === s.id && isNum} offset={drag?.id === s.id && isNum ? drag.dy : 0} />,
     )

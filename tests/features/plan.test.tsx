@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -360,4 +360,24 @@ describe('a calm day', () => {
     showAt('/trip/lap?day=2027-02-08')
     expect(within(day('2027-02-08')).getByTestId('stop-num').style.background).toBe('var(--g3)')
   })
+})
+
+it('hovering or focusing a stop lights it for the map, and leaving clears it', async () => {
+  const { HighlightProvider, useHighlight } = await import('../../src/features/trip/highlight')
+  const { StopSheetProvider } = await import('../../src/features/stops/StopSheet')
+  function Lit() { return <output data-testid="lit">{useHighlight().id ?? ''}</output> }
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ id: 's1', trip_id: t.id, title: 'museum', day: '2027-02-08' })]
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/trip/lap?day=2027-02-08']}><StopSheetProvider><HighlightProvider><Routes><Route path="/trip/:id" element={<><Routed /><Lit /></>} /></Routes></HighlightProvider></StopSheetProvider></MemoryRouter>
+    </QueryClientProvider>,
+  )
+  const row = day('2027-02-08').querySelector('[data-stop="s1"]') as HTMLElement
+  await userEvent.hover(row)
+  expect(screen.getByTestId('lit')).toHaveTextContent('s1')
+  await userEvent.unhover(row)
+  expect(screen.getByTestId('lit')).toHaveTextContent('')
+  act(() => { (row.querySelector('.stop-main') as HTMLElement).focus() })
+  expect(screen.getByTestId('lit')).toHaveTextContent('s1')
 })

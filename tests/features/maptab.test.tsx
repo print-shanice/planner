@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
-const db = vi.hoisted(() => ({ trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown> }))
+const db = vi.hoisted(() => ({ trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useStops: () => db.stopsQ ?? ({ data: db.stops }),
@@ -12,8 +12,8 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse }))
 vi.mock('../../src/features/map/TripMap', () => ({
-  TripMap: ({ onPick, onEmpty }: { onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void }) => (
-    <div>
+  TripMap: ({ onPick, onEmpty, highlight }: { onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null }) => (
+    <div data-highlight={highlight ?? ''}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
     </div>
@@ -127,4 +127,28 @@ describe('the places sheet on a phone', () => {
 it('a link with a pin opens that place\'s card', () => {
   show('/?day=2027-02-08&pin=s1', true)
   expect(screen.getByRole('region', { name: 'arktikum' })).toBeInTheDocument()
+})
+
+describe('on a laptop, plan and map light each other up', () => {
+  it('the stop hovered in the plan is the pin lit on the map', async () => {
+    const { HighlightProvider, useHighlight } = await import('../../src/features/trip/highlight')
+    function Hover() { const h = useHighlight(); return <button onClick={() => h.set('s1')}>hover arktikum</button> }
+    render(<MemoryRouter><HighlightProvider><Hover /><MapTab trip={lap} /></HighlightProvider></MemoryRouter>)
+    expect(document.querySelector('[data-highlight]')).toHaveAttribute('data-highlight', '')
+    await userEvent.click(screen.getByRole('button', { name: 'hover arktikum' }))
+    expect(document.querySelector('[data-highlight]')).toHaveAttribute('data-highlight', 's1')
+  })
+
+  it('clicking a pin finds its stop in the plan', async () => {
+    const row = document.createElement('div')
+    row.dataset.stop = 's1'
+    row.innerHTML = '<button class="stop-main">arktikum row</button>'
+    document.body.appendChild(row)
+    const scroll = vi.fn(); (row as any).scrollIntoView = scroll
+    show()
+    await userEvent.click(screen.getByRole('button', { name: 'tap pin' }))
+    expect(scroll).toHaveBeenCalled()
+    expect(document.activeElement).toBe(row.querySelector('button'))
+    row.remove()
+  })
 })

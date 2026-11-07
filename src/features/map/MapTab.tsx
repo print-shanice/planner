@@ -12,6 +12,7 @@ import { busyDays, mapFeatures, type Filter } from './features'
 import { TripMap } from './TripMap'
 import { PlaceCard } from './PlaceCard'
 import { PlacesSheet, type PlaceItem } from './PlacesSheet'
+import { useHighlight } from '../trip/highlight'
 
 type Card = { place: Place; stopId?: string; seq: number }
 
@@ -31,6 +32,7 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
     return s ? { place: s.place ?? s.destination ?? s.origin ?? { name: s.title, lat: null, lng: null }, stopId: s.id, seq: 0 } : null
   })
   const [listOpen, setListOpen] = useState(true)
+  const lit = useHighlight()
   const center = useRef<{ lat: number; lng: number } | null>(null)
   const seq = useRef(0)
 
@@ -45,6 +47,12 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
   const listTitle = filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} saved` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
 
   function pick(id: string) {
+    // on a laptop the plan is beside the map: bring the pin's stop into view
+    if (!phone) {
+      const row = document.querySelector<HTMLElement>(`[data-stop="${CSS.escape(id)}"]`)
+      row?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
+      row?.querySelector<HTMLElement>('.stop-main')?.focus({ preventScroll: true })
+    }
     const s = stops.find((x) => x.id === id)
     if (s) setCard({ place: s.place ?? s.destination ?? s.origin ?? { name: s.title, lat: null, lng: null }, stopId: s.id, seq: ++seq.current })
   }
@@ -59,7 +67,7 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
 
   return (
     <div className="map-tab">
-      <TripMap data={data} fitKey={`${trip.id}|${filter}`} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
+      <TripMap data={data} highlight={lit.id} fitKey={`${trip.id}|${filter}`} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
         onPick={pick} onEmpty={empty} onCenter={(c) => { center.current = c }} />
       <div className="map-top">
         <div className="map-search">

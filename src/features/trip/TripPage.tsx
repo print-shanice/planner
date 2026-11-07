@@ -20,6 +20,7 @@ import { PHONE_TABS, readTab, SAVED_VIEWS, WIDE_TABS, type SavedView, type Tab }
 import { tint } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
+import { HighlightProvider } from './highlight'
 import { CostForm } from '../money/CostForm'
 import { LinkForm } from '../saved/LinkForm'
 import { Icon } from '../../components/Icon'
@@ -64,7 +65,7 @@ export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | n
 }
 
 export function TripPage() {
-  return <StopSheetProvider><TripScreen /></StopSheetProvider>
+  return <StopSheetProvider><HighlightProvider><TripScreen /></HighlightProvider></StopSheetProvider>
 }
 
 function TripScreen() {

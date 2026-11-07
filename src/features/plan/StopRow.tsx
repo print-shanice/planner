@@ -60,11 +60,13 @@ type Props = {
   offset?: number
   // an untimed stop on a day with times says "any" in the time column
   any?: boolean
+  // hovering or focusing the row lights its pin on the laptop map
+  onLight?: (id: string | null) => void
 }
 
 const STRIP: Record<Exclude<RowVariant, 'stop'>, string> = { checkin: 'check in', staying: 'staying at', checkout: 'check out' }
 
-export function StopRow({ stop, variant, n, colorIndex, clash, onOpen, onGrab, dragging, offset = 0, any }: Props) {
+export function StopRow({ stop, variant, n, colorIndex, clash, onOpen, onGrab, dragging, offset = 0, any, onLight }: Props) {
   if (variant !== 'stop') {
     const text = variant === 'staying' ? `staying at ${stop.title}` : `${STRIP[variant]} · ${stop.title}`
     return (
@@ -81,7 +83,8 @@ export function StopRow({ stop, variant, n, colorIndex, clash, onOpen, onGrab, d
   const journey = stop.kind === 'journey'
   return (
     <>
-      <div className={`stop-row${dragging ? ' dragging' : ''}`} style={offset ? { transform: `translateY(${offset}px)` } : undefined} data-stop={stop.id}>
+      <div className={`stop-row${dragging ? ' dragging' : ''}`} style={offset ? { transform: `translateY(${offset}px)` } : undefined} data-stop={stop.id}
+        onMouseEnter={() => onLight?.(stop.id)} onMouseLeave={() => onLight?.(null)} onFocus={() => onLight?.(stop.id)} onBlur={() => onLight?.(null)}>
         <span className={`agenda-time num${stop.time ? '' : ' any'}`}>{stop.time ?? (any ? 'any' : '')}</span>
         {n != null ? <span className="num-badge num" data-testid="stop-num" style={{ background: dayColor(colorIndex) }}>{n}</span> : <span className="num-badge quiet" />}
         <button type="button" className="stop-main" onClick={() => onOpen?.(stop)} disabled={!onOpen}>
