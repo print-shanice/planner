@@ -124,26 +124,29 @@
 .clash-row strong { font-weight: 700; }
 .clash-row .notice-text span { font-weight: 500; }
 
-/* A trip overview and one focused day share the same date selection. */
-.agenda-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-.agenda-date { display: grid; gap: 5px; color: var(--ink-2); font-size: 12px; }
-.agenda-date input { min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--card); color: var(--ink); font: inherit; }
-.agenda-week { display: flex; gap: 4px; margin: 16px 0 24px; }
-.agenda-week button { flex: 1; min-height: 76px; display: grid; place-items: center; gap: 3px; padding: 8px 4px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); }
-.agenda-week button strong { font-size: 21px; color: var(--ink); }
-.agenda-week button[aria-current] { background: var(--ink); color: var(--card); }
-.agenda-week button[aria-current] strong { color: inherit; }
-.agenda-week button span { font-size: 12px; }
-.agenda-summary { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; min-height: 60px; padding: 16px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; }
-.agenda-heading { margin: 28px 0 8px; font-size: 22px; }
-.agenda-scope { margin-bottom: 14px; font-size: 13px; }
+/* one day on its own page: a strip of nearby days, then the date, then the day itself */
+.day-strip { display: flex; gap: 4px; margin: 4px 0 0; }
+.day-strip button {
+  flex: 1; min-width: 0; min-height: 60px; display: grid; place-items: center; gap: 0; padding: 6px 0;
+  border: 0; border-radius: 16px; background: transparent; color: var(--ink-2); font-size: 12px;
+}
+.day-strip button strong { font-family: var(--f-head); font-size: 20px; color: var(--ink); }
+.day-strip button:hover { background: var(--soft); }
+.day-strip button[aria-current] { background: var(--ink); color: var(--card); }
+.day-strip button[aria-current] strong { color: inherit; }
+.day-title { display: grid; gap: 2px; padding: 8px 0 0; }
+.day-title h1 { font-size: 30px; font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; }
+.day-title .muted { font-size: 14px; }
+/* the day without its card: rows straight on the page */
+.day.bare { border: 0; border-radius: 0; background: none; }
+.day.bare .day-body { padding: 0; }
 .agenda-owner { display: flex; gap: 8px; padding: 14px 0 0; color: var(--ink-2); font-size: 12px; }
 .agenda-anytime { padding: 20px 0 8px; font-weight: 500; color: var(--ink-2); }
 .agenda-marker { display: grid; justify-items: center; gap: 8px; flex-shrink: 0; }
 .agenda-time { font-size: 13px; }
-.fold-action { font-size: 12px; white-space: nowrap; color: var(--ink-2); }
 .reviews { border-top: 1px solid var(--line); padding-top: 24px; }
 .visit-review { padding: 16px; border-radius: 12px; background: var(--soft); }
 .visit-review p { margin-top: 8px; }
 .review-form { padding-top: 12px; }
-@media (max-width: 480px) { .agenda-summary { font-size: 14px; } .fold { gap: 8px; } }
+@media (max-width: 480px) { .fold { gap: 8px; } }
+.fold-action { font-size: 12px; white-space: nowrap; color: var(--ink-2); }

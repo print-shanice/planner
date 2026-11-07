@@ -65,7 +65,6 @@ function showAt(path: string) {
 }
 const loc = () => screen.getByTestId('loc').textContent
 const cal = () => within(screen.getByTestId('calendar'))
-// on a phone the calendar starts folded to one week
 
 
 beforeEach(() => {
@@ -73,13 +72,42 @@ beforeEach(() => {
   db.save.mockClear(); db.walk.mockClear(); db.search.mockReset()
 })
 
-it('overview shows subtrips with explicit open trip links and no day cards', () => {
+it('overview is the calendar: dated side trips are flagged bars, undated ones and day lists stay off it', () => {
   const t = lap()
-  db.trips = [t, trip({ id: 'child', parent_id: t.id, name: 'day trip' })]
-  db.stops = []
+  db.trips = [t,
+    trip({ id: 'child', parent_id: t.id, name: 'day trip', start_date: '2027-02-08', end_date: '2027-02-09', base: place({ country: 'FR' }) }),
+    trip({ id: 'later', parent_id: t.id, name: 'someday', start_date: null, end_date: null })]
+  db.stops = [stop({ trip_id: t.id, title: 'loose idea', day: null })]
   show(t)
   expect(screen.queryByTestId(/^day-/)).toBeNull()
-  expect(screen.getByRole('link', { name: /day trip.*open trip/ })).toHaveAttribute('href', '/trip/child')
+  expect(screen.queryByTestId('fold')).toBeNull()
+  expect(screen.queryByText('someday')).toBeNull()
+  expect(screen.queryByText('loose idea')).toBeNull()
+  expect(screen.queryByText('your days')).toBeNull()
+  expect(screen.queryByLabelText('jump to date')).toBeNull()
+  const bar = cal().getByRole('link', { name: /day trip/ })
+  expect(bar).toHaveAttribute('href', '/trip/child')
+  expect(bar.textContent).toContain('🇫🇷')
+})
+
+it('the trip calendar is a whole month on a phone, without city bars, and marks days with plans', () => {
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, title: 'museum', day: '2027-02-09' }),
+    stop({ trip_id: t.id, kind: 'stay', title: 'cabin', day: '2027-02-07', end_date: '2027-02-11', place: place({ city: 'rovaniemi' }) })]
+  show(t)
+  expect(screen.queryByRole('button', { name: 'whole month' })).toBeNull()
+  expect(cal().getByText('27')).toBeInTheDocument()
+  expect(screen.queryByTestId('cal-city')).toBeNull()
+  expect(cal().getByRole('button', { name: /tue 9 feb/ })).toHaveAttribute('data-planned', 'true')
+  expect(cal().getByRole('button', { name: /wed 10 feb/ })).not.toHaveAttribute('data-planned')
+})
+
+it('a day opens as its own page with the date, its day number and nothing from the overview', () => {
+  const t = lap(); db.trips = [t]; db.stops = [stop({ trip_id: t.id, title: 'museum', day: '2027-02-08' })]
+  showAt('/trip/lap?day=2027-02-08')
+  expect(screen.getByRole('heading', { name: 'monday 8 february' })).toBeInTheDocument()
+  expect(screen.getByText(/day 2 of 5/)).toBeInTheDocument()
+  expect(screen.queryByTestId('calendar')).toBeNull()
 })
 
 it('a date opens a single agenda without changing the parent, including nested plans', async () => {
@@ -124,9 +152,7 @@ it('date navigation changes only the selected day and returns to overview', asyn
   showAt('/trip/lap?day=2027-02-08')
   await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /tue 9 feb/ }))
   expect(loc()).toBe('/trip/lap?day=2027-02-09')
-  await userEvent.click(screen.getByRole('button', { name: 'trip overview' }))
-  expect(screen.getByTestId('calendar')).toBeInTheDocument()
-  expect(screen.queryByTestId(/^day-/)).toBeNull()
+  expect(screen.getAllByTestId(/^day-/)).toHaveLength(1)
 })
 
 it('invalid and out-of-range dates show the overview safely', () => {
@@ -174,7 +200,7 @@ it('existing plans outside changed trip dates remain accessible', async () => {
   const t = lap(); db.trips = [t]
   db.stops = [stop({ trip_id: t.id, title: 'earlier arrival', day: '2027-02-01' })]
   showAt('/trip/lap')
-  await userEvent.click(screen.getByRole('button', { name: /mon,? 1 feb.*open day/ }))
+  await userEvent.click(cal().getByRole('button', { name: /mon 1 feb/ }))
   expect(screen.getByText('earlier arrival')).toBeInTheDocument()
 })
 

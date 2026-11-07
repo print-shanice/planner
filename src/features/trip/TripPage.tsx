@@ -16,7 +16,9 @@ import { MoneyTab } from '../money/MoneyTab'
 import { SavedTab } from '../saved/SavedTab'
 import { PackingTab } from '../packing/PackingTab'
 import { TripHeader } from './TripHeader'
-import { PHONE_TABS, TripTabs, WIDE_TABS, type Tab } from './TripTabs'
+import { PHONE_TABS, WIDE_TABS, type Tab } from './tabs'
+import { TripSummary } from './TripSummary'
+import { tint } from '../../components/MonthCalendar'
 import { AddMenu, type AddKind } from './AddMenu'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { CostForm } from '../money/CostForm'
@@ -68,7 +70,7 @@ export function TripPage() {
 
 function TripScreen() {
   const { id } = useParams()
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const tq = useTrips()
   const trips = tq.data
   const load = loadState(tq)
@@ -99,7 +101,8 @@ function TripScreen() {
   const asked = (params.get('tab') as Tab) || 'plan'
   const tabs = wide ? WIDE_TABS : PHONE_TABS
   const tab: Tab = tabs.includes(asked) ? asked : 'plan'
-  const setTab = (t: Tab) => setParams(p => { const n = new URLSearchParams(p); if (t === 'plan') n.delete('tab'); else n.set('tab', t); return n }, { replace: true })
+  const day = params.get('day')
+  const inside = tab !== 'plan' || validDay(day)
 
   const add = (
     <button type="button" className={wide ? 'icon-btn filled' : 'fab'} aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
@@ -108,21 +111,18 @@ function TripScreen() {
   )
 
   return (
-    <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`}>
+    <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`} style={tint(trip.color)}>
       <section className="trip-main">
-        <TripHeader key={trip.id} trip={trip} />
-        {wide && <div className="tabs-row"><TripTabs tabs={tabs} value={tab} onChange={setTab} variant="top" />{add}</div>}
-        <div id="tab-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="trip-panel">
+        <TripHeader key={trip.id} trip={trip} inside={inside} />
+        {!inside && <div className="tiles-row"><TripSummary trip={trip} sections={tabs.filter((t): t is Exclude<Tab, 'plan'> => t !== 'plan')} />{wide && add}</div>}
+        {tab !== 'plan' && <h1 className="head section-title">{tab}</h1>}
+        <div className="trip-panel">
           <Panel key={trip.id} tab={tab} trip={trip} />
         </div>
+        {wide && inside && <div className="wide-add">{add}</div>}
       </section>
       {wide && <aside className="trip-map"><Suspense fallback={null}><MapTab trip={trip} /></Suspense></aside>}
-      {!wide && (
-        <>
-          {tab !== 'map' && add}
-          <TripTabs tabs={tabs} value={tab} onChange={setTab} variant="bottom" />
-        </>
-      )}
+      {!wide && tab !== 'map' && add}
       <AddMenu open={menu} onClose={() => setMenu(false)} onPick={(k) => { setMenu(false); setKind(k) }} />
       <AddForms kind={kind} trip={trip} onClose={() => setKind(null)} />
     </div>

@@ -22,6 +22,8 @@ type Props = {
   canEdit: boolean
   onOpen?: (s: Stop) => void
   onAddPlace: (p: Place, date: string | null) => void
+  // on its own page the day has its heading above, so the card drops its own
+  bare?: boolean
 }
 
 // where you are when this row starts / ends (a journey moves you)
@@ -33,7 +35,7 @@ export function nearFor(entries: DayEntry[], trip: Trip) {
   return hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null
 }
 
-export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, onAddPlace }: Props) {
+export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, onAddPlace, bare }: Props) {
   const save = useSave('stops')
   const box = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
@@ -98,12 +100,12 @@ export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, cla
   }
 
   return (
-    <section className="day" id={`day-${date}`} data-testid={`day-${date}`} ref={box}>
-      <header className="day-head">
+    <section className={`day${bare ? ' bare' : ''}`} id={`day-${date}`} data-testid={`day-${date}`} ref={box}>
+      {!bare && <header className="day-head">
         <span className="day-bar" style={{ background: 'var(--ink)' }} />
         <h3 className="head">{fmtDay(date, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</h3>
         {dayNumber != null && <span className="muted num">day {dayNumber}</span>}
-      </header>
+      </header>}
       <div className="day-body">
         {items}
         {canEdit && <AddPlaceField near={nearFor(entries, trip)} onPick={(p) => onAddPlace(p, date)} />}

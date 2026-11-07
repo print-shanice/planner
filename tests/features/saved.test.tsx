@@ -8,6 +8,7 @@ vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useLinks: () => db.linksQ ?? ({ data: db.links }),
   useStops: () => ({ data: db.stops }),
+  useRates: () => ({ data: null }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, mutate: db.remove, isPending: false }),
 }))
@@ -43,6 +44,17 @@ it('lists this trip’s links newest first with a youtube player and a plain car
 it('saved places are listed below the links', () => {
   show()
   expect(within(screen.getByRole('region', { name: 'saved places' })).getByText('kotisaari')).toBeInTheDocument()
+})
+
+it('undated plans and undated side trips wait under "no date"', async () => {
+  db.trips = [lap, trip({ id: 'kid', parent_id: 'lap', name: 'someday sauna', start_date: null, end_date: null })]
+  db.stops = [stop({ id: 'u1', trip_id: 'lap', title: 'husky ride', day: null })]
+  show()
+  const box = within(screen.getByRole('region', { name: 'no date' }))
+  expect(box.getByText('husky ride')).toBeInTheDocument()
+  expect(box.getByRole('link', { name: /someday sauna/ })).toHaveAttribute('href', '/trip/kid')
+  await userEvent.click(box.getByRole('button', { name: 'set dates' }))
+  expect(screen.getByRole('dialog', { name: 'edit trip' })).toBeInTheDocument()
 })
 
 it('a link can move to another trip', async () => {

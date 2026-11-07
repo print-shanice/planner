@@ -69,3 +69,11 @@ button.cal-day:is(:not([data-ribbon]), [data-ribbon="on"]):hover .cal-n { backgr
 .cal-fold .icon { transition: transform .15s; }
 .cal-fold[aria-expanded="true"] .icon { transform: rotate(180deg); }
 .cal.folded .cal-head { padding-bottom: 2px; }
+
+/* inside a trip: a dot under days with plans */
+.cal-day[data-planned]::after {
+  content: ''; position: absolute; bottom: 1px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px;
+  border-radius: 50%; background: var(--ink-3);
+}
+.cal-day[data-planned][aria-pressed="true"]::after { background: var(--ink); }
+.cal-bar:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }

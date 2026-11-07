@@ -45,13 +45,27 @@ beforeEach(() => {
   ] as Trip[]
 })
 
-it('breadcrumb lists parent trips root first', () => {
+it('a side trip says what it belongs to and its back arrow goes up to that trip', () => {
   show('/trip/summer')
-  const crumbs = screen.getByRole('navigation', { name: 'breadcrumb' })
-  const links = within(crumbs).getAllByRole('link').map((a) => a.getAttribute('aria-label') ?? a.textContent)
-  expect(links).toEqual(['all trips', 'europe exchange 2027'])
+  expect(screen.getByRole('link', { name: 'back to europe exchange 2027' })).toHaveAttribute('href', '/trip/eu2027')
+  expect(screen.getByText('side trip of europe exchange 2027')).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 1, name: 'the long summer' })).toBeInTheDocument()
   expect(screen.getByText('26 jun – 13 jul · 17 nights')).toBeInTheDocument()
+})
+
+it('a top trip goes back to all trips', () => {
+  show('/trip/eu2027')
+  expect(screen.getByRole('link', { name: 'back to all trips' })).toHaveAttribute('href', '/')
+  expect(screen.queryByText(/side trip of/)).toBeNull()
+})
+
+it('a day or a section goes back to the trip overview', async () => {
+  show('/trip/summer?day=2027-06-28')
+  const back = screen.getByRole('link', { name: 'back to the long summer' })
+  expect(back).toHaveAttribute('href', '/trip/summer')
+  await userEvent.click(back)
+  expect(screen.getByTestId('loc')).toHaveTextContent(/^\/trip\/summer$/)
+  expect(screen.getByTestId('calendar')).toBeInTheDocument()
 })
 
 function family() {
@@ -115,17 +129,20 @@ it('side trip opens the trip form for a child', async () => {
   expect(screen.getByRole('dialog', { name: 'new side trip' })).toBeInTheDocument()
 })
 
-it('tab is kept in the url', async () => {
+it('the summary tiles open their section, kept in the url', async () => {
   show('/trip/summer')
-  await userEvent.click(screen.getByRole('tab', { name: 'money' }))
+  await userEvent.click(screen.getByRole('link', { name: /money/ }))
   expect(screen.getByTestId('loc')).toHaveTextContent('/trip/summer?tab=money')
-  expect(screen.getByRole('tab', { name: 'money' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('heading', { level: 1, name: 'money' })).toBeInTheDocument()
+  expect(screen.queryByTestId('calendar')).toBeNull()
 })
 
-it('there is one add control and five tabs on a phone', () => {
+it('there is one add control, summary tiles and no tab bar on a phone', () => {
   show('/trip/summer')
   expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
-  expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['plan', 'map', 'money', 'saved', 'packing'])
+  expect(screen.queryByRole('tablist')).toBeNull()
+  const tiles = within(screen.getByRole('navigation', { name: 'trip sections' })).getAllByRole('link')
+  expect(tiles.map((t) => t.querySelector('.tile-label')?.textContent)).toEqual(['map', 'money', 'saved', 'packing'])
 })
 
 it('unknown trip shows not found', () => {

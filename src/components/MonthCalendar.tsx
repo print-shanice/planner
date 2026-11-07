@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { monthWeeks, weekBars, type Span } from '../lib/calendar'
 import { fmtDay } from '../lib/dates'
 import { Icon } from './Icon'
+import { CountryFlag } from './CountryFlag'
 
 export const tint = (_color: number | null | undefined) => ({ '--c': 'var(--g0)' }) as CSSProperties
 const WEEKDAYS = ['m', 't', 'w', 't', 'f', 's', 's']
@@ -27,6 +28,10 @@ type Props = {
   // days become buttons when set; only days that pass `canPick`
   onDay?: (d: string) => void
   canPick?: (d: string) => boolean
+  // days with something planned get a dot
+  marked?: (d: string) => boolean
+  // inside a trip, side-trip bars are real links with the side trip's flag
+  linkBars?: boolean
 }
 
 function Week({ week, p }: { week: (string | null)[]; p: Props }) {
@@ -51,6 +56,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         const attrs = {
           'data-day': d, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
           'aria-current': d === p.today ? ('date' as const) : undefined,
+          'data-planned': p.marked?.(d) || undefined,
           style: { gridColumn: i + 1, ...(t ? tint(t.color) : {}) },
         }
         const n = <span className="cal-n num">{+d.slice(8)}</span>
@@ -68,11 +74,14 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
       {bars.map((b) => {
         const props = {
           className: `cal-bar${b.span.trip ? '' : ' city'}`, 'data-testid': b.span.trip ? 'cal-bar' : 'cal-city',
-          'data-starts': b.starts || undefined, 'data-ends': b.ends || undefined, title: b.span.name, 'aria-hidden': true,
+          'data-starts': b.starts || undefined, 'data-ends': b.ends || undefined, title: b.span.name,
+          ...(p.linkBars ? {} : { 'aria-hidden': true }),
           style: { gridColumn: `${b.from + 1} / ${b.to + 2}`, gridRow: b.lane + 2, ...(b.span.trip ? tint(b.span.color) : {}) },
         }
         return b.span.trip
-          ? <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} tabIndex={-1} {...props}>{b.span.name}</Link>
+          ? <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} tabIndex={p.linkBars ? undefined : -1} {...props}>
+              {p.linkBars && b.starts && <CountryFlag code={b.span.trip.base?.country} />}{p.linkBars && b.starts ? ' ' : ''}{b.span.name}
+            </Link>
           : <span key={b.span.id} {...props}>{b.span.name}</span>
       })}
     </div>

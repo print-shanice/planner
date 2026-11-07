@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
 import { useLinks, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -12,6 +13,9 @@ import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { LinkCard } from './LinkCard'
 import { ItemMenu } from './ItemMenu'
 import { SaveFailed } from '../../components/SaveFailed'
+import { Sheet } from '../../components/Sheet'
+import { CountryFlag } from '../../components/CountryFlag'
+import { TripForm } from '../home/TripForm'
 
 function PlaceItem({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[] }) {
   const save = useSave('stops')
@@ -62,6 +66,8 @@ export function SavedTab({ trip }: { trip: Trip }) {
   const tq = useTrips()
   const lq = useLinks()
   const sq = useStops()
+  const canEdit = useCanEdit()
+  const [dating, setDating] = useState<Trip | null>(null)
   const trips = tq.data ?? []
   const links = lq.data ?? []
   const stops = sq.data ?? []
@@ -70,11 +76,29 @@ export function SavedTab({ trip }: { trip: Trip }) {
   if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
   const mine = links.filter((l) => l.trip_id && ids.has(l.trip_id)).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
   const places = stops.filter((s) => s.saved && ids.has(s.trip_id))
+  // a dated trip keeps its undated plans and side trips here, off the calendar
+  const dated = tripDays(trip).length > 0
+  const loose = dated ? stops.filter((s) => s.trip_id === trip.id && !s.day && !s.saved) : []
+  const someday = dated ? trips.filter((t) => t.parent_id === trip.id && !t.start_date).sort((a, b) => a.name.localeCompare(b.name)) : []
 
-  if (!mine.length && !places.length) return <EmptyState title="nothing saved yet" />
+  if (!mine.length && !places.length && !loose.length && !someday.length) return <EmptyState title="nothing saved yet" />
   return (
     <div className="saved stack">
       <LoadState load={load} />
+      {(loose.length > 0 || someday.length > 0) && (
+        <section className="block" aria-label="no date">
+          <h3 className="head">no date</h3>
+          <ul className="list">
+            {someday.map((t) => (
+              <li key={t.id} className="saved-place">
+                <RouterLink to={`/trip/${t.id}`} className="saved-name nodate-name"><CountryFlag code={t.base?.country} />{t.name}</RouterLink>
+                <button type="button" className="btn ghost small" disabled={!canEdit} onClick={() => setDating(t)}>set dates</button>
+              </li>
+            ))}
+            {loose.map((s) => <PlaceItem key={s.id} stop={s} trip={trip} trips={trips} />)}
+          </ul>
+        </section>
+      )}
       {mine.map((l) => <LinkCard key={l.id} link={l} trips={trips} />)}
       {places.length > 0 && (
         <section className="block" aria-label="saved places">
@@ -82,6 +106,9 @@ export function SavedTab({ trip }: { trip: Trip }) {
           <ul className="list">{places.map((s) => <PlaceItem key={s.id} stop={s} trip={trip} trips={trips} />)}</ul>
         </section>
       )}
+      <Sheet open={!!dating} title="edit trip" onClose={() => setDating(null)}>
+        {dating && <TripForm key={dating.id} trip={dating} onDone={() => setDating(null)} onDeleted={() => setDating(null)} />}
+      </Sheet>
     </div>
   )
 }

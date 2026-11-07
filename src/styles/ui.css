@@ -147,8 +147,8 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw /
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* controls that look small still take a 44px tap */
-.btn.small, .tabs-top .tab, .segmented button, .chip-pill { position: relative; }
-.btn.small::after, .tabs-top .tab::after, .segmented button::after, .chip-pill::after { content: ''; position: absolute; inset: -5px 0; }
+.btn.small, .segmented button, .chip-pill { position: relative; }
+.btn.small::after, .segmented button::after, .chip-pill::after { content: ''; position: absolute; inset: -5px 0; }
 .search-box:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
 .maplibregl-ctrl-group button { width: 44px !important; height: 44px !important; }
 

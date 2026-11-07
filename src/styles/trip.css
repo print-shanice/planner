@@ -1,15 +1,23 @@
-.trip-phone { min-height: 100dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 76px); }
+.trip-phone { min-height: 100dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
 .trip-main { width: min(720px, 100%); margin: 0 auto; }
 .trip-header { padding: calc(env(safe-area-inset-top) + 10px) 16px 8px; display: grid; gap: 6px; }
-.crumbs { display: flex; align-items: center; gap: 4px; min-height: 44px; margin-left: -10px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
-.crumb { display: inline-flex; align-items: center; gap: 4px; }
-.crumb + .crumb::before { content: '/'; color: var(--line); margin-right: 2px; }
-.crumb a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; font-weight: 600; }
-.crumb a:hover { color: var(--ink); }
-.crumb .dot { width: 8px; height: 8px; margin-right: 6px; background: var(--c); }
+/* one way back, always one level up: day or section → trip → parent trip → all trips */
+.back-link {
+  justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-left: -8px; padding: 0 12px 0 4px;
+  border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; color: var(--ink-2); max-width: 100%;
+}
+.back-link:hover { color: var(--ink); background: var(--soft); }
+.back-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-header.inside { padding-bottom: 0; }
+/* a side trip says whose it is, in its colour */
+.side-of {
+  justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 10%, var(--card)); color: var(--c); font-size: 13px; font-weight: 700;
+}
 .trip-title-row { display: flex; align-items: flex-start; gap: 8px; }
 .trip-title { flex: 1; min-width: 0; }
-.trip-title h1 { font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+.trip-title h1 { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; }
+.trip-title h1 [role="img"] { margin-right: 8px; }
 /* with side trips or a parent, the title opens the trip family */
 .title-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; letter-spacing: inherit; text-align: left; border-radius: 8px; }
 .title-btn .icon { flex: none; margin-top: 3px; color: var(--ink-3); transition: color .12s; }
@@ -41,34 +49,30 @@
 .trip-panel { padding: 8px 16px 24px; }
 .trip-phone.tab-is-map .trip-panel { padding: 0; }
 
-/* bottom tabs (phone) */
-.tabs-bottom {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  padding: 6px 4px calc(env(safe-area-inset-bottom) + 6px);
-  background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(12px);
-  border-top: 1px solid var(--line);
-}
-.tabs-bottom .tab {
-  display: grid; justify-items: center; gap: 2px; padding: 6px 0; border: 0; background: none;
-  font-size: 11px; font-weight: 600; color: var(--ink-2);
-}
-.tabs-bottom .tab[aria-selected="true"] { color: var(--ink); }
 .fab {
-  position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 80px); z-index: 21;
+  position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 20px); z-index: 21;
   width: 56px; height: 56px; border-radius: 50%; border: 0; display: grid; place-items: center;
   background: var(--ink); color: var(--card); box-shadow: 0 6px 20px rgba(22, 24, 29, .22);
 }
 .fab:disabled, .icon-btn:disabled { opacity: .4; cursor: default; }
 
-/* top tabs (laptop) */
-.tabs-row { display: flex; align-items: center; gap: 12px; padding: 4px 16px 8px; }
-.tabs-top { flex: 1; display: flex; gap: 4px; }
-.tabs-top .tab {
-  min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none;
-  font-weight: 600; color: var(--ink-2);
+/* the trip's sections as summary tiles (they replace the tab bar) */
+.tiles-row { display: flex; align-items: center; gap: 12px; padding: 4px 16px 6px; }
+.tiles { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.tile {
+  display: grid; gap: 2px; min-height: 64px; padding: 10px 12px; align-content: center;
+  border: 1.5px solid var(--line); border-radius: 18px; text-decoration: none; color: var(--ink);
+  transition: border-color .12s, transform .12s;
 }
-.tabs-top .tab[aria-selected="true"] { background: var(--ink); color: var(--card); }
+.tile:hover { border-color: var(--ink-3); }
+.tile:active { transform: scale(.98); }
+.tile-value { font-family: var(--f-head); font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-value .icon { display: block; }
+.tile-label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.section-title { padding: 0 16px 4px; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+.wide-add { position: sticky; bottom: 24px; display: flex; justify-content: flex-end; padding: 0 24px; pointer-events: none; }
+.wide-add > * { pointer-events: auto; }
+.wide-add .icon-btn.filled { width: 52px; height: 52px; box-shadow: 0 6px 20px rgba(22, 24, 29, .22); }
 
 .trip-wide { display: grid; grid-template-columns: minmax(420px, 1fr) minmax(0, 1.15fr); height: 100dvh; }
 .trip-wide .trip-main { width: 100%; overflow: auto; }

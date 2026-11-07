@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Place, Stop, Trip } from '../../lib/types'
-import { useSave, useStops, useTrips } from '../../lib/queries'
+import { useCosts, useRates, useSave, useStops, useTrips } from '../../lib/queries'
+import { formatMoney, totals } from '../../lib/money'
 import { useCanEdit } from '../../lib/offline'
-import { addDays, daysBetween, fmtDay, groupByDay, tripDays } from '../../lib/dates'
+import { daysBetween, fmtDay, groupByDay, tripDays } from '../../lib/dates'
 import { agendaForDay, validDay } from '../../lib/agenda'
-import { CountryFlag } from '../../components/CountryFlag'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { descendants } from '../../lib/countries'
 import { loadState } from '../../lib/load'
@@ -14,7 +14,8 @@ import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { ClashRow } from '../trip/ClashRow'
 import { FoldRow } from './FoldRow'
-import { TripCalendar, wantsCalendar } from './TripCalendar'
+import { TripCalendar } from './TripCalendar'
+import { dayLabel } from '../../components/MonthCalendar'
 import { DayCard } from './DayCard'
 import { NoDate } from './NoDate'
 import { useStopSheet } from '../stops/StopSheet'
@@ -29,7 +30,8 @@ export function PlanTab({ trip }: { trip: Trip }) {
   const load = loadState(tq, sq)
   const canEdit = useCanEdit()
   const save = useSave('stops')
-  const [page, setPage] = useState(0)
+  const costs = useCosts().data ?? []
+  const rates = useRates().data ?? null
 
   const stops = useMemo(() => allStops.filter((s) => s.trip_id === trip.id), [allStops, trip.id])
   const children = useMemo(() => trips.filter((t) => t.parent_id === trip.id), [trips, trip.id])
@@ -71,59 +73,48 @@ export function PlanTab({ trip }: { trip: Trip }) {
     if (!validDay(d) || !canOpen(d)) return
     setParams((p) => { const n = new URLSearchParams(p); n.set('day', d); n.delete('map'); return n })
   }
-  function overview() {
-    setParams(p => { const n = new URLSearchParams(p); n.delete('day'); n.delete('map'); return n })
-  }
+
+  const days = all.length ? all : plannedDays
+  const at = selected ? days.indexOf(selected) : -1
+  const dayCosts = selected ? costs.filter((c) => c.date === selected || (c.stop_id && entries.some((e) => e.kind === 'stop' && e.stop?.id === c.stop_id))) : []
+  const spend = totals(dayCosts, trip.currency, rates)
+  const sub = [
+    selected && trip.start_date && inTrip(selected) ? `day ${daysBetween(trip.start_date, selected) + 1} of ${all.length}` : '',
+    spend.paid + spend.planned > 0 ? formatMoney(spend.paid + spend.planned, trip.currency) : '',
+  ].filter(Boolean).join(' · ')
 
   return (
     <div className="plan">
       <LoadState load={load} />
       {mine.map((c) => <ClashRow key={`${c.a.id}-${c.b.id}`} clash={c} canEdit={canEdit} onAdjust={adjust} />)}
-      {trip.notes?.trim() && (
-        <details className="trip-notes">
-          <summary>notes</summary>
-          <p>{trip.notes}</p>
-        </details>
-      )}
-      <div className="agenda-toolbar">
-        {selected ? <button type="button" className="btn ghost" onClick={overview}>trip overview</button> : <h2 className="head">the journey</h2>}
-        <label className="agenda-date">jump to date<input aria-label="jump to date" type="date" value={selected ?? ''}
-          min={trip.start_date ?? undefined} max={trip.end_date ?? undefined} onChange={e => goDay(e.target.value)} /></label>
-      </div>
-      {!selected && wantsCalendar(trip) && (
-        <TripCalendar trip={trip} stops={stops} children={children} selected={selected} onDay={goDay} />
-      )}
       {selected ? <>
-        <nav className="agenda-week" aria-label="days">
-          {Array.from({ length: 7 }, (_, i) => addDays(selected, i - 3)).filter(d => canOpen(d)).map(d => (
-            <button type="button" key={d} aria-current={d === selected ? 'date' : undefined} onClick={() => goDay(d)}>
-              <span>{fmtDay(d, { weekday: 'short' })}</span><strong>{+d.slice(8)}</strong><span>{fmtDay(d, { month: 'short' })}</span>
+        <nav className="day-strip" aria-label="days">
+          {days.slice(Math.max(0, at - 3), Math.max(0, at - 3) + 7).map(d => (
+            <button type="button" key={d} aria-label={dayLabel(d)} aria-current={d === selected ? 'date' : undefined} onClick={() => goDay(d)}>
+              <span>{fmtDay(d, { weekday: 'short' })}</span><strong className="num">{+d.slice(8)}</strong>
             </button>
           ))}
         </nav>
-        <p className="muted agenda-scope"><CountryFlag code={trip.base?.country} /> {trip.name}{children.length > 0 ? ' · includes side trips' : ''}</p>
-        <DayCard trip={trip} date={selected} entries={entries} colorIndex={0} trips={trips}
-          dayNumber={trip.start_date && inTrip(selected) ? daysBetween(trip.start_date, selected) + 1 : null}
+        <header className="day-title">
+          <h1 className="head">{fmtDay(selected, { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '')}</h1>
+          {sub && <p className="muted num">{sub}</p>}
+        </header>
+        <DayCard trip={trip} date={selected} entries={entries} colorIndex={0} trips={trips} bare
           clash={clash} canEdit={canEdit} onOpen={onOpen} onAddPlace={addPlace} />
         {datedKids.filter(c => c.start_date! <= selected && (c.end_date ?? c.start_date!) >= selected).map(c =>
           <FoldRow key={c.id} trip={c} clash={clash.has(c.id)} />)}
       </> : <>
-        {[...datedKids].sort((a, b) => a.start_date!.localeCompare(b.start_date!)).map(c => <FoldRow key={c.id} trip={c} clash={clash.has(c.id)} />)}
-        <h2 className="head agenda-heading">your days</h2>
-        {plannedDays.slice(page * 7, page * 7 + 7).map(d => (
-          <button type="button" className="agenda-summary" key={d} onClick={() => goDay(d)}>
-            <span>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-            <span className="muted">{agendaForDay(trip, trips, allStops, d).filter(e => e.kind === 'stop').length} plans · open day</span>
-          </button>
-        ))}
-        {plannedDays.length > 7 && <nav className="agenda-toolbar" aria-label="planned days">
-          <button type="button" className="btn ghost" disabled={page === 0} onClick={() => setPage(p => p - 1)}>previous days</button>
-          <span className="muted">{page + 1} / {Math.ceil(plannedDays.length / 7)}</span>
-          <button type="button" className="btn ghost" disabled={(page + 1) * 7 >= plannedDays.length} onClick={() => setPage(p => p + 1)}>next days</button>
-        </nav>}
+        {trip.notes?.trim() && (
+          <details className="trip-notes">
+            <summary>notes</summary>
+            <p>{trip.notes}</p>
+          </details>
+        )}
+        {all.length > 0
+          ? <TripCalendar trip={trip} children={datedKids} planned={plannedDays} onDay={goDay} />
+          : <NoDate trip={trip} stops={undated} sideTrips={undatedKids} canAdd={canEdit} canEdit={canEdit}
+              onOpen={onOpen} onAddPlace={(p) => addPlace(p, null)} onSetDates={setAdjusting} />}
       </>}
-      <NoDate trip={trip} stops={undated} sideTrips={undatedKids} canAdd={canEdit && all.length === 0} canEdit={canEdit}
-        onOpen={onOpen} onAddPlace={(p) => addPlace(p, null)} onSetDates={setAdjusting} />
       <Sheet open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>
