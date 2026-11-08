@@ -392,3 +392,12 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .pick.date input { inset: auto; width: 1px; height: 1px; pointer-events: none; opacity: 0 !important; }
 .page-form .when-row > .pick.date { width: 100%; }
 .page-form .pick.date .pick-open { width: 100%; }
+/* laptop: on a trip the page is exactly the left column (the map stays clear beside it);
+   elsewhere it fills the screen with the form centred */
+@media (min-width: 1024px) {
+  .sheet.page { width: 100%; box-shadow: none; animation: fade .15s ease-out; }
+  .sheet.page .sheet-body { width: min(640px, 100%); margin: 0 auto; }
+  body:has(.trip-wide) .sheet.page { width: max(420px, calc(100vw / 2.15)); border-right: 1px solid var(--line); }
+  body:has(.trip-wide) .sheet-root.page .sheet-backdrop { background: none; }
+  body:has(.trip-wide) .sheet.page .sheet-body { width: 100%; }
+}
