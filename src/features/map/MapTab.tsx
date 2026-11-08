@@ -54,9 +54,17 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   const reading = useReadingDay().day
   const selected = reading ?? params.get('day')
   // on a laptop the map has no chips of its own: it shows the plan's day, or the whole trip
-  const [whole, setWhole] = useState(false)
+  // a trip with side trips opens on the whole trip; null means no choice yet, so that default is read as the trips arrive
+  const [choice, setChoice] = useState<boolean | null>(null)
+  const sides = hasSideTrips(trip, trips)
+  const whole = choice ?? sides
   const planDay = phone ? null : chosenDay(trip, trips, stops, selected, todayISO())
-  useEffect(() => { setWhole(false) }, [planDay])
+  // without side trips, any new plan day shows that day; with them, scrolling the itinerary leaves the whole trip alone
+  useEffect(() => { if (!sides) setChoice(null) }, [planDay, sides])
+  // a day picked in the calendar or day strip (the link's ?day= changing after mount) shows that day
+  const linkDay = params.get('day')
+  const seenDay = useRef(linkDay)
+  useEffect(() => { if (seenDay.current !== linkDay) { seenDay.current = linkDay; setChoice(false) } }, [linkDay])
   const filter: Filter = phone
     ? (params.get('map') === 'saved' ? 'saved' : validDay(selected) ? selected : 'all')
     : whole || !planDay ? 'all' : planDay
@@ -74,7 +82,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
 
   const navigate = useNavigate()
   // the whole trip with side trips is an overview: home and one pin per side trip
-  const overviewNow = useMemo(() => filter === 'all' && hasSideTrips(trip, trips) ? overviewFeatures(trip, trips, stops) : null, [trip, trips, stops, filter])
+  const overviewNow = useMemo(() => filter === 'all' && sides ? overviewFeatures(trip, trips, stops) : null, [trip, trips, stops, filter, sides])
   // the same object while its content is the same, so a realtime change elsewhere doesn't rebuild the html pins
   const overviewKey = overviewNow ? JSON.stringify(overviewNow) : ''
   const overview = useMemo(() => overviewNow, [overviewKey]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -143,7 +151,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
         {(load.state === 'failed' || load.stale) && <LoadNotice onRetry={load.retry} />}
       </div>
       {!phone && planDay && !card && (
-        <button type="button" className="chip-pill whole-trip" aria-pressed={whole} onClick={() => setWhole(!whole)}>
+        <button type="button" className="chip-pill whole-trip" aria-pressed={whole} onClick={() => setChoice(!whole)}>
           <Icon name="globe" size={16} /><span>whole trip</span>
         </button>
       )}

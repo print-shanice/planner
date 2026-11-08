@@ -26,6 +26,7 @@ vi.mock('../../src/features/map/TripMap', () => ({
 }))
 
 import { MapTab } from '../../src/features/map/MapTab'
+import { ReadingDayProvider, useReadingDay } from '../../src/features/trip/readingDay'
 
 const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
 
@@ -320,7 +321,6 @@ describe('whole trip with side trips', () => {
     db.trips = [parent, { ...lap, parent_id: 'ex' }]
     db.stops = []
     showParent(false)
-    await userEvent.click(screen.getByRole('button', { name: 'whole trip' }))
     expect(document.querySelector('[data-overview]')).toHaveAttribute('data-overview', '1')
     await userEvent.click(screen.getByRole('button', { name: 'tap side trip' }))
     expect(screen.getByLabelText('where').textContent).toBe('/trip/lap')
@@ -347,6 +347,45 @@ describe('whole trip with side trips', () => {
     showParent(true)
     const chip = within(screen.getByRole('group', { name: 'show' })).getByRole('button', { name: 'mon 8' })
     expect(chip.querySelector('.dot')!.getAttribute('style')).toContain('var(--g3)')
+  })
+
+  describe('on a laptop', () => {
+    const fit = () => (document.querySelector('[data-fit]') as HTMLElement).dataset.fit
+    const overview = () => (document.querySelector('[data-overview]') as HTMLElement).dataset.overview
+    const sideTrips = () => { db.trips = [parent, { ...lap, parent_id: 'ex' }]; db.stops = [] }
+    function Read() { const r = useReadingDay(); return <button onClick={() => r.set('2027-03-01')}>read</button> }
+    const open = () => render(<MemoryRouter initialEntries={['/']}><ReadingDayProvider><Link to="/?day=2027-02-20">pick</Link><Read /><MapTab trip={parent} /></ReadingDayProvider></MemoryRouter>)
+
+    it('a trip with side trips opens the laptop map on whole trip', () => {
+      sideTrips()
+      open()
+      expect(overview()).toBe('1')
+      expect(screen.getByRole('button', { name: 'whole trip' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('picking a day on a parent trip shows that day', async () => {
+      sideTrips()
+      open()
+      await userEvent.click(screen.getByRole('link', { name: 'pick' }))
+      expect(overview()).toBe('')
+      expect(fit()).toBe('ex|2027-02-20')
+      expect(screen.getByRole('button', { name: 'whole trip' })).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it("reading the itinerary doesn't leave whole trip", async () => {
+      sideTrips()
+      open()
+      await userEvent.click(screen.getByRole('button', { name: 'read' }))
+      expect(overview()).toBe('1')
+    })
+
+    it('the whole trip button still switches a parent trip to its day', async () => {
+      sideTrips()
+      open()
+      await userEvent.click(screen.getByRole('button', { name: 'whole trip' }))
+      expect(overview()).toBe('')
+      expect(screen.getByRole('button', { name: 'whole trip' })).toHaveAttribute('aria-pressed', 'false')
+    })
   })
 
   it('a trip without side trips keeps every stop on whole trip', () => {
