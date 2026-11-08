@@ -5,12 +5,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
 import type { Trip } from '../../src/lib/types'
 
-const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], open: vi.fn(), save: vi.fn((r: unknown) => Promise.resolve(r)) }))
+const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], files: [] as unknown[], open: vi.fn(), remove: vi.fn(), save: vi.fn((r: unknown) => Promise.resolve(r)) }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useStops: () => ({ data: db.stops }),
+  useFiles: () => ({ data: db.files }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))
+vi.mock('../../src/lib/undo', () => ({ useUndoRemove: () => db.remove }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchSpots: () => Promise.resolve([]) }))
 vi.mock('../../src/features/stops/StopSheet', () => ({ useStopSheet: () => ({ openStop: db.open }) }))
@@ -47,6 +49,8 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
   db.open.mockReset()
   db.save.mockClear()
+  db.remove.mockClear()
+  db.files = []
   const t = tokyo()
   db.trips = [t]
   db.stops = [
@@ -67,7 +71,12 @@ it('shows every day as a heading with its date, areas and count, then its lines 
   expect(h).toHaveTextContent('narita · harajuku · shibuya')
   expect(h).toHaveTextContent('3')
   const lines = dayBox('2025-09-19').getAllByTestId('itin-line')
-  expect(lines.map((l) => l.querySelector('.itin-time')?.textContent)).toEqual(['09:00', '17:00–18:30', 'any'])
+  // a live line's time is in its boxes; an empty start reads "any"
+  const shown = (l: HTMLElement) => {
+    const [from, till] = [...l.querySelectorAll<HTMLInputElement>('.itin-time input')]
+    return from ? (from.value || from.placeholder) + (till?.value ? `–${till.value}` : '') : l.querySelector('.itin-time')?.textContent
+  }
+  expect(lines.map(shown)).toEqual(['09:00', '17:00–18:30', 'any'])
   expect(lines[2]).toHaveTextContent('cafe · tokyo')
   expect(screen.getAllByRole('heading', { level: 3 }).map((x) => x.textContent?.slice(0, 10))).toEqual(['thu 18 sep', 'fri 19 sep', 'sat 20 sep'])
 })
@@ -139,21 +148,59 @@ it('the › on a line opens its card', async () => {
   expect(db.open).toHaveBeenCalledWith('neel')
 })
 
-it("tapping a line's time or name changes it right there, saving only what changed", async () => {
+it('a line is live text: type over its name, enter saves only what changed and moves to the next line', async () => {
   show(tokyo())
-  await userEvent.click(screen.getByRole('button', { name: 'change neel' }))
   const name = screen.getByRole('textbox', { name: 'change neel' })
   expect(name).toHaveValue('neel')
-  expect(within(screen.getByRole('group', { name: 'change neel' })).getByLabelText('start time')).toHaveValue('09:00')
   await userEvent.clear(name)
-  await userEvent.type(name, 'neel coffee')
-  await userEvent.click(screen.getByRole('button', { name: 'save line' }))
+  await userEvent.type(name, 'neel coffee{Enter}')
   expect(db.save).toHaveBeenCalledWith({ id: 'neel', title: 'neel coffee' })
-  expect(screen.queryByRole('textbox', { name: 'change neel' })).toBeNull()
-  await userEvent.click(screen.getByRole('button', { name: 'change time of narita airport t2' }))
-  expect(screen.getByRole('group', { name: 'change narita airport t2' })).toBeInTheDocument()
+  expect(screen.getByRole('textbox', { name: 'change enji' })).toHaveFocus()
+})
+
+it('a time typed over saves when you leave the line', async () => {
+  show(tokyo())
+  const start = screen.getByRole('textbox', { name: 'start time of narita airport t2' })
+  expect(start).toHaveValue('09:00')
+  await userEvent.clear(start)
+  await userEvent.type(start, '10')
+  expect(db.save).not.toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('textbox', { name: 'change neel' }))
+  expect(start).toHaveValue('10:00')
+  expect(db.save).toHaveBeenCalledWith({ id: 'narita', time: '10:00' })
+  expect(db.save).toHaveBeenCalledTimes(1)
+})
+
+it('leaving a line untouched saves nothing; escape puts it back', async () => {
+  show(tokyo())
+  const name = screen.getByRole('textbox', { name: 'change neel' })
+  await userEvent.click(name)
+  await userEvent.type(name, ' later')
   await userEvent.keyboard('{Escape}')
-  expect(screen.queryByRole('group', { name: 'change narita airport t2' })).toBeNull()
+  expect(name).toHaveValue('neel')
+  await userEvent.click(screen.getByRole('textbox', { name: 'change enji' }))
+  expect(db.save).not.toHaveBeenCalled()
+})
+
+it('emptying a line removes it, with undo; one with tickets just goes back', async () => {
+  show(tokyo())
+  await userEvent.clear(screen.getByRole('textbox', { name: 'change neel' }))
+  await userEvent.keyboard('{Enter}')
+  expect(db.remove).toHaveBeenCalledWith('neel')
+  db.files = [{ id: 'f', stop_id: 'enji', path: 'x' }]
+  const enji = screen.getByRole('textbox', { name: 'change enji' })
+  await userEvent.clear(enji)
+  await userEvent.keyboard('{Enter}')
+  expect(db.remove).toHaveBeenCalledTimes(1)
+  expect(enji).toHaveValue('enji')
+})
+
+it('journeys and stays stay tap-to-open', async () => {
+  db.stops = [stop({ id: 'fl', trip_id: 'tk', kind: 'journey', day: '2025-09-18', time: '22:00', title: 'sq 638', origin: place({ name: 'changi' }), destination: place({ name: 'narita' }) })]
+  show(tokyo())
+  expect(screen.queryByRole('textbox', { name: /change changi/ })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: /changi → narita/ }))
+  expect(db.open).toHaveBeenCalledWith('fl')
 })
 
 it('every open day ends with a line to type into', async () => {
@@ -176,7 +223,7 @@ it("a side trip's days sit in place, headed with its name; saved ideas stay out;
   expect(head(/sat 20 feb/)).toHaveTextContent('paris')
   expect(head(/thu 18 feb/)).not.toHaveTextContent('paris')
   expect(screen.queryByText('maybe a museum')).toBeNull()
-  expect(within(screen.getByRole('region', { name: 'no date' })).getByText('onsen someday')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'no date' })).getByDisplayValue('onsen someday')).toBeInTheDocument()
 })
 
 it("a line typed on a side trip's day goes to the side trip", async () => {
