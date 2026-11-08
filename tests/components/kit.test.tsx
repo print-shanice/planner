@@ -211,3 +211,14 @@ describe('waiting looks the same everywhere', () => {
     expect(screen.getByRole('status')).toHaveClass('pending')
   })
 })
+
+it('a sheet of buttons focuses itself, not its first button, so no ring shows on open', () => {
+  render(<Sheet open title="add" onClose={() => {}}><button type="button">place</button><button type="button">stay</button></Sheet>)
+  expect(screen.getByRole('dialog', { name: 'add' })).toHaveFocus()
+  expect(screen.getByRole('button', { name: 'place' })).not.toHaveFocus()
+})
+
+it('a sheet with a field focuses the field, ready to type', () => {
+  render(<Sheet open title="new note" onClose={() => {}}><button type="button">x</button><input aria-label="title" /></Sheet>)
+  expect(screen.getByLabelText('title')).toHaveFocus()
+})

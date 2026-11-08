@@ -29,7 +29,8 @@ export function Sheet({ open, title, onClose, children, footer, page }: Props) {
     if (!open) return
     const before = document.activeElement as HTMLElement | null
     const el = panel.current
-    const first = el?.querySelector<HTMLElement>('input, textarea, select, button:not(.sheet-x), [href]')
+    // a field is ready to type into; a sheet of buttons focuses itself, so no focus ring shows on open
+    const first = el?.querySelector<HTMLElement>('input:not([tabindex="-1"]), textarea, select')
     ;(first ?? el)?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Tab' && el) {
