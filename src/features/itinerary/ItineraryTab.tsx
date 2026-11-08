@@ -25,8 +25,6 @@ function writeFolds(id: string, s: Set<string>) {
   try { localStorage.setItem(foldKey(id), JSON.stringify([...s])) } catch { /* no storage: folds last this visit only */ }
 }
 
-const counted = (e: DayEntry) => e.kind === 'stop' || e.kind === 'checkin'
-
 // the sticky bar's height, so a day or a match lands just under it
 function underBar(root: HTMLElement | null) {
   const bar = document.querySelector<HTMLElement>('.trip-bar')
@@ -77,8 +75,11 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
     el?.scrollIntoView?.({ behavior: 'smooth', block })
   }
 
+  // a day you jump to opens, if you'd folded it
   function jumpDay(d: string) {
     setDay(d)
+    if (searching) setPeek((p) => new Set(p).add(d))
+    else if (folded.has(d)) setFolded((f) => { const n = new Set(f); n.delete(d); writeFolds(trip.id, n); return n })
     scrollTo(document.getElementById(`itin-${d}`), 'start')
   }
 
@@ -207,7 +208,6 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
           <h3 className="itin-head">
             <button type="button" aria-expanded={isOpen('none')} onClick={() => toggle('none')}>
               <Icon name="chevron" size={16} /><span className="itin-date">no date</span>
-              <span className="itin-count muted num">{it.undated.length}</span>
             </button>
           </h3>
           {isOpen('none') && <div className="itin-lines">
@@ -243,7 +243,6 @@ function Day({ day, trip, open, onToggle, q, current, onOpen, onLight }: DayProp
           {side && <span className="itin-side"><span className="dot" />{side.name}</span>}
           <span className="itin-date">{dayLabel(day.date)}</span>
           <span className="itin-areas muted">{areas.slice(0, 3).join(' · ')}</span>
-          <span className="itin-count muted num">{day.entries.filter(counted).length || ''}</span>
         </button>
       </h3>
       {open && (

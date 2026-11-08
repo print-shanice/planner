@@ -9,6 +9,7 @@ import { useCanEdit } from '../../lib/offline'
 import { Pill } from '../../components/Pill'
 import { Icon } from '../../components/Icon'
 import { SaveFailed } from '../../components/SaveFailed'
+import { Pending } from '../../components/Pending'
 import { stopSub, stopTitle } from '../plan/StopRow'
 import { readLine, type LineValues } from './LineEditor'
 
@@ -109,6 +110,10 @@ function DocLine({ entry, any, current, onOpen, onLight, autoFocus }: Props & { 
   const [v, setV] = useState(() => valuesOf(s))
   const [problem, setProblem] = useState<string | null>(null)
   const [timeOpen, setTimeOpen] = useState(false)
+  // a save says so: "saving…" while it goes, then "saved" for a moment
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const quiet = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(quiet.current), [])
   const box = useRef<HTMLDivElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   // what's on screen and what was last saved, read fresh from handlers that fire as focus moves
@@ -126,6 +131,8 @@ function DocLine({ entry, any, current, onOpen, onLight, autoFocus }: Props & { 
   const title = stopTitle(s)
   const sub = stopSub(s)
   const when = timeOf(entry, any)
+  const was = saved.current
+  const dirty = v.title !== was.title || v.time !== was.time || v.end !== was.end
 
   function commit(): boolean {
     if (gone.current) return true
@@ -146,7 +153,13 @@ function DocLine({ entry, any, current, onOpen, onLight, autoFocus }: Props & { 
     if (line.end !== was.end) changed.end_time = line.end || null
     saved.current = line
     put(line)
-    if (Object.keys(changed).length) save.mutateAsync({ id: s.id, ...changed }).catch(() => { /* "couldn't save" shows under the line */ })
+    if (Object.keys(changed).length) {
+      clearTimeout(quiet.current)
+      setState('saving')
+      save.mutateAsync({ id: s.id, ...changed })
+        .then(() => { setState('saved'); quiet.current = setTimeout(() => setState('idle'), 1800) })
+        .catch(() => setState('idle')) // "couldn't save" shows under the line, with retry
+    }
     return true
   }
   function key(e: KeyboardEvent<HTMLInputElement>) {
@@ -179,7 +192,11 @@ function DocLine({ entry, any, current, onOpen, onLight, autoFocus }: Props & { 
           {problem && <span className="warn-line">{problem}</span>}
         </span>
         <Pill status={s.status} />
-        {onOpen ? <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s)}><Icon name="next" size={18} /></button> : <span />}
+        {dirty
+          ? <button type="button" className="btn small line-go" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>
+          : state === 'saving' ? <Pending label="saving" className="line-state" />
+          : state === 'saved' ? <span className="line-state muted" role="status"><Icon name="check" size={15} />saved</span>
+          : onOpen ? <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s)}><Icon name="next" size={18} /></button> : <span />}
       </div>
       <SaveFailed table="stops" id={s.id} />
     </>

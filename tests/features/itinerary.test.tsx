@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -69,7 +69,8 @@ it('shows every day as a heading with its date, areas and count, then its lines 
   const h = head(/fri 19 sep/)
   expect(h).toHaveAttribute('aria-expanded', 'true')
   expect(h).toHaveTextContent('narita · harajuku · shibuya')
-  expect(h).toHaveTextContent('3')
+  // no count on the heading
+  expect(h).not.toHaveTextContent(/\d$/)
   const lines = dayBox('2025-09-19').getAllByTestId('itin-line')
   // a live line's time is in its boxes; an empty start reads "any"
   const shown = (l: HTMLElement) => {
@@ -133,6 +134,14 @@ it('a match in the notes shows that bit of the notes; no match says 0', async ()
   expect(screen.queryByRole('button', { name: 'next match' })).toBeDisabled()
 })
 
+it('tapping a folded day in the strip opens it', async () => {
+  show(tokyo())
+  await userEvent.click(head(/sat 20 sep/))
+  expect(head(/sat 20 sep/)).toHaveAttribute('aria-expanded', 'false')
+  await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /20 sep/ }))
+  expect(head(/sat 20 sep/)).toHaveAttribute('aria-expanded', 'true')
+})
+
 it('the day strip jumps to a day and makes it the day you are reading, leaving the link alone', async () => {
   show(tokyo())
   await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /20 sep/ }))
@@ -156,6 +165,21 @@ it('a line is live text: type over its name, enter saves only what changed and m
   await userEvent.type(name, 'neel coffee{Enter}')
   expect(db.save).toHaveBeenCalledWith({ id: 'neel', title: 'neel coffee' })
   expect(screen.getByRole('textbox', { name: 'change enji' })).toHaveFocus()
+})
+
+it('a changed line shows a save button, then says saving and saved', async () => {
+  let land!: () => void
+  db.save.mockImplementationOnce(() => new Promise<unknown>((r) => { land = () => r({}) }))
+  show(tokyo())
+  expect(screen.queryByRole('button', { name: 'save neel' })).toBeNull()
+  await userEvent.type(screen.getByRole('textbox', { name: 'change neel' }), ' cafe')
+  await userEvent.click(screen.getByRole('button', { name: 'save neel' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'neel', title: 'neel cafe' })
+  const line = () => within(document.querySelector('[data-line="neel"]') as HTMLElement)
+  expect(line().getByRole('status')).toHaveTextContent('saving')
+  await act(async () => { land() })
+  expect(line().getByRole('status')).toHaveTextContent('saved')
+  expect(screen.queryByRole('button', { name: 'save neel' })).toBeNull()
 })
 
 it('a time typed over saves when you leave the line', async () => {

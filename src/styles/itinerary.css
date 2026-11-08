@@ -24,7 +24,6 @@
 .itin-head button[aria-expanded="false"] .icon { transform: rotate(-90deg); }
 .itin-date { flex: none; font-family: var(--f-head); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
 .itin-areas { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.itin-count { flex: none; font-size: 13px; }
 .itin-side { flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--c); }
 .itin-side .dot { width: 8px; height: 8px; background: var(--c); }
 .itin-day[style] .itin-head button { box-shadow: inset 3px 0 0 var(--c); padding-left: 10px; }
@@ -97,3 +96,6 @@ button.itin-time { cursor: pointer; min-height: 40px; }
 .doc-time:hover, .doc-name:hover { background: var(--soft); }
 .doc-time:focus, .doc-name:focus { outline: none; background: var(--soft); box-shadow: inset 0 -2px 0 var(--ink); }
 .itin-line.doc:hover { background: none; }
+
+/* a line's save says so: "saving…", then "saved" for a moment */
+.line-state { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-size: 13px; white-space: nowrap; }
