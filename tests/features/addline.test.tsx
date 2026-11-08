@@ -63,6 +63,20 @@ it('the time reads "any" until you type one, and "1pm" works', async () => {
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'lunch', time: '13:00', end_time: null }))
 })
 
+it('letters that are not a time never go in, and a time reads as 13:00 once you leave it', async () => {
+  show(tk())
+  const start = screen.getByLabelText('start time')
+  await userEvent.type(start, 'dsdsds')
+  expect(start).toHaveValue('')
+  await userEvent.type(start, '1pm')
+  expect(start).toHaveValue('1pm')
+  await userEvent.type(screen.getByLabelText('end time'), 'xx230p')
+  expect(screen.getByLabelText('end time')).toHaveValue('230p')
+  await userEvent.click(name())
+  expect(start).toHaveValue('13:00')
+  expect(screen.getByLabelText('end time')).toHaveValue('14:30')
+})
+
 it('a time it cannot read says so and saves nothing', async () => {
   show(tk())
   await userEvent.type(screen.getByLabelText('start time'), '25:00')

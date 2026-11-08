@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
-import { readTime } from '../../lib/time'
+import { couldBeTime, readTime } from '../../lib/time'
 
 export type LineValues = { time: string; end: string; title: string }
 
@@ -33,6 +33,9 @@ export function LineEditor({ label, initial = EMPTY, onSubmit, onCancel, saveOnL
   // once saved or cancelled, the blur that follows doesn't save again
   const closed = useRef(false)
   const set = (p: Partial<LineValues>) => { setV((x) => ({ ...x, ...p })); setProblem(null) }
+  // a time box takes only what could become a time, and tidies it to 13:00 when you leave it
+  const typeTime = (k: 'time' | 'end', x: string) => { if (couldBeTime(x)) set({ [k]: x }) }
+  const tidy = (k: 'time' | 'end') => { const t = readTime(v[k]); if (t) setV((x) => ({ ...x, [k]: t })) }
 
   function submit() {
     const read = readLine(v)
@@ -59,10 +62,12 @@ export function LineEditor({ label, initial = EMPTY, onSubmit, onCancel, saveOnL
       <span className="line-times">
         {/* typed like the doc's time column: "9", "13:00", "1pm"; empty is any time */}
         <input ref={start} type="text" aria-label="start time" placeholder="any" value={v.time} autoComplete="off"
-          onChange={(e) => set({ time: e.target.value })} onKeyDown={key} autoFocus={focus === 'time'} />
+          inputMode="decimal"
+          onChange={(e) => typeTime('time', e.target.value)} onBlur={() => tidy('time')} onKeyDown={key} autoFocus={focus === 'time'} />
         {/* an end only once there's a start */}
         {(v.time || v.end) && <input type="text" aria-label="end time" placeholder="end" value={v.end} autoComplete="off"
-          onChange={(e) => set({ end: e.target.value })} onKeyDown={key} />}
+          inputMode="decimal"
+          onChange={(e) => typeTime('end', e.target.value)} onBlur={() => tidy('end')} onKeyDown={key} />}
       </span>
       <input type="text" className="line-name" aria-label={label} placeholder="name" value={v.title} autoComplete="off" enterKeyHint="done"
         onChange={(e) => set({ title: e.target.value })} onKeyDown={key} autoFocus={focus === 'title'} />

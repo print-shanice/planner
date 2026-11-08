@@ -1,4 +1,4 @@
-import { readTime } from '../../src/lib/time'
+import { couldBeTime, readTime } from '../../src/lib/time'
 
 it('reads a typed time the ways people write it', () => {
   const cases: [string, string | null][] = [
@@ -12,4 +12,9 @@ it('reads a typed time the ways people write it', () => {
 
 it('says when it cannot read a time', () => {
   for (const bad of ['25:00', '9:75', '13pm', 'noon', '12345', '0am']) expect(readTime(bad), bad).toBe(undefined)
+})
+
+it('only lets through what could still become a time', () => {
+  for (const ok of ['', '1', '13', '13:', '13:0', '13:00', '9.3', '930', '1300', '1p', '1pm', '1 pm', '1:30 a', '12:30am']) expect(couldBeTime(ok), ok).toBe(true)
+  for (const no of ['d', 'dsdsds', 'dads', 'a', ':', '13:000', '12345', '1pmx', 'p1', '1 2']) expect(couldBeTime(no), no).toBe(false)
 })
