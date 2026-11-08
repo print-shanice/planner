@@ -89,20 +89,25 @@ it('next up is a calendar that opens on the month the soonest trip starts', () =
   expect(screen.queryByTestId('trip-card')).toBeNull()
 })
 
-it('the calendar moves by month and draws side trips as named bars', async () => {
+it('the calendar moves by month, and a side trip takes over its days the way its parent shows', async () => {
   const user = userEvent.setup()
   db.trips = europe()
   show()
   await user.click(screen.getByRole('button', { name: 'next month' }))
   const cal = screen.getByTestId('calendar')
   expect(within(cal).getByText('february')).toBeInTheDocument()
-  expect(cal.querySelector('[data-day="2027-02-01"]')).toHaveAttribute('data-ribbon', 'on')
-  // lapland runs sunday to thursday, so it carries over into the next week
-  const bars = within(cal).getAllByTestId('cal-bar')
-  expect(bars.map((b) => [b.textContent, b.hasAttribute('data-starts'), b.hasAttribute('data-ends')])).toEqual([
-    ['lapland', true, false], ['lapland', false, true],
-  ])
-  expect(bars[0]).toHaveAttribute('href', '/trip/lap')
+  const day = (d: string) => cal.querySelector(`[data-day="${d}"]`) as HTMLElement
+  expect(day('2027-02-06')).toHaveAttribute('data-ribbon', 'on')
+  expect(day('2027-02-06').style.getPropertyValue('--c')).toBe('var(--g0)')
+  // lapland's own days wear lapland's ribbon, first and last filled; no pills
+  expect(day('2027-02-07')).toHaveAttribute('data-ribbon', 'start')
+  expect(day('2027-02-07').style.getPropertyValue('--c')).toBe('var(--g1)')
+  expect(day('2027-02-09')).toHaveAttribute('data-ribbon', 'on')
+  expect(day('2027-02-11')).toHaveAttribute('data-ribbon', 'end')
+  expect(day('2027-02-12')).toHaveAttribute('data-ribbon', 'on')
+  expect(day('2027-02-12').style.getPropertyValue('--c')).toBe('var(--g0)')
+  expect(within(cal).queryAllByTestId('cal-bar')).toHaveLength(0)
+  expect(within(cal).queryByText('lapland')).toBeNull()
   expect(legend()).toEqual([
     expect.stringContaining('europe exchange 2027'),
     expect.stringMatching(/lapland.*7 – 11 feb/),

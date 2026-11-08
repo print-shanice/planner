@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { countdown, fmtRange } from '../../lib/dates'
-import { monthTree, openingMonth, ribbonDay, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
+import { innermostDay, monthTree, openingMonth, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { MonthCalendar, tint } from '../../components/MonthCalendar'
 
 const spans = (ts: Trip[]) => ts.map(tripSpan).filter((x): x is Span => !!x)
@@ -27,14 +27,19 @@ export function Calendar({ trips, today }: { trips: Trip[]; today: string }) {
     .sort((a, b) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name))
   const rows = [...tree, ...rest.map((trip) => ({ trip, depth: 0 }))]
 
-  const tops = useMemo(() => spans(trips.filter((t) => !t.parent_id)), [trips])
-  const sides = useMemo(() => spans(trips.filter((t) => t.parent_id)), [trips])
+  // each day shows only its innermost trip, drawn like any trip; the list under the calendar shows how they nest
+  const all = useMemo(() => spans(trips), [trips])
+  const depth = useMemo(() => {
+    const byId = new Map(trips.map((t) => [t.id, t]))
+    const of = (t: Trip | undefined, n = 0): number => (t?.parent_id && n < 20 ? of(byId.get(t.parent_id), n + 1) : n)
+    return (s: Span) => of(s.trip)
+  }, [trips])
 
   return (
     <div className="cal-wrap">
       {m && (
         <MonthCalendar month={m} onPrev={() => setMonth(shiftMonth(m, -1))} onNext={() => setMonth(shiftMonth(m, 1))}
-          today={today} ribbon={(d) => ribbonDay(d, tops)} bars={sides} />
+          today={today} ribbon={(d) => innermostDay(d, all, depth)} bars={[]} />
       )}
       {rows.length > 0 && (
         <div className="rows">

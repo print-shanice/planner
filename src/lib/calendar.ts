@@ -50,6 +50,11 @@ export function ribbonDay(d: string, spans: Span[]): Span | undefined {
   return spans.filter((s) => within(s, d)).sort(spanOrder)[0]
 }
 
+// the innermost trip on a day: a side trip (or its side trip) wins over the trip it sits in
+export function innermostDay(d: string, spans: Span[], depth: (s: Span) => number): Span | undefined {
+  return spans.filter((s) => within(s, d)).sort((a, b) => depth(b) - depth(a) || spanOrder(a, b))[0]
+}
+
 export type Bar = { span: Span; from: number; to: number; starts: boolean; ends: boolean; lane: number }
 
 export function weekBars(week: (string | null)[], spans: Span[]): Bar[] {
