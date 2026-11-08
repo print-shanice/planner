@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { chosenDay, dayEntries, validDay } from '../../lib/agenda'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
@@ -8,7 +8,8 @@ import { reversePlace } from '../../lib/photon'
 import { loadState } from '../../lib/load'
 import { LoadNotice } from '../../components/States'
 import { AddPlaceField } from '../plan/AddPlaceField'
-import { busyDays, mapFeatures, type Filter } from './features'
+import { busyDays, EMPTY, mapFeatures, type Filter } from './features'
+import { hasSideTrips, overviewFeatures } from './overview'
 import { TripMap } from './TripMap'
 import { hasPoint } from '../../lib/walk'
 import { mapBed } from '../../lib/legs'
@@ -61,7 +62,11 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   const [view, setView] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const seq = useRef(0)
 
-  const data = useMemo(() => mapFeatures(trip, trips, stops, filter), [trip, trips, stops, filter])
+  const navigate = useNavigate()
+  // the whole trip with side trips is an overview: home and one pin per side trip
+  const overview = useMemo(() => filter === 'all' && hasSideTrips(trip, trips) ? overviewFeatures(trip, trips, stops) : null, [trip, trips, stops, filter])
+  const data = useMemo(() => overview ? { ...EMPTY, lines: overview.lines } : mapFeatures(trip, trips, stops, filter), [overview, trip, trips, stops, filter])
+  const openTrip = (id: string) => navigate(phone ? `/trip/${id}?tab=map` : `/trip/${id}`)
   const days = useMemo(() => busyDays(trip, trips, stops), [trip, trips, stops])
   const stop = card?.stopId ? stops.find((s) => s.id === card.stopId) : undefined
   const isDay = filter !== 'all' && filter !== 'saved'
@@ -73,11 +78,13 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   const bedStop = isDay ? mapBed(dayEntries(trip, trips, stops, filter)) : null
   const bedName = bedStop ? bedStop.title || bedStop.place?.name || '' : ''
   const bed = bedName ? bedStop : null
-  const items: PlaceItem[] = bed
+  const items: PlaceItem[] = overview
+    ? overview.sides.map((s) => ({ id: s.id, n: null, color: s.color, title: s.name, sub: s.dates }))
+    : bed
     ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...pinItems]
     : pinItems
   const count = `${pinItems.length} ${pinItems.length === 1 ? 'place' : 'places'}`
-  const listTitle = filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} saved` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
+  const listTitle = overview ? `${overview.sides.length} side ${overview.sides.length === 1 ? 'trip' : 'trips'}` : filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} saved` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
 
   function pick(id: string) {
     // on a laptop the plan is beside the map: bring the pin's stop into view
@@ -100,14 +107,14 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
 
   return (
     <div className="map-tab">
-      <TripMap data={data} highlight={lit.id} inset={phone ? PHONE_INSET : undefined} fitKey={`${trip.id}|${filter}`} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
+      <TripMap data={data} highlight={lit.id} inset={phone ? PHONE_INSET : undefined} fitKey={`${trip.id}|${filter}`} overview={overview} onTrip={openTrip} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
         onPick={pick} onEmpty={empty} onCenter={setView} />
       <div className="map-top">
         <div className="map-search">
           <AddPlaceField alwaysOpen label="search" near={view ?? middleOf(data) ?? (hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null)} onPick={(p) => setCard({ place: p, seq: ++seq.current })} />
         </div>
         {phone ? <div className="map-chips" role="group" aria-label="show">
-          <button type="button" className="chip-pill" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>all</button>
+          <button type="button" className="chip-pill" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>whole trip</button>
           {days.map((d) => (
             <button key={d} type="button" className="chip-pill" aria-pressed={filter === d} onClick={() => setFilter(d)}>
               <span className="dot" style={{ background: dayColor(trip.color) }} />
@@ -124,7 +131,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
           <Icon name="globe" size={16} /><span>whole trip</span>
         </button>
       )}
-      {phone && !card && <PlacesSheet items={items} title={listTitle} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={pick} />}
+      {phone && !card && <PlacesSheet items={items} title={listTitle} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={overview ? openTrip : pick} />}
       {card && (
         <div className="map-bottom">
           <PlaceCard key={card.seq} trip={trip} place={card.place} stop={stop} day={isDay ? filter : null} looking={card.looking} defaultDay={isDay ? filter : null}

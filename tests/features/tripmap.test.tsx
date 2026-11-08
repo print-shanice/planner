@@ -77,7 +77,12 @@ it('side-trip pins are named buttons that open the trip', () => {
   const overview = { home: { name: 'eindhoven', at: [5.5, 51.4] as [number, number] }, sides: [{ id: 'lap', name: 'lapland', dates: '7 – 11 feb', color: 'var(--g1)', at: [25.7, 66.5] as [number, number] }], lines: empty }
   render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} overview={overview} onTrip={onTrip} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
   act(() => { mk.maps.at(-1).fire('load') })
+  // a click on a side-trip pin must not also reach the map's own click (find the place here)
+  const reached = vi.fn()
+  document.addEventListener('click', reached)
   fireEvent.click(screen.getByRole('button', { name: 'lapland, 7 – 11 feb' }))
+  document.removeEventListener('click', reached)
+  expect(reached).not.toHaveBeenCalled()
   expect(onTrip).toHaveBeenCalledWith('lap')
   expect(mk.maps.at(-1).fits[0]).toEqual([[5.5, 51.4], [25.7, 66.5]])
 })

@@ -1,6 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Link, MemoryRouter } from 'react-router-dom'
+import { Link, MemoryRouter, useLocation } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
 const db = vi.hoisted(() => ({ search: vi.fn(), trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown }))
@@ -12,10 +12,11 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse, searchPlaces: db.search }))
 vi.mock('../../src/features/map/TripMap', () => ({
-  TripMap: ({ onPick, onEmpty, onCenter, highlight, inset, fitKey }: { fitKey?: string; onCenter?: (v: { lat: number; lng: number; zoom: number }) => void; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
-    <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''} data-fit={fitKey}>
+  TripMap: ({ onPick, onEmpty, onCenter, highlight, inset, fitKey, overview, onTrip }: { onTrip?: (id: string) => void; overview?: { sides: unknown[] } | null; fitKey?: string; onCenter?: (v: { lat: number; lng: number; zoom: number }) => void; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
+    <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''} data-fit={fitKey} data-overview={overview ? overview.sides.length : ''}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
+      <button onClick={() => onTrip?.('lap')}>tap side trip</button>
       <button onClick={() => onPick('cafe')}>tap idea</button>
       <button onClick={() => onCenter?.({ lat: 48.85, lng: 2.35, zoom: 12 })}>move map to paris</button>
     </div>
@@ -78,7 +79,7 @@ it('a pin opens its card with one primary action', async () => {
 it('on a phone, filter chips list all days, each busy day and saved', () => {
   show('/', true)
   const chips = screen.getByRole('group', { name: 'show' })
-  expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['all', 'mon 8', 'saved'])
+  expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['whole trip', 'mon 8', 'saved'])
 })
 
 const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
@@ -267,4 +268,37 @@ it('a dated, unsaved place opens with details, not add, when all days show', asy
   const card = screen.getByRole('region', { name: 'arktikum' })
   expect(within(card).getByRole('button', { name: 'details' })).toBeInTheDocument()
   expect(within(card).queryByRole('button', { name: 'add' })).toBeNull()
+})
+
+describe('whole trip with side trips', () => {
+  const parent = trip({ id: 'ex', name: 'exchange', start_date: '2027-01-28', end_date: '2027-07-13' })
+  function Where() { const l = useLocation(); return <output aria-label="where">{l.pathname + l.search}</output> }
+  const showParent = (phone: boolean) => render(<MemoryRouter initialEntries={['/trip/ex?tab=map']}><MapTab trip={parent} phone={phone} /><Where /></MemoryRouter>)
+
+  it('lists the side trips and opens one', async () => {
+    db.trips = [parent, { ...lap, parent_id: 'ex' }]
+    showParent(true)
+    expect(document.querySelector('[data-overview]')).toHaveAttribute('data-overview', '1')
+    expect(screen.getByText('1 side trip')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /lapland/ }))
+    const where = screen.getByLabelText('where').textContent!
+    expect(where).toMatch(/^\/trip\/lap\?/)
+    expect(new URLSearchParams(where.split('?')[1]).get('tab')).toBe('map')
+  })
+
+  it('on a laptop a side trip opens at the trip itself', async () => {
+    db.trips = [parent, { ...lap, parent_id: 'ex' }]
+    db.stops = []
+    showParent(false)
+    await userEvent.click(screen.getByRole('button', { name: 'whole trip' }))
+    expect(document.querySelector('[data-overview]')).toHaveAttribute('data-overview', '1')
+    await userEvent.click(screen.getByRole('button', { name: 'tap side trip' }))
+    expect(screen.getByLabelText('where').textContent).toBe('/trip/lap')
+  })
+
+  it('a trip without side trips keeps every stop on whole trip', () => {
+    show('/', true)
+    expect(document.querySelector('[data-overview]')).toHaveAttribute('data-overview', '')
+    expect(within(screen.getByRole('region', { name: 'places' })).getByText('2 places')).toBeInTheDocument()
+  })
 })

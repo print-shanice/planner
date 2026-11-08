@@ -227,7 +227,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
         text.append(dates)
       }
       el.append(dot, text)
-      el.addEventListener('click', () => cb.current.onTrip?.(s.id))
+      el.addEventListener('click', (e) => { e.stopPropagation(); cb.current.onTrip?.(s.id) }) // not also a tap on the map
       add(el, s.at)
       el.setAttribute('aria-label', `${s.name}${s.dates ? `, ${s.dates}` : ''}`) // after addTo, which labels every marker "map marker"
     }
