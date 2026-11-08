@@ -205,6 +205,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
       el.querySelector('path')!.setAttribute('d', iconPath('bed'))
       el.querySelector('.side-name')!.textContent = overview.home.name
       add(el, overview.home.at)
+      el.setAttribute('aria-label', overview.home.name) // after addTo, which labels every marker "map marker"
     }
     for (const s of overview.sides) {
       if (!s.at) continue

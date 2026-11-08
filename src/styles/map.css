@@ -78,7 +78,7 @@
 
 /* the whole-trip overview: home and one pin per side trip */
 .side-pin {
-  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px; border: 0; border-radius: 22px;
+  display: inline-flex; width: max-content; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px; border: 0; border-radius: 22px;
   background: var(--card); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer;
   box-shadow: 0 2px 8px rgba(22, 24, 29, .25); text-align: left;
 }

@@ -163,6 +163,15 @@ it('on a phone the map fits the day inside what the floating bar, chips and shee
   expect(bottom).toBeGreaterThanOrEqual(280)
 })
 
+it('on a phone a places sheet taller than the usual margin pushes the fit up above it', () => {
+  const h = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) { return this.classList.contains('places-sheet') ? 420 : 0 })
+  try {
+    show('/?day=2027-02-08', true)
+    const [, bottom] = (document.querySelector('[data-inset]') as HTMLElement).dataset.inset!.split(',').map(Number)
+    expect(bottom).toBeGreaterThanOrEqual(420 + 68)
+  } finally { h.mockRestore() }
+})
+
 it('on a laptop the map keeps its usual margins', () => {
   show('/?day=2027-02-08')
   expect((document.querySelector('[data-inset]') as HTMLElement).dataset.inset).toBe('')

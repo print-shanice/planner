@@ -86,3 +86,10 @@ it('side-trip pins are named buttons that open the trip', () => {
   expect(onTrip).toHaveBeenCalledWith('lap')
   expect(mk.maps.at(-1).fits[0]).toEqual([[5.5, 51.4], [25.7, 66.5]])
 })
+
+it('the home pin is labelled with the home name, not "map marker"', () => {
+  const overview = { home: { name: 'eindhoven', at: [5.5, 51.4] as [number, number] }, sides: [], lines: empty }
+  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} overview={overview} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
+  act(() => { mk.maps.at(-1).fire('load') })
+  expect(document.querySelector('[aria-label="eindhoven"]')).not.toBeNull()
+})

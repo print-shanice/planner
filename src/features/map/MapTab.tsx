@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { chosenDay, dayEntries, validDay } from '../../lib/agenda'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { dayColor, fmtDay, todayISO } from '../../lib/dates'
@@ -31,6 +31,8 @@ function middleOf(d: ReturnType<typeof mapFeatures>): { lat: number; lng: number
 
 // on a phone the floating bar and chips cover the top, the places sheet and tab bar the bottom
 const PHONE_INSET = { top: 200, bottom: 300 }
+// the places sheet floats this far above the screen's bottom (over the tab bar)
+const SHEET_LIFT = 68
 
 // redraws only when its trip changes (or the link it reads), not when the page around it does
 export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean }) {
@@ -61,6 +63,14 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   // where the map is looking, so a search finds places there (state, so the search box always has the latest)
   const [view, setView] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const seq = useRef(0)
+  // a tall places sheet covers more than the usual margin, so the fit clears its measured height
+  const root = useRef<HTMLDivElement>(null)
+  const [sheetH, setSheetH] = useState(0)
+  useLayoutEffect(() => {
+    const h = phone ? root.current?.querySelector<HTMLElement>('.places-sheet')?.offsetHeight ?? 0 : 0
+    setSheetH((prev) => prev === h ? prev : h)
+  })
+  const inset = useMemo(() => ({ top: PHONE_INSET.top, bottom: Math.max(PHONE_INSET.bottom, sheetH ? sheetH + SHEET_LIFT : 0) }), [sheetH])
 
   const navigate = useNavigate()
   // the whole trip with side trips is an overview: home and one pin per side trip
@@ -106,8 +116,8 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   }
 
   return (
-    <div className="map-tab">
-      <TripMap data={data} highlight={lit.id} inset={phone ? PHONE_INSET : undefined} fitKey={`${trip.id}|${filter}`} overview={overview} onTrip={openTrip} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
+    <div className="map-tab" ref={root}>
+      <TripMap data={data} highlight={lit.id} inset={phone ? inset : undefined} fitKey={`${trip.id}|${filter}`} overview={overview} onTrip={openTrip} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
         onPick={pick} onEmpty={empty} onCenter={setView} />
       <div className="map-top">
         <div className="map-search">
