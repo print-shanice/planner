@@ -27,17 +27,12 @@ export function dayLegs(entries: DayEntry[]): Leg[] {
   for (const e of entries) {
     if (e.kind === 'sidetrip' || !e.stop) continue
     const here = placeIn(e.stop)
-    if (hasPoint(here)) {
-      if (prev && !tooClose(prev.out, here)) {
-        legs.push({ from: prev.e.stop!, fromKind: prev.e.kind, to: e.stop, a: prev.out, b: here, evening: false })
-      }
-      const out = placeOut(e.stop)
-      if (hasPoint(out)) prev = { e, out }
-    } else {
-      // an entry that only leaves from somewhere (a journey with just a destination) still moves you
-      const out = placeOut(e.stop)
-      if (hasPoint(out)) prev = { e, out }
+    if (hasPoint(here) && prev && !tooClose(prev.out, here)) {
+      legs.push({ from: prev.e.stop!, fromKind: prev.e.kind, to: e.stop, a: prev.out, b: here, evening: false })
     }
+    // a journey with only a destination still leaves you there
+    const out = placeOut(e.stop)
+    if (hasPoint(out)) prev = { e, out }
   }
   const bed = tonightsBed(entries)
   const bedAt = bed ? placeIn(bed) : null

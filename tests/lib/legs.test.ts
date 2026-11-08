@@ -70,3 +70,10 @@ it('next from a stop is its own leg', () => {
   expect(nextFrom('B', legs)?.to.id).toBe('C')
   expect(nextFrom('C', legs)).toBeNull()
 })
+
+it('a journey with only a destination leaves you there', () => {
+  const J = stop({ id: 'J', kind: 'journey', origin: null, destination: at(2) })
+  const legs = dayLegs([e(spot('A', 0)), e(J), e(spot('B', 3))])
+  expect(ids(legs)).toEqual(['J>B'])
+  expect(legs[0].a).toBe(J.destination)
+})

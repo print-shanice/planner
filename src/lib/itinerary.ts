@@ -1,9 +1,9 @@
 import type { Place, Stop, Trip } from './types'
 import { visibleDays, type DayEntry } from './dates'
 import { dayEntries, ownerOn } from './agenda'
+import { descendants } from './countries'
 
 export { ownerOn }
-import { descendants } from './countries'
 
 export type ItinDay = { date: string; entries: DayEntry[]; owner: Trip }
 export type Itinerary = { days: ItinDay[]; undated: Stop[] }

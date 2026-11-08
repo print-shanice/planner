@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import type { DayEntry } from '../../lib/dates'
 import { fmtDay } from '../../lib/dates'
-import type { Place, Stop, Trip } from '../../lib/types'
+import type { Stop, Trip } from '../../lib/types'
 import { hasPoint, tooClose } from '../../lib/walk'
 import { positionsAfterMove } from '../../lib/order'
 import { useSave } from '../../lib/queries'
