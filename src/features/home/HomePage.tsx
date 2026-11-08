@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useId, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeTotals, tripsInCountry } from '../../lib/countries'
@@ -21,6 +21,7 @@ import { AccountButton } from './Account'
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
 export function HomePage() {
+  const travelsId = useId()
   const tq = useTrips()
   const sq = useStops()
   const trips = tq.data ?? []
@@ -73,10 +74,14 @@ export function HomePage() {
       </section>
 
       <div className="home-world">
-        <Suspense fallback={<div className="globe-wrap" />}>
-          <Globe status={status} pins={pins} onCountry={pickCountry} />
-        </Suspense>
-        {trips.length > 0 && <Totals {...totals} />}
+        {/* a summary of where your travels have taken you: the globe and its numbers in one card */}
+        <div className="section-head"><h2 id={travelsId} className="head">your travels, wrapped</h2></div>
+        <div className="travels-card">
+          <Suspense fallback={<div className="globe-wrap" />}>
+            <Globe status={status} pins={pins} onCountry={pickCountry} />
+          </Suspense>
+          {trips.length > 0 && <Totals {...totals} labelledBy={travelsId} />}
+        </div>
       </div>
 
       {/* only shows once a trip has ended */}

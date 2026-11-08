@@ -149,7 +149,7 @@ it('no trips shows only the empty title', () => {
   expect(screen.getByText('no trips yet')).toBeVisible()
   expect(screen.queryByTestId('calendar')).toBeNull()
   expect(screen.queryByRole('heading', { name: 'past trips' })).toBeNull()
-  expect(screen.queryByText('life well lived')).toBeNull()
+  expect(screen.queryByTestId('totals')).toBeNull()
 })
 
 it('past appears once a top-level trip has ended', () => {
@@ -172,13 +172,14 @@ it('totals count countries, cities and trips', () => {
   expect(totals).toHaveTextContent(/4\s*trips/)
 })
 
-it('the numbers sit under "life well lived"', () => {
+it('the globe and its numbers share one card under "your travels, wrapped"', () => {
   db.trips = europe()
   show()
-  const title = screen.getByText('life well lived')
+  const heading = screen.getByRole('heading', { level: 2, name: 'your travels, wrapped' })
   const totals = screen.getByTestId('totals')
-  expect(title.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  expect(totals).toHaveAttribute('aria-labelledby', title.id)
+  expect(totals.closest('.travels-card')).not.toBeNull()
+  expect(totals).toHaveAttribute('aria-labelledby', heading.id)
+  expect(screen.queryByText('life well lived')).toBeNull()
 })
 
 it('trip form saves dates and currency', async () => {
@@ -242,11 +243,11 @@ it('choosing a country with one trip opens it', async () => {
   expect(screen.getByText('opened trip')).toBeInTheDocument()
 })
 
-it('home has only the next up and past trips headings', () => {
+it('home has next up, your travels and past trips headings, nothing else', () => {
   db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' }), ...europe()]
   db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
   show()
-  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['next up', 'past trips'])
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['next up', 'your travels, wrapped', 'past trips'])
   expect(screen.queryByText('cafe reel')).toBeNull()
 })
 
@@ -364,4 +365,12 @@ it('signing out says so while it happens', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'account' }))
   await userEvent.click(within(screen.getByRole('dialog', { name: 'account' })).getByRole('button', { name: 'sign out' }))
   expect(screen.getByRole('button', { name: /^signing out/ })).toHaveAttribute('aria-busy', 'true')
+})
+
+it('the globe sits under its own heading, like next up', () => {
+  db.trips = europe()
+  show()
+  const heading = screen.getByRole('heading', { level: 2, name: 'your travels, wrapped' })
+  const world = document.querySelector('.home-world') as HTMLElement
+  expect(world.firstElementChild).toContainElement(heading)
 })

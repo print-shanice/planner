@@ -1,19 +1,14 @@
-import { useId } from 'react'
-
-export function Totals({ countries, cities, trips }: { countries: number; cities: number; trips: number }) {
-  const id = useId()
+// the numbers along the bottom of the travels card, labelled by its heading
+export function Totals({ countries, cities, trips, labelledBy }: { countries: number; cities: number; trips: number; labelledBy: string }) {
   const items: [number, string][] = [[countries, 'countries'], [cities, 'cities'], [trips, 'trips']]
   return (
-    <div className="totals-block">
-      <p id={id} className="head totals-title">life well lived</p>
-      <dl className="totals" data-testid="totals" aria-labelledby={id}>
-        {items.map(([n, label]) => (
-          <div key={label}>
-            <dt className="num head">{n}</dt>
-            <dd className="muted">{label}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
+    <dl className="totals" data-testid="totals" aria-labelledby={labelledBy}>
+      {items.map(([n, label]) => (
+        <div key={label}>
+          <dt className="num head">{n}</dt>
+          <dd className="muted">{label}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
