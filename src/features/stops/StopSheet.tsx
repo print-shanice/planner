@@ -45,7 +45,7 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      <Sheet open={!!state && !!stop} title={title} onClose={close}>
+      <Sheet open={!!state && !!stop} title={title} onClose={close} page={state?.mode === 'edit'}>
         {state && stop && (state.mode === 'edit'
           ? <StopForm key={`${state.n}-edit`} stop={stop} trip={trip} isNew={!!state.draft}
               // a save can land after its sheet was closed or another one opened; only touch this sheet

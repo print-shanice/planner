@@ -102,9 +102,10 @@ it('a new stop lands at the end of its day', async () => {
 
 it('price writes one linked cost; clearing it removes the cost', async () => {
   let d = await openEdit()
+  await userEvent.click(within(d).getByRole('button', { name: 'more' }))
   await userEvent.type(within(d).getByLabelText('amount'), '120')
-  await userEvent.click(within(d).getByRole('button', { name: 'paid' }))
-  await userEvent.selectOptions(within(d).getByLabelText('paid by'), 'u2')
+  await userEvent.click(within(d).getByRole('switch', { name: 'paid already' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'kai' }))
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({
     trip_id: 'lap', stop_id: 's1', amount: 120, currency: 'EUR', paid_by: 'u2', status: 'paid', split: 'even', category: 'activities',
@@ -224,13 +225,14 @@ it('saving a price again after it failed sends the same new cost, not a second o
 
 it('not paid saves no payer, and paid presets a payer', async () => {
   const d = await openEdit()
+  await userEvent.click(within(d).getByRole('button', { name: 'more' }))
   await userEvent.type(within(d).getByLabelText('amount'), '30')
-  expect(within(d).getByRole('button', { name: 'not paid' })).toHaveClass('choice-chip', 'idle')
-  expect(within(d).getByRole('button', { name: 'paid' })).toHaveClass('choice-chip', 'ok')
-  expect(within(d).queryByLabelText('paid by')).toBeNull()
-  await userEvent.click(within(d).getByRole('button', { name: 'paid' }))
-  expect(within(d).getByLabelText('paid by')).toHaveValue('u1')
-  await userEvent.click(within(d).getByRole('button', { name: 'not paid' }))
+  const paid = within(d).getByRole('switch', { name: 'paid already' })
+  expect(paid).toHaveAttribute('aria-checked', 'false')
+  expect(within(d).queryByRole('group', { name: 'paid by' })).toBeNull()
+  await userEvent.click(paid)
+  expect(within(d).getByRole('button', { name: 'shanice' })).toHaveAttribute('aria-pressed', 'true')
+  await userEvent.click(paid)
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ amount: 30, status: 'estimate', paid_by: null }))
 })
@@ -238,7 +240,7 @@ it('not paid saves no payer, and paid presets a payer', async () => {
 it('an older paid cost with no payer asks who paid', async () => {
   db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'paid', paid_by: null })]
   const d = await openEdit()
-  expect(within(d).getByRole('button', { name: 'paid' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(d).getByRole('switch', { name: 'paid already' })).toHaveAttribute('aria-checked', 'true')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(within(d).getByText('pick who paid')).toBeInTheDocument()
   expect(db.save).not.toHaveBeenCalled()
@@ -247,7 +249,7 @@ it('an older paid cost with no payer asks who paid', async () => {
 it('an older estimate with a payer saves as not paid with no payer', async () => {
   db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'estimate', paid_by: 'u2' })]
   const d = await openEdit()
-  expect(within(d).getByRole('button', { name: 'not paid' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(d).getByRole('switch', { name: 'paid already' })).toHaveAttribute('aria-checked', 'false')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ id: 'c1', status: 'estimate', paid_by: null }))
 })
@@ -259,37 +261,37 @@ it('the stop view says whether it is paid', async () => {
   expect(within(screen.getByRole('dialog')).getByText(/not paid/)).toBeInTheDocument()
 })
 
-it('a new journey shows its essentials and folds the rest, with save in the footer', async () => {
+it('a new journey shows its essentials and keeps the rest under "more", with save always there', async () => {
   show(<Opener kind="journey" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog', { name: 'new journey' })
   for (const l of ['from', 'to', 'depart', 'depart time', 'arrive', 'arrive time']) expect(within(d).getByLabelText(l)).toBeInTheDocument()
   const folds = [...d.querySelectorAll('.fold-toggle')].map((x) => [x.textContent, x.getAttribute('aria-expanded')])
-  expect(folds).toEqual([['cost', 'false'], ['notes & links', 'false']])
+  expect(folds).toEqual([['more', 'false']])
   expect(within(d).getByRole('button', { name: 'save' }).closest('.sheet-foot')).not.toBeNull()
 })
 
-it('booking status is a choice in its colours: idea grey, to book amber, booked green', async () => {
+it('a place asks "needs booking", then "booked", as switches', async () => {
   show(<Opener kind="place" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
-  const d = screen.getByRole('dialog')
-  const status = within(d).getByRole('group', { name: 'status' })
-  expect(within(status).getByRole('button', { name: 'idea' })).toHaveClass('choice-chip', 'idle')
-  expect(within(status).getByRole('button', { name: 'idea' })).toHaveAttribute('aria-pressed', 'true')
-  expect(within(status).getByRole('button', { name: 'to book' })).toHaveClass('warn')
-  expect(within(status).getByRole('button', { name: 'booked' })).toHaveClass('ok')
+  const d = within(screen.getByRole('dialog'))
+  const needs = d.getByRole('switch', { name: 'needs booking' })
+  expect(needs).toHaveAttribute('aria-checked', 'false')
+  expect(d.queryByRole('switch', { name: 'booked' })).toBeNull()
+  await userEvent.click(needs)
+  expect(d.getByRole('switch', { name: 'booked' })).toHaveAttribute('aria-checked', 'false')
+  await userEvent.click(d.getByRole('switch', { name: 'booked' }))
+  expect(d.getByLabelText('booking ref')).toBeInTheDocument()
 })
 
-it('the booking ref shows once booked, and a journey asks for its carrier once it is being booked', async () => {
+it('once a journey is booked it asks for its carrier and ref', async () => {
   show(<Opener kind="journey" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog')
   expect(within(d).queryByLabelText('booking ref')).toBeNull()
   expect(within(d).queryByLabelText('carrier / number')).toBeNull()
-  await userEvent.click(within(d).getByRole('button', { name: 'to book' }))
+  await userEvent.click(within(d).getByRole('switch', { name: 'booked' }))
   expect(within(d).getByLabelText('carrier / number')).toBeInTheDocument()
-  expect(within(d).queryByLabelText('booking ref')).toBeNull()
-  await userEvent.click(within(d).getByRole('button', { name: 'booked' }))
   expect(within(d).getByLabelText('booking ref')).toBeInTheDocument()
 })
 
@@ -309,9 +311,9 @@ it('dates and times read like a calendar, and say date or time when empty', asyn
   expect(within(d).getByLabelText('depart time').closest('.pick')).toHaveTextContent('07:20')
 })
 
-it('a cost problem opens the cost fold', async () => {
+it('a cost problem opens "more", where the cost is', async () => {
   const d = await openEdit()
-  const fold = within(d).getByRole('button', { name: 'cost' })
+  const fold = within(d).getByRole('button', { name: 'more' })
   await userEvent.click(fold)
   await userEvent.type(within(d).getByLabelText('amount'), 'abc')
   await userEvent.click(fold)
@@ -390,26 +392,24 @@ it('a new item that lands after its sheet closed leaves the next sheet open', as
   expect(d).toBeInTheDocument()
 })
 
-it('booking status sits right under the name, before the place', async () => {
+it('a stay has no separate location field: its name finds the place', async () => {
   show(<Opener kind="stay" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog')
-  const name = within(d).getByLabelText('name')
-  const status = within(d).getByRole('group', { name: 'status' })
-  const location = within(d).getByLabelText('location')
-  expect(name.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  expect(status.compareDocumentPosition(location) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(within(d).queryByLabelText('location')).toBeNull()
+  expect(within(d).getByLabelText('name')).toBeInTheDocument()
 })
 
-it('paid or not paid sits in the cost header, and paid opens the cost to say who paid', async () => {
-  show(<Opener kind="place" />)
+it('paid already sits between the amount and who paid', async () => {
+  show(<Opener kind="stay" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog')
-  const payment = within(d).getByRole('group', { name: 'payment' })
-  expect(payment.closest('.fold-head')).toBe(within(d).getByRole('button', { name: 'cost' }).closest('.fold-head'))
-  await userEvent.click(within(payment).getByRole('button', { name: 'paid' }))
-  expect(within(d).getByRole('button', { name: 'cost' })).toHaveAttribute('aria-expanded', 'true')
-  expect(within(d).getByLabelText('paid by')).toBeVisible()
+  const amount = within(d).getByLabelText('amount')
+  const paid = within(d).getByRole('switch', { name: 'paid already' })
+  await userEvent.click(paid)
+  const faces = within(d).getByRole('group', { name: 'paid by' })
+  expect(amount.compareDocumentPosition(paid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(paid.compareDocumentPosition(faces) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 describe('a stop reads like a place card', () => {
@@ -498,4 +498,58 @@ it('uploading a ticket says so on the card', async () => {
   const d = screen.getByRole('dialog')
   await userEvent.upload(within(d).getByLabelText('add file'), new File(['x'], 'pass.pdf', { type: 'application/pdf' }))
   expect(within(d).getByText('uploading…')).toBeInTheDocument()
+})
+
+describe('forms are calm full pages', () => {
+  async function newStay() {
+    show(<Opener kind="stay" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    return within(screen.getByRole('dialog', { name: 'new stay' }))
+  }
+
+  it('a form opens as a full page', async () => {
+    await newStay()
+    expect(screen.getByRole('dialog', { name: 'new stay' })).toHaveClass('page')
+  })
+
+  it('a stay asks only where, when, booking and cost, in that order, with no pills', async () => {
+    const d = await newStay()
+    expect([...screen.getByRole('dialog').querySelectorAll('.form-q')].map((q) => q.textContent)).toEqual(['where are you staying?', 'when', 'booking', 'cost'])
+    expect(d.queryByRole('group', { name: 'status' })).toBeNull()
+    expect(d.queryByRole('group', { name: 'payment' })).toBeNull()
+    expect(screen.getByRole('dialog').querySelector('.choice-chip')).toBeNull()
+  })
+
+  it('"booked" is a switch; once on, the booking ref appears, and off means to book', async () => {
+    const d = await newStay()
+    const booked = d.getByRole('switch', { name: 'booked' })
+    expect(booked).toHaveAttribute('aria-checked', 'false')
+    expect(d.queryByLabelText('booking ref')).toBeNull()
+    await userEvent.click(booked)
+    expect(booked).toHaveAttribute('aria-checked', 'true')
+    expect(d.getByLabelText('booking ref')).toBeInTheDocument()
+    await userEvent.click(booked)
+    await userEvent.type(d.getByLabelText('name'), 'glass igloo')
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith('stops', expect.objectContaining({ status: 'to_book' }))
+  })
+
+  it('who paid is your faces, once it is paid', async () => {
+    const d = await newStay()
+    expect(d.queryByRole('group', { name: 'paid by' })).toBeNull()
+    await userEvent.click(d.getByRole('switch', { name: 'paid already' }))
+    const faces = within(d.getByRole('group', { name: 'paid by' }))
+    expect(faces.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['shanice', 'kai'])
+    await userEvent.click(faces.getByRole('button', { name: 'kai' }))
+    expect(faces.getByRole('button', { name: 'kai' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('dates open the app\'s own calendar, and a tapped day is the date', async () => {
+    const d = await newStay()
+    await userEvent.click(d.getByRole('button', { name: /^choose check-out/ }))
+    const cal = within(screen.getByRole('dialog', { name: 'check-out' }))
+    await userEvent.click(cal.getByRole('button', { name: 'wed 10 feb' }))
+    expect(screen.queryByRole('dialog', { name: 'check-out' })).toBeNull()
+    expect(d.getByLabelText('check-out')).toHaveValue('2027-02-10')
+  })
 })

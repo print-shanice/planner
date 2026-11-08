@@ -34,10 +34,13 @@ export function LinkForm({ tripId, link, onDone }: { tripId: string | null; link
   }
 
   return (
-    <form id={formId} className="stack" onSubmit={submit} noValidate>
-      <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={url} autoFocus onChange={(e) => set({ url: e.target.value })} /></label>
-      <label className="field"><span className="label">title</span><input value={title} onChange={(e) => set({ title: e.target.value })} /></label>
-      <label className="field"><span className="label">note</span><textarea value={note} onChange={(e) => set({ note: e.target.value })} /></label>
+    <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
+      <p className="form-q">paste a link</p>
+      <input className="title-input link-input" type="url" inputMode="url" aria-label="link" placeholder="https://" value={url} autoFocus onChange={(e) => set({ url: e.target.value })} />
+      <p className="form-q">title</p>
+      <input className="title-input small" aria-label="title" placeholder="title" value={title} onChange={(e) => set({ title: e.target.value })} />
+      <p className="form-q">note</p>
+      <textarea className="note-text" aria-label="note" placeholder="why you saved it" value={note} onChange={(e) => set({ note: e.target.value })} />
       <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure} />
     </form>
   )

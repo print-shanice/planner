@@ -48,10 +48,13 @@ export function CostForm({ trip, cost, day, onDone }: Props) {
   }
 
   return (
-    <form id={formId} className="stack" onSubmit={submit} noValidate>
-      <input className="title-input" aria-label="name" placeholder="name" value={title} onChange={(e) => set({ title: e.target.value })} autoFocus={!cost} />
-      <PaymentChoice value={money} onChange={(m) => set({ money: m })} members={members} />
-      <CostFields value={money} onChange={(m) => set({ money: m })} members={members} rates={rates} />
+    <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
+      <p className="form-q">how much?</p>
+      <CostFields value={money} onChange={(m) => set({ money: m })} members={members} rates={rates} autoFocus={!cost}
+        payment={<PaymentChoice value={money} onChange={(m) => set({ money: m })} members={members} />} />
+      <p className="form-q">for</p>
+      <input className="title-input" aria-label="name" placeholder="what was it?" value={title} onChange={(e) => set({ title: e.target.value })} />
+      <p className="form-q">kind and day</p>
       <label className="field">
         <span className="label">category</span>
         <select value={category} onChange={(e) => set({ category: e.target.value })}>

@@ -2,7 +2,8 @@ import type { Cost, Member, StopKind } from '../../lib/types'
 import type { Rates } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
 import { useAuth } from '../../lib/auth'
-import { Choice } from '../../components/Choice'
+import type { CSSProperties, ReactNode } from 'react'
+import { Switch } from '../../components/Switch'
 
 export type CostDraft = { amount: string; currency: string; other: boolean; code: string; rate: string; paid: boolean; paid_by: string; split: string }
 
@@ -48,7 +49,6 @@ export function costValues(d: CostDraft) {
   }
 }
 
-const PAYMENT = [{ value: false, label: 'not paid' }, { value: true, label: 'paid', tone: 'ok' as const }]
 
 export const CATEGORY_OF: Record<StopKind, string> = { place: 'activities', stay: 'stays', journey: 'transport', note: 'other' }
 
@@ -62,20 +62,21 @@ export function PaymentChoice({ value: d, onChange, members }: PaymentProps) {
   const pay = (paid: boolean) => onChange(paid
     ? { ...d, paid, paid_by: d.paid_by || (people.some((m) => m.user_id === me) ? me! : people[0]?.user_id ?? '') }
     : { ...d, paid })
-  return <Choice label="payment" options={PAYMENT} value={d.paid} onChange={pay} />
+  return <Switch label="paid already" checked={d.paid} onChange={pay} />
 }
 
-type Props = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[]; rates: Rates | null }
+// payment: the paid switch, shown between the amount and who paid
+type Props = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[]; rates: Rates | null; payment?: ReactNode; autoFocus?: boolean }
 
-export function CostFields({ value: d, onChange, members, rates }: Props) {
+export function CostFields({ value: d, onChange, members, rates, payment, autoFocus }: Props) {
   const set = (p: Partial<CostDraft>) => onChange({ ...d, ...p })
   const people = members.filter((m) => m.user_id)
   return (
     <fieldset className="cost-fields">
-      <div className="row">
+      <div className="row amount-row">
         <label className="field">
           <span className="label">amount</span>
-          <input inputMode="decimal" value={d.amount} onChange={(e) => set({ amount: e.target.value })} />
+          <input inputMode="decimal" placeholder="0" autoFocus={autoFocus} value={d.amount} onChange={(e) => set({ amount: e.target.value })} />
         </label>
         <label className="field currency-field">
           <span className="label">currency</span>
@@ -97,15 +98,18 @@ export function CostFields({ value: d, onChange, members, rates }: Props) {
           </label>
         </div>
       )}
+      {payment}
       <div className="row">
         {d.paid && (
-          <label className="field">
-            <span className="label">paid by</span>
-            <select value={d.paid_by} onChange={(e) => set({ paid_by: e.target.value })}>
-              {!d.paid_by && <option value="" />}
-              {people.map((m) => <option key={m.user_id!} value={m.user_id!}>{(m.name || m.email).toLowerCase()}</option>)}
-            </select>
-          </label>
+          // who paid: tap a face
+          <div className="faces" role="group" aria-label="paid by">
+            {people.map((m) => (
+              <button key={m.user_id!} type="button" className="face" aria-label={(m.name || m.email).toLowerCase()} aria-pressed={d.paid_by === m.user_id}
+                onClick={() => set({ paid_by: m.user_id! })} style={{ '--c': `var(--g${(m.color ?? 0) % 6})` } as CSSProperties}>
+                <span className="avatar">{(m.name || m.email).slice(0, 1)}</span>
+              </button>
+            ))}
+          </div>
         )}
         <label className="field">
           <span className="label">for</span>

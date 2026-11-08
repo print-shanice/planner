@@ -115,7 +115,7 @@ it('the cost form uses the same paid switch and keeps a new draft', async () => 
   render(<CostForm trip={t} onDone={vi.fn()} />)
   expect(screen.getByLabelText('name')).toHaveValue('sauna')
   await userEvent.type(screen.getByLabelText('amount'), '80')
-  await userEvent.click(screen.getByRole('button', { name: 'paid' }))
+  await userEvent.click(screen.getByRole('switch', { name: 'paid already' }))
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'sauna', amount: 80, status: 'paid', paid_by: 'u1' }))
 })
@@ -126,13 +126,14 @@ it('editing a cost keeps no draft', async () => {
   expect(localStorage.getItem('planner-drafts')).toBeNull()
 })
 
-it('in the cost form, paid or not paid sits right under the name', () => {
+it('the cost form asks how much first, then paid, then what it was for', () => {
   render(<CostForm trip={trip({ id: 'lap' })} onDone={vi.fn()} />)
-  const name = screen.getByLabelText('name')
-  const payment = screen.getByRole('group', { name: 'payment' })
   const amount = screen.getByLabelText('amount')
-  expect(name.compareDocumentPosition(payment) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  expect(payment.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  const paid = screen.getByRole('switch', { name: 'paid already' })
+  const name = screen.getByLabelText('name')
+  expect(amount).toHaveFocus()
+  expect(amount.compareDocumentPosition(paid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(paid.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 it('the budget line says what is left', () => {

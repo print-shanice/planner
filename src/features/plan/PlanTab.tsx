@@ -90,7 +90,7 @@ export function PlanTab({ trip }: { trip: Trip }) {
         {datedKids.filter(c => c.start_date! <= selected && (c.end_date ?? c.start_date!) >= selected).map(c =>
           <FoldRow key={c.id} trip={c} clash={clash.has(c.id)} />)}
       </> : <NoDate stops={undated} sideTrips={undatedKids} canEdit={canEdit} onOpen={onOpen} onSetDates={setAdjusting} />}
-      <Sheet open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
+      <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>
     </div>

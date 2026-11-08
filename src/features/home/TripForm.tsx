@@ -71,23 +71,24 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   }
 
   return (
-    <form id={formId} className="stack" onSubmit={submit} noValidate>
-      <input className="title-input" aria-label="name" placeholder="name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
+    <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
+      <input className="title-input" aria-label="name" placeholder="name the trip" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
+      <p className="form-q">when</p>
       <div className="when">
         <div className="when-row"><span className="when-label">starts</span><Pick type="date" label="starts" value={start} onChange={setStart} /></div>
         <div className="when-row"><span className="when-label">ends</span><Pick type="date" label="ends" value={end} min={start || undefined} onChange={setEnd} /></div>
       </div>
-      {trip && (
-        <label className="field">
-          <span className="label">part of</span>
-          <select value={parent ?? ''} onChange={(e) => setParent(e.target.value || null)}>
-            <option value="">none</option>
-            {parentChoices.map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
-          </select>
-        </label>
-      )}
+      <p className="form-q">based in</p>
+      <PlaceField id={`base-${id}`} label="home base" value={base} onChange={setBase} />
+      <p className="form-q">colour</p>
+      <div className="swatches" role="radiogroup" aria-label="colour">
+        {SWATCHES.map((i) => (
+          <button key={i} type="button" role="radio" aria-checked={color === i} aria-label={`colour ${i + 1}`}
+            className="swatch" style={{ background: `var(--g${i})` }} onClick={() => setColor(i)} />
+        ))}
+      </div>
       <div className="folds">
-        <Fold label="budget" open={budget.trim() !== ''}>
+        <Fold label="more" open={budget.trim() !== '' || !!notes.trim()}>
           <div className="row">
             <label className="field">
               <span className="label">budget</span>
@@ -100,18 +101,15 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
               </select>
             </label>
           </div>
-        </Fold>
-        <Fold label="more" open={!!base || !!notes.trim()}>
-          <PlaceField id={`base-${id}`} label="home base" value={base} onChange={setBase} />
-          <div className="field" role="radiogroup" aria-label="colour">
-            <span className="label">colour</span>
-            <div className="swatches">
-              {SWATCHES.map((i) => (
-                <button key={i} type="button" role="radio" aria-checked={color === i} aria-label={`colour ${i + 1}`}
-                  className="swatch" style={{ background: `var(--g${i})` }} onClick={() => setColor(i)} />
-              ))}
-            </div>
-          </div>
+          {trip && (
+            <label className="field">
+              <span className="label">part of</span>
+              <select value={parent ?? ''} onChange={(e) => setParent(e.target.value || null)}>
+                <option value="">none</option>
+                {parentChoices.map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
+              </select>
+            </label>
+          )}
           <label className="field">
             <span className="label">notes</span>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />

@@ -56,13 +56,13 @@ export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | n
   }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
-      <Sheet open={kind === 'cost'} title="new cost" onClose={onClose}>
+      <Sheet page open={kind === 'cost'} title="new cost" onClose={onClose}>
         <CostForm trip={trip} day={day} onDone={onClose} />
       </Sheet>
-      <Sheet open={kind === 'link'} title="new link" onClose={onClose}>
+      <Sheet page open={kind === 'link'} title="new link" onClose={onClose}>
         <LinkForm tripId={trip.id} onDone={onClose} />
       </Sheet>
-      <Sheet open={kind === 'side trip'} title="new side trip" onClose={onClose}>
+      <Sheet page open={kind === 'side trip'} title="new side trip" onClose={onClose}>
         <TripForm parentId={trip.id} onDone={onClose} />
       </Sheet>
     </>

@@ -56,7 +56,7 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
           </ItemMenu>
         )}
       </div>
-      <Sheet open={editing} title="edit link" onClose={() => setEditing(false)}>
+      <Sheet page open={editing} title="edit link" onClose={() => setEditing(false)}>
         <LinkForm tripId={link.trip_id} link={link} onDone={() => setEditing(false)} />
       </Sheet>
       <SaveFailed table="links" id={link.id} />

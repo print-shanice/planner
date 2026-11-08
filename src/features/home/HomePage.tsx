@@ -87,7 +87,7 @@ export function HomePage() {
         </section>
       )}
 
-      <Sheet open={adding} title="new trip" onClose={() => setAdding(false)}>
+      <Sheet page open={adding} title="new trip" onClose={() => setAdding(false)}>
         <TripForm onDone={() => setAdding(false)} />
       </Sheet>
       <Sheet open={!!country} title={country ? countryName(country) : ''} onClose={() => setCountry(null)}>

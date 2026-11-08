@@ -256,62 +256,139 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
   .pulse, .bone { animation: none; }
 }
 
-/* forms: one clean list, like a phone's settings. rows sit flush and are split by hairlines;
-   no boxes, no filled pills; a value sits on the right, the chosen word of a choice is coloured and underlined */
-.sheet form.stack { gap: 0; }
-.sheet .title-input { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px; }
-.sheet form > *:not(.title-input):not(.folds):not(.when) { border-bottom: 1px solid var(--line); }
-.sheet .when, .sheet .folds { border: 0; border-radius: 0; }
-.sheet .when-row, .sheet .fold-head, .sheet form .field, .sheet .choice { min-height: 52px; }
-.sheet .when-row { padding: 0; gap: 8px; border-bottom: 1px solid var(--line); }
-.sheet .when-row + .when-row { border-top: 0; }
-.sheet .when-label, .sheet form .field .label, .sheet .fold-toggle { font-size: 15px; font-weight: 600; color: var(--ink-2); }
-.sheet .pick { background: none; min-height: 40px; padding: 0; margin-left: 14px; font-weight: 600; }
-.sheet .pick.date { min-width: 0; }
-/* a choice is plain words: the chosen one coloured and underlined */
-.sheet .choice { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start; gap: 22px; padding: 0; border-radius: 0; }
-.sheet .choice-chip {
-  flex: none; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: none;
-  color: var(--ink-3); font-size: 15px; font-weight: 600; box-shadow: inset 0 -2px 0 transparent;
+/* forms are full pages: a phone's whole screen, a laptop's left column (the map stays beside).
+   ✕ on the left, the title small in the middle, save top right; the main thing big; a small grey question
+   over each section; switches, faces and icons instead of pills */
+.sheet-root.page .sheet-backdrop { padding: 0; align-items: stretch; justify-content: flex-start; background: rgba(22, 24, 29, .18); }
+.sheet.page {
+  position: relative; width: 100%; max-width: none; height: 100dvh; max-height: none; border-radius: 0;
+  display: flex; flex-direction: column; animation: rise .2s ease-out;
 }
-.sheet .choice-chip .dot { display: none; }
-.sheet .choice-chip[aria-pressed="true"], .sheet .choice-chip.warn[aria-pressed="true"], .sheet .choice-chip.ok[aria-pressed="true"] { border: 0; background: none; color: var(--ink); box-shadow: inset 0 -2px 0 currentColor; }
-.sheet .choice-chip.warn[aria-pressed="true"] { color: var(--warn); }
-.sheet .choice-chip.ok[aria-pressed="true"] { color: var(--ok); }
-/* a field is a row: label left, value right */
-.sheet form .field:not(:has(textarea)):not(:has(.search-box)):not(:has(.place-chip)) {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0; border: 0; border-radius: 0;
+@media (min-width: 1024px) { .sheet.page { width: min(560px, 44vw); box-shadow: 8px 0 30px rgba(22, 24, 29, .12); animation: page-in .18s ease-out; } }
+@keyframes page-in { from { transform: translateX(-16px); opacity: 0; } }
+.sheet.page .sheet-head { position: relative; justify-content: center; min-height: 56px; padding: calc(env(safe-area-inset-top) + 8px) 64px 4px; }
+.sheet.page .sheet-head h2 { flex: none; font-family: var(--f-body); font-size: 15px; font-weight: 700; color: var(--ink-2); letter-spacing: 0; }
+.sheet.page .sheet-x { position: absolute; left: 8px; bottom: 4px; }
+.sheet.page .sheet-body { flex: 1; padding: 8px 22px 40px; }
+.sheet.page .sheet-foot { border: 0; padding: 0; }
+.sheet.page .form-foot .btn.primary { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 14px; min-height: 40px; padding: 0 18px; }
+.sheet.page .form-foot:has(> .warn-line, > :not(.spacer):not(.btn.primary)) { padding: 10px 22px calc(env(safe-area-inset-bottom) + 12px); border-top: 1px solid var(--line); }
+
+.page-form { gap: 0 !important; }
+.form-q { margin: 26px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.page-form > .form-q:first-child { margin-top: 8px; }
+.page-form .title-input { min-height: 0; padding: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.15; }
+.page-form .title-input.small { font-size: 20px; letter-spacing: -0.02em; }
+.page-form .link-input { font-size: 18px; font-family: var(--f-body); font-weight: 600; letter-spacing: 0; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+.page-form > .title-input:first-child { margin-top: 18px; }
+.note-text { width: 100%; min-height: 120px; margin-top: 12px; padding: 0; border: 0; background: none; resize: vertical; font: 400 17px/1.5 var(--f-body); color: var(--ink); }
+.note-text:focus { outline: none; }
+.name-place-at { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--ink-2); font-size: 14px; }
+.name-place-at .icon-btn { width: 32px; height: 32px; }
+.name-place .results, .name-place .search-note { margin-top: 10px; }
+.name-place .results { background: var(--soft); border-radius: 16px; padding: 4px; }
+
+/* dates and times: two big cards side by side */
+.page-form .when { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 0; border-radius: 0; }
+.page-form .when:has(> :only-child) { grid-template-columns: 1fr; }
+.page-form .when-row {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "label label" "date time"; align-items: end; gap: 2px 8px;
+  min-height: 0; padding: 10px 12px; border: 0; border-radius: 18px; background: var(--soft);
 }
-.sheet form .field:not(:has(textarea)) input, .sheet form .field:not(:has(textarea)) select {
-  flex: 1; min-width: 0; max-width: 62%; min-height: 40px; padding: 0; border: 0; border-radius: 0; background: none;
-  text-align: right; text-align-last: right; font-size: 16px; font-weight: 600; color: var(--ink);
+.page-form .when-row + .when-row { border: 0; }
+.page-form .when-label { grid-area: label; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.page-form .when-row > .pick.date { grid-area: date; }
+.page-form .when-row > .pick.time { grid-area: time; }
+.page-form .pick { min-height: 0; padding: 0; margin: 0; background: none; border-radius: 0; justify-content: flex-start; }
+.page-form .pick.date .pick-text { font-family: var(--f-head); font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.page-form .pick.date[data-empty] .pick-text, .page-form .pick.time[data-empty] .pick-text { color: var(--ink-3); }
+.page-form .pick.time .pick-text { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.pick-open { border: 0; background: none; padding: 0; cursor: pointer; text-align: left; color: inherit; }
+.pick-open::after { content: ''; position: absolute; inset: 0; }
+.pick.date { position: relative; }
+
+/* yes or no */
+.switch-row {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0;
+  border: 0; background: none; color: var(--ink); font-size: 17px; font-weight: 700; text-align: left; cursor: pointer;
 }
-.sheet form .field select { background-image: none; }
-.sheet form .field input::placeholder { color: var(--ink-3); font-weight: 500; }
-.sheet form .row:has(> .field) { flex-direction: column; align-items: stretch; gap: 0; }
-.sheet form .row:has(> .field) > .field + .field { border-top: 1px solid var(--line); }
-.sheet form .row > .field.currency-field { flex: none !important; }
-.sheet form .field:has(textarea) { padding: 12px 0; gap: 8px; }
-.sheet form .field textarea { border: 0; background: var(--soft); border-radius: 12px; }
-.sheet .field .search-box { min-height: 52px; padding: 0; border: 0; border-radius: 0; background: none; }
-.sheet form .field .search-box input { max-width: none; text-align: left; text-align-last: left; font-weight: 500; }
-.sheet .place-chip { background: none; padding: 6px 0; border-radius: 0; }
-/* optional sets: one row each; the whole row opens it */
-.sheet .fold-head { padding: 0; border-bottom: 1px solid var(--line); gap: 10px; }
-.sheet .fold-head::after { right: 4px; }
-.sheet .fold-toggle { flex: 1; align-self: stretch; display: flex; align-items: center; padding-right: 28px; }
-.sheet .fold-toggle::before { display: none; }
-.sheet .form-fold:not([data-open]) .fold-head:not(:has(.fold-extra)) .fold-toggle::after { content: 'add'; margin-left: auto; color: var(--ink-3); font-weight: 600; }
-.sheet .fold-extra { margin-right: 28px; }
-.sheet .fold-extra .choice { min-height: 0; gap: 16px; border: 0; }
-.sheet .fold-extra .choice-chip { min-height: 40px; }
-.sheet .form-fold[data-open] .fold-head { border-bottom: 0; }
-.sheet .fold-body { gap: 0; padding: 0 0 0 14px; border-bottom: 1px solid var(--line); }
-.sheet .fold-body > *:last-child, .sheet .fold-body .field:last-child { border-bottom: 0; }
-.sheet .fold-body .field, .sheet .fold-body .choice, .sheet .fold-body > .row { border-bottom: 1px solid var(--line); }
-.sheet .cost-fields { gap: 0; }
-.sheet .cost-fields > * { border-bottom: 1px solid var(--line); }
-.sheet .cost-fields > *:last-child { border-bottom: 0; }
-.sheet .fold-body > *:last-child, .sheet .cost-fields > *:last-child { border-bottom: 0; }
-.sheet .pick { flex: none; margin-left: auto; white-space: nowrap; }
-.sheet form { overflow-x: clip; }
+.switch { position: relative; width: 50px; height: 30px; border-radius: 999px; background: var(--line); flex: none; transition: background .15s; }
+.switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--card); box-shadow: 0 1px 3px rgba(22, 24, 29, .25); transition: transform .15s; }
+.switch-row[aria-checked="true"] .switch { background: var(--ink); }
+.switch-row[aria-checked="true"] .switch::after { transform: translateX(20px); }
+.switch-row:disabled { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+
+/* plain fields: label above, quiet underline */
+.page-form .field { display: grid; gap: 4px; margin-top: 12px; }
+.page-form .field .label { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.page-form .field input, .page-form .field select {
+  min-height: 44px; padding: 0; border: 0; border-bottom: 2px solid var(--line); border-radius: 0; background: none;
+  font-size: 17px; font-weight: 600; color: var(--ink);
+}
+.page-form .field input:focus, .page-form .field select:focus { outline: none; border-bottom-color: var(--ink); }
+.page-form .field textarea { border: 0; border-radius: 14px; background: var(--soft); }
+.page-form .row { gap: 12px; }
+.page-form .field .search-box { min-height: 48px; padding: 0 0 0 2px; border: 0; border-bottom: 2px solid var(--line); border-radius: 0; background: none; }
+.page-form .place-chip { background: var(--soft); }
+
+/* money: a big amount with its currency beside it, then paid, then faces */
+.page-form .cost-fields { display: grid; gap: 4px; }
+.page-form .amount-row { align-items: end; }
+.page-form .amount-row .field:first-child .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.page-form .amount-row .field:first-child input { font-family: var(--f-head); font-size: 34px; font-weight: 800; letter-spacing: -0.03em; border: 0; min-height: 48px; }
+.page-form .amount-row .currency-field { flex: 0 0 auto !important; }
+.page-form .amount-row .currency-field .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.page-form .amount-row .currency-field select { border: 0; font-size: 15px; color: var(--ink-2); min-height: 44px; }
+.faces { display: flex; gap: 14px; padding: 6px 0; }
+.face { display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; opacity: .35; cursor: pointer; }
+.face .avatar { width: 40px; height: 40px; font-size: 15px; border: 0; background: var(--c); color: var(--card); }
+.face[aria-pressed="true"] { opacity: 1; }
+.face[aria-pressed="true"] .avatar { box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--c); }
+
+/* how you travel: icons, not pills */
+.page-form .modes { display: flex; gap: 16px; padding: 0; background: none; border-radius: 0; }
+.page-form .modes button { flex: none; display: grid; justify-items: center; gap: 4px; min-width: 52px; padding: 0; border: 0; background: none; box-shadow: none; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.page-form .modes button .icon { width: 48px; height: 48px; padding: 13px; border-radius: 50%; background: var(--soft); color: var(--ink-2); box-sizing: border-box; }
+.page-form .modes button[aria-pressed="true"] { color: var(--ink); background: none; box-shadow: none; }
+.page-form .modes button[aria-pressed="true"] .icon { background: var(--ink); color: var(--card); }
+.page-form .route { display: grid; gap: 4px; padding-left: 14px; border-left: 2px dashed var(--ink-3); }
+
+/* colours: six dots */
+.page-form .swatches { display: flex; gap: 12px; }
+
+/* extras: one quiet "more" at the bottom */
+.page-form .folds { margin-top: 28px; border: 0; border-radius: 0; }
+.page-form .fold-head { min-height: 44px; padding: 0 28px 0 0; }
+.page-form .fold-toggle { flex: none; font-size: 14px; font-weight: 600; color: var(--ink-2); text-decoration: underline dashed var(--ink-3); text-underline-offset: 4px; }
+.page-form .fold-toggle::before { inset: 0 -28px 0 0; }
+.page-form .fold-head::after { right: auto; left: 52px; }
+.page-form .fold-body { padding: 4px 0 0; }
+
+/* the app's own calendar for dates */
+.datepick { display: grid; gap: 10px; }
+.datepick-head { display: flex; align-items: center; gap: 4px; }
+.datepick-head .head { flex: 1; font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+.datepick-head .cal-year { font-family: var(--f-body); font-size: 14px; font-weight: 400; color: var(--ink-3); }
+.datepick-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; text-align: center; }
+.datepick-wd { font-size: 12px; color: var(--ink-3); padding-bottom: 4px; }
+.datepick-day { height: 44px; border: 0; border-radius: 50%; background: none; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.datepick-day:hover { background: var(--soft); }
+.datepick-day[data-span] { border-radius: 0; background: var(--g0s); color: var(--g0); }
+.datepick-day[data-from] { background: var(--g0s); color: var(--g0); }
+.datepick-day[aria-current="date"] { box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.datepick-day[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.datepick-day:disabled { color: var(--ink-3); opacity: .45; cursor: default; background: none; }
+.datepick-clear { justify-self: start; }
+.page-form .when { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.page-form .when:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+.page-form .when-row { grid-template-columns: minmax(0, 1fr) auto; min-width: 0; }
+.page-form .when-row > .pick.date { min-width: 0; overflow: hidden; }
+.page-form .pick.date .pick-text { white-space: nowrap; }
+.sheet.page .sheet-body { overflow-x: hidden; }
+.page-form .when-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: "label" "date" "time"; align-items: start; }
+.page-form .when-row > .pick.time { justify-self: start; }
+/* the date's labelled input stays underneath for screen readers and forms; taps go to the app's calendar */
+.pick.date input { inset: auto; width: 1px; height: 1px; pointer-events: none; opacity: 0 !important; }
+.page-form .when-row > .pick.date { width: 100%; }
+.page-form .pick.date .pick-open { width: 100%; }

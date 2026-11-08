@@ -71,7 +71,7 @@ export function TripHeader({ trip, action }: { trip: Trip; action?: ReactNode })
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
         <TripTree trips={trips} current={trip.id} onPick={() => setTree(false)} />
       </Sheet>
-      <Sheet open={editing} title="edit trip" onClose={() => setEditing(false)}>
+      <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}>
         <TripForm trip={trip} onDone={() => setEditing(false)}
           onDeleted={() => { setEditing(false); navigate(trip.parent_id ? `/trip/${trip.parent_id}` : '/') }} />
       </Sheet>

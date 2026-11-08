@@ -4,21 +4,19 @@ import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '..
 import { newId } from '../../lib/id'
 import { hasPoint } from '../../lib/walk'
 import { Fold } from '../../components/Fold'
-import { Choice, type Tone } from '../../components/Choice'
+import { Switch } from '../../components/Switch'
 import { Pick } from '../../components/Pick'
 import { Icon } from '../../components/Icon'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { draftKey, useDraft } from '../../lib/drafts'
 import { PlaceField } from './PlaceField'
+import { NamePlace } from './NamePlace'
 import { CATEGORY_OF, checkCost, COST_PROBLEMS, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from './CostFields'
 import { stopTitle } from '../plan/StopRow'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: () => void }
 
 const MODES: Mode[] = ['flight', 'train', 'bus', 'ferry']
-const STATUSES: { value: StopStatus; label: string; tone: Tone }[] = [
-  { value: 'idea', label: 'idea', tone: 'idle' }, { value: 'to_book', label: 'to book', tone: 'warn' }, { value: 'booked', label: 'booked', tone: 'ok' },
-]
 
 type Draft = {
   title: string; place: Place | null; day: string; time: string; end_date: string; end_time: string
@@ -120,9 +118,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
     })
   }
 
-  const nameField = (label: string) => (
-    <input className="title-input" aria-label={label} placeholder={label} value={d.title} onChange={(e) => set({ title: e.target.value })} autoFocus={isNew} />
-  )
+  const set2 = set
   const when = (rows: [string, 'day' | 'end_date', 'time' | 'end_time' | null][]) => (
     <div className="when">
       {rows.map(([label, dk, tk]) => (
@@ -134,67 +130,81 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       ))}
     </div>
   )
-  const placeField = (
-    <PlaceField id={`loc-${id}`} label="location" value={d.place} near={near}
-      onChange={(p) => set({ place: p, ...(p && !d.title.trim() ? { title: p.name } : {}) })} />
+  const q = (text: string) => <p className="form-q">{text}</p>
+  const named = (label: string) => (
+    <NamePlace label={label} name={d.title} place={d.place} near={near} autoFocus={isNew}
+      onName={(title) => set2({ title })} onPlace={(p) => set2(p ? { place: p, title: p.name } : { place: null })} />
   )
   const link = <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={d.url} onChange={(e) => set({ url: e.target.value })} /></label>
   const notes = <label className="field"><span className="label">notes</span><textarea value={d.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
-  // the booking details that fit the status: a carrier once a journey is being booked, a ref once it's booked
-  const showCarrier = kind === 'journey' && (d.status !== 'idea' || !!d.title.trim())
-  const showRef = d.status === 'booked' || !!d.ref.trim()
-  // the booking state comes first, right under the name (a journey's mode), with what it asks for below it
-  const status = (<>
-    <Choice label="status" options={STATUSES} value={d.status} onChange={(v) => set({ status: v })} />
-    {(showCarrier || showRef) && (
-      <div className="row">
-        {showCarrier && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
-        {showRef && <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>}
-      </div>
-    )}
-  </>)
+  const booked = d.status === 'booked'
+  const ref = booked || !!d.ref.trim()
+    ? <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>
+    : null
+  // booked or not: a switch; off means it still needs booking
+  const bookedSwitch = <Switch label="booked" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} />
+  const money = <CostFields value={cost} onChange={setCost} members={members} rates={rates}
+    payment={<PaymentChoice value={cost} onChange={setCost} members={members} />} />
 
   return (
-    <form id={formId} className="stack" onSubmit={submit} noValidate>
-      {kind === 'place' && (<>
-        {nameField('name')}
-        {status}
-        {placeField}
-        {when([['day', 'day', 'time']])}
-        <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />
-      </>)}
+    <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
       {kind === 'stay' && (<>
-        {nameField('name')}
-        {status}
-        {placeField}
+        {q('where are you staying?')}
+        {named('name')}
+        {q('when')}
         {when([['check-in', 'day', 'time'], ['check-out', 'end_date', 'end_time']])}
+        {q('booking')}
+        {bookedSwitch}
+        {ref}
+        {q('cost')}
+        {money}
+        <div className="folds"><Fold label="more" open={!!d.url.trim() || !!d.notes.trim()}>{link}{notes}</Fold></div>
+      </>)}
+      {kind === 'place' && (<>
+        {q('what are you doing?')}
+        {named('name')}
+        {q('when')}
+        {when([['day', 'day', 'time']])}
+        {q('tickets')}
+        <Switch label="needs booking" checked={d.status !== 'idea'} onChange={(v) => set({ status: v ? (booked ? 'booked' : 'to_book') : 'idea' })} />
+        {d.status !== 'idea' && <Switch label="booked" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} />}
+        {ref}
+        <div className="folds">
+          <Fold label="more" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim() || !!d.end_time} reveal={costReveal}>
+            <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />
+            {money}{link}{notes}
+          </Fold>
+        </div>
       </>)}
       {kind === 'journey' && (<>
+        {q('how')}
         <div className="segmented modes" role="group" aria-label="mode">
-          {MODES.map((m) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m} size={16} />{m}</button>)}
+          {MODES.map((m) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m} size={20} /><span>{m}</span></button>)}
         </div>
-        {status}
-        <PlaceField id={`from-${id}`} label="from" value={d.origin} near={near} onChange={(p) => set({ origin: p })} />
-        <PlaceField id={`to-${id}`} label="to" value={d.destination} near={near} onChange={(p) => set({ destination: p })} />
+        {q('route')}
+        <div className="route">
+          <PlaceField id={`from-${id}`} label="from" value={d.origin} near={near} onChange={(p) => set({ origin: p })} />
+          <PlaceField id={`to-${id}`} label="to" value={d.destination} near={near} onChange={(p) => set({ destination: p })} />
+        </div>
+        {q('when')}
         {when([['depart', 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
+        {q('booking')}
+        {bookedSwitch}
+        {booked && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
+        {ref}
+        <div className="folds">
+          <Fold label="more" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim()} reveal={costReveal}>{money}{link}{notes}</Fold>
+        </div>
       </>)}
       {kind === 'note' && (<>
-        {nameField('title')}
-        {status}
+        <input className="title-input" aria-label="title" placeholder="title" value={d.title} onChange={(e) => set({ title: e.target.value })} autoFocus={isNew} />
+        <textarea className="note-text" aria-label="notes" placeholder="write it down" value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
+        {q('when')}
         {when([['day', 'day', 'time']])}
-        <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />
-        {notes}
+        <div className="folds"><Fold label="more" open={!!d.url.trim() || !!d.end_time}>
+          <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />{link}
+        </Fold></div>
       </>)}
-
-      <div className="folds">
-        <Fold label="cost" open={!!cost.amount.trim() || cost.paid} reveal={costReveal}
-          extra={<PaymentChoice value={cost} onChange={setCost} members={members} />}>
-          <CostFields value={cost} onChange={setCost} members={members} rates={rates} />
-        </Fold>
-        {kind === 'note'
-          ? <Fold label="link" open={!!d.url.trim()}>{link}</Fold>
-          : <Fold label="notes & links" open={!!d.url.trim() || !!d.notes.trim()}>{link}{notes}</Fold>}
-      </div>
       <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure} />
     </form>
   )

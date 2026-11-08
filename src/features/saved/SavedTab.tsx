@@ -150,7 +150,7 @@ export function SavedTab({ trip, view }: { trip: Trip; view?: 'ideas' | 'links' 
         mine.length === 0 ? <EmptyState title={q ? 'nothing found' : 'no links yet'} />
           : <div className="link-list">{mine.map((l) => <LinkCard key={l.id} link={l} trips={trips} pick={pick(l.id)} />)}</div>
       )}
-      <Sheet open={!!dating} title="edit trip" onClose={() => setDating(null)}>
+      <Sheet page open={!!dating} title="edit trip" onClose={() => setDating(null)}>
         {dating && <TripForm key={dating.id} trip={dating} onDone={() => setDating(null)} onDeleted={() => setDating(null)} />}
       </Sheet>
     </div>

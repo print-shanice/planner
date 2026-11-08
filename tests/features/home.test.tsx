@@ -212,7 +212,7 @@ it('delete is blocked while side trips exist', () => {
 it('part of excludes the trip itself and its side trips', () => {
   db.trips = europe()
   render(<MemoryRouter><TripForm trip={db.trips[2] as Trip} onDone={() => {}} /></MemoryRouter>)
-  const opts = within(screen.getByLabelText('part of')).getAllByRole('option').map((o) => o.textContent)
+  const opts = within(screen.getByLabelText('part of')).getAllByRole('option', { hidden: true }).map((o) => o.textContent)
   expect(opts).toEqual(['none', 'summer'])
 })
 
@@ -318,18 +318,18 @@ it('home says when trips could not load, and retries', async () => {
   expect(refetch).toHaveBeenCalled()
 })
 
-it('the trip form folds budget and more away until they have something', () => {
+it('the trip form shows when, where and colour, and keeps budget and notes under "more"', () => {
   render(<MemoryRouter><TripForm onDone={() => {}} /></MemoryRouter>)
   const folds = [...document.querySelectorAll('.fold-toggle')].map((x) => [x.textContent, x.getAttribute('aria-expanded')])
-  expect(folds).toEqual([['budget', 'false'], ['more', 'false']])
-  expect(screen.getByLabelText('home base')).not.toBeVisible()
+  expect(folds).toEqual([['more', 'false']])
+  expect(screen.getByLabelText('home base')).toBeVisible()
+  expect(screen.getByRole('radiogroup', { name: 'colour' })).toBeVisible()
   expect(screen.getByLabelText('notes')).not.toBeVisible()
 })
 
-it('a trip with a budget opens with budget unfolded', () => {
+it('a trip with a budget opens with "more" open', () => {
   render(<MemoryRouter><TripForm trip={trip({ id: 't9', budget: 900 }) as Trip} onDone={() => {}} /></MemoryRouter>)
-  expect(screen.getByRole('button', { name: 'budget' })).toHaveAttribute('aria-expanded', 'true')
-  expect(screen.getByRole('button', { name: 'more' })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByRole('button', { name: 'more' })).toHaveAttribute('aria-expanded', 'true')
 })
 
 it('a failed trip save stays open with retry, and retry sends the same trip', async () => {
