@@ -87,3 +87,12 @@ it('the trip bar sticks to the top with a solid background', () => {
   expect(ruleFor('.trip-bar')).toMatch(/top:\s*0/)
   expect(ruleFor('.trip-bar')).toMatch(/background:\s*var\(--ground\)/)
 })
+
+it('the trip header never grows wider than the phone, however long the flags and dates', () => {
+  expect(ruleFor('.trip-header')).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+})
+
+it('scrolling never hides the trip\'s flags and dates', () => {
+  const hiding = rules.filter(([sel, body]) => /\.trip-meta/.test(sel) && /display:\s*none/.test(body))
+  expect(hiding).toEqual([])
+})

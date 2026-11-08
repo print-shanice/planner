@@ -1,6 +1,6 @@
 .trip-phone { min-height: 100dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
 .trip-main { width: min(720px, 100%); margin: 0 auto; }
-.trip-header { padding: calc(env(safe-area-inset-top) + 10px) 16px 8px; display: grid; gap: 6px; }
+.trip-header { padding: calc(env(safe-area-inset-top) + 10px) 16px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 /* The trip header stays consistent across calendar, itinerary, and sections. */
 .back-link {
   justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-left: -8px; padding: 0 12px 0 4px;
@@ -113,13 +113,9 @@
 .trip-bar.stuck { box-shadow: 0 1px 0 var(--line); }
 .trip-bar > .saved-switch { margin: 4px 16px 0; }
 .trip-bar-sentinel { display: block; height: 0; }
-/* phones: once scrolled, a smaller title and no dates line, so the bar takes less room */
-.trip-phone .trip-bar.stuck .trip-title-row h1 { font-size: 24px; }
-.trip-phone .trip-bar.stuck .trip-meta { display: none; }
-.trip-phone .trip-bar.stuck .trip-header { padding-bottom: 0; gap: 2px; }
-.trip-phone .trip-bar.stuck .trip-title-row .icon-btn.filled { width: 40px; height: 40px; }
 
 /* switching sections never shifts anything: the active tab only changes colour and underline,
    and the column keeps room for its scrollbar */
 .section-tabs button, .section-tabs button[aria-pressed="true"], .saved-switch button, .saved-switch button[aria-pressed="true"] { font-weight: 700; }
 .trip-wide .trip-main { scrollbar-gutter: stable; }
+@media (max-width: 480px) { .trip-title-row h1 { font-size: 29px; } }
