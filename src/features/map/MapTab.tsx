@@ -70,9 +70,11 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
     return { id: f.properties.id, n: f.properties.number, color: f.properties.color, title: (s ? stopTitle(s) : '').toLowerCase(), sub: [s?.time, s?.place?.city].filter(Boolean).join(' · ') }
   })
   // a day's list starts where you sleep
-  const bed = isDay ? mapBed(dayEntries(trip, trips, stops, filter)) : null
+  const bedStop = isDay ? mapBed(dayEntries(trip, trips, stops, filter)) : null
+  const bedName = bedStop ? bedStop.title || bedStop.place?.name || '' : ''
+  const bed = bedName ? bedStop : null
   const items: PlaceItem[] = bed
-    ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bed.title || bed.place?.name || ''}`.toLowerCase(), sub: '' }, ...pinItems]
+    ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...pinItems]
     : pinItems
   const count = `${pinItems.length} ${pinItems.length === 1 ? 'place' : 'places'}`
   const listTitle = filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} saved` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`

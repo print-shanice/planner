@@ -260,3 +260,11 @@ it('an idea\'s card adds it to the day', async () => {
   await userEvent.click(within(card).getByRole('button', { name: 'add' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'cafe', day: '2027-02-08', position: 5, saved: false })
 })
+
+it('a dated, unsaved place opens with details, not add, when all days show', async () => {
+  show('/', true)
+  await userEvent.click(screen.getByRole('button', { name: 'tap pin' }))
+  const card = screen.getByRole('region', { name: 'arktikum' })
+  expect(within(card).getByRole('button', { name: 'details' })).toBeInTheDocument()
+  expect(within(card).queryByRole('button', { name: 'add' })).toBeNull()
+})

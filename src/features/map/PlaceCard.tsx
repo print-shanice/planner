@@ -24,7 +24,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   const trips = useTrips().data ?? []
   // an idea is added into the trip it belongs to
   const home = (stop && trips.find((t) => t.id === stop.trip_id)) || trip
-  const idea = !!stop && stop.kind === 'place' && (!!stop.saved || !opened)
+  const idea = !!stop && stop.kind === 'place' && (!!stop.saved || !stop.day)
   const days = tripDays(idea ? home : trip)
   const [day, setDay] = useState<string>(defaultDay && days.includes(defaultDay) ? defaultDay : days[0] ?? '')
   const [problem, setProblem] = useState<string | null>(null)
