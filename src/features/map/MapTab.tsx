@@ -13,6 +13,7 @@ import { TripMap } from './TripMap'
 import { hasPoint } from '../../lib/walk'
 import { PlaceCard } from './PlaceCard'
 import { PlacesSheet, type PlaceItem } from './PlacesSheet'
+import { useReadingDay } from '../trip/readingDay'
 import { useHighlight } from '../trip/highlight'
 import { Icon } from '../../components/Icon'
 
@@ -36,7 +37,9 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   const stops = sq.data ?? []
   const load = loadState(tq, sq)
   const [params, setParams] = useSearchParams()
-  const selected = params.get('day')
+  // reading the itinerary, the map follows the day being read
+  const reading = useReadingDay().day
+  const selected = reading ?? params.get('day')
   // on a laptop the map has no chips of its own: it shows the plan's day, or the whole trip
   const [whole, setWhole] = useState(false)
   const planDay = phone ? null : chosenDay(trip, trips, stops, selected, todayISO())

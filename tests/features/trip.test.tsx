@@ -199,6 +199,15 @@ it('old links land on the new sections', () => {
   expect(read('tab=nope').tab).toBe('calendar')
 })
 
+it('reading the itinerary never moves the calendar off its own day', async () => {
+  db.stops = [stop({ trip_id: 'summer', day: '2027-07-02', title: 'later' })]
+  show('/trip/summer?tab=itinerary')
+  await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: 'fri 2 jul' }))
+  expect(loc().searchParams.get('day')).toBeNull()
+  await userEvent.click(sections().getByRole('button', { name: 'calendar' }))
+  expect(screen.getByRole('heading', { level: 2, name: 'saturday 26 june' })).toBeInTheDocument()
+})
+
 it('picking a section keeps the day you were on', async () => {
   show('/trip/summer?day=2027-06-28')
   await userEvent.click(sections().getByRole('button', { name: 'money' }))
@@ -337,8 +346,8 @@ it('with no day in the link, the + still fills in the day the calendar shows', a
   expect(within(await screen.findByRole('dialog', { name: 'new place' })).getByLabelText('day')).toHaveValue('2027-06-26')
 })
 
-it('after adding, the trip moves to the day the new stop is on', async () => {
-  show('/trip/summer?day=2027-06-28&tab=itinerary')
+it('after adding, the calendar moves to the day the new stop is on', async () => {
+  show('/trip/summer?day=2027-06-28')
   await userEvent.click(header().getByRole('button', { name: 'add' }))
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'place' }))
   const d = await screen.findByRole('dialog', { name: 'new place' })
@@ -348,7 +357,6 @@ it('after adding, the trip moves to the day the new stop is on', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ day: '2027-06-30', title: 'kotisaari' }))
   expect(loc().searchParams.get('day')).toBe('2027-06-30')
-  expect(loc().searchParams.get('tab')).toBe('itinerary')
 })
 
 async function addPlace(path: string) {

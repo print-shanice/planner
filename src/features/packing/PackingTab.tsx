@@ -95,6 +95,7 @@ export function PackingTab({ trip }: { trip: Trip }) {
           <form onSubmit={e => { e.preventDefault(); void submit() }}>
             <Icon name="plus" size={18} />
             <input aria-label="add to pack" placeholder="add to pack" value={text} disabled={busy} enterKeyHint="done" onChange={e => setText(e.target.value)} />
+            <button type="submit" className="btn small pack-go" aria-label="add to pack" disabled={busy}>add</button>
           </form>
         </li>}
       </ul>}

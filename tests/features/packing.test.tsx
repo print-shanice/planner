@@ -31,6 +31,18 @@ it('packing: add, tick, count', async () => {
   expect(db.save).toHaveBeenCalledWith({ id: 'p2', done: true })
 })
 
+it('the add row has a visible add button that adds, like enter', async () => {
+  db.packing = []
+  db.save.mockReset().mockResolvedValue({})
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  const add = screen.getByRole('button', { name: 'add to pack' })
+  expect(add).toHaveTextContent('add')
+  await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'adapter')
+  await userEvent.click(add)
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'lap', text: 'adapter' }))
+  expect(screen.getByRole('textbox', { name: 'add to pack' })).toHaveValue('')
+})
+
 it('an empty list shows just the field', () => {
   db.packing = []
   render(<PackingTab trip={trip({ id: 'lap' })} />)

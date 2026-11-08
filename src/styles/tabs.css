@@ -57,6 +57,7 @@
 .pack-add input { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; font-size: 16px; color: var(--ink); outline: none; }
 .pack-add input::placeholder, .map-search input::placeholder { color: var(--ink-3); }
 .pack-add:focus-within { box-shadow: inset 0 0 0 2px var(--ink); }
+.pack-go { flex: none; min-height: 44px; }
 .pack-edit { flex: 1; display: grid; gap: 8px; padding: 10px 0; }
 .pack-edit .row { display: flex; align-items: center; gap: 8px; }
 

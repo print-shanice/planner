@@ -23,6 +23,7 @@ import { tint } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
 import { HighlightProvider } from './highlight'
+import { ReadingDayProvider, useReadingDay } from './readingDay'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { Pending } from '../../components/Pending'
 import { CostForm } from '../money/CostForm'
@@ -74,7 +75,7 @@ export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | n
 }
 
 export function TripPage() {
-  return <StopSheetProvider><HighlightProvider><TripScreen /></HighlightProvider></StopSheetProvider>
+  return <StopSheetProvider><HighlightProvider><ReadingDayProvider><TripScreen /></ReadingDayProvider></HighlightProvider></StopSheetProvider>
 }
 
 function TripScreen() {
@@ -83,6 +84,7 @@ function TripScreen() {
   const tq = useTrips()
   const trips = tq.data
   const stops = useStops().data
+  const reading = useReadingDay()
   const load = loadState(tq)
   const wide = useWide()
   const canEdit = useCanEdit()
@@ -137,7 +139,7 @@ function TripScreen() {
   const tabs = wide ? WIDE_TABS : PHONE_TABS
   const day = params.get('day')
   // the day the calendar shows, even when the link has none
-  const onDay = validDay(day) ? day : chosenDay(trip, trips ?? [], stops ?? [], null, todayISO())
+  const onDay = (tab === 'itinerary' && reading.day) || (validDay(day) ? day : chosenDay(trip, trips ?? [], stops ?? [], null, todayISO()))
   const phoneMap = !wide && tab === 'map'
   const dayTab = tab === 'calendar' || tab === 'itinerary'
   const plus = <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}><Icon name="plus" /></button>

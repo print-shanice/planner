@@ -13,6 +13,7 @@ import { dayLabel, tint } from '../../components/MonthCalendar'
 import { fmtDay } from '../../lib/dates'
 import { useStopSheet } from '../stops/StopSheet'
 import { useHighlight } from '../trip/highlight'
+import { useReadingDay } from '../trip/readingDay'
 import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
 
@@ -43,7 +44,8 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
   const load = loadState(tq, sq)
   const sheet = useStopSheet()
   const lit = useHighlight()
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
+  const reading = useReadingDay()
   const root = useRef<HTMLDivElement>(null)
   const strip = useRef<HTMLElement>(null)
 
@@ -59,12 +61,16 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
   const current = matches[cur] ?? null
 
   const asked = params.get('day')
-  const onDay = validDay(asked) ? asked : chosenDay(trip, trips, stops, null, todayISO())
-
+  // where the doc opens: the calendar's day, else today in the trip, else its first day
+  const opensOn = validDay(asked) ? asked : chosenDay(trip, trips, stops, null, todayISO())
+  const onDay = reading.day ?? it.days.find((d) => d.date >= (opensOn ?? ''))?.date ?? it.days[0]?.date ?? null
+  const readingRef = useRef(reading)
+  readingRef.current = reading
   function setDay(d: string | null) {
-    if (!d || d === params.get('day')) return
-    setParams((p) => { const n = new URLSearchParams(p); n.set('day', d); return n }, { replace: true })
+    if (d && d !== readingRef.current.day) readingRef.current.set(d)
   }
+  // leaving the itinerary, the map and the + go back to the calendar's day
+  useEffect(() => () => readingRef.current.set(null), [])
 
   function scrollTo(el: Element | null | undefined, block: ScrollLogicalPosition) {
     underBar(root.current)
@@ -101,7 +107,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
   useEffect(() => {
     if (landed.current || load.state !== 'ready' || !it.days.length) return
     landed.current = true
-    const target = it.days.find((d) => d.date >= (onDay ?? ''))?.date
+    const target = it.days.find((d) => d.date >= (opensOn ?? ''))?.date
     if (!target || target === it.days[0].date) return
     // once the search and the strip have moved into the bar, so the day lands just under it
     const land = () => { underBar(root.current); document.getElementById(`itin-${target}`)?.scrollIntoView?.({ block: 'start' }) }
@@ -129,11 +135,16 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
     return () => { target.removeEventListener('scroll', onScroll); if (frame) cancelAnimationFrame(frame) }
   }) // re-attaches each render so it reads the latest link
 
-  // the strip keeps the day you're on in view
+  // the strip only moves when the day you're on has gone out of sight, and then glides just far enough
   useEffect(() => {
     const box = strip.current
     const chip = box?.querySelector<HTMLElement>('[aria-current="true"]')
-    if (box && chip && typeof box.scrollTo === 'function') box.scrollTo({ left: chip.offsetLeft - box.clientWidth / 2 + chip.offsetWidth / 2 })
+    if (!box || !chip || typeof box.scrollTo !== 'function') return
+    const pad = 16
+    const left = chip.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft
+    const right = left + chip.offsetWidth
+    if (left < box.scrollLeft + pad) box.scrollTo({ left: left - pad, behavior: 'smooth' })
+    else if (right > box.scrollLeft + box.clientWidth - pad) box.scrollTo({ left: right - box.clientWidth + pad, behavior: 'smooth' })
   }, [onDay])
 
   if (load.state !== 'ready' && !it.days.length) return <LoadState load={load} blocks={2} />

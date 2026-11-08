@@ -16,12 +16,16 @@ vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import(
 vi.mock('../../src/features/stops/StopSheet', () => ({ useStopSheet: () => ({ openStop: db.open }) }))
 
 import { ItineraryTab } from '../../src/features/itinerary/ItineraryTab'
+import { ReadingDayProvider, useReadingDay } from '../../src/features/trip/readingDay'
 
 function Probe() {
   const l = useLocation()
-  return <output data-testid="loc">{l.search}</output>
+  const reading = useReadingDay()
+  return <><output data-testid="loc">{l.search}</output><output data-testid="reading">{reading.day ?? ''}</output></>
 }
-const day = () => new URLSearchParams(screen.getByTestId('loc').textContent ?? '').get('day')
+// the day being read: the map and the + follow it, the link (and so the calendar) doesn't
+const day = () => screen.getByTestId('reading').textContent
+const linkDay = () => new URLSearchParams(screen.getByTestId('loc').textContent ?? '').get('day')
 
 const tokyo = () => trip({ id: 'tk', name: 'tokyo', start_date: '2025-09-18', end_date: '2025-09-20' })
 
@@ -29,7 +33,7 @@ function show(t: Trip, path = '/trip/tk?tab=itinerary') {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[path]}>
-        <Routes><Route path="/trip/:id" element={<><ItineraryTab trip={t} /><Probe /></>} /></Routes>
+        <Routes><Route path="/trip/:id" element={<ReadingDayProvider><ItineraryTab trip={t} /><Probe /></ReadingDayProvider>} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -120,10 +124,12 @@ it('a match in the notes shows that bit of the notes; no match says 0', async ()
   expect(screen.queryByRole('button', { name: 'next match' })).toBeDisabled()
 })
 
-it('the day strip jumps to a day and makes it the day you are on', async () => {
+it('the day strip jumps to a day and makes it the day you are reading, leaving the link alone', async () => {
   show(tokyo())
   await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /20 sep/ }))
   expect(day()).toBe('2025-09-20')
+  expect(linkDay()).toBeNull()
+  expect(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /20 sep/ })).toHaveAttribute('aria-current', 'true')
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
 })
 
@@ -140,7 +146,8 @@ it("tapping a line's time or name changes it right there, saving only what chang
   expect(name).toHaveValue('neel')
   expect(within(screen.getByRole('group', { name: 'change neel' })).getByLabelText('start time')).toHaveValue('09:00')
   await userEvent.clear(name)
-  await userEvent.type(name, 'neel coffee{Enter}')
+  await userEvent.type(name, 'neel coffee')
+  await userEvent.click(screen.getByRole('button', { name: 'save line' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'neel', title: 'neel coffee' })
   expect(screen.queryByRole('textbox', { name: 'change neel' })).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: 'change time of narita airport t2' }))

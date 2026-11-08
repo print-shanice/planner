@@ -33,7 +33,11 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
   // a new stop takes you to its day and lights up there, so you can see it landed
   const landed = (added?: { id: string; day: string | null }) => {
     if (!added) return
-    if (added.day) setParams((p) => { const n = new URLSearchParams(p); n.set('day', added.day!); return n })
+    // the calendar moves to it; the itinerary already shows every day, so it just scrolls there
+    if (added.day) setParams((p) => {
+      if (!['calendar', 'plan', null].includes(p.get('tab'))) return p
+      const n = new URLSearchParams(p); n.set('day', added.day!); return n
+    })
     flash(added.id)
   }
 

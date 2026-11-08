@@ -1,4 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
+import { readTime } from '../../lib/time'
 
 export type LineValues = { time: string; end: string; title: string }
 
@@ -16,9 +17,12 @@ type Props = {
 
 const EMPTY: LineValues = { time: '', end: '', title: '' }
 
-export function lineProblem(v: LineValues): string | null {
-  if (v.end && (!v.time || v.end <= v.time)) return 'end before start'
-  return null
+// the line as typed, read: times as hh:mm (or empty), or the problem with it
+export function readLine(v: LineValues): { line: LineValues } | { problem: string } {
+  const time = readTime(v.time), end = readTime(v.end)
+  if (time === undefined || end === undefined) return { problem: 'check the time' }
+  if (end && (!time || end <= time)) return { problem: 'end before start' }
+  return { line: { time: time ?? '', end: end ?? '', title: v.title } }
 }
 
 // a line of the doc you can type: the time column (start, end) and the name
@@ -31,7 +35,8 @@ export function LineEditor({ label, initial = EMPTY, onSubmit, onCancel, saveOnL
   const set = (p: Partial<LineValues>) => { setV((x) => ({ ...x, ...p })); setProblem(null) }
 
   function submit() {
-    const p = lineProblem(v) ?? onSubmit(v)
+    const read = readLine(v)
+    const p = 'problem' in read ? read.problem : onSubmit(read.line)
     setProblem(p)
     if (p) return
     if (saveOnLeave) { closed.current = true; return }
@@ -45,20 +50,25 @@ export function LineEditor({ label, initial = EMPTY, onSubmit, onCancel, saveOnL
   function leave(e: FocusEvent<HTMLDivElement>) {
     if (!saveOnLeave || closed.current || e.currentTarget.contains(e.relatedTarget as Node | null)) return
     closed.current = true
-    if (lineProblem(v) || onSubmit(v)) onCancel?.()
+    const read = readLine(v)
+    if ('problem' in read || onSubmit(read.line)) onCancel?.()
   }
 
   return (
     <div className={`line-edit ${className}`} role="group" aria-label={label} onBlur={leave}>
       <span className="line-times">
-        <input ref={start} type="time" aria-label="start time" value={v.time} data-empty={v.time ? undefined : ''}
+        {/* typed like the doc's time column: "9", "13:00", "1pm"; empty is any time */}
+        <input ref={start} type="text" aria-label="start time" placeholder="any" value={v.time} autoComplete="off"
           onChange={(e) => set({ time: e.target.value })} onKeyDown={key} autoFocus={focus === 'time'} />
         {/* an end only once there's a start */}
-        {(v.time || v.end) && <input type="time" aria-label="end time" value={v.end} data-empty={v.end ? undefined : ''}
+        {(v.time || v.end) && <input type="text" aria-label="end time" placeholder="end" value={v.end} autoComplete="off"
           onChange={(e) => set({ end: e.target.value })} onKeyDown={key} />}
       </span>
-      <input type="text" className="line-name" aria-label={label} placeholder="add" value={v.title} autoComplete="off" enterKeyHint="done"
+      <input type="text" className="line-name" aria-label={label} placeholder="name" value={v.title} autoComplete="off" enterKeyHint="done"
         onChange={(e) => set({ title: e.target.value })} onKeyDown={key} autoFocus={focus === 'title'} />
+      <button type="button" className="btn small line-go" aria-label={saveOnLeave ? 'save line' : 'add line'} onClick={submit}>
+        {saveOnLeave ? 'save' : 'add'}
+      </button>
       {problem && <p className="warn-line line-problem">{problem}</p>}
     </div>
   )

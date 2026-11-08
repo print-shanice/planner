@@ -6,7 +6,9 @@
 .itin-search .search-box:focus-within { outline: 2px solid var(--ink); }
 .itin-search .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
 .match-count { flex: none; padding-right: 8px; font-size: 14px; white-space: nowrap; }
-.itin-strip { position: static; margin: 0 -16px; padding: 2px 16px 0; background: none; }
+.itin-strip { position: static; margin: 0 -16px; padding: 2px 16px 0; background: none; scroll-padding-inline: 16px; }
+/* on a laptop the strip stays inside the plan's column */
+.trip-wide .itin-strip { margin: 0; padding: 2px 0 0; }
 .itin-strip .chip { position: relative; }
 .itin-strip .chip.hit::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
 .itin-strip .chip[aria-current="true"].hit::after { background: var(--card); }
@@ -60,21 +62,21 @@ button.itin-time { cursor: pointer; min-height: 40px; }
 /* the empty line at the end of a day, and a line being changed */
 .add-line { padding: 0 4px; }
 .trip-panel .add-line { margin-top: 6px; }
-.line-edit { display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 8px; align-items: center; }
+.line-edit { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; column-gap: 8px; align-items: center; }
+.line-go { min-height: 44px; }
 .line-times { display: grid; gap: 0; }
 .line-times input {
   width: 100%; min-height: 22px; padding: 0; border: 0; background: none; color: var(--ink-2);
   font: inherit; font-size: 13px; font-variant-numeric: tabular-nums;
 }
-.line-times input[data-empty] { color: var(--ink-3); }
-.line-times input::-webkit-calendar-picker-indicator { display: none; }
+.line-times input::placeholder { color: var(--ink-3); }
 .line-name::placeholder { color: var(--ink-3); }
 .line-times input:focus-visible, .line-name:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 6px; }
 .line-name {
   min-width: 0; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line); background: none;
   color: var(--ink); font: inherit; font-size: 16px;
 }
-.line-problem { grid-column: 2; margin: 4px 0 0; }
+.line-problem { grid-column: 2 / -1; margin: 4px 0 0; }
 .add-line-finding { padding: 2px 0 6px 76px; font-size: 13px; }
 .lit { animation: lit 1.6s ease-out; }
 @media (prefers-reduced-motion: reduce) { .lit { animation: none; } }

@@ -54,6 +54,32 @@ it('a start, an end and a name, then enter, saves a line last on that day and em
   expect(screen.getByLabelText('start time')).toHaveFocus()
 })
 
+it('the time reads "any" until you type one, and "1pm" works', async () => {
+  show(tk())
+  expect(screen.getByLabelText('start time')).toHaveAttribute('placeholder', 'any')
+  await userEvent.type(screen.getByLabelText('start time'), '1pm')
+  await userEvent.type(name(), 'lunch')
+  await userEvent.click(screen.getByRole('button', { name: 'add line' }))
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'lunch', time: '13:00', end_time: null }))
+})
+
+it('a time it cannot read says so and saves nothing', async () => {
+  show(tk())
+  await userEvent.type(screen.getByLabelText('start time'), '25:00')
+  await userEvent.type(name(), 'lunch{Enter}')
+  expect(screen.getByText('check the time')).toHaveClass('warn-line')
+  expect(db.save).not.toHaveBeenCalled()
+})
+
+it('a visible add button adds the line, like enter', async () => {
+  show(tk())
+  expect(screen.getByRole('button', { name: 'add line' })).toHaveTextContent('add')
+  await userEvent.type(name(), 'kura sushi')
+  await userEvent.click(screen.getByRole('button', { name: 'add line' }))
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'kura sushi' }))
+  expect(name()).toHaveValue('')
+})
+
 it('times are optional; an empty name saves nothing', async () => {
   show(tk())
   await userEvent.type(name(), '   {Enter}')
