@@ -644,6 +644,16 @@ describe('next stop', () => {
     expect(within(await card('n')).queryByRole('link', { name: /^next/ })).toBeNull()
   })
 
+  it('the next stop reads as the day lists it, its title over its place', async () => {
+    db.stops = [two()[0], stop({ id: 'd', trip_id: 'lap', title: 'Dinner', day: '2027-02-08', time: '19:00', place: at(66.52, 25.75, 'restaurant olo') })]
+    expect(within(await card('a')).getByRole('link', { name: 'next · dinner' })).toBeInTheDocument()
+  })
+
+  it('a journey next reads as where it starts', async () => {
+    db.stops = [two()[0], stop({ id: 'j', trip_id: 'lap', kind: 'journey', title: 'night train', day: '2027-02-08', time: '20:00', origin: at(66.52, 25.75, 'Rovaniemi station'), destination: at(60.17, 24.94, 'helsinki') })]
+    expect(within(await card('a')).getByRole('link', { name: 'next · rovaniemi station' })).toBeInTheDocument()
+  })
+
   it('the last stop with no bed has no next', async () => {
     db.stops = two()
     expect(within(await card('b')).queryByRole('link', { name: /^next/ })).toBeNull()

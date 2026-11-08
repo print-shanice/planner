@@ -77,3 +77,13 @@ it('a journey with only a destination leaves you there', () => {
   expect(ids(legs)).toEqual(['J>B'])
   expect(legs[0].a).toBe(J.destination)
 })
+
+it("a side trip's last day starts at the bed you woke in, never a leg into the parent's room", () => {
+  const room = spot('room', 0), hostel = stop({ id: 'hostel', place: place({ lat: 66.5, lng: 25.7 }) })
+  const A = stop({ id: 'A', place: place({ lat: 66.6, lng: 25.8 }) })
+  const legs = dayLegs([e(room, 'staying'), e(hostel, 'checkout'), e(A)])
+  expect(ids(legs)).toEqual(['hostel>A', 'A>room'])
+  expect(legs[0].fromKind).toBe('checkout')
+  // the order the day sorts them in (checkout before staying)
+  expect(ids(dayLegs([e(hostel, 'checkout'), e(room, 'staying'), e(A)]))).toEqual(['hostel>A', 'A>room'])
+})

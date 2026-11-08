@@ -20,9 +20,12 @@ import { stopSub, stopTitle } from '../plan/StopRow'
 import { directionsUrl } from '../../lib/gmaps'
 import { ancestors } from '../../lib/countries'
 import { dayEntries } from '../../lib/agenda'
-import { dayLegs, nextFrom } from '../../lib/legs'
+import { dayLegs, nextFrom, type Leg } from '../../lib/legs'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
+
+// the next stop as the day lists it; a journey by where you board it
+const nextName = (l: Leg) => (l.to.kind === 'journey' ? l.b.name || stopTitle(l.to) : stopTitle(l.to) || l.b.name)
 
 function Copy({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false)
@@ -181,7 +184,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         {facts.filter(Boolean).map((f) => <p key={f} className="fact"><Icon name="calendar" size={18} /><span>{f}</span></p>)}
         {leg && (
           <a className="fact fact-link" href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
-            <Icon name="walk" size={18} /><span>{`next · ${(leg.b.name || stopTitle(leg.to)).toLowerCase()}`}</span>
+            <Icon name="walk" size={18} /><span>{`next · ${nextName(leg).toLowerCase()}`}</span>
           </a>
         )}
         {address && stop.kind !== 'journey' && (

@@ -24,8 +24,16 @@ export function mapBed(entries: DayEntry[]): Stop | null {
 export function dayLegs(entries: DayEntry[]): Leg[] {
   const legs: Leg[] = []
   let prev: { e: DayEntry; out: Located } | null = null
+  // the beds already there are context, not places you go: the day starts once,
+  // at the one you woke in (a side trip's checkout, over the parent's long stay)
+  const woke = entries.find((e) => e.kind === 'checkout') ?? entries.find((e) => e.kind === 'staying')
   for (const e of entries) {
     if (e.kind === 'sidetrip' || !e.stop) continue
+    if (e.kind === 'staying' || e.kind === 'checkout') {
+      const out = e === woke ? placeOut(e.stop) : null
+      if (hasPoint(out)) prev = { e, out }
+      continue
+    }
     const here = placeIn(e.stop)
     if (hasPoint(here) && prev && !tooClose(prev.out, here)) {
       legs.push({ from: prev.e.stop!, fromKind: prev.e.kind, to: e.stop, a: prev.out, b: here, evening: false })
