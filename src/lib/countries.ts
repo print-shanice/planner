@@ -127,3 +127,22 @@ export function homeTotals(trips: Trip[], stops: Stop[]): { countries: number; c
   }
   return { countries: countries.size, cities: cities.size, trips: trips.length }
 }
+
+// the names behind the home totals, for their tooltips (lowercased, sorted)
+export function homeLists(trips: Trip[], stops: Stop[]): { countries: string[]; cities: string[]; trips: string[] } {
+  const countries = new Set<string>()
+  const cities = new Map<string, string>()
+  for (const t of trips) { const c = cc(t.base); if (c) countries.add(c) }
+  for (const s of stops) for (const p of placesOf(s)) {
+    const c = cc(p)
+    if (c) countries.add(c)
+    const city = p.city ?? (s.kind === 'journey' ? p.name : null)
+    if (city) { const key = `${city.trim().toLowerCase()}|${c ?? ''}`; if (!cities.has(key)) cities.set(key, city.trim().toLowerCase()) }
+  }
+  const sorted = (xs: Iterable<string>) => [...xs].sort((a, b) => a.localeCompare(b))
+  return {
+    countries: sorted([...countries].map((c) => countryName(c).toLowerCase())),
+    cities: sorted(cities.values()),
+    trips: sorted(trips.map((t) => t.name.toLowerCase())),
+  }
+}

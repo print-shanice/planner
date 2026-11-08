@@ -102,5 +102,13 @@
 /* your travels, wrapped: the globe and its numbers in one card, like next up's calendar */
 .travels-card { display: grid; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .travels-card .globe-wrap { width: min(100% - 32px, 380px); margin: 18px auto 14px; }
-.travels-card .totals { padding: 14px 8px 16px; border-top: 1px solid var(--line); }
+.travels-card .totals-block { display: grid; gap: 8px; padding: 14px 8px 16px; border-top: 1px solid var(--line); }
+.totals-title { text-align: center; font-size: 17px; font-weight: 700; }
 .travels-card .totals dt { font-size: 26px; }
+/* each total shows the globe's tooltip, listing what it counts */
+.total { position: relative; display: grid; gap: 2px; border-radius: 12px; cursor: default; outline: none; }
+.total:focus-visible { box-shadow: 0 0 0 2px var(--ink); }
+.totals-tip { left: 50%; top: 0; max-width: 260px; text-align: left; transform: translate(-50%, calc(-100% - 12px)); animation: totals-tip-in .16s ease-out; }
+.totals-tip strong::before { display: none; }
+@keyframes totals-tip-in { from { opacity: 0; transform: translate(-50%, calc(-100% - 6px)); } }
+.travels-card { overflow: visible; }

@@ -179,7 +179,10 @@ it('the globe and its numbers share one card under "your travels, wrapped"', () 
   const totals = screen.getByTestId('totals')
   expect(totals.closest('.travels-card')).not.toBeNull()
   expect(totals).toHaveAttribute('aria-labelledby', heading.id)
-  expect(screen.queryByText('life well lived')).toBeNull()
+  // "life well lived" titles the numbers, inside the card
+  const title = screen.getByText('life well lived')
+  expect(title.closest('.travels-card')).not.toBeNull()
+  expect(title.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 it('trip form saves dates and currency', async () => {
@@ -373,4 +376,43 @@ it('the globe sits under its own heading, like next up', () => {
   const heading = screen.getByRole('heading', { level: 2, name: 'your travels, wrapped' })
   const world = document.querySelector('.home-world') as HTMLElement
   expect(world.firstElementChild).toContainElement(heading)
+})
+
+describe('the totals say what they count', () => {
+  beforeEach(() => {
+    db.trips = europe()
+    db.stops = [
+      stop({ trip_id: 'lap', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
+      stop({ trip_id: 'par', place: place({ name: 'louvre', city: 'paris', country: 'FR' }) }),
+    ] as Stop[]
+  })
+  const item = (label: string) => within(screen.getByTestId('totals')).getByText(label).closest('[tabindex]') as HTMLElement
+
+  it('hovering a number shows the tooltip listing them', async () => {
+    show()
+    await userEvent.hover(item('countries'))
+    const tip = screen.getByRole('tooltip')
+    expect(tip).toHaveClass('globe-tip')
+    expect(tip).toHaveTextContent('2 countries')
+    expect(tip).toHaveTextContent('finland · france')
+    await userEvent.unhover(item('countries'))
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('cities and trips list theirs too', async () => {
+    show()
+    await userEvent.hover(item('cities'))
+    expect(screen.getByRole('tooltip')).toHaveTextContent('paris · rovaniemi')
+    await userEvent.hover(item('trips'))
+    expect(screen.getByRole('tooltip')).toHaveTextContent('europe exchange 2027 · lapland · paris · summer')
+  })
+
+  it('a tap or tab shows it too, and escape hides it', async () => {
+    show()
+    await userEvent.click(item('cities'))
+    expect(screen.getByRole('tooltip')).toHaveTextContent('2 cities')
+    expect(item('cities')).toHaveAttribute('aria-describedby', screen.getByRole('tooltip').id)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
 })

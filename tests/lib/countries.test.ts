@@ -1,5 +1,5 @@
 import { clashes } from '../../src/lib/clash'
-import { countryStatus, tripsInCountry, homeTotals, ancestors, descendants, globePins } from '../../src/lib/countries'
+import { countryStatus, tripsInCountry, homeTotals, homeLists, ancestors, descendants, globePins } from '../../src/lib/countries'
 import { trip, stop, place } from '../factories'
 
 describe('clashes', () => {
@@ -79,6 +79,16 @@ describe('globe', () => {
       stop({ trip_id: 'c', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
       stop({ trip_id: 'p', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
     ])).toEqual({ countries: 2, cities: 2, trips: 2 })
+  })
+
+  it('home lists name what the totals count', () => {
+    const p = trip({ id: 'p', name: 'exchange' })
+    const c = trip({ id: 'c', parent_id: 'p', name: 'lapland' })
+    expect(homeLists([p, c], [
+      stop({ trip_id: 'c', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
+      stop({ trip_id: 'c', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
+      stop({ trip_id: 'p', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
+    ])).toEqual({ countries: ['finland', 'greece'], cities: ['athens', 'rovaniemi'], trips: ['exchange', 'lapland'] })
   })
 })
 

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useId, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStops, useTrips } from '../../lib/queries'
-import { countryName, countryStatus, globePins, homeTotals, tripsInCountry } from '../../lib/countries'
+import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
 import { countdown, todayISO } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
@@ -36,6 +36,7 @@ export function HomePage() {
   const status = useMemo(() => countryStatus(trips, stops, today), [trips, stops, today])
   const pins = useMemo(() => globePins(trips, stops, today), [trips, stops, today])
   const totals = useMemo(() => homeTotals(trips, stops), [trips, stops])
+  const lists = useMemo(() => homeLists(trips, stops), [trips, stops])
 
   const top = trips.filter((t) => !t.parent_id)
   const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
@@ -80,7 +81,12 @@ export function HomePage() {
           <Suspense fallback={<div className="globe-wrap" />}>
             <Globe status={status} pins={pins} onCountry={pickCountry} />
           </Suspense>
-          {trips.length > 0 && <Totals {...totals} labelledBy={travelsId} />}
+          {trips.length > 0 && (
+            <div className="totals-block">
+              <p className="head totals-title">life well lived</p>
+              <Totals {...totals} lists={lists} labelledBy={travelsId} />
+            </div>
+          )}
         </div>
       </div>
 
