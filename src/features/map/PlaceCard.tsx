@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Place, Stop, Trip } from '../../lib/types'
-import { useSave, useStops } from '../../lib/queries'
+import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { fmtDay, tripDays } from '../../lib/dates'
 import { gmapsUrl } from '../../lib/gmaps'
@@ -21,14 +21,18 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   const save = useSave('stops')
   const canEdit = useCanEdit()
   const sheet = useStopSheet()
-  const days = tripDays(trip)
+  const trips = useTrips().data ?? []
+  // an idea is added into the trip it belongs to
+  const home = (stop && trips.find((t) => t.id === stop.trip_id)) || trip
+  const idea = !!stop && stop.kind === 'place' && (!!stop.saved || !opened)
+  const days = tripDays(idea ? home : trip)
   const [day, setDay] = useState<string>(defaultDay && days.includes(defaultDay) ? defaultDay : days[0] ?? '')
   const [problem, setProblem] = useState<string | null>(null)
   const title = stop ? stopTitle(stop) : place.name || 'dropped pin'
   const maps = gmapsUrl(stop ?? ({ kind: 'place', place } as Stop))
   const sub = [stop ? (stop.day ? fmtDay(stop.day, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '') : KIND[stop.kind]) : null, place.address].filter(Boolean).join(' · ')
 
-  const lastOn = (d: string | null) => Math.max(-1, ...stops.filter((s) => s.trip_id === trip.id && (s.day ?? null) === d).map((s) => s.position)) + 1
+  const lastOn = (d: string | null) => Math.max(-1, ...stops.filter((s) => s.trip_id === (idea ? home.id : trip.id) && (s.day ?? null) === d).map((s) => s.position)) + 1
 
   async function run(fn: () => Promise<unknown>) {
     setProblem(null)
@@ -36,6 +40,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   }
 
   const add = () => run(() => save.mutateAsync({ trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: day || null, position: lastOn(day || null), place, status: 'idea' }))
+  const addIdea = () => run(() => save.mutateAsync({ id: stop!.id, day: day || null, position: lastOn(day || null), saved: false }))
   const toggleSave = () => run(() => (stop
     ? save.mutateAsync({ id: stop.id, saved: !stop.saved })
     : save.mutateAsync({ trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: null, position: lastOn(null), place, saved: true, status: 'idea' })))
@@ -50,7 +55,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
         <button type="button" className="icon-btn" aria-label="close" onClick={onClose}><Icon name="close" size={18} /></button>
       </div>
       <div className="place-card-actions">
-        {stop ? (
+        {stop && !idea ? (
           <Button variant="primary" onClick={() => sheet?.openStop(stop.id, opened)}>details</Button>
         ) : (
           <>
@@ -59,7 +64,8 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
                 {days.map((d) => <option key={d} value={d}>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</option>)}
               </select>
             )}
-            <Button variant="primary" disabled={!canEdit} onClick={add}>add</Button>
+            <Button variant="primary" disabled={!canEdit} onClick={idea ? addIdea : add}>add</Button>
+            {idea && <Button variant="ghost" onClick={() => sheet?.openStop(stop!.id, opened)}>details</Button>}
           </>
         )}
         {(!stop || stop.kind === 'place') && (

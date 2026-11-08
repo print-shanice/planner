@@ -16,6 +16,7 @@ vi.mock('../../src/features/map/TripMap', () => ({
     <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''} data-fit={fitKey}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
+      <button onClick={() => onPick('cafe')}>tap idea</button>
       <button onClick={() => onCenter?.({ lat: 48.85, lng: 2.35, zoom: 12 })}>move map to paris</button>
     </div>
   ),
@@ -232,4 +233,30 @@ it('before the map says where it is, search looks near the day\'s places', async
   const near = db.search.mock.lastCall?.[1]
   expect(near.lat).toBeCloseTo(66.5, 1)
   expect(near.lng).toBeCloseTo(25.705, 2)
+})
+
+it('the day\'s list starts with the bed and names journeys by both ends', () => {
+  db.stops = [
+    ...db.stops,
+    stop({ id: 'hostel', trip_id: 'lap', kind: 'stay', title: 'hostel', day: '2027-02-07', end_date: '2027-02-10', place: place({ name: 'Hostel', lat: 66.49, lng: 25.69 }) }),
+    stop({ id: 'j', trip_id: 'lap', kind: 'journey', title: '', day: '2027-02-08', time: null, position: 9, origin: place({ name: 'Rovaniemi Airport', lat: 66.56, lng: 25.83 }), destination: place({ name: 'Helsinki Airport', lat: 60.32, lng: 24.95 }) }),
+  ]
+  show('/?day=2027-02-08', true)
+  const rows = Array.from(document.querySelectorAll('.places-row')).map((r) => r.textContent)
+  expect(rows).toEqual([
+    'staying at hostel',
+    expect.stringMatching(/^1arktikum/),
+    expect.stringMatching(/^2church/),
+    expect.stringMatching(/^3rovaniemi airport → helsinki airport/),
+  ])
+})
+
+it('an idea\'s card adds it to the day', async () => {
+  db.stops = [...db.stops, stop({ id: 'cafe', trip_id: 'lap', title: 'cafe', day: null, saved: true, place: place({ name: 'Cafe', lat: 66.5, lng: 25.72 }) })]
+  show('/?day=2027-02-08', true)
+  await userEvent.click(screen.getByRole('button', { name: 'tap idea' }))
+  const card = screen.getByRole('region', { name: 'cafe' })
+  expect(within(card).getByRole('button', { name: 'details' })).toBeInTheDocument()
+  await userEvent.click(within(card).getByRole('button', { name: 'add' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'cafe', day: '2027-02-08', position: 5, saved: false })
 })

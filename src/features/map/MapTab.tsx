@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
-import { chosenDay, validDay } from '../../lib/agenda'
+import { chosenDay, dayEntries, validDay } from '../../lib/agenda'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
@@ -11,6 +11,8 @@ import { AddPlaceField } from '../plan/AddPlaceField'
 import { busyDays, mapFeatures, type Filter } from './features'
 import { TripMap } from './TripMap'
 import { hasPoint } from '../../lib/walk'
+import { mapBed } from '../../lib/legs'
+import { stopTitle } from '../plan/StopRow'
 import { PlaceCard } from './PlaceCard'
 import { PlacesSheet, type PlaceItem } from './PlacesSheet'
 import { useReadingDay } from '../trip/readingDay'
@@ -62,11 +64,17 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   const data = useMemo(() => mapFeatures(trip, trips, stops, filter), [trip, trips, stops, filter])
   const days = useMemo(() => busyDays(trip, trips, stops), [trip, trips, stops])
   const stop = card?.stopId ? stops.find((s) => s.id === card.stopId) : undefined
-  const items: PlaceItem[] = data.pins.features.map((f) => {
+  const isDay = filter !== 'all' && filter !== 'saved'
+  const pinItems: PlaceItem[] = data.pins.features.map((f) => {
     const s = stops.find((x) => x.id === f.properties.id)
-    return { id: f.properties.id, n: f.properties.number, color: f.properties.color, title: s?.title || s?.place?.name || '', sub: [s?.time, s?.place?.city].filter(Boolean).join(' · ') }
+    return { id: f.properties.id, n: f.properties.number, color: f.properties.color, title: (s ? stopTitle(s) : '').toLowerCase(), sub: [s?.time, s?.place?.city].filter(Boolean).join(' · ') }
   })
-  const count = `${items.length} ${items.length === 1 ? 'place' : 'places'}`
+  // a day's list starts where you sleep
+  const bed = isDay ? mapBed(dayEntries(trip, trips, stops, filter)) : null
+  const items: PlaceItem[] = bed
+    ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bed.title || bed.place?.name || ''}`.toLowerCase(), sub: '' }, ...pinItems]
+    : pinItems
+  const count = `${pinItems.length} ${pinItems.length === 1 ? 'place' : 'places'}`
   const listTitle = filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} saved` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
 
   function pick(id: string) {
@@ -117,7 +125,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
       {phone && !card && <PlacesSheet items={items} title={listTitle} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={pick} />}
       {card && (
         <div className="map-bottom">
-          <PlaceCard key={card.seq} trip={trip} place={card.place} stop={stop} day={filter !== 'all' && filter !== 'saved' ? filter : null} looking={card.looking} defaultDay={filter !== 'all' && filter !== 'saved' ? filter : null}
+          <PlaceCard key={card.seq} trip={trip} place={card.place} stop={stop} day={isDay ? filter : null} looking={card.looking} defaultDay={isDay ? filter : null}
             onClose={() => setCard(null)} onDone={() => setCard(null)} />
         </div>
       )}
