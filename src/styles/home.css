@@ -108,7 +108,7 @@
 /* each total shows the globe's tooltip, listing what it counts */
 .total { position: relative; display: grid; gap: 2px; border-radius: 12px; cursor: default; outline: none; }
 .total:focus-visible { box-shadow: 0 0 0 2px var(--ink); }
-.totals-tip { left: 50%; top: 0; max-width: 260px; text-align: left; transform: translate(-50%, calc(-100% - 12px)); animation: totals-tip-in .16s ease-out; }
+.totals-tip { z-index: 70; max-width: 260px; text-transform: lowercase; font-family: var(--f-body); text-align: left; transform: translate(-50%, calc(-100% - 12px)); animation: totals-tip-in .16s ease-out; }
 .totals-tip strong::before { display: none; }
 @keyframes totals-tip-in { from { opacity: 0; transform: translate(-50%, calc(-100% - 6px)); } }
 .travels-card { overflow: visible; }

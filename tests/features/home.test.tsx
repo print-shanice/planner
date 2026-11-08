@@ -416,3 +416,14 @@ describe('the totals say what they count', () => {
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 })
+
+it('a total\'s tooltip floats above the page, so showing it can never move the page', async () => {
+  db.trips = europe()
+  db.stops = [stop({ trip_id: 'lap', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) })] as Stop[]
+  show()
+  const cities = within(screen.getByTestId('totals')).getByText('cities').closest('[tabindex]') as HTMLElement
+  await userEvent.hover(cities)
+  const tip = screen.getByRole('tooltip')
+  expect(tip.style.position).toBe('fixed')
+  expect(tip.parentElement).toBe(document.body)
+})
