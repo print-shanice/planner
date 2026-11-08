@@ -32,6 +32,7 @@ vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import(
 
 import { PlanTab } from '../../src/features/plan/PlanTab'
 import { failSave, forgetPending } from '../../src/lib/pending'
+import { directionsUrl } from '../../src/lib/gmaps'
 
 const lap = () => trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', base: place({ name: 'rovaniemi', lat: 66.5, lng: 25.7 }) })
 
@@ -242,13 +243,47 @@ it('existing plans outside changed trip dates remain accessible', async () => {
   expect(screen.getByText('earlier arrival')).toBeInTheDocument()
 })
 
-it('walking legs skip an unlocated note', () => {
+it('a leg jumps over an unlocated note', () => {
   const t = lap(); db.trips = [t]
-  db.stops = [stop({ trip_id: t.id, day: '2027-02-08', position: 0, place: place() }),
-    stop({ trip_id: t.id, day: '2027-02-08', kind: 'note', position: 1, place: null }),
-    stop({ trip_id: t.id, day: '2027-02-08', position: 2, place: place() })]
+  db.stops = [stop({ trip_id: t.id, day: '2027-02-08', position: 0, place: place({ lat: 66.50, lng: 25.70 }) }),
+    stop({ trip_id: t.id, day: '2027-02-08', kind: 'note', title: 'a note', position: 1, place: null }),
+    stop({ trip_id: t.id, day: '2027-02-08', position: 2, place: place({ lat: 66.51, lng: 25.72 }) })]
   showAt('/trip/lap?day=2027-02-08')
-  expect(db.walk).not.toHaveBeenCalled()
+  expect(db.walk).toHaveBeenCalledTimes(1)
+  const link = day('2027-02-08').querySelector('a.leg') as HTMLElement
+  const note = [...day('2027-02-08').querySelectorAll('.stop-row')].find((r) => r.textContent?.includes('a note')) as HTMLElement
+  expect(link.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+it('a leg links to google maps directions', async () => {
+  const t = lap(); db.trips = [t]
+  const a = place({ lat: 66.50, lng: 25.70 }), b = place({ lat: 66.51, lng: 25.72 })
+  db.stops = [stop({ trip_id: t.id, title: 'a', day: '2027-02-08', time: '10:00', place: a }),
+    stop({ trip_id: t.id, title: 'b', day: '2027-02-08', time: null, position: 1, place: b })]
+  showAt('/trip/lap?day=2027-02-08')
+  const link = await within(day('2027-02-08')).findByRole('link', { name: '9 min walk' })
+  expect(link).toHaveAttribute('href', directionsUrl(a, b))
+  expect(link).toHaveAttribute('target', '_blank')
+})
+
+it('a long walk still gives directions', async () => {
+  db.walk.mockResolvedValueOnce(9000)
+  const t = lap(); db.trips = [t]
+  db.stops = [stop({ trip_id: t.id, title: 'a', day: '2027-02-08', time: '10:00', place: place({ lat: 66.50, lng: 25.70 }) }),
+    stop({ trip_id: t.id, title: 'b', day: '2027-02-08', time: null, position: 1, place: place({ lat: 66.51, lng: 25.72 }) })]
+  showAt('/trip/lap?day=2027-02-08')
+  expect(await within(day('2027-02-08')).findByRole('link', { name: 'directions' })).toBeInTheDocument()
+})
+
+it('the evening leg goes back to the bed', async () => {
+  const t = lap(); db.trips = [t]
+  const bed = place({ lat: 66.50, lng: 25.70 }), museum = place({ lat: 66.52, lng: 25.75 })
+  db.stops = [stop({ trip_id: t.id, kind: 'stay', title: 'hostel', day: '2027-02-07', end_date: '2027-02-10', place: bed }),
+    stop({ trip_id: t.id, title: 'museum', day: '2027-02-08', place: museum })]
+  showAt('/trip/lap?day=2027-02-08')
+  await within(day('2027-02-08')).findAllByRole('link', { name: /walk|directions/ })
+  const hrefs = [...day('2027-02-08').querySelectorAll('a.leg')].map((l) => l.getAttribute('href'))
+  expect(hrefs).toEqual([directionsUrl(bed, museum), directionsUrl(museum, bed)])
 })
 
 it('a selected stay check-out remains visible', () => {

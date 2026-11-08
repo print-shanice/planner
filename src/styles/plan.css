@@ -80,8 +80,8 @@
 }
 .grip:hover { color: var(--ink-2); }
 
-.leg { display: flex; align-items: center; gap: 6px; min-height: 8px; margin-left: 64px; padding: 0 0 0 16px; border-left: 2px dotted var(--line); font-size: 12.5px; color: var(--ink-3); }
-.leg:not(:empty) { min-height: 28px; }
+.leg { display: flex; align-items: center; gap: 6px; min-height: 44px; margin-left: 64px; padding: 0 0 0 16px; border-left: 2px dotted var(--line); font-size: 12.5px; color: var(--ink-2); text-decoration: none; }
+.leg:hover, .leg:active { filter: brightness(.9); }
 
 /* a side trip's days in its parent: one row in its colour that opens it */
 .fold {

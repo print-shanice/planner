@@ -2,7 +2,6 @@ import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import type { DayEntry } from '../../lib/dates'
 import { fmtDay } from '../../lib/dates'
 import type { Stop, Trip } from '../../lib/types'
-import { hasPoint, tooClose } from '../../lib/walk'
 import { positionsAfterMove } from '../../lib/order'
 import { useSave } from '../../lib/queries'
 import { CountryFlag } from '../../components/CountryFlag'
@@ -10,7 +9,7 @@ import { Link } from 'react-router-dom'
 import { StopRow, type RowVariant } from './StopRow'
 import { useHighlight } from '../trip/highlight'
 import { WalkLeg } from './WalkLeg'
-import { placeIn, placeOut } from '../../lib/legs'
+import { dayLegs } from '../../lib/legs'
 
 type Props = {
   trip: Trip
@@ -65,7 +64,7 @@ export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, cla
 
   const items: JSX.Element[] = []
   let n = 0
-  let prev: Stop | null = null
+  const legs = dayLegs(entries)
   const timed = entries.some((e) => e.kind === 'stop' && e.stop?.time)
   for (const e of entries) {
     // side trips never reach a day card: the plan folds them into their own row
@@ -73,9 +72,6 @@ export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, cla
     const s = e.stop
     const owner = trips?.find(t => t.id === s.trip_id)
     if (owner && owner.id !== trip.id) items.push(<Link className="agenda-owner" key={`owner-${s.id}-${e.kind}`} to={`/trip/${owner.id}`}><CountryFlag code={owner.base?.country} />{owner.name} · open trip</Link>)
-    // a walk between every pair of located places, unless they're really one place
-    const a = prev ? placeOut(prev) : null, b = placeIn(s)
-    if (prev && hasPoint(a) && hasPoint(b) && !tooClose(a, b)) items.push(<WalkLeg key={`w-${prev.id}-${s.id}-${e.kind}`} from={a} to={b} />)
     const isNum = e.kind === 'stop'
     if (isNum) n += 1
     items.push(
@@ -84,7 +80,8 @@ export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, cla
         onGrab={canEdit && isNum && !s.time && numbered.every(x => x.trip_id === trip.id && !x.time) && numbered.length > 1 ? (ev) => grab(ev, s) : undefined}
         dragging={drag?.id === s.id && isNum} offset={drag?.id === s.id && isNum ? drag.dy : 0} />,
     )
-    prev = s
+    // each leg sits under the row it leaves from
+    for (const l of legs) if (l.from.id === s.id && l.fromKind === e.kind) items.push(<WalkLeg key={`w-${s.id}-${e.kind}-${l.to.id}`} from={l.a} to={l.b} />)
   }
 
   return (

@@ -4,7 +4,7 @@ import type { Stop, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { daysBetween, fmtDay, groupByDay, todayISO, tripDays } from '../../lib/dates'
-import { agendaForDay, chosenDay, validDay } from '../../lib/agenda'
+import { dayEntries, chosenDay, validDay } from '../../lib/agenda'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { descendants } from '../../lib/countries'
 import { loadState } from '../../lib/load'
@@ -55,7 +55,7 @@ export const PlanTab = memo(function PlanTab({ trip }: { trip: Trip }) {
   const undatedKids = useMemo(() => children.filter((c) => !c.start_date).sort((a, b) => a.name.localeCompare(b.name)), [children])
 
   const undated = groupByDay(trip, stops, children).undated
-  const entries = selected ? agendaForDay(trip, trips, allStops, selected) : []
+  const entries = selected ? dayEntries(trip, trips, allStops, selected) : []
   if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
 
   function adjust(c: Clash) {
