@@ -401,3 +401,5 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
   body:has(.trip-wide) .sheet-root.page .sheet-backdrop { background: none; }
   body:has(.trip-wide) .sheet.page .sheet-body { width: 100%; }
 }
+/* a search box draws the one line; its input draws none */
+.page-form .field .search-box input { border: 0; min-height: 44px; }
