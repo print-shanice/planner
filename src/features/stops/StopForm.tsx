@@ -14,7 +14,7 @@ import { NamePlace } from './NamePlace'
 import { CATEGORY_OF, checkCost, COST_PROBLEMS, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from './CostFields'
 import { stopTitle } from '../plan/StopRow'
 
-type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: () => void }
+type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: (added?: { id: string; day: string | null }) => void }
 
 const MODES: Mode[] = ['flight', 'train', 'bus', 'ferry']
 
@@ -42,6 +42,14 @@ function toRow(d: Draft, kind: Stop['kind']): Partial<Stop> {
   return { ...base, end_time: d.end_time || null }
 }
 
+// picking a found place keeps your words, unless they were only a bit of its name ("pelg")
+export function keptName(typed: string, found: string): string {
+  const t = typed.trim()
+  if (!t) return found
+  const short = t.length < found.length && found.toLowerCase().includes(t.toLowerCase())
+  return short ? found : t
+}
+
 function problemOf(d: Draft, kind: Stop['kind']): string | null {
   if (kind === 'journey') { if (!d.origin && !d.destination) return 'add where it starts or ends' }
   else if (!d.title.trim()) return 'add a name'
@@ -53,6 +61,7 @@ function problemOf(d: Draft, kind: Stop['kind']): string | null {
 export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const allStops = useStops().data ?? []
   const members = useMembers().data ?? []
+  const people = members.map((m) => m.user_id).filter((x): x is string => !!x)
   const rates = useRates().data ?? null
   const save = useSave('stops')
   const saveCost = useSave('costs')
@@ -66,7 +75,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   // a new stop's form is kept as a draft per trip and kind, with its id, until it's saved
   const [form, update, settle] = useDraft<{ id: string; d: Draft; cost: CostDraft }>(
     isNew ? draftKey(stop.trip_id, stop.kind) : null,
-    () => ({ id: stop.id, d: initial, cost: costDraft(linked, trip?.currency ?? 'EUR', rates) }),
+    () => ({ id: stop.id, d: initial, cost: costDraft(linked, trip?.currency ?? 'EUR', rates, people) }),
   )
   const { id, d, cost } = form
   const [problem, setProblem] = useState<string | null>(null)
@@ -104,7 +113,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         if (moved) changed.position = position
         if (Object.keys(changed).length) await save.mutateAsync({ id, ...changed })
       }
-      const values = costValues(cost)
+      const values = costValues(cost, people)
       if (values) {
         await saveCost.mutateAsync({
           id: costId,
@@ -114,7 +123,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       } else if (linked) {
         await removeCost.mutateAsync(linked.id)
       }
-      onDone()
+      onDone(isNew ? { id, day } : undefined)
     })
   }
 
@@ -124,7 +133,8 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       {rows.map(([label, dk, tk]) => (
         <div key={label} className="when-row">
           <span className="when-label">{label}</span>
-          <Pick type="date" label={label} value={d[dk]} onChange={(v) => set({ [dk]: v } as Partial<Draft>)} min={dk === 'end_date' ? d.day || undefined : undefined} />
+          <Pick type="date" label={label} value={d[dk]} onChange={(v) => set({ [dk]: v } as Partial<Draft>)} min={dk === 'end_date' ? d.day || undefined : undefined}
+            around={trip?.start_date} span={trip?.start_date && trip.end_date ? [trip.start_date, trip.end_date] : null} />
           {tk && <Pick type="time" label={`${label} time`} value={d[tk]} onChange={(v) => set({ [tk]: v } as Partial<Draft>)} />}
         </div>
       ))}
@@ -133,7 +143,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const q = (text: string) => <p className="form-q">{text}</p>
   const named = (label: string) => (
     <NamePlace label={label} name={d.title} place={d.place} near={near} autoFocus={isNew}
-      onName={(title) => set2({ title })} onPlace={(p) => set2(p ? { place: p, title: p.name } : { place: null })} />
+      onName={(title) => set2({ title })} onPlace={(p) => set2(p ? { place: p, title: keptName(d.title, p.name) } : { place: null })} />
   )
   const link = <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={d.url} onChange={(e) => set({ url: e.target.value })} /></label>
   const notes = <label className="field"><span className="label">notes</span><textarea value={d.notes} onChange={(e) => set({ notes: e.target.value })} /></label>

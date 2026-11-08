@@ -1,6 +1,16 @@
 import type { Cost } from './types'
 import { toEur, type Rates } from './money'
 
+// paying someone back: it squares a debt and is never spending
+export const isPayback = (c: Cost) => c.category === 'repayment'
+
+// who a cost is for: its own list, else (older rows) everyone or the one person
+function sharers(c: Cost, members: string[]): string[] {
+  if (c.split_among?.length) return c.split_among
+  if (c.split && c.split !== 'even') return [c.split]
+  return members.length ? members : [c.paid_by!]
+}
+
 export function balances(costs: Cost[], members: string[], rates: Rates | null): Record<string, number> {
   const bal: Record<string, number> = {}
   const add = (who: string, v: number) => { bal[who] = (bal[who] ?? 0) + v }
@@ -9,11 +19,13 @@ export function balances(costs: Cost[], members: string[], rates: Rates | null):
     const eur = toEur(c.amount, c.currency, rates, c.eur_rate)
     if (eur == null || !Number.isFinite(eur)) continue
     add(c.paid_by, eur)
-    if (c.split && c.split !== 'even') add(c.split, -eur)
-    else {
-      const sharers = members.length ? members : [c.paid_by]
-      for (const m of sharers) add(m, -eur / sharers.length)
+    const shares = c.split_amounts && Object.keys(c.split_amounts).length ? c.split_amounts : null
+    if (shares && c.amount) {
+      for (const [who, part] of Object.entries(shares)) add(who, -eur * (Number(part) / c.amount))
+      continue
     }
+    const who = sharers(c, members)
+    for (const m of who) add(m, -eur / who.length)
   }
   return bal
 }

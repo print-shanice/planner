@@ -25,6 +25,14 @@ it('a city result is its own city', () => {
   expect(p.address).toBe('North Holland')
 })
 
+it('keeps the district (else the locality) as the area, unless it just repeats the name or city', () => {
+  const at = (props: Record<string, unknown>) => parsePhoton({ features: [{ geometry: { coordinates: [139.7, 35.66] }, properties: { name: 'Iyoshi Cola', city: 'Tokyo', type: 'house', ...props } }] })[0]
+  expect(at({ district: 'Shibuya', locality: 'Jingumae' }).area).toBe('Shibuya')
+  expect(at({ locality: 'Jingumae' }).area).toBe('Jingumae')
+  expect(at({ district: 'Tokyo' }).area).toBeUndefined()
+  expect(at({}).area).toBeUndefined()
+})
+
 it('bad input parses to nothing', () => {
   expect(parsePhoton(null)).toEqual([])
   expect(parsePhoton({ features: [{ properties: {} }] })).toEqual([])

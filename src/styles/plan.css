@@ -55,7 +55,7 @@
 .stop-sub { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* a journey reads like a ticket */
-.journey-ticket { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 16px; }
+.journey-ticket { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 16px; }
 .journey-route { display: grid; grid-template-columns: auto minmax(16px, 1fr) auto; align-items: center; gap: 8px; }
 .journey-route:has(> :only-child) { grid-template-columns: 1fr; }
 .journey-end { font-family: var(--f-head); font-weight: 800; font-size: 17px; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }

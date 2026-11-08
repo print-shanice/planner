@@ -27,7 +27,8 @@ export type Totals = {
 export function totals(costs: Cost[], cur: string, rates: Rates | null): Totals {
   const t: Totals = { paid: 0, planned: 0, leftOut: 0, byCategory: {} }
   for (const c of costs) {
-    if (!Number.isFinite(c.amount)) continue
+    // paying someone back isn't spending
+    if (!Number.isFinite(c.amount) || c.category === 'repayment') continue
     const v = convert(c.amount, c.currency, cur, rates, c.eur_rate)
     if (v == null || !Number.isFinite(v)) { t.leftOut++; continue }
     const b = (t.byCategory[c.category] ??= { paid: 0, planned: 0 })

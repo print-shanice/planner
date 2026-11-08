@@ -35,11 +35,21 @@ function Copy({ text, label }: { text: string; label: string }) {
   return <button type="button" className="icon-btn" aria-label={label} onClick={copy}><Icon name={done ? 'check' : 'copy'} size={18} /></button>
 }
 
+// who a cost is for, in a few words
+export function splitLine(c: Cost, members: Member[]): string {
+  const who = (id: string) => members.find((m) => m.user_id === id)?.name ?? 'someone'
+  if (c.split_amounts && Object.keys(c.split_amounts).length) return 'exact amounts'
+  const among = c.split_among?.length ? c.split_among : c.split !== 'even' ? [c.split] : null
+  const everyone = members.filter((m) => m.user_id).map((m) => m.user_id!)
+  if (!among || (among.length === everyone.length && among.every((x) => everyone.includes(x)))) return 'split evenly'
+  return among.length === 1 ? `only for ${who(among[0])}` : `for ${among.map(who).join(' and ')}`
+}
+
 function costLine(c: Cost, members: Member[]) {
   const who = (id: string | null) => members.find((m) => m.user_id === id)?.name
   const parts = [formatMoney(c.amount, c.currency)]
   parts.push(c.status === 'paid' ? (c.paid_by ? `paid by ${who(c.paid_by) ?? 'someone'}` : 'paid') : 'not paid')
-  parts.push(c.split === 'even' ? 'split evenly' : `only for ${who(c.split) ?? 'one'}`)
+  parts.push(splitLine(c, members))
   return parts.join(' · ')
 }
 

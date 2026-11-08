@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Place } from '../../lib/types'
 import { searchPlaces } from '../../lib/photon'
+import { nearFirst } from '../../lib/guess'
 import { Pending } from '../../components/Pending'
 
 const MIN = 3
@@ -25,7 +26,7 @@ export function usePlaceSearch(near?: { lat: number; lng: number; zoom?: number 
     setBusy(true); setFailed(false)
     try {
       const out = await searchPlaces(term, near ?? undefined)
-      if (mine === seq.current) setResults(out)
+      if (mine === seq.current) setResults(nearFirst(out, near))
     } catch {
       if (mine === seq.current) { setFailed(true); setResults(null) }
     } finally {

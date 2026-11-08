@@ -124,6 +124,20 @@ it('the chosen day shows under the calendar with its date and day number', () =>
   expect(within(day('2027-02-08')).getByText('museum')).toBeInTheDocument()
 })
 
+it('the chosen day ends with a line to type into, and so does "no date"', async () => {
+  const t = lap(); db.trips = [t]; db.stops = []
+  showAt('/trip/lap?day=2027-02-08')
+  await userEvent.type(screen.getByRole('textbox', { name: 'add to mon 8 feb' }), 'sauna{Enter}')
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'lap', day: '2027-02-08', title: 'sauna' }))
+})
+
+it('an undated trip ends its "no date" list with a line to type into', () => {
+  db.trips = [trip({ id: 'some', start_date: null, end_date: null })]
+  db.stops = []
+  showAt('/trip/some')
+  expect(screen.getByRole('textbox', { name: 'add to no date' })).toBeInTheDocument()
+})
+
 it('without a day in the link, the plan opens on the first day of the trip', () => {
   const t = lap(); db.trips = [t]; db.stops = []
   showAt('/trip/lap')

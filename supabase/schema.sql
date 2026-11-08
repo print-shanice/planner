@@ -79,6 +79,15 @@ create table if not exists public.costs (
   updated_at timestamptz not null default now()
 );
 
+-- who a cost is for: the people when it was saved, and exact shares when it isn't even
+alter table public.costs add column if not exists split_among uuid[];
+alter table public.costs add column if not exists split_amounts jsonb;
+-- older rows spell out who they were for, so someone joining later never shares old costs
+update public.costs set split_among = (select coalesce(array_agg(m.user_id order by m.email), '{}') from public.members m where m.user_id is not null)
+  where split_among is null and split = 'even';
+update public.costs set split_among = array[split::uuid]
+  where split_among is null and split ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+
 create table if not exists public.links (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid references public.trips(id) on delete cascade,

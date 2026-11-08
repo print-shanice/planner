@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import type { Cost, Trip } from '../../lib/types'
-import { useCosts, useMembers, useRates, useTrips } from '../../lib/queries'
+import { useCosts, useMembers, useRates, useRemove, useSave, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { useAuth } from '../../lib/auth'
 import { CATEGORIES, convert, formatMoney, totals } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
-import { balances, transfers } from '../../lib/settle'
-import { descendants } from '../../lib/countries'
-import { fmtDay } from '../../lib/dates'
+import { balances, isPayback, transfers } from '../../lib/settle'
+import { ancestors, descendants } from '../../lib/countries'
+import { fmtDay, todayISO } from '../../lib/dates'
+import { newId } from '../../lib/id'
 import { loadState } from '../../lib/load'
 import { EmptyState } from '../../components/EmptyState'
 import { LoadState } from '../../components/States'
@@ -17,6 +18,7 @@ import { useStopSheet } from '../stops/StopSheet'
 import { CostForm } from './CostForm'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Pending } from '../../components/Pending'
+import { TwoTapDelete } from '../../components/TwoTapDelete'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
@@ -45,14 +47,25 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   const budget = trip.budget != null ? convert(trip.budget, trip.currency, cur, rates) : null
   const scale = Math.max(total, budget ?? 0) || 1
   const over = budget != null && total > budget + 0.004 ? total - budget : 0
-  const name = (id: string) => (id === userId ? 'you' : members.find((m) => m.user_id === id)?.name || 'someone')
+  const name = (id: string | null) => (id === userId ? 'you' : members.find((m) => m.user_id === id)?.name || 'someone')
+  const owes = (id: string) => (id === userId ? 'owe' : 'owes')
+  const payBack = (x: { from: string; to: string; eur: number }) => save.mutateAsync({
+    id: newId(), trip_id: top.id, stop_id: null, title: '', category: 'repayment', status: 'paid', date: todayISO(),
+    paid_by: x.from, split: x.to, split_among: [x.to], split_amounts: null, amount: x.eur, currency: 'EUR', eur_rate: null,
+  }).catch(() => { /* "couldn't save" shows on the row */ })
 
+  const save = useSave('costs')
+  const remove = useRemove('costs')
+  // people settle once for the whole trip, side trips and all, whichever of them you're looking at
+  const top = ancestors(trip.id, trips)[0] ?? trip
   const settle = useMemo(() => {
-    const paid = costs.filter((c) => c.status === 'paid' && c.paid_by)
+    const family = new Set(descendants(top.id, trips))
+    const paid = allCosts.filter((c) => family.has(c.trip_id) && c.status === 'paid' && c.paid_by)
     if (!paid.length) return null
     const people = members.map((m) => m.user_id).filter((x): x is string => !!x)
-    return transfers(balances(paid, people, rates))
-  }, [costs, members, rates])
+    const bal = balances(paid, people, rates)
+    return { bal: Object.entries(bal).filter(([, v]) => Math.abs(v) > 0.005).sort((a, b) => b[1] - a[1]), moves: transfers(bal) }
+  }, [allCosts, top.id, trips, members, rates])
 
   if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
 
@@ -95,9 +108,22 @@ export function MoneyTab({ trip }: { trip: Trip }) {
       {settle && (
         <section className="settle-box" aria-label="settle up">
           <p className="label">settle up</p>
-          {settle.length === 0
-            ? <p className="settle-line">all square</p>
-            : settle.map((x) => <p key={`${x.from}-${x.to}`} className="settle-line num">{`${name(x.from)} ${x.from === userId ? 'owe' : 'owes'} ${name(x.to)} ${show(convert(x.eur, 'EUR', cur, rates) ?? x.eur)}`}</p>)}
+          {settle.moves.length === 0 ? <p className="settle-line"><Pill status="settled" /></p> : <>
+            {settle.bal.length > 2 && <ul className="settle-people">
+              {settle.bal.map(([id, v]) => (
+                <li key={id} className="num">{`${name(id)} · ${v > 0 ? 'owed' : owes(id)} ${show(convert(Math.abs(v), 'EUR', cur, rates) ?? Math.abs(v))}`}</li>
+              ))}
+            </ul>}
+            {settle.moves.map((x) => {
+              const line = `${name(x.from)} ${owes(x.from)} ${name(x.to)} ${show(convert(x.eur, 'EUR', cur, rates) ?? x.eur)}`
+              return (
+                <div key={`${x.from}-${x.to}`} className="settle-move">
+                  <p className="settle-line num">{line}</p>
+                  {canEdit && <button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => payBack(x)}>paid back</button>}
+                </div>
+              )
+            })}
+          </>}
         </section>
       )}
 
@@ -134,7 +160,20 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         <section className="block" aria-label="all costs">
           <h3 className="head">all costs</h3>
           <ul className="list costs">
-            {sorted.map((c) => (
+            {sorted.map((c) => isPayback(c) ? (
+              // a pay-back only squares up: it reads as who paid whom, and can only be removed
+              <li key={c.id}>
+                <div className="cost-row payback">
+                  <span className="cost-name">
+                    <span>{`${name(c.paid_by)} paid ${name(c.split_among?.[0] ?? c.split)} back`}</span>
+                    {c.date && <span className="muted">{fmtDay(c.date)}</span>}
+                  </span>
+                  <span className="num">{formatMoney(c.amount, c.currency)}</span>
+                  <TwoTapDelete disabled={!canEdit} onConfirm={() => remove.mutateAsync(c.id)} />
+                </div>
+                <SaveFailed table="costs" id={c.id} />
+              </li>
+            ) : (
               <li key={c.id}>
                 <button type="button" className="cost-row" onClick={() => (c.stop_id && sheet ? sheet.openStop(c.stop_id) : setEditing(c))}>
                   <span className="cost-name">

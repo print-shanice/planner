@@ -1,8 +1,9 @@
 import { lazy, memo, Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useTrips } from '../../lib/queries'
+import { useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
-import { validDay } from '../../lib/agenda'
+import { chosenDay, validDay } from '../../lib/agenda'
+import { todayISO } from '../../lib/dates'
 import { useWide } from '../../lib/useWide'
 import { loadState } from '../../lib/load'
 import type { Trip } from '../../lib/types'
@@ -11,6 +12,7 @@ import { LoadState, Skeleton } from '../../components/States'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { PlanTab } from '../plan/PlanTab'
+import { ItineraryTab } from '../itinerary/ItineraryTab'
 import { MoneyTab } from '../money/MoneyTab'
 import { SavedTab } from '../saved/SavedTab'
 import { PackingTab } from '../packing/PackingTab'
@@ -35,8 +37,9 @@ const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapT
 const MapWait = () => <div className="map-tab"><Pending label="loading map" className="map-loading" /></div>
 
 // the slow parts only redraw when what they show changes, not on every tap
-const Panel = memo(function Panel({ tab, view, trip }: { tab: Tab; view: SavedView; trip: Trip }) {
+const Panel = memo(function Panel({ tab, view, trip, slot }: { tab: Tab; view: SavedView; trip: Trip; slot: HTMLElement | null }) {
   switch (tab) {
+    case 'itinerary': return <ItineraryTab trip={trip} slot={slot} />
     case 'map': return <Suspense fallback={<MapWait />}><MapTab trip={trip} phone /></Suspense>
     case 'money': return <MoneyTab trip={trip} />
     case 'saved': return view === 'packing' ? <PackingTab trip={trip} /> : <SavedTab key={`${trip.id}-${view}`} trip={trip} view={view} />
@@ -79,10 +82,13 @@ function TripScreen() {
   const [params, setParams] = useSearchParams()
   const tq = useTrips()
   const trips = tq.data
+  const stops = useStops().data
   const load = loadState(tq)
   const wide = useWide()
   const canEdit = useCanEdit()
   const [kind, setKind] = useState<AddKind | null>(null)
+  // the itinerary's search and day strip sit in the sticky bar
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
   const [menu, setMenu] = useState(false)
   // a section switch can take a moment to build: the tab answers at once, the section says it's loading
   const [switching, startSwitch] = useTransition()
@@ -130,8 +136,10 @@ function TripScreen() {
   const { tab, view } = readTab(params, wide)
   const tabs = wide ? WIDE_TABS : PHONE_TABS
   const day = params.get('day')
-  const onDay = validDay(day) ? day : null
+  // the day the calendar shows, even when the link has none
+  const onDay = validDay(day) ? day : chosenDay(trip, trips ?? [], stops ?? [], null, todayISO())
   const phoneMap = !wide && tab === 'map'
+  const dayTab = tab === 'calendar' || tab === 'itinerary'
   const plus = <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}><Icon name="plus" /></button>
   // the day stays when you switch sections; each section keeps its own scroll
   function pick(next: Tab, nextView: SavedView = view) {
@@ -139,7 +147,7 @@ function TripScreen() {
     startSwitch(() => setParams((p) => {
       const n = new URLSearchParams(p)
       n.delete('view'); n.delete('map')
-      if (next === 'plan') n.delete('tab')
+      if (next === 'calendar') n.delete('tab')
       else n.set('tab', next)
       if (next === 'saved') n.set('view', nextView)
       return n
@@ -167,6 +175,7 @@ function TripScreen() {
           <div className={`trip-bar${stuck ? ' stuck' : ''}`}>
             <TripHeader key={trip.id} trip={trip} action={plus} />
             {wide && sectionNav}
+            {tab === 'itinerary' && <div className="bar-slot" ref={setSlot} />}
             {tab === 'saved' && !wide && (
               <div className="segmented saved-switch" role="group" aria-label="saved">
                 {SAVED_VIEWS.map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => pick('saved', v)}>{v}</button>)}
@@ -179,19 +188,19 @@ function TripScreen() {
           // the loading animation, in the middle of the space under the navigation
           <div className="section-wait" role="status" aria-label="loading"><img src={`${import.meta.env.BASE_URL}loading.gif`} alt="" /></div>
         )}
-        {tab !== 'plan' && (
+        {tab !== 'calendar' && (
           <section id="trip-section" className="trip-inline-section" aria-label={tab}>
-            <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} view={view} trip={trip} /></div>
+            <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} view={view} trip={trip} slot={slot} /></div>
           </section>
         )}
-        <div className="trip-panel" hidden={tab !== 'plan'}>
+        <div className="trip-panel" hidden={tab !== 'calendar'}>
           <PlanTab key={trip.id} trip={trip} />
         </div>
       </section>
       {wide && <aside className="trip-map"><Suspense fallback={<MapWait />}><MapTab trip={trip} /></Suspense></aside>}
-      <AddSheet open={menu} title={tab === 'plan' && onDay ? `add to ${dayLabel(onDay)}` : 'add'} onClose={() => setMenu(false)}
+      <AddSheet open={menu} title={dayTab && onDay ? `add to ${dayLabel(onDay)}` : 'add'} onClose={() => setMenu(false)}
         onPick={(k) => { setMenu(false); setKind(k) }} />
-      <AddForms kind={kind} trip={trip} day={tab === 'plan' ? onDay : null} idea={tab === 'saved'} onClose={() => setKind(null)} />
+      <AddForms kind={kind} trip={trip} day={dayTab ? onDay : null} idea={tab === 'saved'} onClose={() => setKind(null)} />
     </div>
   )
 }

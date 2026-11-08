@@ -152,19 +152,19 @@ function wide(on: boolean) {
 }
 afterEach(() => wide(false))
 
-it('phones show four sections in a bar at the bottom', () => {
+it('phones show five sections in a bar at the bottom', () => {
   show('/trip/summer')
   const nav = screen.getByRole('navigation', { name: 'trip sections' })
   expect(nav).toHaveClass('tab-bar')
-  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'map', 'money', 'saved'])
-  expect(sections().getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'true')
+  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['calendar', 'itinerary', 'map', 'money', 'saved'])
+  expect(sections().getByRole('button', { name: 'calendar' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 it('laptops show one quiet row of tabs, with the map always beside', async () => {
   wide(true)
   show('/trip/summer')
   expect(screen.getByRole('navigation', { name: 'trip sections' })).toHaveClass('section-tabs')
-  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'money', 'ideas', 'links', 'packing'])
+  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['calendar', 'itinerary', 'money', 'ideas', 'links', 'packing'])
   expect(await screen.findByText('map here')).toBeInTheDocument()
 })
 
@@ -183,8 +183,10 @@ it('on a laptop ideas, links and packing are tabs of their own, with no second s
 
 it('old links land on the new sections', () => {
   const read = (q: string, w = false) => readTab(new URLSearchParams(q), w)
-  expect(read('')).toEqual({ tab: 'plan', view: 'ideas' })
-  for (const old of ['calendar', 'itinerary', 'plan']) expect(read(`tab=${old}`).tab).toBe('plan')
+  expect(read('')).toEqual({ tab: 'calendar', view: 'ideas' })
+  for (const old of ['calendar', 'plan']) expect(read(`tab=${old}`).tab).toBe('calendar')
+  expect(read('tab=itinerary').tab).toBe('itinerary')
+  expect(read('tab=itinerary', true).tab).toBe('itinerary')
   for (const old of ['cost', 'money']) expect(read(`tab=${old}`).tab).toBe('money')
   expect(read('tab=ideas')).toEqual({ tab: 'saved', view: 'ideas' })
   expect(read('tab=links')).toEqual({ tab: 'saved', view: 'links' })
@@ -193,8 +195,8 @@ it('old links land on the new sections', () => {
   expect(read('tab=saved&view=links')).toEqual({ tab: 'saved', view: 'links' })
   expect(read('tab=saved&view=nope')).toEqual({ tab: 'saved', view: 'ideas' })
   expect(read('tab=map').tab).toBe('map')
-  expect(read('tab=map', true).tab).toBe('plan')
-  expect(read('tab=nope').tab).toBe('plan')
+  expect(read('tab=map', true).tab).toBe('calendar')
+  expect(read('tab=nope').tab).toBe('calendar')
 })
 
 it('picking a section keeps the day you were on', async () => {
@@ -203,7 +205,7 @@ it('picking a section keeps the day you were on', async () => {
   expect(loc().searchParams.get('tab')).toBe('money')
   expect(loc().searchParams.get('day')).toBe('2027-06-28')
   expect(screen.getByRole('heading', { level: 1, name: 'the long summer' })).toBeInTheDocument()
-  await userEvent.click(sections().getByRole('button', { name: 'plan' }))
+  await userEvent.click(sections().getByRole('button', { name: 'calendar' }))
   expect(loc().searchParams.get('tab')).toBeNull()
   expect(loc().searchParams.get('day')).toBe('2027-06-28')
   expect(screen.getByTestId('day-2027-06-28')).toBeVisible()
@@ -223,7 +225,7 @@ it('saved switches between ideas, links and packing', async () => {
   expect(views.getByRole('button', { name: 'packing' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-for (const path of ['/trip/summer', '/trip/summer?day=2027-06-28', '/trip/summer?tab=money', '/trip/summer?tab=saved', '/trip/summer?tab=saved&view=links', '/trip/summer?tab=saved&view=packing', '/trip/summer?tab=map']) {
+for (const path of ['/trip/summer', '/trip/summer?day=2027-06-28', '/trip/summer?tab=itinerary', '/trip/summer?tab=money', '/trip/summer?tab=saved', '/trip/summer?tab=saved&view=links', '/trip/summer?tab=saved&view=packing', '/trip/summer?tab=map']) {
   it(`no section repeats its own name as a heading (${path})`, () => {
     show(path)
     for (const name of ['calendar', 'itinerary', 'plan', 'map', 'cost', 'money', 'saved', 'ideas', 'links', 'packing']) {
@@ -327,6 +329,28 @@ it('a place added on a day is set to that day', async () => {
   expect(within(await screen.findByRole('dialog', { name: 'new place' })).getByLabelText('day')).toHaveValue('2027-06-28')
 })
 
+it('with no day in the link, the + still fills in the day the calendar shows', async () => {
+  show('/trip/summer')
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  const menu = screen.getByRole('dialog', { name: 'add to sat 26 jun' })
+  await userEvent.click(within(menu).getByRole('button', { name: 'place' }))
+  expect(within(await screen.findByRole('dialog', { name: 'new place' })).getByLabelText('day')).toHaveValue('2027-06-26')
+})
+
+it('after adding, the trip moves to the day the new stop is on', async () => {
+  show('/trip/summer?day=2027-06-28&tab=itinerary')
+  await userEvent.click(header().getByRole('button', { name: 'add' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'place' }))
+  const d = await screen.findByRole('dialog', { name: 'new place' })
+  await userEvent.type(within(d).getByRole('textbox', { name: /name/ }), 'kotisaari')
+  await userEvent.click(within(d).getByRole('button', { name: /choose day/ }))
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'day' })).getByRole('button', { name: 'wed 30 jun' }))
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ day: '2027-06-30', title: 'kotisaari' }))
+  expect(loc().searchParams.get('day')).toBe('2027-06-30')
+  expect(loc().searchParams.get('tab')).toBe('itinerary')
+})
+
 async function addPlace(path: string) {
   db.save.mockClear()
   show(path)
@@ -402,9 +426,9 @@ describe('the trip header stays at the top', () => {
 it('a tapped tab lights up at once, before the page has caught up', async () => {
   const { TripSummary } = await import('../../src/features/trip/TripSummary')
   const onPick = vi.fn()
-  render(<TripSummary bar active="plan" onPick={onPick} sections={['plan', 'map', 'money', 'saved'].map((t) => ({ label: t, tab: t as never }))} />)
+  render(<TripSummary bar active="calendar" onPick={onPick} sections={['calendar', 'itinerary', 'map', 'money', 'saved'].map((t) => ({ label: t, tab: t as never }))} />)
   await userEvent.click(screen.getByRole('button', { name: 'money' }))
   expect(onPick).toHaveBeenCalled()
   expect(screen.getByRole('button', { name: 'money' })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'false')
+  expect(screen.getByRole('button', { name: 'calendar' })).toHaveAttribute('aria-pressed', 'false')
 })

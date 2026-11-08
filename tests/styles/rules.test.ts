@@ -96,3 +96,9 @@ it('scrolling never hides the trip\'s flags and dates', () => {
   const hiding = rules.filter(([sel, body]) => /\.trip-meta/.test(sel) && /display:\s*none/.test(body))
   expect(hiding).toEqual([])
 })
+
+it('a journey ticket can shrink to its column, so a long route never runs off a phone', () => {
+  const ticket = rules.find(([s]) => s.trim().endsWith('.journey-ticket'))?.[1] ?? ''
+  expect(ticket).toMatch(/min-width:\s*0/)
+  expect(ticket).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/)
+})

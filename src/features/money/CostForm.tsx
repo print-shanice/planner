@@ -16,6 +16,7 @@ type Draft = { id: string; title: string; category: string; date: string; money:
 
 export function CostForm({ trip, cost, day, onDone }: Props) {
   const members = useMembers().data ?? []
+  const people = members.map((m) => m.user_id).filter((x): x is string => !!x)
   const rates = useRates().data ?? null
   const save = useSave('costs')
   const remove = useRemove('costs')
@@ -23,7 +24,7 @@ export function CostForm({ trip, cost, day, onDone }: Props) {
   // a new cost is kept as a draft for this trip, with one id, so saving again after a failure sends the same row
   const [form, update, settle] = useDraft<Draft>(cost ? null : draftKey(trip.id, 'cost'), () => ({
     id: cost?.id ?? newId(), title: cost?.title ?? '', category: cost?.category ?? 'food', date: cost?.date ?? day ?? '',
-    money: costDraft(cost, trip.currency, rates),
+    money: costDraft(cost, trip.currency, rates, people),
   }))
   const { id, title, category, date, money } = form
   const set = (p: Partial<Draft>) => update((v) => ({ ...v, ...p }))
@@ -41,7 +42,7 @@ export function CostForm({ trip, cost, day, onDone }: Props) {
       await save.mutateAsync({
         id,
         ...(cost ? {} : { trip_id: trip.id, stop_id: null }),
-        title: title.trim(), category, date: date || null, ...costValues(money)!,
+        title: title.trim(), category, date: date || null, ...costValues(money, people)!,
       })
       onDone()
     })

@@ -2,12 +2,13 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, cost } from '../factories'
 
-const db = vi.hoisted(() => ({ ratesQ: null as null | Record<string, unknown>, save: vi.fn(), trips: [] as any[], costs: [] as any[], stops: [] as any[], costsQ: null as null | Record<string, unknown> }))
+const TWO = [{ email: 's@x.com', user_id: 'u1', name: 'shanice', color: 0 }, { email: 'k@x.com', user_id: 'u2', name: 'kai', color: 1 }]
+const db = vi.hoisted(() => ({ members: null as null | unknown[], ratesQ: null as null | Record<string, unknown>, save: vi.fn(), trips: [] as any[], costs: [] as any[], stops: [] as any[], costsQ: null as null | Record<string, unknown> }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useCosts: () => db.costsQ ?? ({ data: db.costs }),
   useStops: () => ({ data: db.stops }),
-  useMembers: () => ({ data: [{ email: 's@x.com', user_id: 'u1', name: 'shanice', color: 0 }, { email: 'k@x.com', user_id: 'u2', name: 'kai', color: 1 }] }),
+  useMembers: () => ({ data: db.members ?? TWO }),
   useRates: () => db.ratesQ ?? ({ data: { date: '2026-11-04', rates: { SGD: 1.4398, GBP: 0.85 } } }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -181,7 +182,7 @@ it('an even split everyone has paid is all square', () => {
   db.trips = [t]
   db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even' }), cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u1', split: 'even' })]
   show(t)
-  expect(within(screen.getByRole('region', { name: 'settle up' })).getByText('all square')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'settle up' })).getByText('settled')).toHaveClass('ok')
 })
 
 it('totals round to whole amounts; a single cost keeps its own', () => {
@@ -202,4 +203,118 @@ it('while exchange rates load, money says so instead of leaving costs out', () =
   show(t)
   db.ratesQ = null
   expect(screen.getByRole('status')).toHaveTextContent('loading rates')
+})
+
+describe('splitting', () => {
+  const form = (id: string) => {
+    const t = trip({ id, currency: 'EUR' })
+    db.trips = [t]
+    db.save.mockReset().mockResolvedValue({})
+    render(<MemoryRouter><CostForm trip={t} onDone={() => {}} /></MemoryRouter>)
+  }
+  const fill = async () => {
+    await userEvent.type(screen.getByLabelText('amount'), '90')
+    await userEvent.type(screen.getByRole('textbox', { name: 'name' }), 'dinner')
+  }
+  const forBox = () => within(screen.getByRole('group', { name: 'split' }))
+
+  it('everyone is the people in the trip now, written down', async () => {
+    form('split-all')
+    await fill()
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ split: 'even', split_among: ['u1', 'u2'], split_amounts: null }))
+  })
+
+  it('some people: only the ones ticked share it', async () => {
+    form('split-some')
+    await fill()
+    await userEvent.click(forBox().getByRole('button', { name: 'some people' }))
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(screen.getByText("pick who it's for")).toBeInTheDocument()
+    expect(db.save).not.toHaveBeenCalled()
+    await userEvent.click(forBox().getByRole('button', { name: 'for kai' }))
+    expect(forBox().getByRole('button', { name: 'for kai' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ split: 'u2', split_among: ['u2'], split_amounts: null }))
+  })
+
+  it('exact amounts must add up to the cost', async () => {
+    form('split-exact')
+    await fill()
+    await userEvent.click(forBox().getByRole('button', { name: 'amounts' }))
+    await userEvent.type(forBox().getByLabelText("shanice's share"), '30')
+    await userEvent.type(forBox().getByLabelText("kai's share"), '50')
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(screen.getByText("doesn't add up")).toBeInTheDocument()
+    expect(db.save).not.toHaveBeenCalled()
+    await userEvent.clear(forBox().getByLabelText("kai's share"))
+    await userEvent.type(forBox().getByLabelText("kai's share"), '60')
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ split: 'even', split_among: ['u1', 'u2'], split_amounts: { u1: 30, u2: 60 } }))
+  })
+
+  it('an older cost for one person opens as "some people" with them ticked', async () => {
+    const t = trip({ id: 'split-old', currency: 'EUR' })
+    db.trips = [t]
+    render(<MemoryRouter><CostForm trip={t} cost={cost({ trip_id: 'split-old', amount: 30, split: 'u2' })} onDone={() => {}} /></MemoryRouter>)
+    expect(forBox().getByRole('button', { name: 'some people' })).toHaveAttribute('aria-pressed', 'true')
+    expect(forBox().getByRole('button', { name: 'for kai' })).toHaveAttribute('aria-pressed', 'true')
+    expect(forBox().getByRole('button', { name: 'for shanice' })).toHaveAttribute('aria-pressed', 'false')
+  })
+})
+
+describe('settling up', () => {
+  it('with three or more people, it shows where each person stands', () => {
+    db.members = [...TWO, { email: 'j@x.com', user_id: 'u3', name: 'jo', color: 2 }]
+    const t = trip({ id: 'lap', currency: 'EUR' })
+    db.trips = [t]
+    db.costs = [cost({ trip_id: 'lap', amount: 90, status: 'paid', paid_by: 'u2', split_among: ['u1', 'u2', 'u3'] })]
+    show(t)
+    const box = within(screen.getByRole('region', { name: 'settle up' }))
+    expect(box.getByText('kai · owed €60')).toBeInTheDocument()
+    expect(box.getByText('you · owe €30')).toBeInTheDocument()
+    expect(box.getByText('jo · owes €30')).toBeInTheDocument()
+    db.members = null
+  })
+
+  it('who pays whom, with a paid back button; two people need no extra lines', async () => {
+    const t = trip({ id: 'lap', currency: 'EUR' })
+    db.trips = [t]
+    db.save.mockReset().mockResolvedValue({})
+    db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even', split_among: ['u1', 'u2'] })]
+    show(t)
+    const box = within(screen.getByRole('region', { name: 'settle up' }))
+    expect(box.queryByText('kai · owed €20')).toBeNull()
+    await userEvent.click(box.getByRole('button', { name: 'paid back: you owe kai €20' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({
+      trip_id: 'lap', stop_id: null, category: 'repayment', status: 'paid', paid_by: 'u1', split: 'u2', split_among: ['u2'],
+      split_amounts: null, amount: 20, currency: 'EUR',
+    }))
+  })
+
+  it("a pay-back isn't spending and squares up; the list says who paid whom back", () => {
+    const t = trip({ id: 'lap', currency: 'EUR' })
+    db.trips = [t]
+    db.costs = [
+      cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split_among: ['u1', 'u2'] }),
+      cost({ trip_id: 'lap', amount: 20, currency: 'EUR', status: 'paid', paid_by: 'u1', split: 'u2', split_among: ['u2'], category: 'repayment', date: '2027-02-10' }),
+    ]
+    show(t)
+    expect(screen.getByTestId('money-total')).toHaveTextContent(/^€40$/)
+    expect(within(screen.getByRole('region', { name: 'settle up' })).getByText('settled')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'all costs' })).getByText('you paid kai back')).toBeInTheDocument()
+  })
+
+  it('settle-up covers the whole trip, side trips and parent alike, and pay-backs go on the top trip', async () => {
+    const eu = trip({ id: 'eu', currency: 'EUR' })
+    const paris = trip({ id: 'paris', parent_id: 'eu', currency: 'EUR' })
+    db.trips = [eu, paris]
+    db.save.mockReset().mockResolvedValue({})
+    db.costs = [cost({ trip_id: 'eu', amount: 40, status: 'paid', paid_by: 'u2', split_among: ['u1', 'u2'] })]
+    show(paris)
+    const box = within(screen.getByRole('region', { name: 'settle up' }))
+    expect(box.getByText('you owe kai €20')).toBeInTheDocument()
+    await userEvent.click(box.getByRole('button', { name: 'paid back: you owe kai €20' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'eu', category: 'repayment' }))
+  })
 })

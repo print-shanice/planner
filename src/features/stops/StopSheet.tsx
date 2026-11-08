@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { Stop, StopKind } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { newId } from '../../lib/id'
@@ -6,6 +7,7 @@ import { Sheet } from '../../components/Sheet'
 import { StopForm } from './StopForm'
 import { StopView } from './StopView'
 import { stopTitle } from '../plan/StopRow'
+import { flash } from '../itinerary/flash'
 
 type Api = { openStop: (id: string) => void; editStop: (id: string) => void; newStop: (kind: StopKind, tripId: string, defaults?: Partial<Stop>) => void }
 const Ctx = createContext<Api | null>(null)
@@ -27,6 +29,13 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
   const seq = useRef(0)
   const stops = useStops().data
   const trips = useTrips().data
+  const [, setParams] = useSearchParams()
+  // a new stop takes you to its day and lights up there, so you can see it landed
+  const landed = (added?: { id: string; day: string | null }) => {
+    if (!added) return
+    if (added.day) setParams((p) => { const n = new URLSearchParams(p); n.set('day', added.day!); return n })
+    flash(added.id)
+  }
 
   const openStop = useCallback((id: string) => setState({ n: ++seq.current, mode: 'view', id }), [])
   const editStop = useCallback((id: string) => setState({ n: ++seq.current, mode: 'edit', id }), [])
@@ -49,7 +58,7 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
         {state && stop && (state.mode === 'edit'
           ? <StopForm key={`${state.n}-edit`} stop={stop} trip={trip} isNew={!!state.draft}
               // a save can land after its sheet was closed or another one opened; only touch this sheet
-              onDone={() => setState((s) => (s?.n !== state.n ? s : state.draft ? null : { ...s, mode: 'view' }))} />
+              onDone={(added) => { landed(added); setState((s) => (s?.n !== state.n ? s : state.draft ? null : { ...s, mode: 'view' })) }} />
           : <StopView key={`${state.n}-view`} stop={stop} onClose={close} onEdit={() => setState({ ...state, n: ++seq.current, mode: 'edit' })} />)}
       </Sheet>
     </Ctx.Provider>

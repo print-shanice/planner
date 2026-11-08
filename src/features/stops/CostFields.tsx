@@ -5,11 +5,22 @@ import { useAuth } from '../../lib/auth'
 import type { CSSProperties, ReactNode } from 'react'
 import { Switch } from '../../components/Switch'
 
-export type CostDraft = { amount: string; currency: string; other: boolean; code: string; rate: string; paid: boolean; paid_by: string; split: string }
+export type SplitMode = 'even' | 'some' | 'amounts'
+export type CostDraft = {
+  amount: string; currency: string; other: boolean; code: string; rate: string; paid: boolean; paid_by: string
+  // who it's for: everyone, some people, or exact amounts each
+  mode: SplitMode; among: string[]; shares: Record<string, string>
+}
 
-export function costDraft(c: Cost | undefined, fallback: string, rates: Rates | null): CostDraft {
+const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
+
+// people: the members who can share a cost (they've signed in), in order
+export function costDraft(c: Cost | undefined, fallback: string, rates: Rates | null, people: string[] = []): CostDraft {
   const cur = c?.currency ?? fallback
   const known = currencyList(rates).includes(cur)
+  const amounts = c?.split_amounts && Object.keys(c.split_amounts).length ? c.split_amounts : null
+  const among = c?.split_among?.length ? c.split_among : c?.split && c.split !== 'even' ? [c.split] : null
+  const mode: SplitMode = amounts ? 'amounts' : among && !(people.length && sameSet(among, people)) ? 'some' : 'even'
   return {
     amount: c ? String(c.amount) : '',
     currency: known ? cur : 'other',
@@ -19,11 +30,13 @@ export function costDraft(c: Cost | undefined, fallback: string, rates: Rates | 
     // paid and its payer always go together: an older estimate with a payer reads as not paid
     paid: c?.status === 'paid',
     paid_by: c?.status === 'paid' ? c.paid_by ?? '' : '',
-    split: c?.split ?? 'even',
+    mode,
+    among: among ?? [],
+    shares: amounts ? Object.fromEntries(Object.entries(amounts).map(([k, v]) => [k, String(v)])) : {},
   }
 }
 
-export const COST_PROBLEMS = ['check the amount', 'enter a 3-letter currency code', 'pick who paid']
+export const COST_PROBLEMS = ['check the amount', 'enter a 3-letter currency code', 'pick who paid', "pick who it's for", "doesn't add up"]
 
 const num = (s: string) => Number(s.replace(',', '.').trim())
 
@@ -34,17 +47,27 @@ export function checkCost(d: CostDraft): string | null {
   if (d.other && !/^[a-z]{3}$/i.test(d.code.trim())) return 'enter a 3-letter currency code'
   if (d.other && d.rate.trim() && !(num(d.rate) > 0)) return 'check the amount'
   if (d.paid && !d.paid_by) return 'pick who paid'
+  if (d.mode === 'some' && !d.among.length) return "pick who it's for"
+  if (d.mode === 'amounts') {
+    const sum = Object.values(d.shares).reduce((t, v) => t + (v.trim() ? num(v) : 0), 0)
+    if (!Number.isFinite(sum) || Math.abs(sum - a) > 0.009) return "doesn't add up"
+  }
   return null
 }
 
-export function costValues(d: CostDraft) {
+// people: who "everyone" is right now; it's written down so someone joining later never shares this cost
+export function costValues(d: CostDraft, people: string[]) {
   if (!d.amount.trim()) return null
+  const among = d.mode === 'even' ? people : d.mode === 'some' ? people.filter((p) => d.among.includes(p)).concat(d.among.filter((p) => !people.includes(p)))
+    : people.filter((p) => d.shares[p]?.trim() && num(d.shares[p]) > 0)
   return {
     amount: num(d.amount),
     currency: d.other ? d.code.trim().toUpperCase() : d.currency,
     eur_rate: d.other && d.rate.trim() ? num(d.rate) : null,
     paid_by: d.paid ? d.paid_by || null : null,
-    split: d.split || 'even',
+    split: d.mode === 'some' && among.length === 1 ? among[0] : 'even',
+    split_among: among,
+    split_amounts: d.mode === 'amounts' ? Object.fromEntries(among.map((p) => [p, num(d.shares[p])])) : null,
     status: (d.paid ? 'paid' : 'estimate') as Cost['status'],
   }
 }
@@ -64,6 +87,9 @@ export function PaymentChoice({ value: d, onChange, members }: PaymentProps) {
     : { ...d, paid })
   return <Switch label="paid already" checked={d.paid} onChange={pay} />
 }
+
+const MODES: [SplitMode, string][] = [['even', 'everyone'], ['some', 'some people'], ['amounts', 'amounts']]
+const who = (m: Member) => (m.name || m.email).toLowerCase()
 
 // payment: the paid switch, shown between the amount and who paid
 type Props = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[]; rates: Rates | null; payment?: ReactNode; autoFocus?: boolean }
@@ -111,13 +137,34 @@ export function CostFields({ value: d, onChange, members, rates, payment, autoFo
             ))}
           </div>
         )}
-        <label className="field">
-          <span className="label">for</span>
-          <select value={d.split} onChange={(e) => set({ split: e.target.value })}>
-            <option value="even">split evenly</option>
-            {people.map((m) => <option key={m.user_id!} value={m.user_id!}>only for {(m.name || m.email).toLowerCase()}</option>)}
-          </select>
-        </label>
+      </div>
+      <div className="split-for" role="group" aria-label="split">
+        <span className="label">split</span>
+        <div className="segmented">
+          {MODES.map(([m, l]) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}>{l}</button>)}
+        </div>
+        {d.mode === 'some' && (
+          <div className="faces">
+            {people.map((m) => (
+              <button key={m.user_id!} type="button" className="face" aria-label={`for ${who(m)}`} aria-pressed={d.among.includes(m.user_id!)}
+                onClick={() => set({ among: d.among.includes(m.user_id!) ? d.among.filter((x) => x !== m.user_id) : [...d.among, m.user_id!] })}
+                style={{ '--c': `var(--g${(m.color ?? 0) % 6})` } as CSSProperties}>
+                <span className="avatar">{who(m).slice(0, 1)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {d.mode === 'amounts' && (
+          <div className="shares">
+            {people.map((m) => (
+              <label key={m.user_id!} className="field">
+                <span className="label">{`${who(m)}'s share`}</span>
+                <input inputMode="decimal" placeholder="0" value={d.shares[m.user_id!] ?? ''}
+                  onChange={(e) => set({ shares: { ...d.shares, [m.user_id!]: e.target.value } })} />
+              </label>
+            ))}
+          </div>
+        )}
       </div>
     </fieldset>
   )

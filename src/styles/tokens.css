@@ -14,6 +14,8 @@
   --warn: #8A5200;
   --warn-bg: #FBEFD6;
   --idle: #5D626B;
+  /* a search match, and nothing else */
+  --found: #FFE97A;
 
   --g0: #3346C7;
   --g1: #0F7C8C;

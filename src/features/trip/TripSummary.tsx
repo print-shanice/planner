@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import type { SavedView, Tab } from './tabs'
 import { Icon } from '../../components/Icon'
 
-const ICON: Record<Tab, string> = { plan: 'calendar', map: 'map', money: 'money', saved: 'saved' }
+const ICON: Record<Tab, string> = { calendar: 'calendar', itinerary: 'plan', map: 'map', money: 'money', saved: 'saved' }
 export type Section = { label: string; tab: Tab; view?: SavedView }
 
-// phones: a bar of four at the bottom; laptops: one quiet row of text tabs (ideas, links and packing
+// phones: a bar of five at the bottom; laptops: one quiet row of text tabs (ideas, links and packing
 // each get their own, and the map is always beside)
 export function TripSummary({ sections, active, onPick, bar }: { sections: Section[]; active: string; onPick: (s: Section) => void; bar: boolean }) {
   // the tapped tab lights up straight away, on its own, while the page catches up

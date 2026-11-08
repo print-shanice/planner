@@ -49,6 +49,12 @@ it('a cost only for one person is owed in full by them', () => {
   expect(transfers(b)).toEqual([{ from: 'b', to: 'a', eur: 30 }])
 })
 
+it('a pay-back is never spending: totals and categories leave it out', () => {
+  const t = totals([cost({ amount: 40, currency: 'EUR', status: 'paid', category: 'food' }), cost({ amount: 20, currency: 'EUR', status: 'paid', category: 'repayment' })], 'EUR', R)
+  expect(t.paid).toBe(40)
+  expect(Object.keys(t.byCategory)).toEqual(['food'])
+})
+
 it('estimates never count in settle-up', () => {
   expect(transfers(balances([cost({ status: 'estimate', paid_by: 'a' })], ['a', 'b'], R))).toEqual([])
 })

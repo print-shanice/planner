@@ -2,6 +2,8 @@ export type Place = {
   name: string
   address?: string
   city?: string
+  // the neighbourhood or district, when the search knows it
+  area?: string
   country?: string
   lat: number | null
   lng: number | null
@@ -62,7 +64,11 @@ export type Cost = {
   date: string | null
   status: 'estimate' | 'paid'
   paid_by: string | null
+  // older rows: 'even' or one person's id. newer rows also say exactly who it was for
   split: string
+  split_among?: string[] | null
+  // exact shares, in the cost's own currency; none means split evenly
+  split_amounts?: Record<string, number> | null
   created_by?: string | null
 }
 

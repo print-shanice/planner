@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { makeDb, type Db } from './harness'
 
 let d: Db
@@ -73,4 +74,21 @@ it('schema can be run twice without errors', async () => {
   const { readFileSync } = await import('node:fs')
   await d.admin()
   await expect(d.db.exec(readFileSync('supabase/schema.sql', 'utf8'))).resolves.toBeDefined()
+})
+
+it('costs say who they are for; rerunning the schema spells out older rows', async () => {
+  await d.admin()
+  await d.q(`update members set user_id = '00000000-0000-0000-0000-00000000000a' where email = 'shanice@x.com'`)
+  await d.q(`update members set user_id = '00000000-0000-0000-0000-00000000000b' where email = 'k@x.com'`)
+  const t = (await d.q("insert into trips(name, currency) values ('eu', 'EUR') returning id")).rows[0].id
+  await d.q(`insert into costs(trip_id, amount, currency, split) values ('${t}', 40, 'EUR', 'even'), ('${t}', 10, 'EUR', '00000000-0000-0000-0000-00000000000b')`)
+  await d.q(`insert into costs(trip_id, amount, currency, split_among, split_amounts) values ('${t}', 30, 'EUR', array['00000000-0000-0000-0000-00000000000a']::uuid[], '{"00000000-0000-0000-0000-00000000000a": 30}')`)
+  await d.db.exec(readFileSync('supabase/schema.sql', 'utf8'))
+  const rows = (await d.q('select amount, split_among, split_amounts from costs order by amount')).rows
+  expect(rows.map((r) => [Number(r.amount), [...r.split_among].sort()])).toEqual([
+    [10, ['00000000-0000-0000-0000-00000000000b']],
+    [30, ['00000000-0000-0000-0000-00000000000a']],
+    [40, ['00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b']],
+  ])
+  expect(rows[1].split_amounts).toEqual({ '00000000-0000-0000-0000-00000000000a': 30 })
 })

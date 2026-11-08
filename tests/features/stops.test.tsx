@@ -24,6 +24,8 @@ vi.mock('../../src/lib/queries', async () => {
   }
 })
 vi.mock('../../src/lib/id', () => ({ newId: () => 'new-id' }))
+const photon = vi.hoisted(() => ({ search: vi.fn(() => Promise.resolve([] as unknown[])) }))
+vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchPlaces: photon.search }))
 const tickets = vi.hoisted(() => ({ open: vi.fn(), keep: vi.fn(() => Promise.resolve()) }))
 vi.mock('../../src/lib/ticketCache', () => ({ openTicket: tickets.open, keepTickets: tickets.keep }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => db.canEdit }))
@@ -37,6 +39,10 @@ let qc: QueryClient
 function Opener({ id, kind }: { id?: string; kind?: 'stay' | 'place' | 'journey' | 'note' }) {
   const s = useStopSheet()!
   return <button onClick={() => (id ? s.openStop(id) : s.newStop(kind!, 'lap', { day: '2027-02-08' }))}>open</button>
+}
+function NoDay() {
+  const s = useStopSheet()!
+  return <button onClick={() => s.newStop('place', 'lap')}>open blank</button>
 }
 function OtherTrip() {
   const s = useStopSheet()!
@@ -390,6 +396,35 @@ it('a new item that lands after its sheet closed leaves the next sheet open', as
   await act(async () => { finish() })
   d = screen.getByRole('dialog', { name: 'arktikum' })
   expect(d).toBeInTheDocument()
+})
+
+it("the date picker opens on the trip's month, marks the trip's days and always shows six weeks", async () => {
+  show(<NoDay />)
+  await userEvent.click(screen.getByRole('button', { name: 'open blank' }))
+  await userEvent.click(screen.getByRole('button', { name: 'choose day' }))
+  const pick = screen.getByRole('dialog', { name: 'day' })
+  expect(pick).toHaveTextContent('february 2027')
+  expect(within(pick).getByRole('button', { name: 'sun 7 feb' })).toHaveAttribute('data-trip')
+  expect(within(pick).getByRole('button', { name: 'thu 11 feb' })).toHaveAttribute('data-trip')
+  expect(within(pick).getByRole('button', { name: 'fri 12 feb' })).not.toHaveAttribute('data-trip')
+  expect(pick.querySelectorAll('.datepick-grid > :not(.datepick-wd)')).toHaveLength(42)
+  await userEvent.click(within(pick).getByRole('button', { name: 'next month' }))
+  expect(pick.querySelectorAll('.datepick-grid > :not(.datepick-wd)')).toHaveLength(42)
+})
+
+it('picking a found place keeps the name you typed; a short search takes the place name', async () => {
+  photon.search.mockResolvedValue([place({ name: 'De Pelgrim', city: 'rotterdam' })])
+  show(<Opener kind="place" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const name = screen.getByRole('textbox', { name: 'name' })
+  await userEvent.type(name, 'cafe de pelgrim')
+  await userEvent.click(await screen.findByRole('button', { name: /De Pelgrim/ }, { timeout: 2000 }))
+  expect(name).toHaveValue('cafe de pelgrim')
+  await userEvent.click(screen.getByRole('button', { name: 'clear location' }))
+  await userEvent.clear(name)
+  await userEvent.type(name, 'pelg')
+  await userEvent.click(await screen.findByRole('button', { name: /De Pelgrim/ }, { timeout: 2000 }))
+  expect(name).toHaveValue('De Pelgrim')
 })
 
 it('a stay has no separate location field: its name finds the place', async () => {

@@ -21,6 +21,8 @@ export function parsePhoton(json: unknown): Place[] {
     const parts = isCity ? [p.state] : [street, city !== name ? city : undefined]
     const address = parts.filter(Boolean).join(', ')
     const place: Place = { name, address, ...(city ? { city: String(city) } : {}), country: p.countrycode ? String(p.countrycode).toUpperCase() : undefined, lat: c[1], lng: c[0] }
+    const area = String(p.district ?? p.locality ?? '').trim()
+    if (area && area !== name && area !== city) place.area = area
     if (p.osm_type && p.osm_id != null) place.osm_id = `${p.osm_type}${p.osm_id}`
     if (!place.country) delete place.country
     out.push(place)
@@ -49,4 +51,17 @@ export async function reversePlace(lat: number, lng: number): Promise<Place | nu
   } catch {
     return null
   }
+}
+
+// specific places only (a cafe, a shop, a sight), never an area, a street or a station
+const SPOTS = new Set(['amenity', 'shop', 'tourism', 'leisure', 'historic', 'craft', 'office', 'building'])
+
+export function parseSpots(json: unknown): Place[] {
+  const feats = (json as { features?: { properties?: Props }[] } | null)?.features
+  if (!Array.isArray(feats)) return []
+  return parsePhoton({ features: feats.filter((f) => SPOTS.has(String(f?.properties?.osm_key ?? ''))) })
+}
+
+export async function searchSpots(q: string, near: { lat: number; lng: number }): Promise<Place[]> {
+  return parseSpots(await getJson(`${PHOTON}/api?q=${encodeURIComponent(q.trim())}&limit=8&lang=en&lat=${near.lat}&lon=${near.lng}`))
 }

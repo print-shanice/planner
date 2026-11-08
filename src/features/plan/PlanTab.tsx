@@ -18,6 +18,8 @@ import { DayCard } from './DayCard'
 import { NoDate } from './NoDate'
 import { useStopSheet } from '../stops/StopSheet'
 import { useWide } from '../../lib/useWide'
+import { ownerOn } from '../../lib/itinerary'
+import { AddLine } from '../itinerary/AddLine'
 
 // redraws only when its trip changes (or the link it reads), not when the page around it does
 export const PlanTab = memo(function PlanTab({ trip }: { trip: Trip }) {
@@ -88,9 +90,13 @@ export const PlanTab = memo(function PlanTab({ trip }: { trip: Trip }) {
         </header>
         <DayCard trip={trip} date={selected} entries={entries} colorIndex={trip.color} trips={trips} bare
           clash={clash} canEdit={canEdit} onOpen={onOpen} />
+        <AddLine key={selected} trip={ownerOn(trip, trips, selected)} day={selected} />
         {datedKids.filter(c => c.start_date! <= selected && (c.end_date ?? c.start_date!) >= selected).map(c =>
           <FoldRow key={c.id} trip={c} clash={clash.has(c.id)} />)}
-      </> : <NoDate stops={undated} sideTrips={undatedKids} canEdit={canEdit} onOpen={onOpen} onSetDates={setAdjusting} />}
+      </> : <>
+        <NoDate stops={undated} sideTrips={undatedKids} canEdit={canEdit} onOpen={onOpen} onSetDates={setAdjusting} />
+        <AddLine trip={trip} day={null} />
+      </>}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>
