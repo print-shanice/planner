@@ -176,7 +176,10 @@ function TripScreen() {
           </div>
         )}
         {!wide && sectionNav}
-        {switching && <Pending label="loading" className="section-wait" />}
+        {switching && (
+          // the loading animation, in the middle of the space under the navigation
+          <div className="section-wait" role="status" aria-label="loading"><img src={`${import.meta.env.BASE_URL}loading.gif`} alt="" /></div>
+        )}
         {tab !== 'plan' && (
           <section id="trip-section" className="trip-inline-section" aria-label={tab}>
             <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} view={view} trip={trip} /></div>
