@@ -119,3 +119,6 @@
 .section-tabs button, .section-tabs button[aria-pressed="true"], .saved-switch button, .saved-switch button[aria-pressed="true"] { font-weight: 700; }
 .trip-wide .trip-main { scrollbar-gutter: stable; }
 @media (max-width: 480px) { .trip-title-row h1 { font-size: 29px; } }
+/* switching sections: the old one fades while the new one builds, under a "loading" line */
+.section-wait { display: flex; margin: 16px 16px 0; }
+.trip.switching .trip-inline-section, .trip.switching .trip-panel { opacity: .35; pointer-events: none; transition: opacity .1s .08s; }

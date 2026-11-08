@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -83,6 +83,9 @@ function TripScreen() {
   const canEdit = useCanEdit()
   const [kind, setKind] = useState<AddKind | null>(null)
   const [menu, setMenu] = useState(false)
+  // a section switch can take a moment to build: the tab answers at once, the section says it's loading
+  const [switching, startSwitch] = useTransition()
+  const [going, setGoing] = useState<string | null>(null)
   const main = useRef<HTMLElement>(null)
   const scrolls = useRef<Record<string, number>>({})
   // once the page scrolls, the bar tightens up (a smaller title, no dates line)
@@ -133,24 +136,25 @@ function TripScreen() {
   // the day stays when you switch sections; each section keeps its own scroll
   function pick(next: Tab, nextView: SavedView = view) {
     scrolls.current[`${tab}/${view}`] = scroller()?.scrollTop ?? window.scrollY
-    setParams((p) => {
+    setGoing(wide && next === 'saved' ? nextView : next)
+    startSwitch(() => setParams((p) => {
       const n = new URLSearchParams(p)
       n.delete('view'); n.delete('map')
       if (next === 'plan') n.delete('tab')
       else n.set('tab', next)
       if (next === 'saved') n.set('view', nextView)
       return n
-    })
+    }))
   }
   const sectionNav = (
     <TripSummary bar={!wide} onPick={(x) => pick(x.tab, x.view)}
       sections={wide
         ? tabs.flatMap((t): Section[] => t === 'saved' ? SAVED_VIEWS.map((v) => ({ label: v, tab: t, view: v })) : [{ label: t, tab: t }])
         : tabs.map((t) => ({ label: t, tab: t }))}
-      active={wide && tab === 'saved' ? view : tab} />
+      active={(switching && going) || (wide && tab === 'saved' ? view : tab)} />
   )
   return (
-    <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}`} style={tint(trip.color)}>
+    <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}${switching ? ' switching' : ''}`} style={tint(trip.color)}>
       <section className="trip-main" ref={main}>
         <span ref={sentinel} className="trip-bar-sentinel" aria-hidden="true" />
         {phoneMap ? (
@@ -172,6 +176,7 @@ function TripScreen() {
           </div>
         )}
         {!wide && sectionNav}
+        {switching && <Pending label="loading" className="section-wait" />}
         {tab !== 'plan' && (
           <section id="trip-section" className="trip-inline-section" aria-label={tab}>
             <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} view={view} trip={trip} /></div>
