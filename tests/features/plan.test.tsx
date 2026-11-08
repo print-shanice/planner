@@ -272,7 +272,7 @@ it('a long walk still gives directions', async () => {
   db.stops = [stop({ trip_id: t.id, title: 'a', day: '2027-02-08', time: '10:00', place: place({ lat: 66.50, lng: 25.70 }) }),
     stop({ trip_id: t.id, title: 'b', day: '2027-02-08', time: null, position: 1, place: place({ lat: 66.51, lng: 25.72 }) })]
   showAt('/trip/lap?day=2027-02-08')
-  expect(await within(day('2027-02-08')).findByRole('link', { name: 'directions' })).toBeInTheDocument()
+  expect(await within(day('2027-02-08')).findByRole('link', { name: 'directions' })).toHaveTextContent('directions')
 })
 
 it('the evening leg goes back to the bed', async () => {
@@ -437,5 +437,5 @@ it('a walk being worked out shows a quiet pulsing leg', () => {
   db.stops = [stop({ trip_id: t.id, title: 'a', day: '2027-02-08', time: '10:00', place: place({ lat: 66.50, lng: 25.70 }) }),
     stop({ trip_id: t.id, title: 'b', day: '2027-02-08', time: '11:00', place: place({ lat: 66.51, lng: 25.72 }) })]
   showAt('/trip/lap?day=2027-02-08')
-  expect(day('2027-02-08').querySelector('.leg.pulse')).not.toBeNull()
+  expect(day('2027-02-08').querySelector('.leg.pulse')).toHaveTextContent('directions')
 })

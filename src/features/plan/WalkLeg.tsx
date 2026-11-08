@@ -15,12 +15,12 @@ export function WalkLeg({ from, to }: { from: Located; to: Located }) {
   })
   const label = walkLabel(data ?? null)
   const waiting = isPending && !!key
+  const text = !waiting && label ? label : 'directions'
   // every leg is a link out; the walk time is its name once known
   return (
-    <a className={`leg${waiting ? ' pulse' : ''}`} href={directionsUrl(from, to)} target="_blank" rel="noopener noreferrer"
-      aria-label={label && !waiting ? label : 'directions'}>
+    <a className={`leg${waiting ? ' pulse' : ''}`} href={directionsUrl(from, to)} target="_blank" rel="noopener noreferrer">
       <Icon name="walk" size={16} />
-      {label && !waiting && <span>{label}</span>}
+      <span>{text}</span>
       <Icon name="next" size={14} />
     </a>
   )
