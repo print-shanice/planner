@@ -4,7 +4,7 @@ import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type StyleSpecif
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Place } from '../../lib/types'
-import type { mapFeatures } from './features'
+import type { MapData } from './features'
 
 export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
 
@@ -22,9 +22,8 @@ function plainStyle(): StyleSpecification {
   }
 }
 
-type Data = ReturnType<typeof mapFeatures>
 type Props = {
-  data: Data
+  data: MapData
   fitKey: string
   fallback: Place | null
   focus: Place | null
@@ -60,11 +59,30 @@ function bookmark(color: string, card: string): ImageData {
   return g.getImageData(0, 0, w, h)
 }
 
-function boundsOf(d: Data): LngLatBoundsLike | null {
+// a small bed on an ink square: where tonight is slept
+function bedPin(color: string, card: string): ImageData {
+  const s = 2, w = 22 * s, h = 22 * s
+  const cv = document.createElement('canvas')
+  cv.width = w; cv.height = h
+  const g = cv.getContext('2d')!
+  g.fillStyle = color
+  g.beginPath(); g.roundRect(1 * s, 1 * s, 20 * s, 20 * s, 5 * s); g.fill()
+  g.fillStyle = card
+  g.fillRect(5 * s, 6 * s, 2 * s, 10 * s)
+  g.fillRect(5 * s, 12 * s, 12 * s, 2 * s)
+  g.fillRect(7 * s, 8 * s, 4 * s, 3 * s)
+  g.fillRect(12 * s, 9 * s, 5 * s, 3 * s)
+  return g.getImageData(0, 0, w, h)
+}
+
+function boundsOf(d: MapData): LngLatBoundsLike | null {
   const pts: number[][] = []
   for (const f of d.pins.features) pts.push(f.geometry.coordinates)
-  for (const f of d.saved.features) pts.push(f.geometry.coordinates)
+  for (const f of d.ends.features) pts.push(f.geometry.coordinates)
+  for (const f of d.beds.features) pts.push(f.geometry.coordinates)
   for (const f of d.lines.features) pts.push(...f.geometry.coordinates)
+  // ideas only fit the view when nothing else is on it
+  if (!pts.length) for (const f of d.saved.features) pts.push(f.geometry.coordinates)
   if (!pts.length) return null
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1])
   return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]]
@@ -102,14 +120,19 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
     m.on('load', () => {
       const ink = css('var(--ink)'), ink2 = css('var(--ink-2)'), card = css('var(--card)')
       m.addImage('bookmark', bookmark(ink, card), { pixelRatio: 2 })
+      m.addImage('bed', bedPin(ink, card), { pixelRatio: 2 })
       const empty = { type: 'FeatureCollection', features: [] } as FeatureCollection
-      for (const id of ['lines', 'pins', 'pin-labels', 'saved', 'focus']) m.addSource(id, { type: 'geojson', data: empty })
+      for (const id of ['lines', 'pins', 'pin-labels', 'ends', 'beds', 'pin-names', 'saved', 'focus']) m.addSource(id, { type: 'geojson', data: empty })
       m.addLayer({ id: 'day-lines', type: 'line', source: 'lines', filter: ['==', ['get', 'kind'], 'day'], paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-dasharray': [1.2, 1.6], 'line-opacity': 0.8 }, layout: { 'line-cap': 'round' } })
       m.addLayer({ id: 'journeys', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['!=', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2.5 } })
       m.addLayer({ id: 'flights', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['==', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2, 'line-dasharray': [2, 2] } })
       m.addLayer({ id: 'saved', type: 'symbol', source: 'saved', layout: { 'icon-image': 'bookmark', 'icon-allow-overlap': true, 'icon-anchor': 'bottom' } })
       // the stop lit in the plan beside: a soft ring in its colour
       m.addLayer({ id: 'halo', type: 'circle', source: 'pins', filter: ['==', ['get', 'id'], ''], paint: { 'circle-radius': 20, 'circle-color': ['get', 'color'], 'circle-opacity': 0.25 } })
+      m.addLayer({ id: 'journey-ends', type: 'circle', source: 'ends', paint: { 'circle-radius': 6, 'circle-color': ['get', 'color'], 'circle-stroke-color': card, 'circle-stroke-width': 2 } })
+      m.addLayer({ id: 'beds', type: 'symbol', source: 'beds', layout: { 'icon-image': 'bed', 'icon-allow-overlap': true } })
+      // names sit on their own source too: a missing font only loses the names
+      m.addLayer({ id: 'pin-names', type: 'symbol', source: 'pin-names', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-offset': [0, 1.4], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': ink, 'text-halo-color': card, 'text-halo-width': 1.5 } })
       m.addLayer({ id: 'pins', type: 'circle', source: 'pins', paint: { 'circle-radius': 12, 'circle-color': ['get', 'color'], 'circle-stroke-color': card, 'circle-stroke-width': 2 } })
       // numbers sit on their own source: if the font can't load, the pins still show
       m.addLayer({ id: 'pin-numbers', type: 'symbol', source: 'pin-labels', layout: { 'text-field': ['to-string', ['get', 'number']], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true }, paint: { 'text-color': card } })
@@ -120,12 +143,12 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
     })
 
     m.on('click', (e) => {
-      const hit = m.queryRenderedFeatures(e.point, { layers: ['pins', 'saved'].filter((l) => m.getLayer(l)) })[0]
+      const hit = m.queryRenderedFeatures(e.point, { layers: ['pins', 'saved', 'beds', 'journey-ends'].filter((l) => m.getLayer(l)) })[0]
       const id = hit?.properties?.id as string | undefined
       if (id) cb.current.onPick(id)
       else cb.current.onEmpty({ lng: e.lngLat.lng, lat: e.lngLat.lat })
     })
-    for (const l of ['pins', 'saved']) {
+    for (const l of ['pins', 'saved', 'beds', 'journey-ends']) {
       m.on('mouseenter', l, () => { m.getCanvas().style.cursor = 'pointer' })
       m.on('mouseleave', l, () => { m.getCanvas().style.cursor = '' })
     }
@@ -144,6 +167,9 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
     ;(m.getSource('pins') as GeoJSONSource).setData(paint(d.pins))
     ;(m.getSource('pin-labels') as GeoJSONSource).setData(d.pins)
     ;(m.getSource('lines') as GeoJSONSource).setData(paint(d.lines))
+    ;(m.getSource('ends') as GeoJSONSource).setData(paint(d.ends))
+    ;(m.getSource('beds') as GeoJSONSource).setData(d.beds)
+    ;(m.getSource('pin-names') as GeoJSONSource).setData(paint(d.names))
     ;(m.getSource('saved') as GeoJSONSource).setData(d.saved)
     if (fitted.current !== fitKeyRef.current) {
       fitted.current = fitKeyRef.current
