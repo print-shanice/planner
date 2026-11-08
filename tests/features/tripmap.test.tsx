@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 
 const mk = vi.hoisted(() => {
   const maps: any[] = []
@@ -16,9 +16,16 @@ const mk = vi.hoisted(() => {
     getCanvas() { return { style: {} } } getCenter() { return { lng: 0, lat: 0 } }
   }
   class GeolocateControl {}
-  return { maps, FakeMap, GeolocateControl }
+  class Marker {
+    el: HTMLElement
+    constructor(o: { element: HTMLElement }) { this.el = o.element }
+    setLngLat() { return this }
+    addTo() { document.body.appendChild(this.el); this.el.setAttribute('aria-label', 'map marker'); return this }
+    remove() { this.el.remove() }
+  }
+  return { maps, FakeMap, GeolocateControl, Marker }
 })
-vi.mock('maplibre-gl', () => ({ default: { Map: mk.FakeMap, GeolocateControl: mk.GeolocateControl } }))
+vi.mock('maplibre-gl', () => ({ default: { Map: mk.FakeMap, GeolocateControl: mk.GeolocateControl, Marker: mk.Marker } }))
 
 import { TripMap } from '../../src/features/map/TripMap'
 
@@ -63,4 +70,14 @@ it('ideas are not part of the fit when the day has stops', () => {
   const m = mk.maps.at(-1)
   act(() => { m.fire('load') })
   expect(m.fits[0]).toEqual([[25.7, 66.5], [25.7, 66.5]])
+})
+
+it('side-trip pins are named buttons that open the trip', () => {
+  const onTrip = vi.fn()
+  const overview = { home: { name: 'eindhoven', at: [5.5, 51.4] as [number, number] }, sides: [{ id: 'lap', name: 'lapland', dates: '7 – 11 feb', color: 'var(--g1)', at: [25.7, 66.5] as [number, number] }], lines: empty }
+  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} overview={overview} onTrip={onTrip} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
+  act(() => { mk.maps.at(-1).fire('load') })
+  fireEvent.click(screen.getByRole('button', { name: 'lapland, 7 – 11 feb' }))
+  expect(onTrip).toHaveBeenCalledWith('lap')
+  expect(mk.maps.at(-1).fits[0]).toEqual([[5.5, 51.4], [25.7, 66.5]])
 })

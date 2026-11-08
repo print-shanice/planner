@@ -5,6 +5,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Place } from '../../lib/types'
 import type { MapData } from './features'
+import type { Overview } from './overview'
+import { iconPath } from '../../components/Icon'
 
 export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
 
@@ -34,6 +36,9 @@ type Props = {
   onPick: (id: string) => void
   onEmpty: (p: { lng: number; lat: number }) => void
   onCenter?: (p: { lng: number; lat: number; zoom: number }) => void
+  // the whole trip: home and one pin per side trip, drawn as html markers
+  overview?: Overview | null
+  onTrip?: (id: string) => void
 }
 
 const root = () => getComputedStyle(document.documentElement)
@@ -75,8 +80,10 @@ function bedPin(color: string, card: string): ImageData {
   return g.getImageData(0, 0, w, h)
 }
 
-function boundsOf(d: MapData): LngLatBoundsLike | null {
+function boundsOf(d: MapData, o?: Overview | null): LngLatBoundsLike | null {
   const pts: number[][] = []
+  if (o?.home) pts.push(o.home.at)
+  for (const s of o?.sides ?? []) if (s.at) pts.push(s.at)
   for (const f of d.pins.features) pts.push(f.geometry.coordinates)
   for (const f of d.ends.features) pts.push(f.geometry.coordinates)
   for (const f of d.beds.features) pts.push(f.geometry.coordinates)
@@ -88,16 +95,16 @@ function boundsOf(d: MapData): LngLatBoundsLike | null {
   return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]]
 }
 
-export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPick, onEmpty, onCenter }: Props) {
+export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPick, onEmpty, onCenter, overview, onTrip }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const ready = useRef(false)
   const [drawn, setDrawn] = useState(false)
   const fitted = useRef<string | null>(null)
-  const cb = useRef({ onPick, onEmpty, onCenter })
-  cb.current = { onPick, onEmpty, onCenter }
-  const latest = useRef({ data, fallback, inset })
-  latest.current = { data, fallback, inset }
+  const cb = useRef({ onPick, onEmpty, onCenter, onTrip })
+  cb.current = { onPick, onEmpty, onCenter, onTrip }
+  const latest = useRef({ data, fallback, inset, overview })
+  latest.current = { data, fallback, inset, overview }
   const fitKeyRef = useRef(fitKey)
   fitKeyRef.current = fitKey
 
@@ -124,6 +131,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
       const empty = { type: 'FeatureCollection', features: [] } as FeatureCollection
       for (const id of ['lines', 'pins', 'pin-labels', 'ends', 'beds', 'pin-names', 'saved', 'focus']) m.addSource(id, { type: 'geojson', data: empty })
       m.addLayer({ id: 'day-lines', type: 'line', source: 'lines', filter: ['==', ['get', 'kind'], 'day'], paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-dasharray': [1.2, 1.6], 'line-opacity': 0.8 }, layout: { 'line-cap': 'round' } })
+      m.addLayer({ id: 'spokes', type: 'line', source: 'lines', filter: ['==', ['get', 'kind'], 'spoke'], paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-dasharray': [2, 2] } })
       m.addLayer({ id: 'journeys', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['!=', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2.5 } })
       m.addLayer({ id: 'flights', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['==', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2, 'line-dasharray': [2, 2] } })
       m.addLayer({ id: 'saved', type: 'symbol', source: 'saved', layout: { 'icon-image': 'bookmark', 'icon-allow-overlap': true, 'icon-anchor': 'bottom' } })
@@ -163,7 +171,7 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
   function push() {
     const m = map.current
     if (!m || !ready.current) return
-    const { data: d, fallback: fb, inset: cover } = latest.current
+    const { data: d, fallback: fb, inset: cover, overview: ov } = latest.current
     ;(m.getSource('pins') as GeoJSONSource).setData(paint(d.pins))
     ;(m.getSource('pin-labels') as GeoJSONSource).setData(d.pins)
     ;(m.getSource('lines') as GeoJSONSource).setData(paint(d.lines))
@@ -173,13 +181,58 @@ export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPic
     ;(m.getSource('saved') as GeoJSONSource).setData(d.saved)
     if (fitted.current !== fitKeyRef.current) {
       fitted.current = fitKeyRef.current
-      const b = boundsOf(d)
+      const b = boundsOf(d, ov)
       if (b) m.fitBounds(b, { padding: { top: cover?.top ?? 150, bottom: cover?.bottom ?? 90, left: 40, right: 40 }, maxZoom: 14, duration: 0 })
       else if (fb && fb.lat != null && fb.lng != null) m.jumpTo({ center: [fb.lng, fb.lat], zoom: 11 })
       else m.jumpTo({ center: [10, 50], zoom: 3.5 })
     }
   }
-  useEffect(push, [data, fitKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(push, [data, fitKey, overview]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // the overview's pins are html, so they live outside the geojson sources
+  useEffect(() => {
+    const m = map.current
+    if (!m || !drawn || !overview) return
+    const made: maplibregl.Marker[] = []
+    const add = (el: HTMLElement, at: [number, number]) => {
+      const mk = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(at).addTo(m)
+      made.push(mk)
+    }
+    if (overview.home) {
+      const el = document.createElement('div')
+      el.className = 'side-pin home'
+      el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path></path></svg><span class="side-name"></span>'
+      el.querySelector('path')!.setAttribute('d', iconPath('bed'))
+      el.querySelector('.side-name')!.textContent = overview.home.name
+      add(el, overview.home.at)
+    }
+    for (const s of overview.sides) {
+      if (!s.at) continue
+      const el = document.createElement('button')
+      el.type = 'button'
+      el.className = 'side-pin'
+      const dot = document.createElement('span')
+      dot.className = 'side-dot'
+      dot.style.background = s.color
+      const text = document.createElement('span')
+      text.className = 'side-text'
+      const name = document.createElement('span')
+      name.className = 'side-name'
+      name.textContent = s.name
+      text.append(name)
+      if (s.dates) {
+        const dates = document.createElement('span')
+        dates.className = 'side-dates'
+        dates.textContent = s.dates
+        text.append(dates)
+      }
+      el.append(dot, text)
+      el.addEventListener('click', () => cb.current.onTrip?.(s.id))
+      add(el, s.at)
+      el.setAttribute('aria-label', `${s.name}${s.dates ? `, ${s.dates}` : ''}`) // after addTo, which labels every marker "map marker"
+    }
+    return () => { for (const mk of made) mk.remove() }
+  }, [overview, drawn])
 
   useEffect(() => {
     const m = map.current
