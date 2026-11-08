@@ -47,3 +47,28 @@ export function chosenDay(trip: Trip, trips: Trip[], stops: Stop[], requested: s
   if (validDay(requested) && canOpen(requested)) return requested
   return inTrip(today) ? today : all[0] ?? planned[0] ?? null
 }
+
+const covers = (t: Trip, d: string) => !!t.start_date && t.start_date <= d && (t.end_date ?? t.start_date) >= d
+
+function depth(t: Trip, trips: Trip[]): number {
+  let n = 0
+  for (let p = t.parent_id; p && n < 20; n++) p = trips.find((x) => x.id === p)?.parent_id ?? null
+  return n
+}
+
+// the innermost trip in the family that the day belongs to
+export function ownerOn(trip: Trip, trips: Trip[], date: string | null): Trip {
+  if (!date) return trip
+  const ids = new Set(descendants(trip.id, trips))
+  return trips.filter((t) => ids.has(t.id) && covers(t, date)).sort((a, b) => depth(b, trips) - depth(a, trips))[0] ?? trip
+}
+
+// a day's entries as the plan reads them: a side trip's own bed that night replaces the parent's "staying at"
+export function dayEntries(trip: Trip, trips: Trip[], stops: Stop[], date: string): DayEntry[] {
+  const entries = agendaForDay(trip, trips, stops, date)
+  const owner = ownerOn(trip, trips, date)
+  if (owner.id === trip.id) return entries
+  const inner = new Set(descendants(owner.id, trips))
+  const sleepsThere = entries.some((e) => (e.kind === 'checkin' || e.kind === 'staying') && inner.has(e.stop!.trip_id))
+  return sleepsThere ? entries.filter((e) => e.kind !== 'staying' || inner.has(e.stop!.trip_id)) : entries
+}

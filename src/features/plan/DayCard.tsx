@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { StopRow, type RowVariant } from './StopRow'
 import { useHighlight } from '../trip/highlight'
 import { WalkLeg } from './WalkLeg'
+import { placeIn, placeOut } from '../../lib/legs'
 
 type Props = {
   trip: Trip
@@ -24,10 +25,6 @@ type Props = {
   // on its own page the day has its heading above, so the card drops its own
   bare?: boolean
 }
-
-// where you are when this row starts / ends (a journey moves you)
-const placeIn = (s: Stop): Place | null => (s.kind === 'journey' ? s.origin : s.place)
-const placeOut = (s: Stop): Place | null => (s.kind === 'journey' ? s.destination : s.place)
 
 export function DayCard({ trip, trips, date, entries, colorIndex, dayNumber, clash, canEdit, onOpen, bare }: Props) {
   const save = useSave('stops')

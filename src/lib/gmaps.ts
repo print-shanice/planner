@@ -21,3 +21,9 @@ export function gmapsUrl(s: Stop): string | null {
   const q = query(s.place)
   return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null
 }
+
+// between two located places; the mode is left to google
+export function directionsUrl(from: Place, to: Place): string {
+  const pt = (p: Place) => encodeURIComponent(`${p.lat},${p.lng}`)
+  return `https://www.google.com/maps/dir/?api=1&origin=${pt(from)}&destination=${pt(to)}`
+}

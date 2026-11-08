@@ -1,19 +1,13 @@
 import type { Place, Stop, Trip } from './types'
 import { visibleDays, type DayEntry } from './dates'
-import { agendaForDay } from './agenda'
+import { dayEntries, ownerOn } from './agenda'
+
+export { ownerOn }
 import { descendants } from './countries'
 
 export type ItinDay = { date: string; entries: DayEntry[]; owner: Trip }
 export type Itinerary = { days: ItinDay[]; undated: Stop[] }
 export type Match = { id: string; date: string | null }
-
-const covers = (t: Trip, d: string) => !!t.start_date && t.start_date <= d && (t.end_date ?? t.start_date) >= d
-
-function depth(t: Trip, trips: Trip[]): number {
-  let n = 0
-  for (let p = t.parent_id; p && n < 20; n++) p = trips.find((x) => x.id === p)?.parent_id ?? null
-  return n
-}
 
 // the whole trip as one doc: every listed day of the trip and its side trips, each with everything on it.
 // a long trip only lists days where something starts or ends; a short side trip lists all its days
@@ -28,24 +22,11 @@ export function itineraryDays(trip: Trip, trips: Trip[], stops: Stop[]): Itinera
   }
   const days = [...dates].sort().map((date) => {
     const owner = ownerOn(trip, trips, date)
-    let entries = agendaForDay(trip, trips, mine, date)
-    // a side trip's own bed that night replaces the parent's "staying at"
-    if (owner.id !== trip.id) {
-      const inner = new Set(descendants(owner.id, trips))
-      const sleepsThere = entries.some((e) => (e.kind === 'checkin' || e.kind === 'staying') && inner.has(e.stop!.trip_id))
-      if (sleepsThere) entries = entries.filter((e) => e.kind !== 'staying' || inner.has(e.stop!.trip_id))
-    }
+    const entries = dayEntries(trip, trips, mine, date)
     return { date, entries, owner }
   })
   const undated = mine.filter((s) => !s.day).sort((a, b) => a.position - b.position || a.title.localeCompare(b.title))
   return { days, undated }
-}
-
-// the innermost trip in the family that the day belongs to
-export function ownerOn(trip: Trip, trips: Trip[], date: string | null): Trip {
-  if (!date) return trip
-  const ids = new Set(descendants(trip.id, trips))
-  return trips.filter((t) => ids.has(t.id) && covers(t, date)).sort((a, b) => depth(b, trips) - depth(a, trips))[0] ?? trip
 }
 
 const whereOf = (s: Stop): Place | null => (s.kind === 'journey' ? s.destination : s.place)

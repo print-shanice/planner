@@ -1,4 +1,4 @@
-import { gmapsUrl } from '../../src/lib/gmaps'
+import { gmapsUrl, directionsUrl } from '../../src/lib/gmaps'
 import { stop, place } from '../factories'
 
 it('maps link for a place', () => {
@@ -21,4 +21,9 @@ it('a nameless point uses its coordinates', () => {
 
 it('nothing to show gives no link', () => {
   expect(gmapsUrl(stop({ kind: 'note', place: null }))).toBeNull()
+})
+
+it('directions between two stops use their coordinates and leave the mode to google', () => {
+  expect(directionsUrl(place({ name: 'a', lat: 37.97, lng: 23.72 }), place({ name: 'b', lat: 37.98, lng: 23.74 })))
+    .toBe('https://www.google.com/maps/dir/?api=1&origin=37.97%2C23.72&destination=37.98%2C23.74')
 })
