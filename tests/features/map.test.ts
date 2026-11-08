@@ -130,3 +130,12 @@ it('an idea already on the day is not shown twice', () => {
   expect(out.pins.features.map((f) => f.properties.id)).toEqual(['x'])
   expect(out.saved.features).toEqual([])
 })
+
+it('a blank or missing name draws no name', () => {
+  const blank = [
+    stop({ id: 'x', trip_id: 'lap', title: '', day: '2027-02-07', position: 0, place: { ...at(66.5, 25.7), name: '  ' } }),
+    stop({ id: 'jj', trip_id: 'lap', kind: 'journey', title: '', day: '2027-02-07', position: 1, origin: { ...at(66.51, 25.7), name: undefined } as unknown as Stop['origin'], destination: { ...at(66.6, 25.9), name: 'Kemi' } }),
+  ] as Stop[]
+  const names = mapFeatures(lap, [lap], blank, '2027-02-07').names.features.map((f) => f.properties.name)
+  expect(names).toEqual(['kemi'])
+})

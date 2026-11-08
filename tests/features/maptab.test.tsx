@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, useLocation } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
-const db = vi.hoisted(() => ({ search: vi.fn(), trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown }))
+const db = vi.hoisted(() => ({ search: vi.fn(), trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown, fits: [] as Array<[string | undefined, number | undefined]>, overviews: [] as unknown[] }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useStops: () => db.stopsQ ?? ({ data: db.stops }),
@@ -13,6 +13,8 @@ vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () 
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse, searchPlaces: db.search }))
 vi.mock('../../src/features/map/TripMap', () => ({
   TripMap: ({ onPick, onEmpty, onCenter, highlight, inset, fitKey, overview, onTrip }: { onTrip?: (id: string) => void; overview?: { sides: unknown[] } | null; fitKey?: string; onCenter?: (v: { lat: number; lng: number; zoom: number }) => void; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
+    // every render's view and inset, in order: the real map fits on the first render of a new view
+    db.fits.push([fitKey, inset?.bottom]), db.overviews.push(overview),
     <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''} data-fit={fitKey} data-overview={overview ? overview.sides.length : ''}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
@@ -35,6 +37,8 @@ beforeEach(() => {
   ]
   db.save.mockReset().mockResolvedValue({})
   db.reverse.mockReset()
+  db.fits = []
+  db.overviews = []
 })
 
 const show = (path = '/', phone = false) => render(<MemoryRouter initialEntries={[path]}><MapTab trip={lap} phone={phone} /></MemoryRouter>)
@@ -163,12 +167,29 @@ it('on a phone the map fits the day inside what the floating bar, chips and shee
   expect(bottom).toBeGreaterThanOrEqual(280)
 })
 
-it('on a phone a places sheet taller than the usual margin pushes the fit up above it', () => {
-  const h = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) { return this.classList.contains('places-sheet') ? 420 : 0 })
+it('on a phone a places sheet taller than the usual margin pushes the fit up above it, as far as the sheet can grow', () => {
+  db.stops = Array.from({ length: 8 }, (_, i) => stop({ id: `p${i}`, trip_id: 'lap', title: `p${i}`, day: '2027-02-08', position: i, place: place({ lat: 66.5 + i * 0.01, lng: 25.7 }) }))
+  show('/?day=2027-02-08', true)
+  const [, bottom] = (document.querySelector('[data-inset]') as HTMLElement).dataset.inset!.split(',').map(Number)
+  expect(bottom).toBeGreaterThan(300)
+  // the sheet stops at 45% of the screen (map.css), then scrolls
+  expect(bottom).toBeLessThanOrEqual(Math.round(window.innerHeight * 0.45) + 68)
+})
+
+it('on a phone a new view is fitted with its own sheet height, not the last view\'s', async () => {
+  // the sheet as tall as its rows, measured only once it has drawn
+  const h = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) { return this.classList.contains('places-sheet') ? 68 + 57 * this.querySelectorAll('li').length : 0 })
   try {
-    show('/?day=2027-02-08', true)
-    const [, bottom] = (document.querySelector('[data-inset]') as HTMLElement).dataset.inset!.split(',').map(Number)
-    expect(bottom).toBeGreaterThanOrEqual(420 + 68)
+    const parent = trip({ id: 'ex', name: 'exchange', start_date: '2027-01-28', end_date: '2027-07-13', base: place({ name: 'room', city: 'eindhoven', lat: 51.44, lng: 5.47 }) })
+    const months = ['02', '03', '04', '05', '06']
+    db.trips = [parent, ...months.map((m, i) => trip({ id: `side${i}`, name: `side ${i}`, parent_id: 'ex', start_date: `2027-${m}-10`, end_date: `2027-${m}-12`, base: place({ lat: 48 + i, lng: 10 + i }) }))]
+    db.stops = [stop({ id: 'one', trip_id: 'ex', title: 'one', day: '2027-02-01', place: place({ lat: 51.44, lng: 5.48 }) })]
+    render(<MemoryRouter initialEntries={['/trip/ex?tab=map&day=2027-02-01']}><MapTab trip={parent} phone /></MemoryRouter>)
+    const dayBottom = db.fits.filter(([k]) => k === 'ex|2027-02-01').at(-1)![1]!
+    await userEvent.click(within(screen.getByRole('group', { name: 'show' })).getByRole('button', { name: 'whole trip' }))
+    const whole = db.fits.filter(([k]) => k === 'ex|all')
+    expect(whole[0][1]).toBeGreaterThan(dayBottom)
+    expect(whole[0][1]).toBe(whole.at(-1)![1])
   } finally { h.mockRestore() }
 })
 
@@ -303,6 +324,29 @@ describe('whole trip with side trips', () => {
     expect(document.querySelector('[data-overview]')).toHaveAttribute('data-overview', '1')
     await userEvent.click(screen.getByRole('button', { name: 'tap side trip' }))
     expect(screen.getByLabelText('where').textContent).toBe('/trip/lap')
+  })
+
+  it('a change elsewhere keeps the same side-trip pins, a change to them makes new ones', () => {
+    db.trips = [parent, { ...lap, parent_id: 'ex' }]
+    const view = (t: typeof parent) => <MemoryRouter initialEntries={['/trip/ex?tab=map']}><MapTab trip={t} phone /></MemoryRouter>
+    const { rerender } = render(view(parent))
+    const first = db.overviews.at(-1)
+    expect(first).toBeTruthy()
+    // a realtime refresh: fresh objects, same content
+    db.trips = db.trips.map((t) => ({ ...t }))
+    db.stops = db.stops.map((s) => ({ ...s }))
+    rerender(view({ ...parent }))
+    expect(db.overviews.at(-1)).toBe(first)
+    db.trips = db.trips.map((t) => t.id === 'lap' ? { ...t, name: 'lapland again' } : t)
+    rerender(view({ ...parent }))
+    expect(db.overviews.at(-1)).not.toBe(first)
+  })
+
+  it("a day chip's dot is the colour of the trip that owns the day", () => {
+    db.trips = [{ ...parent, color: 0 }, { ...lap, parent_id: 'ex', color: 3 }]
+    showParent(true)
+    const chip = within(screen.getByRole('group', { name: 'show' })).getByRole('button', { name: 'mon 8' })
+    expect(chip.querySelector('.dot')!.getAttribute('style')).toContain('var(--g3)')
   })
 
   it('a trip without side trips keeps every stop on whole trip', () => {

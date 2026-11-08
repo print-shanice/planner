@@ -43,7 +43,11 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
   const names: Feature<Point, NameProps>[] = []
   const lines: Feature<LineString, LineProps>[] = []
   const saved: Feature<Point, SavedProps>[] = []
-  const name = (p: Place, text: string) => names.push(pt(p, { name: text.toLowerCase() }))
+  // a blank name would only be an empty label
+  const name = (p: Place, text: string | null | undefined) => {
+    const t = (text ?? '').trim()
+    if (t) names.push(pt(p, { name: t.toLowerCase() }))
+  }
 
   const mine = stops.filter(s => ids.has(s.trip_id))
   // a single day is drawn even when only its bed falls on it

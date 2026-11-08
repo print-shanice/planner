@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { chosenDay, dayEntries, validDay } from '../../lib/agenda'
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { chosenDay, dayEntries, ownerOn, validDay } from '../../lib/agenda'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { dayColor, fmtDay, todayISO } from '../../lib/dates'
@@ -34,6 +34,14 @@ const PHONE_INSET = { top: 200, bottom: 300 }
 // the places sheet floats this far above the screen's bottom (over the tab bar)
 const SHEET_LIFT = 68
 
+// the places sheet's height, worked out from what it will list rather than measured after it draws,
+// so a new view is fitted around its own sheet (the numbers are map.css's: handle, title, rows, padding)
+function sheetHeight(items: PlaceItem[], open: boolean): number {
+  const rows = open ? items.reduce((h, p) => h + (p.sub ? 57 : 52), 0) : 0
+  // past 45% of the screen the sheet scrolls
+  return Math.round(Math.min(26 + 34 + 8 + rows, window.innerHeight * 0.45))
+}
+
 // redraws only when its trip changes (or the link it reads), not when the page around it does
 export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean }) {
   const tq = useTrips()
@@ -63,18 +71,13 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   // where the map is looking, so a search finds places there (state, so the search box always has the latest)
   const [view, setView] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const seq = useRef(0)
-  // a tall places sheet covers more than the usual margin, so the fit clears its measured height
-  const root = useRef<HTMLDivElement>(null)
-  const [sheetH, setSheetH] = useState(0)
-  useLayoutEffect(() => {
-    const h = phone ? root.current?.querySelector<HTMLElement>('.places-sheet')?.offsetHeight ?? 0 : 0
-    setSheetH((prev) => prev === h ? prev : h)
-  })
-  const inset = useMemo(() => ({ top: PHONE_INSET.top, bottom: Math.max(PHONE_INSET.bottom, sheetH ? sheetH + SHEET_LIFT : 0) }), [sheetH])
 
   const navigate = useNavigate()
   // the whole trip with side trips is an overview: home and one pin per side trip
-  const overview = useMemo(() => filter === 'all' && hasSideTrips(trip, trips) ? overviewFeatures(trip, trips, stops) : null, [trip, trips, stops, filter])
+  const overviewNow = useMemo(() => filter === 'all' && hasSideTrips(trip, trips) ? overviewFeatures(trip, trips, stops) : null, [trip, trips, stops, filter])
+  // the same object while its content is the same, so a realtime change elsewhere doesn't rebuild the html pins
+  const overviewKey = overviewNow ? JSON.stringify(overviewNow) : ''
+  const overview = useMemo(() => overviewNow, [overviewKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const data = useMemo(() => overview ? { ...EMPTY, lines: overview.lines } : mapFeatures(trip, trips, stops, filter), [overview, trip, trips, stops, filter])
   const openTrip = (id: string) => navigate(phone ? `/trip/${id}?tab=map` : `/trip/${id}`)
   const days = useMemo(() => busyDays(trip, trips, stops), [trip, trips, stops])
@@ -95,6 +98,9 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
     : pinItems
   const count = `${pinItems.length} ${pinItems.length === 1 ? 'place' : 'places'}`
   const listTitle = overview ? `${overview.sides.length} side ${overview.sides.length === 1 ? 'trip' : 'trips'}` : filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} saved` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
+  // a tall places sheet covers more than the usual margin, so the fit clears it
+  const sheetH = phone && !card ? sheetHeight(items, listOpen) : 0
+  const inset = useMemo(() => ({ top: PHONE_INSET.top, bottom: Math.max(PHONE_INSET.bottom, sheetH ? sheetH + SHEET_LIFT : 0) }), [sheetH])
 
   function pick(id: string) {
     // on a laptop the plan is beside the map: bring the pin's stop into view
@@ -116,7 +122,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
   }
 
   return (
-    <div className="map-tab" ref={root}>
+    <div className="map-tab">
       <TripMap data={data} highlight={lit.id} inset={phone ? inset : undefined} fitKey={`${trip.id}|${filter}`} overview={overview} onTrip={openTrip} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
         onPick={pick} onEmpty={empty} onCenter={setView} />
       <div className="map-top">
@@ -127,7 +133,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
           <button type="button" className="chip-pill" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>whole trip</button>
           {days.map((d) => (
             <button key={d} type="button" className="chip-pill" aria-pressed={filter === d} onClick={() => setFilter(d)}>
-              <span className="dot" style={{ background: dayColor(trip.color) }} />
+              <span className="dot" style={{ background: dayColor(ownerOn(trip, trips, d).color) }} />
               {fmtDay(d, { weekday: 'short', day: 'numeric' }).replace(',', '')}
             </button>
           ))}
