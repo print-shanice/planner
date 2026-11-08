@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { chosenDay, validDay } from '../../lib/agenda'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
 import { dayColor, fmtDay, todayISO } from '../../lib/dates'
@@ -28,7 +28,8 @@ function middleOf(d: ReturnType<typeof mapFeatures>): { lat: number; lng: number
 // on a phone the floating bar and chips cover the top, the places sheet and tab bar the bottom
 const PHONE_INSET = { top: 200, bottom: 300 }
 
-export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean }) {
+// redraws only when its trip changes (or the link it reads), not when the page around it does
+export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean }) {
   const tq = useTrips()
   const sq = useStops()
   const trips = tq.data ?? []
@@ -119,4 +120,4 @@ export function MapTab({ trip, phone = false }: { trip: Trip; phone?: boolean })
       )}
     </div>
   )
-}
+})

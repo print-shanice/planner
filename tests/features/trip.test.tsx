@@ -398,3 +398,13 @@ describe('the trip header stays at the top', () => {
     expect(within(bar).queryByRole('navigation', { name: 'trip sections' })).toBeNull()
   })
 })
+
+it('a tapped tab lights up at once, before the page has caught up', async () => {
+  const { TripSummary } = await import('../../src/features/trip/TripSummary')
+  const onPick = vi.fn()
+  render(<TripSummary bar active="plan" onPick={onPick} sections={['plan', 'map', 'money', 'saved'].map((t) => ({ label: t, tab: t as never }))} />)
+  await userEvent.click(screen.getByRole('button', { name: 'money' }))
+  expect(onPick).toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'money' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'false')
+})

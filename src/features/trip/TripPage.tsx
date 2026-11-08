@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
+import { lazy, memo, Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -34,14 +34,15 @@ const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapT
 // the map's code is a big download; say so while it comes
 const MapWait = () => <div className="map-tab"><Pending label="loading map" className="map-loading" /></div>
 
-function Panel({ tab, view, trip }: { tab: Tab; view: SavedView; trip: Trip }) {
+// the slow parts only redraw when what they show changes, not on every tap
+const Panel = memo(function Panel({ tab, view, trip }: { tab: Tab; view: SavedView; trip: Trip }) {
   switch (tab) {
     case 'map': return <Suspense fallback={<MapWait />}><MapTab trip={trip} phone /></Suspense>
     case 'money': return <MoneyTab trip={trip} />
     case 'saved': return view === 'packing' ? <PackingTab trip={trip} /> : <SavedTab key={`${trip.id}-${view}`} trip={trip} view={view} />
     default: return null
   }
-}
+})
 
 // each kind opens its own form once the add menu has closed, so sheets never stack
 export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | null; trip: Trip; day: string | null; idea: boolean; onClose: () => void }) {
@@ -85,7 +86,6 @@ function TripScreen() {
   const [menu, setMenu] = useState(false)
   // a section switch can take a moment to build: the tab answers at once, the section says it's loading
   const [switching, startSwitch] = useTransition()
-  const [going, setGoing] = useState<string | null>(null)
   const main = useRef<HTMLElement>(null)
   const scrolls = useRef<Record<string, number>>({})
   // once the page scrolls, the bar tightens up (a smaller title, no dates line)
@@ -136,7 +136,6 @@ function TripScreen() {
   // the day stays when you switch sections; each section keeps its own scroll
   function pick(next: Tab, nextView: SavedView = view) {
     scrolls.current[`${tab}/${view}`] = scroller()?.scrollTop ?? window.scrollY
-    setGoing(wide && next === 'saved' ? nextView : next)
     startSwitch(() => setParams((p) => {
       const n = new URLSearchParams(p)
       n.delete('view'); n.delete('map')
@@ -151,7 +150,7 @@ function TripScreen() {
       sections={wide
         ? tabs.flatMap((t): Section[] => t === 'saved' ? SAVED_VIEWS.map((v) => ({ label: v, tab: t, view: v })) : [{ label: t, tab: t }])
         : tabs.map((t) => ({ label: t, tab: t }))}
-      active={(switching && going) || (wide && tab === 'saved' ? view : tab)} />
+      active={wide && tab === 'saved' ? view : tab} />
   )
   return (
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}${switching ? ' switching' : ''}`} style={tint(trip.color)}>

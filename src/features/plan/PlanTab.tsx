@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
@@ -19,7 +19,8 @@ import { NoDate } from './NoDate'
 import { useStopSheet } from '../stops/StopSheet'
 import { useWide } from '../../lib/useWide'
 
-export function PlanTab({ trip }: { trip: Trip }) {
+// redraws only when its trip changes (or the link it reads), not when the page around it does
+export const PlanTab = memo(function PlanTab({ trip }: { trip: Trip }) {
   const sheet = useStopSheet()
   const onOpen = sheet ? (s: Stop) => sheet.openStop(s.id) : undefined
   const tq = useTrips()
@@ -95,4 +96,4 @@ export function PlanTab({ trip }: { trip: Trip }) {
       </Sheet>
     </div>
   )
-}
+})
