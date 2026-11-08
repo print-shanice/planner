@@ -24,7 +24,7 @@ import { AddLine } from '../itinerary/AddLine'
 // redraws only when its trip changes (or the link it reads), not when the page around it does
 export const PlanTab = memo(function PlanTab({ trip }: { trip: Trip }) {
   const sheet = useStopSheet()
-  const onOpen = sheet ? (s: Stop) => sheet.openStop(s.id) : undefined
+  const onOpen = sheet ? (s: Stop) => sheet.openStop(s.id, selected) : undefined
   const tq = useTrips()
   const sq = useStops()
   const trips = tq.data ?? []

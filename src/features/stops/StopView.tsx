@@ -16,7 +16,11 @@ import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { FilesSection, filesOf } from './FilesSection'
 import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
-import { stopSub } from '../plan/StopRow'
+import { stopSub, stopTitle } from '../plan/StopRow'
+import { directionsUrl } from '../../lib/gmaps'
+import { ancestors } from '../../lib/countries'
+import { dayEntries } from '../../lib/agenda'
+import { dayLegs, nextFrom } from '../../lib/legs'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
 
@@ -53,9 +57,9 @@ function costLine(c: Cost, members: Member[]) {
   return parts.join(' · ')
 }
 
-type Props = { stop: Stop; onEdit: () => void; onClose: () => void }
+type Props = { stop: Stop; day?: string | null; onEdit: () => void; onClose: () => void }
 
-export function StopView({ stop, onEdit, onClose }: Props) {
+export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const canEdit = useCanEdit()
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
@@ -130,6 +134,11 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   }
   const what = stop.kind === 'place' ? stopSub(stop) : ''
 
+  // the way on to the next stop of the day it was opened from (else its own day); the top trip owns the day's legs
+  const on = openedOn ?? stop.day
+  const top = ancestors(stop.trip_id, trips)[0] ?? trips.find((t) => t.id === stop.trip_id)
+  const leg = on && top ? nextFrom(stop.id, dayLegs(dayEntries(top, trips, stops, on))) : null
+
   return (
     <div className="stack stop-view">
       {(stop.status !== 'idea' || what) && (
@@ -170,6 +179,11 @@ export function StopView({ stop, onEdit, onClose }: Props) {
 
       <div className="facts">
         {facts.filter(Boolean).map((f) => <p key={f} className="fact"><Icon name="calendar" size={18} /><span>{f}</span></p>)}
+        {leg && (
+          <a className="fact fact-link" href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
+            <Icon name="walk" size={18} /><span>{`next · ${(leg.b.name || stopTitle(leg.to)).toLowerCase()}`}</span>
+          </a>
+        )}
         {address && stop.kind !== 'journey' && (
           <div className="fact fact-copy"><Icon name="pin" size={18} /><span className="copy-text">{address}</span><Copy text={address} label="copy address" /></div>
         )}

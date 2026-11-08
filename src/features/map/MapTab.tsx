@@ -117,7 +117,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false }: { trip: Trip
       {phone && !card && <PlacesSheet items={items} title={listTitle} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={pick} />}
       {card && (
         <div className="map-bottom">
-          <PlaceCard key={card.seq} trip={trip} place={card.place} stop={stop} looking={card.looking} defaultDay={filter !== 'all' && filter !== 'saved' ? filter : null}
+          <PlaceCard key={card.seq} trip={trip} place={card.place} stop={stop} day={filter !== 'all' && filter !== 'saved' ? filter : null} looking={card.looking} defaultDay={filter !== 'all' && filter !== 'saved' ? filter : null}
             onClose={() => setCard(null)} onDone={() => setCard(null)} />
         </div>
       )}

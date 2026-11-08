@@ -49,7 +49,8 @@ type Props = {
   any: boolean
   q: string
   current: boolean
-  onOpen?: (s: Stop) => void
+  day?: string | null
+  onOpen?: (s: Stop, day?: string | null) => void
   onLight?: (id: string | null) => void
 }
 
@@ -65,7 +66,7 @@ export function ItinLine(props: Props) {
   return <StaticLine {...props} onEdit={editable ? () => setLive(true) : undefined} />
 }
 
-function StaticLine({ entry, any, q, current, onOpen, onLight, onEdit }: Props & { onEdit?: () => void }) {
+function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit }: Props & { onEdit?: () => void }) {
   const s = entry.stop!
   const stay = entry.kind !== 'stop'
   const title = stay ? `${STAY[entry.kind]} · ${s.title}` : stopTitle(s)
@@ -84,10 +85,10 @@ function StaticLine({ entry, any, q, current, onOpen, onLight, onEdit }: Props &
         <span className="itin-time num" aria-label={when.till ? `${when.from} to ${when.till}` : undefined}>
           <span>{when.from}</span>{when.till && <span className="till">–{when.till}</span>}
         </span>
-        <button type="button" className="itin-main" onClick={() => (onEdit ? onEdit() : onOpen?.(s))} disabled={!onEdit && !onOpen}
+        <button type="button" className="itin-main" onClick={() => (onEdit ? onEdit() : onOpen?.(s, day))} disabled={!onEdit && !onOpen}
           onFocus={() => onLight?.(s.id)} onBlur={() => onLight?.(null)}>{words}</button>
         {(entry.kind === 'stop' || entry.kind === 'checkin') ? <Pill status={s.status} /> : <span />}
-        {onEdit && onOpen && <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s)}><Icon name="next" size={18} /></button>}
+        {onEdit && onOpen && <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button>}
       </div>
       {entry.kind !== 'staying' && entry.kind !== 'checkout' && <SaveFailed table="stops" id={s.id} />}
     </>
@@ -102,7 +103,7 @@ function focusNext(from: HTMLElement | null) {
   all[all.indexOf(from as HTMLInputElement) + 1]?.focus()
 }
 
-function DocLine({ entry, any, current, onOpen, onLight, autoFocus }: Props & { autoFocus?: boolean }) {
+function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus }: Props & { autoFocus?: boolean }) {
   const s = entry.stop!
   const save = useSave('stops')
   const removeLater = useUndoRemove('stops')
@@ -196,7 +197,7 @@ function DocLine({ entry, any, current, onOpen, onLight, autoFocus }: Props & { 
           ? <button type="button" className="btn small line-go" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>
           : state === 'saving' ? <Pending label="saving" className="line-state" />
           : state === 'saved' ? <span className="line-state muted" role="status"><Icon name="check" size={15} />saved</span>
-          : onOpen ? <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s)}><Icon name="next" size={18} /></button> : <span />}
+          : onOpen ? <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button> : <span />}
       </div>
       <SaveFailed table="stops" id={s.id} />
     </>

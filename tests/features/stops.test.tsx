@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place, cost } from '../factories'
+import { directionsUrl } from '../../src/lib/gmaps'
 
 const db = vi.hoisted(() => ({
   trips: [] as any[], stops: [] as any[], costs: [] as any[], files: [] as any[],
@@ -586,5 +587,71 @@ describe('forms are calm full pages', () => {
     await userEvent.click(cal.getByRole('button', { name: 'wed 10 feb' }))
     expect(screen.queryByRole('dialog', { name: 'check-out' })).toBeNull()
     expect(d.getByLabelText('check-out')).toHaveValue('2027-02-10')
+  })
+})
+
+// the card's "next ·" row: directions to the next stop of its day
+describe('next stop', () => {
+  const at = (lat: number, lng: number, name: string) => place({ name, lat, lng })
+  const A = at(66.5, 25.7, 'A'), B = at(66.52, 25.75, 'B'), C = at(66.6, 25.9, 'C'), H = at(66.55, 25.8, 'hostel')
+  function OpenDay({ id, day }: { id: string; day?: string | null }) {
+    const s = useStopSheet()!
+    return <button onClick={() => s.openStop(id, day)}>open</button>
+  }
+  async function card(id: string, day?: string | null) {
+    show(<OpenDay id={id} day={day} />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    return screen.getByRole('dialog')
+  }
+  const two = () => [
+    stop({ id: 'a', trip_id: 'lap', title: 'a', day: '2027-02-08', time: '10:00', place: A }),
+    stop({ id: 'b', trip_id: 'lap', title: 'b', day: '2027-02-08', time: '12:00', place: B }),
+  ]
+  const hostel = (o = {}) => stop({ id: 'h', trip_id: 'lap', kind: 'stay', title: 'hostel', day: '2027-02-07', end_date: '2027-02-09', place: H, ...o })
+
+  it('a stop\'s card links to the next stop', async () => {
+    db.stops = two()
+    const d = await card('a')
+    expect(within(d).getByRole('link', { name: 'next · b' })).toHaveAttribute('href', directionsUrl(A as any, B as any))
+  })
+
+  it('the last stop\'s next is tonight\'s bed', async () => {
+    db.stops = [...two(), hostel()]
+    const d = await card('b')
+    expect(within(d).getByRole('link', { name: 'next · hostel' })).toBeInTheDocument()
+  })
+
+  it('a stay opened from a day starts that morning', async () => {
+    db.stops = [...two(), hostel()]
+    const d = await card('h', '2027-02-08')
+    expect(within(d).getByRole('link', { name: 'next · a' })).toBeInTheDocument()
+  })
+
+  it('a stay opened without a day uses its check-in day', async () => {
+    db.stops = [hostel({ time: '15:00' }), stop({ id: 'c', trip_id: 'lap', title: 'c', day: '2027-02-07', time: '18:00', place: C })]
+    const d = await card('h')
+    expect(within(d).getByRole('link', { name: 'next · c' })).toBeInTheDocument()
+  })
+
+  it('a stay with no day shows no next row', async () => {
+    db.stops = [hostel({ day: null, end_date: null })]
+    const d = await card('h')
+    expect(within(d).queryByRole('link', { name: /^next/ })).toBeNull()
+  })
+
+  it('no next for an unlocated or last stop with no bed', async () => {
+    db.stops = [...two(), stop({ id: 'n', trip_id: 'lap', title: 'n', day: '2027-02-08', place: null })]
+    expect(within(await card('n')).queryByRole('link', { name: /^next/ })).toBeNull()
+  })
+
+  it('the last stop with no bed has no next', async () => {
+    db.stops = two()
+    expect(within(await card('b')).queryByRole('link', { name: /^next/ })).toBeNull()
+  })
+
+  it('a side trip\'s stop reads its day through the top trip', async () => {
+    db.trips = [...db.trips, trip({ id: 'kid', name: 'kid', parent_id: 'lap', start_date: '2027-02-08', end_date: '2027-02-08' })]
+    db.stops = [{ ...two()[0], trip_id: 'kid' }, { ...two()[1], trip_id: 'kid' }]
+    expect(within(await card('a')).getByRole('link', { name: 'next · b' })).toBeInTheDocument()
   })
 })

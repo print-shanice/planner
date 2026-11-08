@@ -163,7 +163,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
       return n
     })
   }
-  const onOpen = sheet ? (s: Stop) => sheet.openStop(s.id) : undefined
+  const onOpen = sheet ? (s: Stop, day?: string | null) => sheet.openStop(s.id, day) : undefined
 
   const tools = (
     <div className="itin-tools">
@@ -227,7 +227,7 @@ type DayProps = {
   onToggle: () => void
   q: string
   current: string | null
-  onOpen?: (s: Stop) => void
+  onOpen?: (s: Stop, day?: string | null) => void
   onLight: (id: string | null) => void
 }
 
@@ -249,7 +249,7 @@ function Day({ day, trip, open, onToggle, q, current, onOpen, onLight }: DayProp
         <div className="itin-lines">
           {day.entries.map((e) => (
             <ItinLine key={`${e.stop!.id}-${e.kind}`} entry={e} any={timed && e.kind === 'stop'} q={q}
-              current={current === e.stop!.id && e.kind !== 'staying' && e.kind !== 'checkout'} onOpen={onOpen} onLight={onLight} />
+              current={current === e.stop!.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
           ))}
           <AddLine trip={day.owner} day={day.date} />
         </div>

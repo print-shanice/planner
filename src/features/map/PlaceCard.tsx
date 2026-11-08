@@ -12,11 +12,11 @@ import { stopTitle } from '../plan/StopRow'
 import { saveError } from '../../lib/errors'
 
 // looking: a tap on the map is still being turned into a place name
-type Props = { trip: Trip; place: Place; stop?: Stop; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
+type Props = { trip: Trip; place: Place; stop?: Stop; day?: string | null; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
 
 const KIND: Record<string, string> = { place: 'place', stay: 'stay', journey: 'journey', note: 'note' }
 
-export function PlaceCard({ trip, place, stop, defaultDay, looking, onClose, onDone }: Props) {
+export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking, onClose, onDone }: Props) {
   const stops = useStops().data ?? []
   const save = useSave('stops')
   const canEdit = useCanEdit()
@@ -51,7 +51,7 @@ export function PlaceCard({ trip, place, stop, defaultDay, looking, onClose, onD
       </div>
       <div className="place-card-actions">
         {stop ? (
-          <Button variant="primary" onClick={() => sheet?.openStop(stop.id)}>details</Button>
+          <Button variant="primary" onClick={() => sheet?.openStop(stop.id, opened)}>details</Button>
         ) : (
           <>
             {days.length > 0 && (

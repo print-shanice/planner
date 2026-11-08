@@ -154,7 +154,7 @@ it('the day strip jumps to a day and makes it the day you are reading, leaving t
 it('the › on a line opens its card', async () => {
   show(tokyo())
   await userEvent.click(screen.getByRole('button', { name: 'open neel' }))
-  expect(db.open).toHaveBeenCalledWith('neel')
+  expect(db.open).toHaveBeenCalledWith('neel', '2025-09-20')
 })
 
 it('a line is live text: type over its name, enter saves only what changed and moves to the next line', async () => {
@@ -224,7 +224,7 @@ it('journeys and stays stay tap-to-open', async () => {
   show(tokyo())
   expect(screen.queryByRole('textbox', { name: /change changi/ })).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: /changi → narita/ }))
-  expect(db.open).toHaveBeenCalledWith('fl')
+  expect(db.open).toHaveBeenCalledWith('fl', '2025-09-18')
 })
 
 it('every open day ends with a line to type into', async () => {
