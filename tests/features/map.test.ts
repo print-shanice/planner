@@ -25,6 +25,8 @@ it('pins carry the plan numbers and day colours', () => {
   expect(byId.b).toMatchObject({ number: 3, color: 'var(--g0)' })
   expect(byId.c).toMatchObject({ number: 1, color: 'var(--g0)' })
   expect(byId.n).toBeUndefined()
+  expect(byId.j).toMatchObject({ number: 4, color: 'var(--g0)' })
+  expect(pins.features.find((f) => f.properties.id === 'j')!.geometry.coordinates).toEqual([5.37, 51.45])
   expect(pins.features.find((f) => f.properties.id === 'a')!.geometry.coordinates).toEqual([25.7, 66.5])
 })
 
@@ -68,5 +70,63 @@ it('side trips are on the parent map', () => {
   const { stops } = setup()
   const out = mapFeatures(eu, [eu, kid], stops, 'all')
   expect(out.pins.features.find((f) => f.properties.id === 'a')!.properties.color).toBe('var(--g0)')
-  expect(out.pins.features).toHaveLength(3)
+  expect(out.pins.features).toHaveLength(4)
+})
+
+it("a side trip's day takes the side trip's colour", () => {
+  const ex = trip({ id: 'ex', start_date: '2027-02-01', end_date: '2027-02-28', color: 5 })
+  const kid = trip({ id: 'lap2', parent_id: 'ex', start_date: '2027-02-07', end_date: '2027-02-11', color: 1 })
+  const stops = [stop({ id: 'k', trip_id: 'lap2', day: '2027-02-08', place: at(66.6, 25.9) })]
+  const out = mapFeatures(ex, [ex, kid], stops, '2027-02-08')
+  expect(out.pins.features[0].properties.color).toBe('var(--g1)')
+})
+
+it("a journey's destination is an end dot", () => {
+  const { trips, stops } = setup()
+  const { ends } = mapFeatures(lap, trips, stops, 'all')
+  expect(ends.features.map((f) => f.properties.id)).toEqual(['j'])
+  expect(ends.features[0].geometry.coordinates).toEqual([25.83, 66.56])
+})
+
+it("tonight's bed is drawn for a day", () => {
+  const { trips, stops } = setup()
+  const bed = stop({ id: 'bed', trip_id: 'lap', kind: 'stay', title: 'Hotel', day: '2027-02-06', end_date: '2027-02-09', place: at(66.5, 25.72) })
+  const all = [...stops, bed]
+  const out = mapFeatures(lap, trips, all, '2027-02-07')
+  expect(out.beds.features.map((f) => f.properties.id)).toEqual(['bed'])
+  expect(mapFeatures(lap, trips, all, 'all').beds.features).toEqual([])
+})
+
+it('names sit beside pins, ends and the bed, lowercased', () => {
+  const { trips, stops } = setup()
+  const named = [
+    ...stops,
+    stop({ id: 'ark', trip_id: 'lap', title: 'Arktikum', day: '2027-02-07', position: 5, place: at(66.51, 25.73) }),
+    stop({ id: 'bed', trip_id: 'lap', kind: 'stay', title: 'Hotel Nova', day: '2027-02-06', end_date: '2027-02-09', place: at(66.5, 25.72) }),
+  ]
+  const j = named.find((s) => s.id === 'j')!
+  j.origin = { ...at(51.45, 5.37), name: 'Eindhoven Airport' } as Stop['origin']
+  j.destination = { ...at(66.56, 25.83), name: 'Rovaniemi Airport' } as Stop['destination']
+  const names = mapFeatures(lap, trips, named, '2027-02-07').names.features.map((f) => f.properties.name)
+  expect(names).toEqual(expect.arrayContaining(['arktikum', 'hotel nova', 'eindhoven airport', 'rovaniemi airport']))
+})
+
+it("ideas within 10 km of the day show, far ones don't", () => {
+  const ex = trip({ id: 'ex', start_date: '2027-02-01', end_date: '2027-02-28', color: 5 })
+  const kid = trip({ id: 'lap2', parent_id: 'ex', start_date: '2027-02-07', end_date: '2027-02-11', color: 1 })
+  const stops = [
+    stop({ id: 'p', trip_id: 'lap2', day: '2027-02-08', place: at(66.5, 25.7) }),
+    stop({ id: 'near', trip_id: 'lap2', day: null, saved: true, place: at(66.545, 25.7) }),
+    stop({ id: 'far', trip_id: 'lap2', day: null, saved: true, place: at(66.86, 25.7) }),
+    stop({ id: 'parent', trip_id: 'ex', day: null, saved: false, place: at(66.5, 25.75) }),
+  ]
+  const out = mapFeatures(ex, [ex, kid], stops, '2027-02-08')
+  expect(out.saved.features.map((f) => f.properties.id).sort()).toEqual(['near', 'parent'])
+})
+
+it('an idea already on the day is not shown twice', () => {
+  const stops = [stop({ id: 'x', trip_id: 'lap', day: '2027-02-08', saved: true, place: at(66.6, 25.9) })]
+  const out = mapFeatures(lap, [lap], stops, '2027-02-08')
+  expect(out.pins.features.map((f) => f.properties.id)).toEqual(['x'])
+  expect(out.saved.features).toEqual([])
 })

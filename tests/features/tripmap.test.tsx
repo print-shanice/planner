@@ -27,7 +27,7 @@ beforeEach(() => {
 const empty = { type: 'FeatureCollection', features: [] } as never
 
 it('the map says it is loading until its first draw', () => {
-  render(<TripMap data={{ pins: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
+  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
   expect(screen.getByRole('status')).toHaveTextContent('loading map')
   act(() => { mk.maps.at(-1).fire('load') })
   expect(screen.queryByText('loading map')).toBeNull()
@@ -35,7 +35,7 @@ it('the map says it is loading until its first draw', () => {
 
 it('the map says where it is looking as soon as it has drawn', () => {
   const onCenter = vi.fn()
-  render(<TripMap data={{ pins: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} onCenter={onCenter} />)
+  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} onCenter={onCenter} />)
   const m = mk.maps.at(-1)
   m.getZoom = () => 11
   act(() => { m.fire('load') })
