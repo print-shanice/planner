@@ -17,6 +17,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: github-pages
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,8 +30,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-          VITE_GOOGLE_MAPS_KEY: ${{ vars.VITE_GOOGLE_MAPS_KEY }}
-          VITE_GOOGLE_MAP_ID: ${{ vars.VITE_GOOGLE_MAP_ID }}
+          VITE_GOOGLE_MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_KEY || vars.VITE_GOOGLE_MAPS_KEY }}
+          VITE_GOOGLE_MAP_ID: ${{ secrets.VITE_GOOGLE_MAP_ID || vars.VITE_GOOGLE_MAP_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
