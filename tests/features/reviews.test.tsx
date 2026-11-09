@@ -7,7 +7,8 @@ const db = vi.hoisted(() => ({ reviews: [] as Review[], trips: [] as Trip[], sav
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ userId: 'me' }) }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.editable }))
 vi.mock('../../src/lib/queries', () => ({
-  useReviews: () => ({ data: db.reviews }), useStops: () => ({ data: [] }), useTrips: () => ({ data: db.trips }), useMembers: () => ({ data: [] }),
+  useReviews: () => ({ data: db.reviews }), useLinks: () => ({ data: [] }),
+  useStops: () => ({ data: [] }), useTrips: () => ({ data: db.trips }), useMembers: () => ({ data: [] }),
   useSave: () => ({ mutateAsync: db.save, isPending: false }),
 }))
 const s = stop({ id: 'visit', place: place() })

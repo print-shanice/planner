@@ -1,7 +1,7 @@
 import { useRef, useState, type MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Cost, Member, Stop } from '../../lib/types'
-import { useCosts, useFiles, useMembers, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
+import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { addDays, daysBetween, fmtDay, nights } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
@@ -21,6 +21,12 @@ import { directionsUrl } from '../../lib/gmaps'
 import { ancestors } from '../../lib/countries'
 import { dayEntries } from '../../lib/agenda'
 import { dayLegs, nextFrom, type Leg } from '../../lib/legs'
+import { scheduleChange, unscheduleChange } from '../../lib/schedule'
+import { tripDays } from '../../lib/dates'
+import { hostOf as host } from '../../lib/embed'
+import { Sheet } from '../../components/Sheet'
+import { CaptureForm } from '../capture/CaptureForm'
+import { SiteIcon } from '../saved/LinkCard'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
 
@@ -73,7 +79,8 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const saveCost = useSave('costs')
   const remove = useRemove('stops')
   const [problem, setProblem] = useState<string | null>(null)
-  const [moving, setMoving] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const inspiration = (useLinks().data ?? []).filter((l) => l.stop_id === stop.id)
   const picker = useRef<{ open: () => void }>(null)
   const navigate = useNavigate()
   const linked = costs.find((c) => c.stop_id === stop.id)
@@ -94,12 +101,13 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
     for (const c of positionsAfterMove(siblings.map((s) => s.id), at, to, siblings.map((s) => s.position))) await save.mutateAsync(c)
   })
 
+  // a day, another day, or back to no date: only the date changes, everything else stays with it
   const moveDay = (d: string) => run(async () => {
-    const last = Math.max(-1, ...stops.filter((s) => s.trip_id === stop.trip_id && s.day === d && s.id !== stop.id).map((s) => s.position))
-    const change: Partial<Stop> & { id: string } = { id: stop.id, day: d, position: last + 1 }
-    if (stop.end_date && stop.day) change.end_date = addDays(stop.end_date, daysBetween(stop.day, d))
-    await save.mutateAsync(change)
+    await save.mutateAsync(d ? scheduleChange(stop, d, stops) : unscheduleChange(stop, stops))
   })
+  const home = trips.find((t) => t.id === stop.trip_id)
+  const days = home ? tripDays(home) : []
+  const dayChoices = stop.day && !days.includes(stop.day) ? [stop.day, ...days].sort() : days
 
   const moveTrip = (tripId: string) => run(async () => {
     await save.mutateAsync({ id: stop.id, trip_id: tripId })
@@ -155,28 +163,29 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         {maps
           ? <a className="stop-action" href={maps} target="_blank" rel="noopener noreferrer"><span className="ico"><Icon name="ext" /></span>directions</a>
           : <button type="button" className="stop-action" disabled><span className="ico"><Icon name="ext" /></span>directions</button>}
-        <button type="button" className="stop-action" aria-expanded={moving} disabled={!canEdit} onClick={() => setMoving(!moving)}><span className="ico"><Icon name="calendar" /></span>move</button>
         <button type="button" className="stop-action" disabled={!canEdit} onClick={() => picker.current?.open()}><span className="ico"><Icon name="upload" /></span>ticket</button>
       </div>
 
-      {moving && canEdit && (
-        <div className="move">
-          {stop.day && siblings.length > 1 && (
-            <div className="row">
-              <button type="button" className="btn ghost small" disabled={at <= 0} onClick={() => shift(at - 1)}><Icon name="up" size={18} /><span>earlier</span></button>
-              <button type="button" className="btn ghost small" disabled={at >= siblings.length - 1} onClick={() => shift(at + 1)}><Icon name="down" size={18} /><span>later</span></button>
-            </div>
-          )}
-          <label className="field">
-            <span className="label">move to another day</span>
-            <input type="date" value={stop.day ?? ''} onChange={(e) => { if (e.target.value && e.target.value !== stop.day) moveDay(e.target.value) }} />
-          </label>
-          <label className="field">
-            <span className="label">move to another trip</span>
-            <select value={stop.trip_id} onChange={(e) => { if (e.target.value !== stop.trip_id) moveTrip(e.target.value) }}>
-              {[...trips].sort((a, b) => a.name.localeCompare(b.name)).map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
+      {canEdit && (
+        <div className="when-row plan-row" role="group" aria-label="when">
+          {dayChoices.length ? (
+            <select className="input" aria-label="day" value={stop.day ?? ''} onChange={(e) => moveDay(e.target.value)}>
+              <option value="">no date</option>
+              {dayChoices.map((d) => <option key={d} value={d}>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</option>)}
             </select>
-          </label>
+          ) : (
+            <span className="date-and-clear">
+              <input className="input" type="date" aria-label="day" value={stop.day ?? ''} onChange={(e) => moveDay(e.target.value)} />
+              {stop.day && <button type="button" className="text-link" onClick={() => moveDay('')}>no date</button>}
+            </span>
+          )}
+          {stop.day && !stop.time && siblings.length > 1 && <>
+            <button type="button" className="icon-btn" aria-label="earlier" disabled={at <= 0} onClick={() => shift(at - 1)}><Icon name="up" size={18} /></button>
+            <button type="button" className="icon-btn" aria-label="later" disabled={at >= siblings.length - 1} onClick={() => shift(at + 1)}><Icon name="down" size={18} /></button>
+          </>}
+          <select className="input" aria-label="trip" value={stop.trip_id} onChange={(e) => { if (e.target.value !== stop.trip_id) moveTrip(e.target.value) }}>
+            {[...trips].sort((a, b) => a.name.localeCompare(b.name)).map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
+          </select>
         </div>
       )}
 
@@ -197,6 +206,19 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         {safeUrl(stop.url) && <a href={safeUrl(stop.url)!} target="_blank" rel="noopener noreferrer" className="fact fact-link"><Icon name="link" size={18} /><span>{hostOf(stop.url)}</span></a>}
         {stop.notes && <p className="notes">{stop.notes}</p>}
       </div>
+
+      {(stop.kind === 'place' || stop.kind === 'stay') && (
+        <section className="inspiration" aria-label="links">
+          <p className="mono-label">links</p>
+          {inspiration.map((l) => (
+            <a key={l.id} className="fact fact-link" href={safeUrl(l.url) ?? undefined} target="_blank" rel="noopener noreferrer"><SiteIcon url={l.url} /><span>{l.title || host(l.url)}</span></a>
+          ))}
+          {canEdit && <button type="button" className="text-link" onClick={() => setLinking(true)}>add a link →</button>}
+          <Sheet page open={linking} title="save a link" onClose={() => setLinking(false)}>
+            <CaptureForm initial={null} tripId={stop.trip_id} stopId={stop.id} onDone={() => setLinking(false)} />
+          </Sheet>
+        </section>
+      )}
 
       {(stop.kind === 'place' || stop.kind === 'stay') && <Reviews stop={stop} />}
 

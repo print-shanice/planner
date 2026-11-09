@@ -92,3 +92,13 @@ it('costs say who they are for; rerunning the schema spells out older rows', asy
   ])
   expect(rows[1].split_amounts).toEqual({ '00000000-0000-0000-0000-00000000000a': 30 })
 })
+
+it('a saved link can point at a place, and outlives it', async () => {
+  await d.as('shanice@x.com')
+  const t = (await d.q("insert into trips(name, currency) values ('eu', 'EUR') returning id")).rows[0].id
+  const s = (await d.q(`insert into stops(trip_id, kind, title) values ('${t}', 'place', 'cafe') returning id`)).rows[0].id
+  await d.q(`insert into links(url, stop_id) values ('https://instagram.com/reel/a', '${s}')`)
+  await d.q(`delete from stops where id = '${s}'`)
+  const rows = (await d.q('select trip_id, stop_id from links')).rows
+  expect(rows).toEqual([{ trip_id: null, stop_id: null }])
+})

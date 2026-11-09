@@ -41,9 +41,9 @@ const SYM: Record<string, string> = { SGD: 'S$', EUR: '€', GBP: '£', USD: 'US
 const ZERO = new Set(['JPY', 'KRW', 'ISK', 'HUF', 'IDR'])
 
 // totals read in whole units ({ whole: true }); a single cost keeps its cents
-export function formatMoney(v: number, cur: string, opts?: { whole?: boolean }): string {
+export function formatMoney(v: number, cur: string, opts?: { whole?: boolean; exact?: boolean }): string {
   if (opts?.whole) v = Math.round(v)
-  const whole = opts?.whole || ZERO.has(cur) || Math.abs(v) >= 100 || Math.abs(v - Math.round(v)) < 0.005
+  const whole = opts?.whole || ZERO.has(cur) || (!opts?.exact && (Math.abs(v) >= 100 || Math.abs(v - Math.round(v)) < 0.005))
   const d = whole ? 0 : 2
   const n = Math.abs(v).toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d })
   return (v < -0.004 ? '−' : '') + (SYM[cur] ?? `${cur} `) + n

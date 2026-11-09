@@ -17,7 +17,8 @@ vi.mock('../../src/lib/queries', async () => {
   const read = (k: string) => () => rq.useQuery({ queryKey: [k], queryFn: () => (db as any)[k], initialData: () => (db as any)[k], staleTime: Infinity })
   return {
     keys: { trips: ['trips'], stops: ['stops'], costs: ['costs'], files: ['files'] },
-    useTrips: read('trips'), useStops: read('stops'), useCosts: read('costs'), useFiles: read('files'), useMembers: read('members'),
+    useTrips: read('trips'), useLinks: () => ({ data: [] }),
+  useStops: read('stops'), useCosts: read('costs'), useFiles: read('files'), useMembers: read('members'),
     useReviews: () => ({ data: [] }),
     useRates: () => ({ data: { date: '2026-11-04', rates: { SGD: 1.5, GBP: 0.85, USD: 1.08, CHF: 0.94, JPY: 165 } } }),
     useSave: (t: string) => ({ mutateAsync: (r: any) => db.save(t, r), mutate: (r: any) => db.save(t, r), isPending: false }),
@@ -109,7 +110,7 @@ it('a new stop lands at the end of its day', async () => {
 
 it('price writes one linked cost; clearing it removes the cost', async () => {
   let d = await openEdit()
-  await userEvent.click(within(d).getByRole('button', { name: 'more' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'booking, cost & notes' }))
   await userEvent.type(within(d).getByLabelText('amount'), '120')
   await userEvent.click(within(d).getByRole('switch', { name: 'paid already' }))
   await userEvent.click(within(d).getByRole('button', { name: 'kai' }))
@@ -180,8 +181,7 @@ it('moving to another trip moves its cost too', async () => {
   db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1' })]
   show(<Opener id="s1" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
-  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'move' }))
-  await userEvent.selectOptions(within(screen.getByRole('dialog')).getByLabelText('move to another trip'), 'par')
+  await userEvent.selectOptions(within(screen.getByRole('dialog')).getByLabelText('trip'), 'par')
   expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', trip_id: 'par' })
   expect(db.save).toHaveBeenCalledWith('costs', { id: 'c1', trip_id: 'par' })
 })
@@ -232,7 +232,7 @@ it('saving a price again after it failed sends the same new cost, not a second o
 
 it('not paid saves no payer, and paid presets a payer', async () => {
   const d = await openEdit()
-  await userEvent.click(within(d).getByRole('button', { name: 'more' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'booking, cost & notes' }))
   await userEvent.type(within(d).getByLabelText('amount'), '30')
   const paid = within(d).getByRole('switch', { name: 'paid already' })
   expect(paid).toHaveAttribute('aria-checked', 'false')
@@ -274,7 +274,7 @@ it('a new journey shows its essentials and keeps the rest under "more", with sav
   const d = screen.getByRole('dialog', { name: 'new journey' })
   for (const l of ['from', 'to', 'depart', 'depart time', 'arrive', 'arrive time']) expect(within(d).getByLabelText(l)).toBeInTheDocument()
   const folds = [...d.querySelectorAll('.fold-toggle')].map((x) => [x.textContent, x.getAttribute('aria-expanded')])
-  expect(folds).toEqual([['more', 'false']])
+  expect(folds).toEqual([['booking, cost & notes', 'false']])
   expect(within(d).getByRole('button', { name: 'save' }).closest('.sheet-foot')).not.toBeNull()
 })
 
@@ -320,7 +320,7 @@ it('dates and times read like a calendar, and say date or time when empty', asyn
 
 it('a cost problem opens "more", where the cost is', async () => {
   const d = await openEdit()
-  const fold = within(d).getByRole('button', { name: 'more' })
+  const fold = within(d).getByRole('button', { name: 'booking, cost & notes' })
   await userEvent.click(fold)
   await userEvent.type(within(d).getByLabelText('amount'), 'abc')
   await userEvent.click(fold)
@@ -464,8 +464,8 @@ describe('a stop reads like a place card', () => {
     expect(d.getByText('to book')).toHaveClass('pill', 'warn')
     expect(d.getByText('museum · rovaniemi')).toBeInTheDocument()
     const acts = within(d.getByRole('group', { name: 'actions' }))
-    expect(acts.getAllByRole('button').concat(acts.getAllByRole('link')).map((a) => a.textContent).sort()).toEqual(['directions', 'map', 'move', 'ticket'])
-    expect([...d.getByRole('group', { name: 'actions' }).children].map((a) => a.textContent)).toEqual(['map', 'directions', 'move', 'ticket'])
+    expect(acts.getAllByRole('button').concat(acts.getAllByRole('link')).map((a) => a.textContent).sort()).toEqual(['directions', 'map', 'ticket'])
+    expect([...d.getByRole('group', { name: 'actions' }).children].map((a) => a.textContent)).toEqual(['map', 'directions', 'ticket'])
   })
 
   it('"map" closes the card and shows the place on that day\'s map', async () => {
@@ -477,15 +477,24 @@ describe('a stop reads like a place card', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('"move" opens in the same sheet, never a second one', async () => {
+  it('its day and trip are right there to change, with "no date" to make it an idea again', async () => {
     const d = await open()
-    const move = d.getByRole('button', { name: 'move' })
-    expect(d.queryByLabelText('move to another day')).toBeNull()
-    await userEvent.click(move)
-    expect(move).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
-    expect(d.getByLabelText('move to another day')).toHaveValue('2027-02-08')
-    expect(d.getByLabelText('move to another trip')).toBeInTheDocument()
+    expect(d.getByLabelText('day')).toHaveValue('2027-02-08')
+    expect(within(d.getByLabelText('day')).getByRole('option', { name: 'no date' })).toBeInTheDocument()
+    expect(d.getByLabelText('trip')).toHaveValue('lap')
+  })
+
+  it('a new day moves it there, keeping everything else', async () => {
+    const d = await open()
+    await userEvent.selectOptions(d.getByLabelText('day'), '2027-02-10')
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', day: '2027-02-10', position: 0, saved: false })
+  })
+
+  it('"no date" takes it off the plan and keeps it as an idea', async () => {
+    const d = await open()
+    await userEvent.selectOptions(d.getByLabelText('day'), '')
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', day: null, end_date: null, position: 0, saved: true })
   })
 
   it('"ticket" opens the file picker', async () => {
@@ -502,10 +511,10 @@ describe('a stop reads like a place card', () => {
     expect(d.getByText('Arktikum, Pohjoisranta 4')).toBeInTheDocument()
   })
 
-  it('offline, move and ticket are off', async () => {
+  it('offline, changing the day and ticket are off', async () => {
     db.canEdit = false
     const d = await open()
-    expect(d.getByRole('button', { name: 'move' })).toBeDisabled()
+    expect(d.queryByLabelText('day')).toBeNull()
     expect(d.getByRole('button', { name: 'ticket' })).toBeDisabled()
     expect(d.getByRole('button', { name: 'map' })).toBeEnabled()
   })

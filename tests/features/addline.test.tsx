@@ -12,6 +12,7 @@ const db = vi.hoisted(() => ({
 }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
+  useLinks: () => ({ data: [] }),
   useStops: () => ({ data: db.stops }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))

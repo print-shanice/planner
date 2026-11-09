@@ -1,28 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pending } from '../../components/Pending'
-import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type StyleSpecification } from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
-import type { FeatureCollection } from 'geojson'
+import { Loading } from '../../components/Loading'
 import type { Place } from '../../lib/types'
 import type { MapData } from './features'
 import type { Overview } from './overview'
 import { iconPath } from '../../components/Icon'
+import { googleMapId } from '../../lib/google/config'
+import { lib, loadGoogle, useGoogleState } from '../../lib/google/loader'
+import { useOnline } from '../../lib/offline'
+import { MapNote } from './MapNote'
 
-export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
-
-// used when the street map can't load (offline, or the tile host is down): country shapes only
-function plainStyle(): StyleSpecification {
-  return {
-    version: 8,
-    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-    sources: { countries: { type: 'geojson', data: `${import.meta.env.BASE_URL}countries-110m.geojson` } },
-    layers: [
-      { id: 'water', type: 'background', paint: { 'background-color': css('var(--map-water)') } },
-      { id: 'land', type: 'fill', source: 'countries', paint: { 'fill-color': css('var(--map-land)') } },
-      { id: 'borders', type: 'line', source: 'countries', paint: { 'line-color': css('var(--line)'), 'line-width': 0.8 } },
-    ],
-  }
-}
+export type WalkLine = { path: { lat: number; lng: number }[]; color: string }
 
 type Props = {
   data: MapData
@@ -31,226 +18,267 @@ type Props = {
   focus: Place | null
   // the stop lit in the plan beside the map
   highlight?: string | null
-  // how much of the top and bottom other things cover (the phone's floating bar, chips and places sheet)
+  // how much of the top and bottom other things cover (the phone's floating bar and places list)
   inset?: { top: number; bottom: number }
   onPick: (id: string) => void
   onEmpty: (p: { lng: number; lat: number }) => void
+  // a tap on one of google's own place labels
+  onPoi?: (placeId: string, p: { lng: number; lat: number }) => void
   onCenter?: (p: { lng: number; lat: number; zoom: number }) => void
-  // the whole trip: home and one pin per side trip, drawn as html markers
   overview?: Overview | null
   onTrip?: (id: string) => void
+  // the day's walks, along the streets
+  walks?: WalkLine[]
+  // the stop picked in the list or on the map: it lights up and comes into view
+  selected?: string | null
 }
+
+type G = typeof google.maps
+type MarkerLib = { AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement }
+
+// one google map per visit: its box moves between screens instead of a new map (and a new paid load) each time
+let shared: { map: google.maps.Map; box: HTMLDivElement } | null = null
 
 const root = () => getComputedStyle(document.documentElement)
-const css = (v: string) => {
+export const css = (v: string) => {
   const m = v.match(/var\((--[\w-]+)\)/)
-  return m ? root().getPropertyValue(m[1]).trim() : v
+  return m ? root().getPropertyValue(m[1]).trim() || v : v
 }
 
-// maplibre paints with real colours, not css variables
-function paint<T extends FeatureCollection>(c: T): T {
-  return { ...c, features: c.features.map((f) => (f.properties?.color ? { ...f, properties: { ...f.properties, color: css(f.properties.color) } } : f)) }
+function svg(name: string, size = 16): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${iconPath(name)}"></path></svg>`
 }
 
-function bookmark(color: string, card: string): ImageData {
-  const s = 2, w = 22 * s, h = 26 * s
-  const cv = document.createElement('canvas')
-  cv.width = w; cv.height = h
-  const g = cv.getContext('2d')!
-  g.fillStyle = card
-  g.beginPath(); g.roundRect(1 * s, 1 * s, 20 * s, 24 * s, 5 * s); g.fill()
-  g.fillStyle = color
-  g.beginPath(); g.moveTo(6 * s, 5 * s); g.lineTo(16 * s, 5 * s); g.lineTo(16 * s, 21 * s); g.lineTo(11 * s, 17 * s); g.lineTo(6 * s, 21 * s); g.closePath(); g.fill()
-  return g.getImageData(0, 0, w, h)
+// a stop: its category in a disc of its trip's colour, its number beside it
+export function pinElement(o: { icon: string; color?: string; number?: number | null; kind: 'stop' | 'idea' | 'bed' | 'end'; label: string }): HTMLElement {
+  const el = document.createElement('button')
+  el.type = 'button'
+  el.className = `gpin gpin-${o.kind}`
+  el.setAttribute('aria-label', o.label)
+  if (o.color) el.style.setProperty('--pin', css(o.color))
+  if (o.kind !== 'end') el.innerHTML = svg(o.icon, o.kind === 'idea' ? 14 : 16)
+  if (o.number != null) {
+    const n = document.createElement('span')
+    n.className = 'gpin-n'
+    n.textContent = String(o.number)
+    el.append(n)
+  }
+  return el
 }
 
-// a small bed on an ink square: where tonight is slept
-function bedPin(color: string, card: string): ImageData {
-  const s = 2, w = 22 * s, h = 22 * s
-  const cv = document.createElement('canvas')
-  cv.width = w; cv.height = h
-  const g = cv.getContext('2d')!
-  g.fillStyle = color
-  g.beginPath(); g.roundRect(1 * s, 1 * s, 20 * s, 20 * s, 5 * s); g.fill()
-  g.fillStyle = card
-  g.fillRect(5 * s, 6 * s, 2 * s, 10 * s)
-  g.fillRect(5 * s, 12 * s, 12 * s, 2 * s)
-  g.fillRect(7 * s, 8 * s, 4 * s, 3 * s)
-  g.fillRect(12 * s, 9 * s, 5 * s, 3 * s)
-  return g.getImageData(0, 0, w, h)
+function sidePin(name: string, dates: string, color: string | null, home: boolean): HTMLElement {
+  const el = document.createElement(home ? 'div' : 'button')
+  if (!home) (el as HTMLButtonElement).type = 'button'
+  el.className = `side-pin${home ? ' home' : ''}`
+  if (home) el.innerHTML = svg('bed')
+  else {
+    const dot = document.createElement('span')
+    dot.className = 'side-dot'
+    dot.style.background = css(color ?? 'var(--ink)')
+    el.append(dot)
+  }
+  const text = document.createElement('span')
+  text.className = 'side-text'
+  const n = document.createElement('span')
+  n.className = 'side-name'
+  n.textContent = name
+  text.append(n)
+  if (dates) { const d = document.createElement('span'); d.className = 'side-dates'; d.textContent = dates; text.append(d) }
+  el.append(text)
+  el.setAttribute('aria-label', `${name}${dates ? `, ${dates}` : ''}`)
+  return el
 }
 
-function boundsOf(d: MapData, o?: Overview | null): LngLatBoundsLike | null {
-  const pts: number[][] = []
+type Want = { key: string; at: [number, number]; make: () => HTMLElement; z: number; pick?: () => void; id?: string }
+
+function boundsOf(d: MapData, o?: Overview | null, walks?: WalkLine[]): [number, number][] {
+  const pts: [number, number][] = []
   if (o?.home) pts.push(o.home.at)
   for (const s of o?.sides ?? []) if (s.at) pts.push(s.at)
-  for (const f of d.pins.features) pts.push(f.geometry.coordinates)
-  for (const f of d.ends.features) pts.push(f.geometry.coordinates)
-  for (const f of d.beds.features) pts.push(f.geometry.coordinates)
-  for (const f of d.lines.features) pts.push(...f.geometry.coordinates)
+  for (const f of d.pins.features) pts.push(f.geometry.coordinates as [number, number])
+  for (const f of d.ends.features) pts.push(f.geometry.coordinates as [number, number])
+  for (const f of d.beds.features) pts.push(f.geometry.coordinates as [number, number])
+  for (const w of walks ?? []) for (const p of w.path) pts.push([p.lng, p.lat])
   // ideas only fit the view when nothing else is on it
-  if (!pts.length) for (const f of d.saved.features) pts.push(f.geometry.coordinates)
-  if (!pts.length) return null
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1])
-  return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]]
+  if (!pts.length) for (const f of d.saved.features) pts.push(f.geometry.coordinates as [number, number])
+  return pts
 }
 
-export function TripMap({ data, fitKey, fallback, focus, highlight, inset, onPick, onEmpty, onCenter, overview, onTrip }: Props) {
-  const box = useRef<HTMLDivElement>(null)
-  const map = useRef<maplibregl.Map | null>(null)
-  const ready = useRef(false)
-  const [drawn, setDrawn] = useState(false)
+export function TripMap(props: Props) {
+  const { data, fitKey, fallback, focus, highlight, inset, overview, walks } = props
+  const state = useGoogleState()
+  const online = useOnline()
+  const holder = useRef<HTMLDivElement>(null)
+  const [map, setMap] = useState<google.maps.Map | null>(null)
+  const [tries, setTries] = useState(0)
+  const cb = useRef(props)
+  cb.current = props
+  const markers = useRef(new Map<string, { m: google.maps.marker.AdvancedMarkerElement; el: HTMLElement; sig: string }>())
+  const lines = useRef<google.maps.Polyline[]>([])
   const fitted = useRef<string | null>(null)
-  const cb = useRef({ onPick, onEmpty, onCenter, onTrip })
-  cb.current = { onPick, onEmpty, onCenter, onTrip }
-  const latest = useRef({ data, fallback, inset, overview })
-  latest.current = { data, fallback, inset, overview }
-  const fitKeyRef = useRef(fitKey)
-  fitKeyRef.current = fitKey
+  const markerLib = useRef<MarkerLib | null>(null)
 
+  // load google only when this map shows, then borrow the visit's one map
   useEffect(() => {
-    if (!box.current) return
-    let m: maplibregl.Map
-    try {
-      m = new maplibregl.Map({ container: box.current, style: MAP_STYLE, center: [10, 50], zoom: 3.5, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false })
-    } catch {
-      return
+    if (!online) return
+    let alive = true
+    ;(async () => {
+      try {
+        await loadGoogle()
+        const [{ Map }, mk] = await Promise.all([lib<{ Map: G['Map'] }>('maps'), lib<MarkerLib>('marker')])
+        if (!alive || !holder.current) return
+        markerLib.current = mk
+        if (!shared) {
+          const box = document.createElement('div')
+          box.className = 'gmap'
+          const map = new Map(box, {
+            mapId: googleMapId(), center: { lat: 50, lng: 10 }, zoom: 4, disableDefaultUI: true, zoomControl: true,
+            clickableIcons: true, gestureHandling: 'greedy', fullscreenControl: false, cameraControl: false,
+          } as google.maps.MapOptions)
+          shared = { map, box }
+        }
+        holder.current.append(shared.box)
+        fitted.current = null
+        setMap(shared.map)
+      } catch { /* the note below says the map couldn't load */ }
+    })()
+    return () => {
+      alive = false
+      // the map stays alive for the next screen; only its markers and lines go
+      for (const { m } of markers.current.values()) m.map = null
+      markers.current.clear()
+      for (const l of lines.current) l.setMap(null)
+      lines.current = []
+      shared?.box.remove()
+      setMap(null)
     }
-    map.current = m
-    m.touchZoomRotate.disableRotation()
-    let plain = false
-    m.on('error', () => {
-      if (!ready.current && !plain && !m.isStyleLoaded()) { plain = true; m.setStyle(plainStyle()) }
+  }, [online, tries])
+
+  // taps: a stop's marker picks it; google's own labels become a place; anywhere else is a dropped pin
+  useEffect(() => {
+    if (!map) return
+    const click = map.addListener('click', (e: google.maps.MapMouseEvent & { placeId?: string; stop?: () => void }) => {
+      const at = e.latLng ? { lat: e.latLng.lat(), lng: e.latLng.lng() } : null
+      if (e.placeId && cb.current.onPoi && at) { e.stop?.(); cb.current.onPoi(e.placeId, at); return }
+      if (at) cb.current.onEmpty(at)
     })
-    m.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }), 'bottom-right')
-
-    m.on('load', () => {
-      const ink = css('var(--ink)'), ink2 = css('var(--ink-2)'), card = css('var(--card)')
-      m.addImage('bookmark', bookmark(ink, card), { pixelRatio: 2 })
-      m.addImage('bed', bedPin(ink, card), { pixelRatio: 2 })
-      const empty = { type: 'FeatureCollection', features: [] } as FeatureCollection
-      for (const id of ['lines', 'pins', 'pin-labels', 'ends', 'beds', 'pin-names', 'saved', 'focus']) m.addSource(id, { type: 'geojson', data: empty })
-      m.addLayer({ id: 'day-lines', type: 'line', source: 'lines', filter: ['==', ['get', 'kind'], 'day'], paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-dasharray': [1.2, 1.6], 'line-opacity': 0.8 }, layout: { 'line-cap': 'round' } })
-      m.addLayer({ id: 'spokes', type: 'line', source: 'lines', filter: ['==', ['get', 'kind'], 'spoke'], paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-dasharray': [2, 2] } })
-      m.addLayer({ id: 'journeys', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['!=', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2.5 } })
-      m.addLayer({ id: 'flights', type: 'line', source: 'lines', filter: ['all', ['==', ['get', 'kind'], 'journey'], ['==', ['get', 'mode'], 'flight']], paint: { 'line-color': ink2, 'line-width': 2, 'line-dasharray': [2, 2] } })
-      m.addLayer({ id: 'saved', type: 'symbol', source: 'saved', layout: { 'icon-image': 'bookmark', 'icon-allow-overlap': true, 'icon-anchor': 'bottom' } })
-      // the stop lit in the plan beside: a soft ring in its colour
-      m.addLayer({ id: 'halo', type: 'circle', source: 'pins', filter: ['==', ['get', 'id'], ''], paint: { 'circle-radius': 20, 'circle-color': ['get', 'color'], 'circle-opacity': 0.25 } })
-      m.addLayer({ id: 'journey-ends', type: 'circle', source: 'ends', paint: { 'circle-radius': 6, 'circle-color': ['get', 'color'], 'circle-stroke-color': card, 'circle-stroke-width': 2 } })
-      m.addLayer({ id: 'beds', type: 'symbol', source: 'beds', layout: { 'icon-image': 'bed', 'icon-allow-overlap': true } })
-      // names sit on their own source too: a missing font only loses the names
-      m.addLayer({ id: 'pin-names', type: 'symbol', source: 'pin-names', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-offset': [0, 1.4], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': ink, 'text-halo-color': card, 'text-halo-width': 1.5 } })
-      m.addLayer({ id: 'pins', type: 'circle', source: 'pins', paint: { 'circle-radius': 12, 'circle-color': ['get', 'color'], 'circle-stroke-color': card, 'circle-stroke-width': 2 } })
-      // numbers sit on their own source: if the font can't load, the pins still show
-      m.addLayer({ id: 'pin-numbers', type: 'symbol', source: 'pin-labels', layout: { 'text-field': ['to-string', ['get', 'number']], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true }, paint: { 'text-color': card } })
-      m.addLayer({ id: 'focus', type: 'circle', source: 'focus', paint: { 'circle-radius': 9, 'circle-color': ink, 'circle-stroke-color': card, 'circle-stroke-width': 3 } })
-      ready.current = true
-      setDrawn(true)
-      push()
+    const idle = map.addListener('idle', () => {
+      const c = map.getCenter()
+      if (c) cb.current.onCenter?.({ lat: c.lat(), lng: c.lng(), zoom: map.getZoom() ?? 4 })
     })
+    return () => { click.remove(); idle.remove() }
+  }, [map])
 
-    m.on('click', (e) => {
-      const hit = m.queryRenderedFeatures(e.point, { layers: ['pins', 'saved', 'beds', 'journey-ends'].filter((l) => m.getLayer(l)) })[0]
-      const id = hit?.properties?.id as string | undefined
-      if (id) cb.current.onPick(id)
-      else cb.current.onEmpty({ lng: e.lngLat.lng, lat: e.lngLat.lat })
-    })
-    for (const l of ['pins', 'saved', 'beds', 'journey-ends']) {
-      m.on('mouseenter', l, () => { m.getCanvas().style.cursor = 'pointer' })
-      m.on('mouseleave', l, () => { m.getCanvas().style.cursor = '' })
-    }
-    const report = () => { const c = m.getCenter(); cb.current.onCenter?.({ lng: c.lng, lat: c.lat, zoom: m.getZoom() }) }
-    m.on('moveend', report)
-    // and once it first draws, before anyone has moved it
-    m.on('load', report)
-
-    return () => { ready.current = false; m.remove(); map.current = null }
-  }, [])
-
-  function push() {
-    const m = map.current
-    if (!m || !ready.current) return
-    const { data: d, fallback: fb, inset: cover, overview: ov } = latest.current
-    ;(m.getSource('pins') as GeoJSONSource).setData(paint(d.pins))
-    ;(m.getSource('pin-labels') as GeoJSONSource).setData(d.pins)
-    ;(m.getSource('lines') as GeoJSONSource).setData(paint(d.lines))
-    ;(m.getSource('ends') as GeoJSONSource).setData(paint(d.ends))
-    ;(m.getSource('beds') as GeoJSONSource).setData(d.beds)
-    ;(m.getSource('pin-names') as GeoJSONSource).setData(paint(d.names))
-    ;(m.getSource('saved') as GeoJSONSource).setData(d.saved)
-    if (fitted.current !== fitKeyRef.current) {
-      fitted.current = fitKeyRef.current
-      const b = boundsOf(d, ov)
-      if (b) m.fitBounds(b, { padding: { top: cover?.top ?? 150, bottom: cover?.bottom ?? 90, left: 40, right: 40 }, maxZoom: 14, duration: 0 })
-      else if (fb && fb.lat != null && fb.lng != null) m.jumpTo({ center: [fb.lng, fb.lat], zoom: 11 })
-      else m.jumpTo({ center: [10, 50], zoom: 3.5 })
-    }
-  }
-  useEffect(push, [data, fitKey, overview]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // the overview's pins are html, so they live outside the geojson sources
+  // markers: kept by key and only rebuilt when what they show changes
   useEffect(() => {
-    const m = map.current
-    if (!m || !drawn || !overview) return
-    const made: maplibregl.Marker[] = []
-    const add = (el: HTMLElement, at: [number, number]) => {
-      const mk = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(at).addTo(m)
-      made.push(mk)
+    const mk = markerLib.current
+    if (!map || !mk) return
+    const want: Want[] = []
+    for (const f of data.saved.features) {
+      const p = f.properties
+      want.push({ key: `idea:${p.id}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 1, make: () => pinElement({ kind: 'idea', icon: p.icon, label: 'idea' }), pick: () => cb.current.onPick(p.id) })
     }
-    if (overview.home) {
-      const el = document.createElement('div')
-      el.className = 'side-pin home'
-      el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path></path></svg><span class="side-name"></span>'
-      el.querySelector('path')!.setAttribute('d', iconPath('bed'))
-      el.querySelector('.side-name')!.textContent = overview.home.name
-      add(el, overview.home.at)
-      el.setAttribute('aria-label', overview.home.name) // after addTo, which labels every marker "map marker"
+    for (const f of data.ends.features) {
+      const p = f.properties
+      want.push({ key: `end:${p.id}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 2, make: () => pinElement({ kind: 'end', icon: '', color: p.color, label: 'arrival' }), pick: () => cb.current.onPick(p.id) })
     }
-    for (const s of overview.sides) {
-      if (!s.at) continue
-      const el = document.createElement('button')
-      el.type = 'button'
-      el.className = 'side-pin'
-      const dot = document.createElement('span')
-      dot.className = 'side-dot'
-      dot.style.background = s.color
-      const text = document.createElement('span')
-      text.className = 'side-text'
-      const name = document.createElement('span')
-      name.className = 'side-name'
-      name.textContent = s.name
-      text.append(name)
-      if (s.dates) {
-        const dates = document.createElement('span')
-        dates.className = 'side-dates'
-        dates.textContent = s.dates
-        text.append(dates)
-      }
-      el.append(dot, text)
-      el.addEventListener('click', (e) => { e.stopPropagation(); cb.current.onTrip?.(s.id) }) // not also a tap on the map
-      add(el, s.at)
-      el.setAttribute('aria-label', `${s.name}${s.dates ? `, ${s.dates}` : ''}`) // after addTo, which labels every marker "map marker"
+    for (const f of data.beds.features) {
+      const p = f.properties
+      want.push({ key: `bed:${p.id}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 3, make: () => pinElement({ kind: 'bed', icon: 'bed', label: 'tonight\'s bed' }), pick: () => cb.current.onPick(p.id) })
     }
-    return () => { for (const mk of made) mk.remove() }
-  }, [overview, drawn])
+    const names = new Map(data.names.features.map((f) => [(f.geometry.coordinates as number[]).join(','), f.properties.name]))
+    for (const f of data.pins.features) {
+      const p = f.properties
+      const name = names.get((f.geometry.coordinates as number[]).join(',')) ?? ''
+      want.push({ key: `pin:${p.id}:${p.number}:${p.color}:${p.icon}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 10 + p.number, make: () => pinElement({ kind: 'stop', icon: p.icon, color: p.color, number: p.number, label: `${p.number} ${name}`.trim() }), pick: () => cb.current.onPick(p.id) })
+    }
+    if (overview?.home) want.push({ key: `home:${overview.home.name}`, at: overview.home.at, z: 5, make: () => sidePin(overview.home!.name, '', null, true) })
+    for (const s of overview?.sides ?? []) {
+      if (s.at) want.push({ key: `side:${s.id}:${s.name}:${s.dates}:${s.color}`, at: s.at, z: 6, make: () => sidePin(s.name, s.dates, s.color, false), pick: () => cb.current.onTrip?.(s.id) })
+    }
+    const keep = new Set(want.map((w) => w.key))
+    for (const [k, v] of markers.current) if (!keep.has(k)) { v.m.map = null; markers.current.delete(k) }
+    for (const w of want) {
+      const sig = `${w.at[0]},${w.at[1]}`
+      const had = markers.current.get(w.key)
+      if (had) { if (had.sig !== sig) { had.m.position = { lng: w.at[0], lat: w.at[1] }; had.sig = sig } continue }
+      const el = w.make()
+      if (w.id) el.dataset.stop = w.id
+      // the marker's own button handles the tap, so it isn't also a tap on the map
+      el.addEventListener('click', (e) => { e.stopPropagation(); w.pick?.() })
+      const m = new mk.AdvancedMarkerElement({ map, position: { lng: w.at[0], lat: w.at[1] }, content: el, zIndex: w.z })
+      markers.current.set(w.key, { m, el, sig })
+    }
+  }, [map, data, overview])
 
+  // lines: journeys straight (dashed for flights), walks along the streets, spokes to side trips
   useEffect(() => {
-    const m = map.current
-    if (!m || !ready.current) return
-    const src = m.getSource('focus') as GeoJSONSource | undefined
-    src?.setData({ type: 'FeatureCollection', features: focus && focus.lat != null && focus.lng != null ? [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [focus.lng, focus.lat] } }] : [] })
-    if (focus && focus.lat != null && focus.lng != null) m.easeTo({ center: [focus.lng, focus.lat], zoom: Math.max(m.getZoom(), 13), duration: 500 })
-  }, [focus])
+    if (!map) return
+    for (const l of lines.current) l.setMap(null)
+    lines.current = []
+    const add = (o: google.maps.PolylineOptions) => lines.current.push(new google.maps.Polyline({ map, clickable: false, ...o }))
+    const dash = (color: string, weight: number) => [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: color, scale: weight }, offset: '0', repeat: `${weight * 4}px` }]
+    const ll = (c: number[]) => ({ lng: c[0], lat: c[1] })
+    const walked = new Set((walks ?? []).filter((w) => w.path.length > 1).map((w) => w.color))
+    for (const w of walks ?? []) if (w.path.length > 1) add({ path: w.path, strokeColor: css(w.color), strokeOpacity: 0.85, strokeWeight: 4 })
+    for (const f of data.lines.features) {
+      const p = f.properties
+      const path = f.geometry.coordinates.map(ll)
+      if (p.kind === 'journey') add(p.mode === 'flight' ? { path, strokeOpacity: 0, icons: dash(css('var(--ink-2)'), 2), geodesic: true } : { path, strokeColor: css('var(--ink-2)'), strokeWeight: 3 })
+      // a day's straight dashed line only stands in until (or where) google has no walk for it
+      else if (p.kind === 'day' && !walked.has(p.color)) add({ path, strokeOpacity: 0, icons: dash(css(p.color), 2.5) })
+      else if (p.kind === 'spoke') add({ path, strokeOpacity: 0, icons: dash(css('var(--ink-3)'), 1.5) })
+    }
+  }, [map, data, walks])
 
+  // a new view (another day, the whole trip) fits what it shows, clear of whatever covers the edges
   useEffect(() => {
-    const m = map.current
-    if (!m || !ready.current || !m.getLayer('halo')) return
-    m.setFilter('halo', ['==', ['get', 'id'], highlight ?? ''])
-  }, [highlight])
+    if (!map || fitted.current === fitKey) return
+    fitted.current = fitKey
+    const pts = boundsOf(data, overview, walks)
+    const pad = { top: inset?.top ?? 60, bottom: inset?.bottom ?? 60, left: 40, right: 40 }
+    if (pts.length > 1) {
+      const b = new google.maps.LatLngBounds()
+      for (const [lng, lat] of pts) b.extend({ lat, lng })
+      map.fitBounds(b, pad)
+    } else if (pts.length === 1) { map.setCenter({ lng: pts[0][0], lat: pts[0][1] }); map.setZoom(15) }
+    else if (fallback?.lat != null && fallback.lng != null) { map.setCenter({ lat: fallback.lat, lng: fallback.lng }); map.setZoom(12) }
+    else { map.setCenter({ lat: 50, lng: 10 }); map.setZoom(4) }
+  }, [map, fitKey, data, overview]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // the stop lit in the plan
+  useEffect(() => {
+    for (const { el } of markers.current.values()) el.classList.toggle('lit', !!el.dataset.stop && (el.dataset.stop === highlight || el.dataset.stop === props.selected))
+  }, [highlight, props.selected, map, data])
+
+  // a picked stop comes into view if it's off the edge
+  useEffect(() => {
+    if (!map || !props.selected) return
+    const hit = [...markers.current.values()].find((v) => v.el.dataset.stop === props.selected)
+    const pos = hit?.m.position as google.maps.LatLngLiteral | undefined
+    if (pos && !map.getBounds()?.contains(pos)) map.panTo(pos)
+  }, [props.selected, map])
+
+  // a searched or tapped place: a ring, and the map goes to it
+  useEffect(() => {
+    if (!map || !markerLib.current) return
+    if (!focus || focus.lat == null || focus.lng == null) return
+    const el = pinElement({ kind: 'idea', icon: 'pin', label: focus.name || 'dropped pin' })
+    el.classList.add('gpin-focus')
+    const m = new markerLib.current.AdvancedMarkerElement({ map, position: { lat: focus.lat, lng: focus.lng }, content: el, zIndex: 100 })
+    map.panTo({ lat: focus.lat, lng: focus.lng })
+    if ((map.getZoom() ?? 0) < 14) map.setZoom(15)
+    return () => { m.map = null }
+  }, [focus, map])
+
+  const note = !online ? <MapNote title="the map needs a connection" />
+    : state === 'none' ? <MapNote title="map not set up" detail="add a google maps key" />
+    : state === 'auth' ? <MapNote title="google refused the map key" detail="check the key's allowed sites and billing" />
+    : state === 'failed' ? <MapNote title="the map didn't load" onRetry={() => setTries((n) => n + 1)} />
+    : null
   return <>
-    <div ref={box} className="trip-map-canvas" />
-    {!drawn && <Pending label="loading map" className="map-loading" />}
+    <div ref={holder} className="trip-map-canvas" />
+    {note}
+    {!note && !map && <Loading label="loading map" />}
   </>
 }

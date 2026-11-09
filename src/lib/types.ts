@@ -8,6 +8,12 @@ export type Place = {
   lat: number | null
   lng: number | null
   osm_id?: string
+  // google's place id: kept for good, so the place can be looked up again
+  gid?: string
+  // when the coordinates came from google (yyyy-mm-dd); they're refreshed after 30 days
+  at?: string
+  // what the search thought it was (cafe, museum…); the stop keeps its own category
+  category?: string
 }
 
 export type Trip = {
@@ -78,6 +84,8 @@ export type Link = {
   url: string
   title: string
   note: string
+  // the place in the plan it's inspiration for
+  stop_id?: string | null
   created_at?: string
   created_by?: string | null
 }

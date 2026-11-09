@@ -88,7 +88,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
         ))}
       </div>
       <div className="folds">
-        <Fold label="more" open={budget.trim() !== '' || !!notes.trim()}>
+        <Fold label="budget, notes & trip details" open={budget.trim() !== '' || !!notes.trim()}>
           <div className="row">
             <label className="field">
               <span className="label">budget</span>

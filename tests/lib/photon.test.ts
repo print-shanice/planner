@@ -66,3 +66,8 @@ it('search near a map view favours places in that view', async () => {
   expect(url).toContain('&zoom=12')
   expect(url).toContain('&location_bias_scale=0.5')
 })
+
+it('says what kind of place a result is, from its openstreetmap tag', () => {
+  const [p] = parsePhoton({ features: [{ geometry: { coordinates: [5.47, 51.44] }, properties: { name: 'Kopi Soesoe', osm_key: 'amenity', osm_value: 'cafe', city: 'Eindhoven' } }] })
+  expect(p.category).toBe('cafe')
+})

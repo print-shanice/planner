@@ -11,8 +11,10 @@ import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { draftKey, useDraft } from '../../lib/drafts'
 import { PlaceField } from './PlaceField'
 import { NamePlace } from './NamePlace'
-import { CATEGORY_OF, checkCost, COST_PROBLEMS, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from './CostFields'
+import { checkCost, COST_PROBLEMS, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from './CostFields'
 import { stopTitle } from '../plan/StopRow'
+import { expenseCategory } from '../../lib/categories'
+import { CategoryPick } from './CategoryPick'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: (added?: { id: string; day: string | null }) => void }
 
@@ -21,14 +23,22 @@ const MODES: Mode[] = ['flight', 'train', 'bus', 'ferry']
 type Draft = {
   title: string; place: Place | null; day: string; time: string; end_date: string; end_time: string
   mode: Mode; origin: Place | null; destination: Place | null; status: StopStatus; ref: string; url: string; notes: string
+  category: string
 }
 
 function seed(s: Stop): Draft {
   return {
     title: s.title ?? '', place: s.place, day: s.day ?? '', time: s.time ?? '', end_date: s.end_date ?? '', end_time: s.end_time ?? '',
     mode: s.mode ?? 'train', origin: s.origin, destination: s.destination, status: s.status ?? 'idea',
-    ref: s.ref ?? '', url: s.url ?? '', notes: s.notes ?? '',
+    ref: s.ref ?? '', url: s.url ?? '', notes: s.notes ?? '', category: s.category ?? '',
   }
+}
+
+// the search's guess at a category belongs on the stop, not inside the place
+function bare(p: Place | null): Place | null {
+  if (!p || !('category' in p)) return p
+  const { category: _, ...rest } = p
+  return rest
 }
 
 function toRow(d: Draft, kind: Stop['kind']): Partial<Stop> {
@@ -36,9 +46,9 @@ function toRow(d: Draft, kind: Stop['kind']): Partial<Stop> {
     title: d.title.trim(), day: d.day || null, time: d.time || null, status: d.status,
     ref: d.ref.trim(), url: d.url.trim(), notes: d.notes,
   }
-  if (kind === 'place') return { ...base, place: d.place, end_time: d.end_time || null }
-  if (kind === 'stay') return { ...base, place: d.place, end_date: d.end_date || null, end_time: d.end_time || null }
-  if (kind === 'journey') return { ...base, mode: d.mode, origin: d.origin, destination: d.destination, end_date: d.end_date || null, end_time: d.end_time || null }
+  if (kind === 'place') return { ...base, place: bare(d.place), category: d.category || null, end_time: d.end_time || null }
+  if (kind === 'stay') return { ...base, place: bare(d.place), end_date: d.end_date || null, end_time: d.end_time || null }
+  if (kind === 'journey') return { ...base, mode: d.mode, origin: bare(d.origin), destination: bare(d.destination), end_date: d.end_date || null, end_time: d.end_time || null }
   return { ...base, end_time: d.end_time || null }
 }
 
@@ -118,7 +128,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         await saveCost.mutateAsync({
           id: costId,
           trip_id: stop.trip_id, stop_id: id, title: stopTitle({ ...stop, ...row, id } as Stop),
-          category: stop.category ?? CATEGORY_OF[kind], date: day, ...values,
+          category: linked?.category ?? expenseCategory({ kind, category: stop.category }), date: day, ...values,
         })
       } else if (linked) {
         await removeCost.mutateAsync(linked.id)
@@ -143,7 +153,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const q = (text: string) => <p className="form-q">{text}</p>
   const named = (label: string) => (
     <NamePlace label={label} name={d.title} place={d.place} near={near} autoFocus={isNew}
-      onName={(title) => set2({ title })} onPlace={(p) => set2(p ? { place: p, title: keptName(d.title, p.name) } : { place: null })} />
+      onName={(title) => set2({ title })} onPlace={(p) => set2(p ? { place: p, title: keptName(d.title, p.name), ...(!d.category && p.category ? { category: p.category } : {}) } : { place: null })} />
   )
   const link = <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={d.url} onChange={(e) => set({ url: e.target.value })} /></label>
   const notes = <label className="field"><span className="label">notes</span><textarea value={d.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
@@ -158,6 +168,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
 
   return (
     <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
+      {trip && <p className="form-context">{trip.name}{d.day ? ` · ${d.day}` : stop.saved ? ' · saved for later' : ' · no date yet'}</p>}
       {kind === 'stay' && (<>
         {q('where are you staying?')}
         {named('name')}
@@ -168,11 +179,12 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {ref}
         {q('cost')}
         {money}
-        <div className="folds"><Fold label="more" open={!!d.url.trim() || !!d.notes.trim()}>{link}{notes}</Fold></div>
+        <div className="folds"><Fold label="booking, cost & notes" open={!!d.url.trim() || !!d.notes.trim()}>{link}{notes}</Fold></div>
       </>)}
       {kind === 'place' && (<>
         {q('what are you doing?')}
         {named('name')}
+        <CategoryPick value={d.category} onChange={(category) => set({ category })} />
         {q('when')}
         {when([['day', 'day', 'time']])}
         {q('tickets')}
@@ -180,7 +192,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {d.status !== 'idea' && <Switch label="booked" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} />}
         {ref}
         <div className="folds">
-          <Fold label="more" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim() || !!d.end_time} reveal={costReveal}>
+          <Fold label="booking, cost & notes" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim() || !!d.end_time} reveal={costReveal}>
             <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />
             {money}{link}{notes}
           </Fold>
@@ -203,7 +215,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {booked && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
         {ref}
         <div className="folds">
-          <Fold label="more" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim()} reveal={costReveal}>{money}{link}{notes}</Fold>
+          <Fold label="booking, cost & notes" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim()} reveal={costReveal}>{money}{link}{notes}</Fold>
         </div>
       </>)}
       {kind === 'note' && (<>
@@ -211,7 +223,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         <textarea className="note-text" aria-label="notes" placeholder="write it down" value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
         {q('when')}
         {when([['day', 'day', 'time']])}
-        <div className="folds"><Fold label="more" open={!!d.url.trim() || !!d.end_time}>
+        <div className="folds"><Fold label="booking, cost & notes" open={!!d.url.trim() || !!d.end_time}>
           <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />{link}
         </Fold></div>
       </>)}

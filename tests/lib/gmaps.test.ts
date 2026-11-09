@@ -27,3 +27,9 @@ it('directions between two stops use their coordinates and leave the mode to goo
   expect(directionsUrl(place({ name: 'a', lat: 37.97, lng: 23.72 }), place({ name: 'b', lat: 37.98, lng: 23.74 })))
     .toBe('https://www.google.com/maps/dir/?api=1&origin=37.97%2C23.72&destination=37.98%2C23.74')
 })
+
+it('opens google\'s own place when the place came from google', () => {
+  const p = { name: 'kopi', lat: 51.4, lng: 5.4, gid: 'ChIJ1' }
+  expect(gmapsUrl({ kind: 'place', place: p } as never)).toContain('query_place_id=ChIJ1')
+  expect(directionsUrl({ name: 'a', lat: 1, lng: 2 }, p)).toContain('destination_place_id=ChIJ1')
+})

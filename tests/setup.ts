@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 import 'fake-indexeddb/auto'
-import { afterEach } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+
+// tests never use a real google key from .env.local: no requests, no cost, the same results on every machine
+beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', ''); vi.stubEnv('VITE_GOOGLE_MAP_ID', '') })
 
 afterEach(() => {
   cleanup()

@@ -41,17 +41,32 @@ describe('itineraryDays', () => {
     expect(on('2027-02-23')).toEqual(['staying:flat'])
   })
 
-  it('collects undated stops, but never saved ideas', () => {
+  it('collects every undated stop (ideas live in one place now)', () => {
     const t = tokyo()
     const loose = stop({ id: 'loose', trip_id: 'tk', day: null, title: 'onsen' })
     const idea = stop({ id: 'idea', trip_id: 'tk', day: null, saved: true, title: 'maybe' })
-    expect(itineraryDays(t, [t], [loose, idea]).undated.map((s) => s.id)).toEqual(['loose'])
+    expect(itineraryDays(t, [t], [loose, idea]).undated.map((s) => s.id).sort()).toEqual(['idea', 'loose'])
   })
 
-  it('leaves saved ideas out of the days too', () => {
+  it('a stop with a day is in the plan, even an older row still marked saved', () => {
     const t = tokyo()
     const idea = stop({ id: 'idea', trip_id: 'tk', day: '2026-09-19', saved: true })
-    expect(itineraryDays(t, [t], [idea]).days[1].entries).toEqual([])
+    expect(itineraryDays(t, [t], [idea]).days[1].entries.map((e) => e.stop!.id)).toEqual(['idea'])
+  })
+
+  it('a long trip lists today while it is on, so there is always somewhere to add to it', () => {
+    const eu = trip({ id: 'eu', start_date: '2027-01-28', end_date: '2027-07-13' })
+    const a = stop({ trip_id: 'eu', day: '2027-02-02' })
+    expect(itineraryDays(eu, [eu], [a], '2027-03-10').days.map((d) => d.date)).toEqual(['2027-02-02', '2027-03-10'])
+    expect(itineraryDays(eu, [eu], [a], '2027-08-10').days.map((d) => d.date)).toEqual(['2027-02-02'])
+  })
+
+  it('a trip without dates lists the days its stops are on', () => {
+    const t = trip({ id: 'nd', start_date: null, end_date: null })
+    const a = stop({ trip_id: 'nd', day: '2027-05-02' }), b = stop({ trip_id: 'nd', day: null })
+    const it = itineraryDays(t, [t], [a, b])
+    expect(it.days.map((d) => d.date)).toEqual(['2027-05-02'])
+    expect(it.undated).toHaveLength(1)
   })
 })
 
@@ -104,5 +119,44 @@ describe('marked', () => {
     expect(marked('a b a', 'a')).toEqual([{ text: 'a', hit: true }, { text: ' b ', hit: false }, { text: 'a', hit: true }])
     expect(marked('nothing', 'x')).toEqual([{ text: 'nothing', hit: false }])
     expect(marked('nothing', '')).toEqual([{ text: 'nothing', hit: false }])
+  })
+})
+
+import { overviewItems, foldsSideTrips } from '../../src/lib/itinerary'
+describe('a long trip with side trips reads as an overview', () => {
+  const eu = trip({ id: 'eu', name: 'exchange', start_date: '2027-01-28', end_date: '2027-07-13' })
+  const paris = trip({ id: 'paris', parent_id: 'eu', name: 'paris', start_date: '2027-02-19', end_date: '2027-02-23', color: 2 })
+  const lap = trip({ id: 'lap', parent_id: 'eu', name: 'lapland', start_date: '2027-03-04', end_date: '2027-03-09', color: 1 })
+  const rome = trip({ id: 'rome', parent_id: 'eu', name: 'rome', start_date: null, end_date: null })
+  const trips = [eu, paris, lap, rome]
+  const stops = [
+    stop({ id: 'flat', trip_id: 'eu', kind: 'stay', day: '2027-01-28', end_date: '2027-07-13' }),
+    stop({ id: 'museum', trip_id: 'eu', day: '2027-01-30' }),
+    stop({ id: 'train', trip_id: 'eu', kind: 'journey', day: '2027-02-19' }),
+    stop({ id: 'louvre', trip_id: 'paris', day: '2027-02-20' }),
+    stop({ id: 'husky', trip_id: 'lap', day: '2027-03-05' }),
+  ]
+
+  it('only long trips with dated side trips fold them', () => {
+    expect(foldsSideTrips(eu, trips)).toBe(true)
+    expect(foldsSideTrips(paris, trips)).toBe(false)
+    const short = trip({ id: 'b', start_date: '2027-04-15', end_date: '2027-04-20' })
+    expect(foldsSideTrips(short, [short, trip({ parent_id: 'b', start_date: '2027-04-17', end_date: '2027-04-17' })])).toBe(false)
+  })
+
+  it('each side trip is one row at its start; the parent keeps only its own days', () => {
+    const items = overviewItems(eu, trips, stops)
+    expect(items.map((i) => (i.kind === 'side' ? `side:${i.trip.id}` : `day:${i.day.date}`))).toEqual([
+      'day:2027-01-28', 'day:2027-01-30', 'side:paris', 'day:2027-02-19', 'side:lap', 'day:2027-07-13',
+    ])
+    // on a side trip's first day, only the parent's own line shows (the train there), not the side trip's plan
+    const d19 = items.find((i) => i.kind === 'day' && i.day.date === '2027-02-19')!
+    expect(d19.kind === 'day' && d19.day.entries.map((e) => e.stop!.id)).toEqual(['train'])
+  })
+
+  it('a side trip row knows how much is in it', () => {
+    const items = overviewItems(eu, trips, [...stops, stop({ trip_id: 'paris', day: '2027-02-21', status: 'to_book' })])
+    const row = items.find((i) => i.kind === 'side' && i.trip.id === 'paris')!
+    expect(row.kind === 'side' && { places: row.places, toBook: row.toBook, nights: row.nights }).toEqual({ places: 2, toBook: 1, nights: 4 })
   })
 })

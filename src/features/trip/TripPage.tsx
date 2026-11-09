@@ -1,61 +1,45 @@
-import { lazy, memo, Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, useTransition } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useStops, useTrips } from '../../lib/queries'
-import { useCanEdit } from '../../lib/offline'
-import { chosenDay, validDay } from '../../lib/agenda'
+import { chosenDay, ownerOn } from '../../lib/agenda'
 import { todayISO } from '../../lib/dates'
+import { rememberPlan } from '../../lib/resume'
 import { useWide } from '../../lib/useWide'
 import { loadState } from '../../lib/load'
 import type { Trip } from '../../lib/types'
 import { EmptyState } from '../../components/EmptyState'
-import { LoadState, Skeleton } from '../../components/States'
+import { LoadState } from '../../components/States'
+import { Loading } from '../../components/Loading'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
-import { PlanTab } from '../plan/PlanTab'
 import { ItineraryTab } from '../itinerary/ItineraryTab'
 import { MoneyTab } from '../money/MoneyTab'
-import { SavedTab } from '../saved/SavedTab'
+import { LinksTab, SavedTab } from '../saved/SavedTab'
 import { PackingTab } from '../packing/PackingTab'
-import { TripSummary, type Section } from './TripSummary'
+import { TripSummary } from './TripSummary'
 import { TripHeader } from './TripHeader'
-import { PHONE_TABS, readTab, SAVED_VIEWS, WIDE_TABS, type SavedView, type Tab } from './tabs'
-import { tint } from '../../components/MonthCalendar'
+import { PHONE_TABS, readTab, WIDE_TABS, type Tab } from './tabs'
+import { tint, dayLabel } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
 import { HighlightProvider } from './highlight'
 import { ReadingDayProvider, useReadingDay } from './readingDay'
 import { OfflineBadge } from '../../components/OfflineBadge'
-import { Pending } from '../../components/Pending'
 import { CostForm } from '../money/CostForm'
-import { LinkForm } from '../saved/LinkForm'
+import { CaptureForm } from '../capture/CaptureForm'
 import { Icon } from '../../components/Icon'
-import { dayLabel } from '../../components/MonthCalendar'
+import { useCanEdit } from '../../lib/offline'
 
+const MapTab = lazy(() => import('../map/MapTab').then(m => ({ default: m.MapTab })))
+const MapWait = () => <div className="map-tab"><Loading label="loading map" /></div>
 
-const MapTab = lazy(() => import('../map/MapTab').then((m) => ({ default: m.MapTab })))
-
-// the map's code is a big download; say so while it comes
-const MapWait = () => <div className="map-tab"><Pending label="loading map" className="map-loading" /></div>
-
-// the slow parts only redraw when what they show changes, not on every tap
-const Panel = memo(function Panel({ tab, view, trip, slot }: { tab: Tab; view: SavedView; trip: Trip; slot: HTMLElement | null }) {
-  switch (tab) {
-    case 'itinerary': return <ItineraryTab trip={trip} slot={slot} />
-    case 'map': return <Suspense fallback={<MapWait />}><MapTab trip={trip} phone /></Suspense>
-    case 'money': return <MoneyTab trip={trip} />
-    case 'saved': return view === 'packing' ? <PackingTab trip={trip} /> : <SavedTab key={`${trip.id}-${view}`} trip={trip} view={view} />
-    default: return null
-  }
-})
-
-// each kind opens its own form once the add menu has closed, so sheets never stack
-export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | null; trip: Trip; day: string | null; idea: boolean; onClose: () => void }) {
+// each kind opens its own form once the add menu has closed, so sheets never stack.
+// nothing gets a date it wasn't given: without a day, a new stay, journey, note or place waits as an idea
+export function AddForms({ kind, trip, day, onClose }: { kind: AddKind | null; trip: Trip; day: string | null; onClose: () => void }) {
   const sheet = useStopSheet()
-  const start = day ?? trip.start_date
   useEffect(() => {
-    if (kind === 'stay') sheet?.newStop('stay', trip.id, { day: start, end_date: trip.end_date })
-    else if (kind === 'journey' || kind === 'note') sheet?.newStop(kind, trip.id, { day: start })
-    else if (kind === 'place') sheet?.newStop('place', trip.id, day ? { day } : { saved: idea, day: null })
+    if (kind === 'stay') sheet?.newStop('stay', trip.id, { day, end_date: null })
+    else if (kind === 'journey' || kind === 'note' || kind === 'place') sheet?.newStop(kind, trip.id, { day })
     else return
     onClose()
   }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -64,8 +48,8 @@ export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | n
       <Sheet page open={kind === 'cost'} title="new cost" onClose={onClose}>
         <CostForm trip={trip} day={day} onDone={onClose} />
       </Sheet>
-      <Sheet page open={kind === 'link'} title="new link" onClose={onClose}>
-        <LinkForm tripId={trip.id} onDone={onClose} />
+      <Sheet page open={kind === 'link'} title="save a link" onClose={onClose}>
+        <CaptureForm initial={null} tripId={trip.id} onDone={onClose} />
       </Sheet>
       <Sheet page open={kind === 'side trip'} title="new side trip" onClose={onClose}>
         <TripForm parentId={trip.id} onDone={onClose} />
@@ -75,134 +59,116 @@ export function AddForms({ kind, trip, day, idea, onClose }: { kind: AddKind | n
 }
 
 export function TripPage() {
-  return <StopSheetProvider><HighlightProvider><ReadingDayProvider><TripScreen /></ReadingDayProvider></HighlightProvider></StopSheetProvider>
+  const { id } = useParams()
+  return <StopSheetProvider><HighlightProvider><ReadingDayProvider key={id}><TripScreen key={id} /></ReadingDayProvider></HighlightProvider></StopSheetProvider>
 }
 
 function TripScreen() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
   const tq = useTrips()
-  const trips = tq.data
-  const stops = useStops().data
+  const sq = useStops()
+  const trips = tq.data ?? []
+  const stops = sq.data ?? []
+  const trip = trips.find(t => t.id === id)
+  const load = loadState(tq, sq)
   const reading = useReadingDay()
-  const load = loadState(tq)
   const wide = useWide()
   const canEdit = useCanEdit()
   const [kind, setKind] = useState<AddKind | null>(null)
-  // the itinerary's search and day strip sit in the sticky bar
-  const [slot, setSlot] = useState<HTMLElement | null>(null)
   const [menu, setMenu] = useState(false)
-  // a section switch can take a moment to build: the tab answers at once, the section says it's loading
+  const [editing, setEditing] = useState(false)
+  // a section can take a moment to build: the tab answers at once, and totoro fills the space until it's there
   const [switching, startSwitch] = useTransition()
   const main = useRef<HTMLElement>(null)
-  const scrolls = useRef<Record<string, number>>({})
-  // once the page scrolls, the bar tightens up (a smaller title, no dates line)
+  const bar = useRef<HTMLDivElement>(null)
   const sentinel = useRef<HTMLSpanElement>(null)
   const [stuck, setStuck] = useState(false)
+  // the plan's search button lives in the header, beside the +
+  const [searchSlot, setSearchSlot] = useState<HTMLElement | null>(null)
+  const scrolls = useRef<Partial<Record<Tab, number>>>({})
+  const tab = readTab(params, wide)
+  const selected = trip ? chosenDay(trip, trips, stops, params.get('day'), todayISO()) : null
+  // the day being read in the plan; the + adds to it and the map shows it
+  const onDay = tab === 'plan' ? reading.day ?? selected : null
+  useEffect(() => {
+    if (trip && tab === 'plan' && tq.data && sq.data) rememberPlan({ tripId: trip.id, day: reading.day ?? selected })
+  }, [trip?.id, tab, reading.day, selected, tq.data, sq.data])
+
+  // the plan's day strip sits just under the sticky bar, whatever height the bar has
+  useEffect(() => {
+    const el = bar.current
+    const page = el?.closest<HTMLElement>('.trip')
+    if (!el || !page || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => page.style.setProperty('--trip-bar-h', `${el.offsetHeight}px`))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [wide, !!trip, tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  // once scrolled, the title shrinks so the plan has the room
   useEffect(() => {
     const el = sentinel.current
     if (!el || typeof IntersectionObserver === 'undefined') return
     const io = new IntersectionObserver(([e]) => setStuck(!e.isIntersecting), { root: wide ? main.current : null })
     io.observe(el)
     return () => io.disconnect()
-  }, [wide, !!trips, params.get('tab')]) // eslint-disable-line react-hooks/exhaustive-deps
-  const scroller = () => (wide ? main.current : null)
-  const where = `${readTab(params, wide).tab}/${readTab(params, wide).view}`
-  useLayoutEffect(() => {
-    const y = scrolls.current[where]
-    if (y == null) return
-    const el = scroller()
-    if (el) el.scrollTop = y
-    else window.scrollTo(0, y)
-  }, [where]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wide, !!trip, tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const trip = trips?.find((t) => t.id === id)
   if (!trip) {
-    if (load.state === 'loading') return <main className="trip-wait"><Skeleton blocks={3} /></main>
-    if (load.state !== 'ready') {
-      return (
-        <main className="center-screen">
-          <LoadState load={load} />
-          <Link to="/" className="btn ghost">all trips</Link>
-        </main>
-      )
-    }
-    return (
-      <main className="center-screen">
-        <EmptyState title="trip not found" />
-        <Link to="/" className="btn ghost">all trips</Link>
-      </main>
-    )
+    if (load.state === 'loading') return <main className="trip-wait"><Loading /></main>
+    return <main className="center-screen">{load.state === 'ready' ? <EmptyState title="trip not found" /> : <LoadState load={load} />}<Link to="/" className="btn ghost">all trips</Link></main>
   }
-
-  const { tab, view } = readTab(params, wide)
-  const tabs = wide ? WIDE_TABS : PHONE_TABS
-  const day = params.get('day')
-  // the day the calendar shows, even when the link has none
-  const onDay = (tab === 'itinerary' && reading.day) || (validDay(day) ? day : chosenDay(trip, trips ?? [], stops ?? [], null, todayISO()))
+  const owner = ownerOn(trip, trips, onDay)
   const phoneMap = !wide && tab === 'map'
-  const dayTab = tab === 'calendar' || tab === 'itinerary'
-  const plus = <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}><Icon name="plus" /></button>
-  // the day stays when you switch sections; each section keeps its own scroll
-  function pick(next: Tab, nextView: SavedView = view) {
-    scrolls.current[`${tab}/${view}`] = scroller()?.scrollTop ?? window.scrollY
-    startSwitch(() => setParams((p) => {
+
+  function pick(next: Tab) {
+    scrolls.current[tab] = wide ? main.current?.scrollTop ?? 0 : window.scrollY
+    startSwitch(() => setParams(p => {
       const n = new URLSearchParams(p)
-      n.delete('view'); n.delete('map')
-      if (next === 'calendar') n.delete('tab')
-      else n.set('tab', next)
-      if (next === 'saved') n.set('view', nextView)
+      n.delete('view'); n.delete('map'); n.delete('tool')
+      if (next === 'plan') n.delete('tab'); else n.set('tab', next)
+      // the day being read follows you to the map and back
+      const day = reading.day ?? selected
+      if (tab === 'plan' && day) n.set('day', day)
       return n
     }))
+    const y = scrolls.current[next] ?? 0
+    if (wide) main.current?.scrollTo?.(0, y); else window.scrollTo?.(0, y)
   }
-  const sectionNav = (
-    <TripSummary bar={!wide} onPick={(x) => pick(x.tab, x.view)}
-      sections={wide
-        ? tabs.flatMap((t): Section[] => t === 'saved' ? SAVED_VIEWS.map((v) => ({ label: v, tab: t, view: v })) : [{ label: t, tab: t }])
-        : tabs.map((t) => ({ label: t, tab: t }))}
-      active={wide && tab === 'saved' ? view : tab} />
-  )
+  const back = new URLSearchParams()
+  if (selected) back.set('day', selected)
+  if (params.get('pin')) back.set('pin', params.get('pin')!)
+  const plus = <button type="button" className="icon-btn plus-btn" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}><Icon name="plus" /></button>
+  const menuTitle = onDay ? `add to ${dayLabel(onDay)}` : 'add'
+
   return (
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}${switching ? ' switching' : ''}`} style={tint(trip.color)}>
       <section className="trip-main" ref={main}>
-        <span ref={sentinel} className="trip-bar-sentinel" aria-hidden="true" />
         {phoneMap ? (
-          // the phone map fills the screen; only the way back and the + float over it
           <div className="map-float">
-            <Link to={`/trip/${trip.id}${onDay ? `?day=${onDay}` : ''}`} className="chip-pill back-chip" aria-label={`back to ${trip.name}`}><Icon name="back" size={18} /><span>{trip.name}</span></Link>
-            <span className="map-float-end"><OfflineBadge inline />{plus}</span>
+            <Link to={`/trip/${trip.id}${back.size ? `?${back}` : ''}`} className="chip-pill back-chip" aria-label={`back to ${trip.name}`}><Icon name="back" /><span>{trip.name}</span></Link>
+            <OfflineBadge inline />
+            {plus}
           </div>
         ) : (
-          // the name, the + and the way around stay at the top while the page scrolls
-          <div className={`trip-bar${stuck ? ' stuck' : ''}`}>
-            <TripHeader key={trip.id} trip={trip} action={plus} />
-            {wide && sectionNav}
-            {tab === 'itinerary' && <div className="bar-slot" ref={setSlot} />}
-            {tab === 'saved' && !wide && (
-              <div className="segmented saved-switch" role="group" aria-label="saved">
-                {SAVED_VIEWS.map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => pick('saved', v)}>{v}</button>)}
-              </div>
-            )}
-          </div>
+          <><span ref={sentinel} className="trip-bar-sentinel" aria-hidden="true" />
+          <div ref={bar} className={`trip-bar${stuck ? ' stuck' : ''}`}>
+            <TripHeader trip={trip} add={<span className="trip-actions">{tab === 'plan' && <span ref={setSearchSlot} className="search-slot" />}{plus}</span>} onEdit={() => setEditing(true)} />
+            {wide && <TripSummary bar={false} tabs={WIDE_TABS} active={tab} onPick={pick} />}
+          </div></>
         )}
-        {!wide && sectionNav}
-        {switching && (
-          // the loading animation, in the middle of the space under the navigation
-          <div className="section-wait" role="status" aria-label="loading"><img src={`${import.meta.env.BASE_URL}loading.gif`} alt="" /></div>
-        )}
-        {tab !== 'calendar' && (
-          <section id="trip-section" className="trip-inline-section" aria-label={tab}>
-            <div className="section-content"><Panel key={`${trip.id}-${tab}`} tab={tab} view={view} trip={trip} slot={slot} /></div>
-          </section>
-        )}
-        <div className="trip-panel" hidden={tab !== 'calendar'}>
-          <PlanTab key={trip.id} trip={trip} />
-        </div>
+        {switching && <Loading className="section-wait" />}
+        {tab === 'plan' && <ItineraryTab trip={trip} searchSlot={searchSlot} />}
+        {phoneMap && <section className="map-section" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} phone /></Suspense></section>}
+        {tab === 'ideas' && <section className="trip-section" aria-label="ideas"><SavedTab trip={trip} /></section>}
+        {tab === 'links' && <section className="trip-section" aria-label="links"><LinksTab trip={trip} /></section>}
+        {tab === 'money' && <section className="trip-section" aria-label="money"><MoneyTab trip={trip} /></section>}
+        {tab === 'packing' && <section className="trip-section" aria-label="packing"><PackingTab trip={trip} /></section>}
       </section>
-      {wide && <aside className="trip-map"><Suspense fallback={<MapWait />}><MapTab trip={trip} /></Suspense></aside>}
-      <AddSheet open={menu} title={dayTab && onDay ? `add to ${dayLabel(onDay)}` : 'add'} onClose={() => setMenu(false)}
-        onPick={(k) => { setMenu(false); setKind(k) }} />
-      <AddForms kind={kind} trip={trip} day={dayTab ? onDay : null} idea={tab === 'saved'} onClose={() => setKind(null)} />
+      {wide && <aside className="trip-map" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} ideas={tab === 'ideas'} /></Suspense></aside>}
+      {!wide && <TripSummary bar tabs={PHONE_TABS} active={tab} onPick={pick} />}
+      <AddSheet open={menu} title={menuTitle} onClose={() => setMenu(false)} onPick={k => { setMenu(false); setKind(k) }} />
+      <AddForms kind={kind} trip={owner} day={onDay} onClose={() => setKind(null)} />
+      <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}><TripForm trip={trip} onDone={() => setEditing(false)} onDeleted={() => { window.location.hash = trip.parent_id ? `/trip/${trip.parent_id}` : '/' }} /></Sheet>
     </div>
   )
 }

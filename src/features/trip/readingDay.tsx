@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 
-// the day the itinerary is showing as you scroll it. the laptop map and the + follow it;
-// the link's ?day= (and so the calendar) only changes when you pick a day in the calendar
+// The visible itinerary day drives the map, contextual creation, and the day carried
+// into the URL when switching sections.
 type Reading = { day: string | null; set: (day: string | null) => void }
 
 const Ctx = createContext<Reading>({ day: null, set: () => {} })

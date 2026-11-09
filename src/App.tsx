@@ -7,6 +7,7 @@ import { configProblem } from './lib/supabase'
 import { ConfigProblem } from './features/auth/ConfigProblem'
 import { HomePage } from './features/home/HomePage'
 import { TripPage } from './features/trip/TripPage'
+import { CapturePage } from './features/capture/CapturePage'
 
 export function App() {
   if (configProblem) return <div className="app"><ConfigProblem problem={configProblem} /></div>
@@ -21,6 +22,7 @@ export function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/trip/:id" element={<TripPage />} />
+                <Route path="/save" element={<CapturePage />} />
                 <Route path="*" element={<HomePage />} />
               </Routes>
             </HashRouter>

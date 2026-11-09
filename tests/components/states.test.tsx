@@ -5,10 +5,10 @@ import type { Load } from '../../src/lib/load'
 
 const load = (o: Partial<Load>): Load => ({ state: 'ready', stale: false, retry: vi.fn(), ...o })
 
-it('loading shows grey rows and no empty title', () => {
+it('loading shows totoro and no empty title', () => {
   render(<LoadState load={load({ state: 'loading' })} blocks={3} />)
   const s = screen.getByRole('status', { name: 'loading' })
-  expect(s.querySelectorAll('.skeleton-card')).toHaveLength(3)
+  expect(s.querySelector('img')).toHaveAttribute('src', expect.stringMatching(/loading\.gif$/))
   expect(s).not.toHaveTextContent(/\w/)
 })
 

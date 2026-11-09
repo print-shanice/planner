@@ -11,7 +11,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "allowImportingTsExtensions": false,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "vite-plugin-pwa/client"]
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "vite-plugin-pwa/client", "google.maps"]
   },
   "include": ["src", "tests"]
 }

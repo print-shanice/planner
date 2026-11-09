@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Button } from '../../components/Button'
+import { peekPending } from '../../lib/capture'
 
 export function SignIn() {
   const [email, setEmail] = useState('')
@@ -50,6 +51,8 @@ export function SignIn() {
   return (
     <main className="center-screen">
       <h1 className="wordmark big">planner</h1>
+      {/* a shared link waits on this device, unsaved, until you're signed in */}
+      {peekPending() && <p className="note-line">sign in to save your link</p>}
       {sent ? (
         <form className="signin" onSubmit={verify}>
           <div className="stack-sm center">

@@ -179,3 +179,14 @@ describe('sign-in says when it is waiting', () => {
     expect(screen.getByRole('button', { name: 'sign in' })).toBeEnabled()
   })
 })
+
+it('a link shared in before signing in waits on this device, unsaved, and says so at sign-in', async () => {
+  const { keepPending, peekPending } = await import('../../src/lib/capture')
+  keepPending({ url: 'https://www.instagram.com/reel/C9x/', title: '', text: '' })
+  auth.getSession.mockResolvedValue({ data: { session: null }, error: null })
+  ui()
+  expect(await screen.findByText('sign in to save your link')).toBeVisible()
+  // nothing written anywhere but this device
+  expect(rpc).not.toHaveBeenCalled()
+  expect(peekPending()?.url).toBe('https://www.instagram.com/reel/C9x/')
+})

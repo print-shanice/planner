@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { ancestors, countryName, descendants } from '../../lib/countries'
 import { fmtRange, nights } from '../../lib/dates'
@@ -12,14 +12,13 @@ import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
 
-export function TripHeader({ trip, action }: { trip: Trip; action?: ReactNode }) {
+export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode; onEdit: () => void }) {
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
   const members = useMembers().data ?? []
   const canEdit = useCanEdit()
-  const navigate = useNavigate()
-  const [editing, setEditing] = useState(false)
   const [tree, setTree] = useState(false)
+  const [adding, setAdding] = useState(false)
   const path = ancestors(trip.id, trips)
   const parent = path.at(-1)
   // the title switches between trips of one family: the top trip and every side trip under it
@@ -53,8 +52,9 @@ export function TripHeader({ trip, action }: { trip: Trip; action?: ReactNode })
         <Link to={up ? `/trip/${up.id}` : '/'} className="back-link" aria-label={`back to ${upName}`}>
           <Icon name="back" />{up && <CountryFlag code={up.base?.country} />}<span>{upName}</span>
         </Link>
-        <button type="button" className="avatars" aria-label="edit trip" disabled={!canEdit} onClick={() => setEditing(true)}>
-          {members.map((m) => <span key={m.email} className="avatar" style={{ background: `var(--g${(m.color ?? 0) % 6})` }} title={m.name}>{(m.name || m.email).slice(0, 1)}</span>)}
+        {/* the people sharing the trip are also the way into its settings */}
+        <button type="button" className="avatars trip-people" aria-label="edit trip" title={`shared with ${members.map(m => m.name || m.email).join(', ')}`} disabled={!canEdit} onClick={onEdit}>
+          {members.map((m) => <span key={m.email} className="avatar" style={{ background: `var(--g${(m.color ?? 0) % 6})` }}>{(m.name || m.email).slice(0, 1)}</span>)}
         </button>
       </div>
       <div className="trip-title-row">
@@ -65,16 +65,14 @@ export function TripHeader({ trip, action }: { trip: Trip; action?: ReactNode })
             </button>
           ) : <span>{trip.name}</span>}
         </h1>
-        {action}
+        {add}
       </div>
       {(flags || when) && <p className="trip-meta muted num">{flags}{flags && when && <span aria-hidden="true">·</span>}{when && <span>{when}</span>}</p>}
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
         <TripTree trips={trips} current={trip.id} onPick={() => setTree(false)} />
+        <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => { setTree(false); setAdding(true) }}><Icon name="plus" />add side trip</button>
       </Sheet>
-      <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}>
-        <TripForm trip={trip} onDone={() => setEditing(false)}
-          onDeleted={() => { setEditing(false); navigate(trip.parent_id ? `/trip/${trip.parent_id}` : '/') }} />
-      </Sheet>
+      <Sheet page open={adding} title="new side trip" onClose={() => setAdding(false)}><TripForm parentId={trip.id} onDone={() => setAdding(false)} /></Sheet>
     </header>
   )
 }

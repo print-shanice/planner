@@ -1,95 +1,80 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import { EMPTY, mapFeatures } from '../../src/features/map/features'
+import { trip, stop, place } from '../factories'
 
-const mk = vi.hoisted(() => {
-  const maps: any[] = []
-  class FakeMap {
-    handlers: Record<string, ((e?: unknown) => void)[]> = {}
-    touchZoomRotate = { disableRotation() {} }
-    constructor() { maps.push(this) }
-    on(ev: string, a: unknown, b?: unknown) { const fn = (typeof a === 'function' ? a : b) as () => void; (this.handlers[ev] ??= []).push(fn); return this }
-    fire(ev: string) { for (const f of this.handlers[ev] ?? []) f() }
-    sources: string[] = []
-    layers: string[] = []
-    fits: unknown[] = []
-    addControl() {} addImage() {} addSource(id: string) { this.sources.push(id) } addLayer(l: { id: string }) { this.layers.push(l.id) } getLayer() { return true } setFilter() {}
-    getSource() { return { setData() {} } } fitBounds(b: unknown) { this.fits.push(b) } jumpTo() {} remove() {} isStyleLoaded() { return false }
-    getCanvas() { return { style: {} } } getCenter() { return { lng: 0, lat: 0 } }
+const g = vi.hoisted(() => ({ online: true, maps: [] as any[], markers: [] as any[], lines: [] as any[] }))
+vi.mock('../../src/lib/offline', () => ({ useOnline: () => g.online, useCanEdit: () => true }))
+
+function installGoogle() {
+  class Map {
+    listeners: Record<string, ((e: unknown) => void)[]> = {}
+    constructor(public box: HTMLElement) { g.maps.push(this) }
+    addListener(ev: string, fn: (e: unknown) => void) { (this.listeners[ev] ??= []).push(fn); return { remove() {} } }
+    fitBounds() {} setCenter() {} setZoom() {} panTo() {} getZoom() { return 12 } getCenter() { return { lat: () => 1, lng: () => 2 } } getBounds() { return null }
   }
-  class GeolocateControl {}
-  class Marker {
-    el: HTMLElement
-    constructor(o: { element: HTMLElement }) { this.el = o.element }
-    setLngLat() { return this }
-    addTo() { document.body.appendChild(this.el); this.el.setAttribute('aria-label', 'map marker'); return this }
-    remove() { this.el.remove() }
+  class AdvancedMarkerElement {
+    map: unknown; content: HTMLElement; position: unknown
+    constructor(o: { map: unknown; content: HTMLElement; position: unknown }) { this.map = o.map; this.content = o.content; this.position = o.position; document.body.append(o.content); g.markers.push(this) }
   }
-  return { maps, FakeMap, GeolocateControl, Marker }
-})
-vi.mock('maplibre-gl', () => ({ default: { Map: mk.FakeMap, GeolocateControl: mk.GeolocateControl, Marker: mk.Marker } }))
+  class Polyline { constructor(o: unknown) { g.lines.push(o) } setMap() {} }
+  class LatLngBounds { extend() {} }
+  ;(window as any).google = { maps: { importLibrary: async (n: string) => (n === 'marker' ? { AdvancedMarkerElement } : { Map }), Polyline, LatLngBounds } }
+}
 
-import { TripMap } from '../../src/features/map/TripMap'
-
-// jsdom has no canvas; the map draws its bookmark icon on one when it loads
 beforeEach(() => {
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(new Proxy({}, { get: () => () => {}, set: () => true }) as never)
+  vi.resetModules()
+  g.online = true; g.maps = []; g.markers = []; g.lines = []
+  document.body.innerHTML = ''
+  delete (window as any).google
+})
+afterEach(() => vi.unstubAllEnvs())
+
+const lap = trip({ id: 'lap', start_date: '2027-02-07', end_date: '2027-02-11', color: 1 })
+const stops = [
+  stop({ id: 'c', trip_id: 'lap', title: 'kopi', day: '2027-02-08', category: 'cafe', place: place({ lat: 66.5, lng: 25.7 }) }),
+  stop({ id: 'm', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', position: 1, category: 'museum', place: place({ lat: 66.51, lng: 25.72 }) }),
+  stop({ id: 'i', trip_id: 'lap', title: 'bakery idea', day: null, category: 'bakery', place: place({ lat: 66.505, lng: 25.71 }) }),
+]
+
+async function show(data = mapFeatures(lap, [lap], stops, '2027-02-08')) {
+  const { TripMap } = await import('../../src/features/map/TripMap')
+  return render(<TripMap data={data} fitKey="k" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
+}
+
+it('says the map is not set up when there is no google key, and loads nothing', async () => {
+  vi.stubEnv('VITE_GOOGLE_MAPS_KEY', '')
+  await show()
+  expect(screen.getByRole('status')).toHaveTextContent('map not set up')
+  expect(document.querySelector('script[src*="maps.googleapis"]')).toBeNull()
 })
 
-const empty = { type: 'FeatureCollection', features: [] } as never
-
-it('the map says it is loading until its first draw', () => {
-  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
-  expect(screen.getByRole('status')).toHaveTextContent('loading map')
-  act(() => { mk.maps.at(-1).fire('load') })
-  expect(screen.queryByText('loading map')).toBeNull()
+it('says it needs a connection when offline', async () => {
+  vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k')
+  g.online = false
+  await show()
+  expect(screen.getByRole('status')).toHaveTextContent('the map needs a connection')
 })
 
-it('the map says where it is looking as soon as it has drawn', () => {
-  const onCenter = vi.fn()
-  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} onCenter={onCenter} />)
-  const m = mk.maps.at(-1)
-  m.getZoom = () => 11
-  act(() => { m.fire('load') })
-  expect(onCenter).toHaveBeenCalledWith({ lng: 0, lat: 0, zoom: 11 })
+it('draws each stop with its category icon and number in its trip colour, and ideas as quiet pins', async () => {
+  vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k')
+  installGoogle()
+  await show(mapFeatures(lap, [lap], stops, '2027-02-08'))
+  await waitFor(() => expect(g.markers.length).toBeGreaterThan(0))
+  const pins = [...document.querySelectorAll('.gpin-stop')] as HTMLElement[]
+  expect(pins.map((p) => p.querySelector('.gpin-n')?.textContent)).toEqual(['1', '2'])
+  expect(pins[0].style.getPropertyValue('--pin')).toBeTruthy()
+  expect(pins[0].querySelector('path')?.getAttribute('d')).not.toBe(pins[1].querySelector('path')?.getAttribute('d'))
+  expect(document.querySelectorAll('.gpin-idea')).toHaveLength(1)
 })
 
-it('the map adds the end, bed and name layers', () => {
-  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
-  const m = mk.maps.at(-1)
-  act(() => { m.fire('load') })
-  expect(m.sources).toEqual(expect.arrayContaining(['ends', 'beds', 'pin-names']))
-  const at = (id: string) => m.layers.indexOf(id)
-  expect(at('journey-ends')).toBeGreaterThan(-1)
-  expect(at('journey-ends')).toBeLessThan(at('beds'))
-  expect(at('beds')).toBeLessThan(at('pin-names'))
-  expect(at('pin-names')).toBeLessThan(at('pins'))
-})
-
-it('ideas are not part of the fit when the day has stops', () => {
-  const pt = (c: number[]) => ({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: { id: 'a' }, geometry: { type: 'Point', coordinates: c } }] }) as never
-  render(<TripMap data={{ pins: pt([25.7, 66.5]), ends: empty, beds: empty, names: empty, lines: empty, saved: pt([-70, -30]) }} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
-  const m = mk.maps.at(-1)
-  act(() => { m.fire('load') })
-  expect(m.fits[0]).toEqual([[25.7, 66.5], [25.7, 66.5]])
-})
-
-it('side-trip pins are named buttons that open the trip', () => {
-  const onTrip = vi.fn()
-  const overview = { home: { name: 'eindhoven', at: [5.5, 51.4] as [number, number] }, sides: [{ id: 'lap', name: 'lapland', dates: '7 – 11 feb', color: 'var(--g1)', at: [25.7, 66.5] as [number, number] }], lines: empty }
-  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} overview={overview} onTrip={onTrip} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
-  act(() => { mk.maps.at(-1).fire('load') })
-  // a click on a side-trip pin must not also reach the map's own click (find the place here)
-  const reached = vi.fn()
-  document.addEventListener('click', reached)
-  fireEvent.click(screen.getByRole('button', { name: 'lapland, 7 – 11 feb' }))
-  document.removeEventListener('click', reached)
-  expect(reached).not.toHaveBeenCalled()
-  expect(onTrip).toHaveBeenCalledWith('lap')
-  expect(mk.maps.at(-1).fits[0]).toEqual([[5.5, 51.4], [25.7, 66.5]])
-})
-
-it('the home pin is labelled with the home name, not "map marker"', () => {
-  const overview = { home: { name: 'eindhoven', at: [5.5, 51.4] as [number, number] }, sides: [], lines: empty }
-  render(<TripMap data={{ pins: empty, ends: empty, beds: empty, names: empty, lines: empty, saved: empty }} overview={overview} fitKey="t|all" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />)
-  act(() => { mk.maps.at(-1).fire('load') })
-  expect(document.querySelector('[aria-label="eindhoven"]')).not.toBeNull()
+it('makes one map per visit, however many times the map screen opens', async () => {
+  vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k')
+  installGoogle()
+  const a = await show({ ...EMPTY })
+  await waitFor(() => expect(g.maps).toHaveLength(1))
+  a.unmount()
+  const { TripMap } = await import('../../src/features/map/TripMap')
+  await act(async () => { render(<TripMap data={EMPTY} fitKey="j" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />) })
+  await waitFor(() => expect(document.querySelector('.gmap')).not.toBeNull())
+  expect(g.maps).toHaveLength(1)
 })

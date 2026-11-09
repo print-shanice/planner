@@ -7,6 +7,7 @@ const db = vi.hoisted(() => ({ members: null as null | unknown[], ratesQ: null a
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useCosts: () => db.costsQ ?? ({ data: db.costs }),
+  useLinks: () => ({ data: [] }),
   useStops: () => ({ data: db.stops }),
   useMembers: () => ({ data: db.members ?? TWO }),
   useRates: () => db.ratesQ ?? ({ data: { date: '2026-11-04', rates: { SGD: 1.4398, GBP: 0.85 } } }),
@@ -55,7 +56,7 @@ it('settle up says who owes whom, with you for me', () => {
   db.trips = [t]
   db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even' })]
   show(t)
-  expect(within(screen.getByRole('region', { name: 'settle up' })).getByText('you owe kai €20')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'settle up' })).getByText('you owe kai €20.00')).toBeInTheDocument()
 })
 
 it('side trips are included and listed by trip', () => {
@@ -71,7 +72,7 @@ it('side trips are included and listed by trip', () => {
 
 const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
 
-beforeEach(() => { db.costsQ = null })
+beforeEach(() => { db.costsQ = null; db.members = null })
 
 it('costs still loading are not "no costs yet"', () => {
   const t = trip({ id: 'lap' })
@@ -271,9 +272,9 @@ describe('settling up', () => {
     db.costs = [cost({ trip_id: 'lap', amount: 90, status: 'paid', paid_by: 'u2', split_among: ['u1', 'u2', 'u3'] })]
     show(t)
     const box = within(screen.getByRole('region', { name: 'settle up' }))
-    expect(box.getByText('kai · owed €60')).toBeInTheDocument()
-    expect(box.getByText('you · owe €30')).toBeInTheDocument()
-    expect(box.getByText('jo · owes €30')).toBeInTheDocument()
+    expect(box.getByText('kai · owed €60.00')).toBeInTheDocument()
+    expect(box.getByText('you · owe €30.00')).toBeInTheDocument()
+    expect(box.getByText('jo · owes €30.00')).toBeInTheDocument()
     db.members = null
   })
 
@@ -284,8 +285,10 @@ describe('settling up', () => {
     db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even', split_among: ['u1', 'u2'] })]
     show(t)
     const box = within(screen.getByRole('region', { name: 'settle up' }))
-    expect(box.queryByText('kai · owed €20')).toBeNull()
-    await userEvent.click(box.getByRole('button', { name: 'paid back: you owe kai €20' }))
+    expect(box.queryByText('kai · owed €20.00')).toBeNull()
+    await userEvent.click(box.getByRole('button', { name: 'paid back: you owe kai €20.00' }))
+    expect(db.save).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'confirm repayment' }))
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({
       trip_id: 'lap', stop_id: null, category: 'repayment', status: 'paid', paid_by: 'u1', split: 'u2', split_among: ['u2'],
       split_amounts: null, amount: 20, currency: 'EUR',
@@ -313,8 +316,20 @@ describe('settling up', () => {
     db.costs = [cost({ trip_id: 'eu', amount: 40, status: 'paid', paid_by: 'u2', split_among: ['u1', 'u2'] })]
     show(paris)
     const box = within(screen.getByRole('region', { name: 'settle up' }))
-    expect(box.getByText('you owe kai €20')).toBeInTheDocument()
-    await userEvent.click(box.getByRole('button', { name: 'paid back: you owe kai €20' }))
+    expect(box.getByText('you owe kai €20.00')).toBeInTheDocument()
+    await userEvent.click(box.getByRole('button', { name: 'paid back: you owe kai €20.00' }))
+    expect(db.save).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'confirm repayment' }))
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'eu', category: 'repayment' }))
   })
+})
+
+it('settlement identifies the parent scope and keeps exact cents', () => {
+  const parent = trip({id: 'parent', name: 'Europe summer'})
+  const child = trip({id: 'child', parent_id: 'parent', name: 'Lisbon'})
+  db.trips = [parent, child]
+  db.costs = [cost({trip_id: 'parent', amount: 49.50, status: 'paid', paid_by: 'u2', split: 'even'})]
+  show(child)
+  expect(screen.getByText('you owe kai €24.75')).toBeInTheDocument()
+  expect(screen.getByText('Europe summer · with side trips')).toBeInTheDocument()
 })

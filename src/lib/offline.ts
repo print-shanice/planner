@@ -7,6 +7,8 @@ import { clearTickets } from './ticketCache'
 import { pausePersist, persistPaused } from './wipe'
 import { forgetPending } from './pending'
 import { forgetDrafts } from './drafts'
+import { forgetResume } from './resume'
+import { forgetCapture } from './capture'
 
 export const persister = createAsyncStoragePersister({
   storage: {
@@ -60,5 +62,7 @@ export async function forgetDevice(qc: QueryClient): Promise<void> {
   qc.clear()
   forgetPending()
   forgetDrafts()
+  forgetResume()
+  forgetCapture()
   await Promise.allSettled([persister.removeClient(), clearTickets()])
 }

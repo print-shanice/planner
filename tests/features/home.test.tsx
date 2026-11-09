@@ -21,7 +21,7 @@ vi.mock('../../src/lib/queries', () => ({
   useLinks: () => ({ data: db.links }),
   useMembers: () => ({ data: db.members }),
   useRates: () => ({ data: null }),
-  useSave: () => ({ mutateAsync: db.save, isPending: false }),
+  useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, isPending: false }),
 }))
 const env = vi.hoisted(() => ({ online: true, signOut: vi.fn(), forget: vi.fn() }))
@@ -53,6 +53,7 @@ function show() {
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-11-05T10:00:00'))
+  localStorage.clear()
   db.trips = []; db.stops = []; db.links = []; db.save.mockClear(); db.remove.mockClear()
   db.globe = null; env.online = true
   db.members = []; env.signOut.mockReset().mockResolvedValue(undefined); env.forget.mockReset().mockResolvedValue(undefined)
@@ -138,10 +139,13 @@ it('an upcoming trip without dates is still listed', () => {
   expect(legend().at(-1)).toContain('someday japan')
 })
 
-it('there is exactly one add-trip control on home', () => {
+it('home has one +, which adds a trip or saves a link', async () => {
   db.trips = europe()
   show()
-  expect(screen.getAllByRole('button', { name: 'new trip' })).toHaveLength(1)
+  expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
+  await userEvent.click(screen.getByRole('button', { name: 'add' }))
+  const menu = screen.getByRole('dialog', { name: 'add' })
+  expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== '')).toEqual(['trip', 'link'])
 })
 
 it('no trips shows only the empty title', () => {
@@ -187,7 +191,8 @@ it('the globe and its numbers share one card under "your travels, wrapped"', () 
 
 it('trip form saves dates and currency', async () => {
   show()
-  await userEvent.click(screen.getByRole('button', { name: 'new trip' }))
+  await userEvent.click(screen.getByRole('button', { name: 'add' }))
+  await userEvent.click(screen.getByRole('button', { name: 'trip' }))
   const dialog = screen.getByRole('dialog', { name: 'new trip' })
   await userEvent.type(within(dialog).getByLabelText('name'), 'lapland')
   fireEvent.change(within(dialog).getByLabelText('starts'), { target: { value: '2027-02-07' } })
@@ -201,7 +206,8 @@ it('trip form saves dates and currency', async () => {
 
 it('trip form refuses an end before the start', async () => {
   show()
-  await userEvent.click(screen.getByRole('button', { name: 'new trip' }))
+  await userEvent.click(screen.getByRole('button', { name: 'add' }))
+  await userEvent.click(screen.getByRole('button', { name: 'trip' }))
   const dialog = screen.getByRole('dialog', { name: 'new trip' })
   await userEvent.type(within(dialog).getByLabelText('name'), 'x')
   fireEvent.change(within(dialog).getByLabelText('starts'), { target: { value: '2027-02-11' } })
@@ -246,12 +252,20 @@ it('choosing a country with one trip opens it', async () => {
   expect(screen.getByText('opened trip')).toBeInTheDocument()
 })
 
-it('home has next up, your travels and past trips headings, nothing else', () => {
+it('home has next up, the inbox of links without a trip, your travels and past trips', () => {
   db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' }), ...europe()]
   db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
   show()
-  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['next up', 'your travels, wrapped', 'past trips'])
-  expect(screen.queryByText('cafe reel')).toBeNull()
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['next up', 'inbox', 'your travels, wrapped', 'past trips'])
+  expect(screen.getByText('cafe reel')).toBeInTheDocument()
+})
+
+it('a link in the inbox goes to a trip from its own row', async () => {
+  db.trips = europe()
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
+  show()
+  await userEvent.selectOptions(screen.getByLabelText('move cafe reel to a trip'), 'par')
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'l1', trip_id: 'par' }))
 })
 
 it('when every trip is over, next up says so', () => {
@@ -330,7 +344,7 @@ it('home says when trips could not load, and retries', async () => {
 it('the trip form shows when, where and colour, and keeps budget and notes under "more"', () => {
   render(<MemoryRouter><TripForm onDone={() => {}} /></MemoryRouter>)
   const folds = [...document.querySelectorAll('.fold-toggle')].map((x) => [x.textContent, x.getAttribute('aria-expanded')])
-  expect(folds).toEqual([['more', 'false']])
+  expect(folds).toEqual([['budget, notes & trip details', 'false']])
   expect(screen.getByLabelText('home base')).toBeVisible()
   expect(screen.getByRole('radiogroup', { name: 'colour' })).toBeVisible()
   expect(screen.getByLabelText('notes')).not.toBeVisible()
@@ -338,7 +352,7 @@ it('the trip form shows when, where and colour, and keeps budget and notes under
 
 it('a trip with a budget opens with "more" open', () => {
   render(<MemoryRouter><TripForm trip={trip({ id: 't9', budget: 900 }) as Trip} onDone={() => {}} /></MemoryRouter>)
-  expect(screen.getByRole('button', { name: 'more' })).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.getByRole('button', { name: 'budget, notes & trip details' })).toHaveAttribute('aria-expanded', 'true')
 })
 
 it('a failed trip save stays open with retry, and retry sends the same trip', async () => {

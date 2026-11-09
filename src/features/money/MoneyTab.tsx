@@ -19,6 +19,7 @@ import { CostForm } from './CostForm'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Pending } from '../../components/Pending'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
+import { useSubmit } from '../../components/FormFooter'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
@@ -37,6 +38,8 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   const [cur, setCur] = useState(trip.currency || 'EUR')
   const [editing, setEditing] = useState<Cost | null>(null)
   const [withKids, setWithKids] = useState(true)
+  const [repayment, setRepayment] = useState<{ from: string; to: string; eur: number } | null>(null)
+  const { run, saving, failure } = useSubmit()
 
   const kids = trips.filter((x) => x.parent_id === trip.id)
   const scoped = withKids || !kids.length
@@ -52,7 +55,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
   const payBack = (x: { from: string; to: string; eur: number }) => save.mutateAsync({
     id: newId(), trip_id: top.id, stop_id: null, title: '', category: 'repayment', status: 'paid', date: todayISO(),
     paid_by: x.from, split: x.to, split_among: [x.to], split_amounts: null, amount: x.eur, currency: 'EUR', eur_rate: null,
-  }).catch(() => { /* "couldn't save" shows on the row */ })
+  })
 
   const save = useSave('costs')
   const remove = useRemove('costs')
@@ -71,6 +74,11 @@ export function MoneyTab({ trip }: { trip: Trip }) {
 
   const sorted = [...costs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || a.title.localeCompare(b.title))
   const show = (v: number) => formatMoney(v, cur, { whole: true })
+  // If a display-currency rate is unavailable, name EUR rather than mislabelling the debt.
+  const debt = (eur: number) => {
+    const converted = convert(eur, 'EUR', cur, rates)
+    return formatMoney(converted ?? eur, converted == null ? 'EUR' : cur, { exact: true })
+  }
   const left = budget != null && !over ? budget - total : null
 
   return (
@@ -108,18 +116,19 @@ export function MoneyTab({ trip }: { trip: Trip }) {
       {settle && (
         <section className="settle-box" aria-label="settle up">
           <p className="label">settle up</p>
+          <p className="settle-scope muted">{top.name} · with side trips</p>
           {settle.moves.length === 0 ? <p className="settle-line"><Pill status="settled" /></p> : <>
             {settle.bal.length > 2 && <ul className="settle-people">
               {settle.bal.map(([id, v]) => (
-                <li key={id} className="num">{`${name(id)} · ${v > 0 ? 'owed' : owes(id)} ${show(convert(Math.abs(v), 'EUR', cur, rates) ?? Math.abs(v))}`}</li>
+                <li key={id} className="num">{`${name(id)} · ${v > 0 ? 'owed' : owes(id)} ${debt(Math.abs(v))}`}</li>
               ))}
             </ul>}
             {settle.moves.map((x) => {
-              const line = `${name(x.from)} ${owes(x.from)} ${name(x.to)} ${show(convert(x.eur, 'EUR', cur, rates) ?? x.eur)}`
+              const line = `${name(x.from)} ${owes(x.from)} ${name(x.to)} ${debt(x.eur)}`
               return (
                 <div key={`${x.from}-${x.to}`} className="settle-move">
                   <p className="settle-line num">{line}</p>
-                  {canEdit && <button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => payBack(x)}>paid back</button>}
+                  {canEdit && <button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => setRepayment(x)}>record repayment</button>}
                 </div>
               )
             })}
@@ -195,6 +204,19 @@ export function MoneyTab({ trip }: { trip: Trip }) {
 
       <Sheet page open={!!editing} title="edit cost" onClose={() => setEditing(null)}>
         {editing && <CostForm key={editing.id} trip={trip} cost={editing} onDone={() => setEditing(null)} />}
+      </Sheet>
+      <Sheet open={!!repayment} title="record repayment" onClose={() => { if (!saving) setRepayment(null) }}>
+        {repayment && <div className="stack">
+          <p>{name(repayment.from)} paid {name(repayment.to)} {debt(repayment.eur)}</p>
+          <p className="muted">{top.name} · with side trips</p>
+          {failure && <p className="warn-line" role="alert">{failure}</p>}
+          <button type="button" className="btn primary" disabled={saving || !canEdit} onClick={() => void run(async () => {
+            const current = settle?.moves.find(x => x.from === repayment.from && x.to === repayment.to)
+            if (!current || Math.abs(current.eur - repayment.eur) > 0.005) throw new Error('balance changed; close and review it again')
+            await payBack(repayment)
+            setRepayment(null)
+          })}>{saving ? 'saving' : 'confirm repayment'}</button>
+        </div>}
       </Sheet>
     </div>
   )

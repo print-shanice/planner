@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import type { Place } from '../../lib/types'
-import { SearchStatus, usePlaceSearch } from './usePlaceSearch'
+import { HitRow, PoweredBy, SearchStatus, usePlaceSearch } from './usePlaceSearch'
+import { usePick } from './usePick'
 import { Icon } from '../../components/Icon'
+import { Pending } from '../../components/Pending'
 
 type Props = { near?: { lat: number; lng: number; zoom?: number } | null; onPick: (p: Place) => void; label?: string; alwaysOpen?: boolean }
 
 export function AddPlaceField({ near, onPick, label = 'add a place', alwaysOpen = false }: Props) {
   const [open, setOpen] = useState(alwaysOpen)
-  const { q, results, failed, busy, change, run, clear } = usePlaceSearch(near)
+  const { q, results, failed, busy, change, run, clear, pick: resolve } = usePlaceSearch(near)
+  const { pick, picking, failed: lost } = usePick(resolve, (p) => { onPick(p); close() })
 
   function close() { setOpen(alwaysOpen); clear() }
 
@@ -31,19 +34,12 @@ export function AddPlaceField({ near, onPick, label = 'add a place', alwaysOpen 
         {(!alwaysOpen || q) && <button type="button" className="icon-btn" aria-label="cancel" onClick={close}><Icon name="close" size={18} /></button>}
       </div>
       <SearchStatus busy={busy} failed={failed} results={results} onRetry={() => run()} />
+      {picking && <div className="search-note"><Pending label="finding the place" /></div>}
+      {lost && <p className="warn-line search-note">couldn't get that place</p>}
       {results && results.length > 0 && (
         <ul className="results">
-          {results.map((p, i) => (
-            <li key={`${p.osm_id ?? i}`}>
-              <button type="button" className="result" onClick={() => { onPick(p); close() }}>
-                <Icon name="pin" size={18} />
-                <span className="result-text">
-                  <span>{p.name}</span>
-                  {p.address && <span className="muted">{p.address}</span>}
-                </span>
-              </button>
-            </li>
-          ))}
+          {results.map((h) => <li key={h.key}><HitRow hit={h} onPick={() => pick(h)} /></li>)}
+          <li><PoweredBy /></li>
         </ul>
       )}
     </div>

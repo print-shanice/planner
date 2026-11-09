@@ -1,4 +1,5 @@
 import type { Place } from './types'
+import { fromOsm } from './categories'
 
 export const PHOTON = 'https://photon.komoot.io'
 
@@ -24,6 +25,8 @@ export function parsePhoton(json: unknown): Place[] {
     const area = String(p.district ?? p.locality ?? '').trim()
     if (area && area !== name && area !== city) place.area = area
     if (p.osm_type && p.osm_id != null) place.osm_id = `${p.osm_type}${p.osm_id}`
+    const category = fromOsm(String(p.osm_key ?? ''), String(p.osm_value ?? ''))
+    if (category) place.category = category
     if (!place.country) delete place.country
     out.push(place)
   }

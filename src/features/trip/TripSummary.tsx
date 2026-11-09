@@ -1,23 +1,26 @@
 import { useEffect, useState } from 'react'
-import type { SavedView, Tab } from './tabs'
+import { TAB_ICON, type Tab } from './tabs'
 import { Icon } from '../../components/Icon'
 
-const ICON: Record<Tab, string> = { calendar: 'calendar', itinerary: 'plan', map: 'map', money: 'money', saved: 'saved' }
-export type Section = { label: string; tab: Tab; view?: SavedView }
+// the tapped tab is painted first; the switch (and totoro) starts only after the browser has shown it,
+// so the highlight never waits behind the new section's work
+function afterPaint(fn: () => void) {
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => setTimeout(fn, 0))
+  else setTimeout(fn, 0)
+}
 
-// phones: a bar of five at the bottom; laptops: one quiet row of text tabs (ideas, links and packing
-// each get their own, and the map is always beside)
-export function TripSummary({ sections, active, onPick, bar }: { sections: Section[]; active: string; onPick: (s: Section) => void; bar: boolean }) {
+// phones: a bar at the bottom; laptops: one quiet row of underlined words under the title
+export function TripSummary({ tabs, active, onPick, bar }: { tabs: Tab[]; active: Tab; onPick: (t: Tab) => void; bar: boolean }) {
   // the tapped tab lights up straight away, on its own, while the page catches up
-  const [tapped, setTapped] = useState<string | null>(null)
+  const [tapped, setTapped] = useState<Tab | null>(null)
   useEffect(() => { setTapped(null) }, [active])
   const on = tapped ?? active
   return (
     <nav className={bar ? 'tab-bar' : 'section-tabs'} aria-label="trip sections">
-      {sections.map((s) => (
-        <button key={s.label} type="button" aria-pressed={on === s.label} onClick={() => { setTapped(s.label); onPick(s) }}>
-          {bar && <Icon name={ICON[s.tab]} size={24} />}
-          <span>{s.label}</span>
+      {tabs.map((t) => (
+        <button key={t} type="button" aria-current={on === t ? 'page' : undefined} aria-pressed={on === t} onClick={() => { setTapped(t); afterPaint(() => onPick(t)) }}>
+          {bar && <Icon name={TAB_ICON[t]} size={22} />}
+          <span>{t}</span>
         </button>
       ))}
     </nav>

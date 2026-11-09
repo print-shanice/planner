@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -8,14 +8,18 @@ import type { Trip } from '../../src/lib/types'
 const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], files: [] as unknown[], open: vi.fn(), remove: vi.fn(), save: vi.fn((r: unknown) => Promise.resolve(r)) }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
+  useLinks: () => ({ data: [] }),
   useStops: () => ({ data: db.stops }),
   useFiles: () => ({ data: db.files }),
+  useRates: () => ({ data: null }),
+  useMembers: () => ({ data: [] }),
+  useRemove: () => ({ mutateAsync: vi.fn(), mutate: vi.fn() }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))
 vi.mock('../../src/lib/undo', () => ({ useUndoRemove: () => db.remove }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchSpots: () => Promise.resolve([]) }))
-vi.mock('../../src/features/stops/StopSheet', () => ({ useStopSheet: () => ({ openStop: db.open }) }))
+vi.mock('../../src/features/stops/StopSheet', () => ({ useStopSheet: () => ({ openStop: db.open, editStop: db.open }) }))
 
 import { ItineraryTab } from '../../src/features/itinerary/ItineraryTab'
 import { ReadingDayProvider, useReadingDay } from '../../src/features/trip/readingDay'
@@ -31,18 +35,28 @@ const linkDay = () => new URLSearchParams(screen.getByTestId('loc').textContent 
 
 const tokyo = () => trip({ id: 'tk', name: 'tokyo', start_date: '2025-09-18', end_date: '2025-09-20' })
 
-function show(t: Trip, path = '/trip/tk?tab=itinerary') {
-  return render(
+function show(t: Trip, path = '/trip/tk?tab=itinerary', edit = true) {
+  window.matchMedia = ((q: string) => ({ matches: edit && q.includes('1024'), media: q, addEventListener() {}, removeEventListener() {} })) as never
+  const result = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[path]}>
         <Routes><Route path="/trip/:id" element={<ReadingDayProvider><ItineraryTab trip={t} /><Probe /></ReadingDayProvider>} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return result
 }
 
 const dayBox = (date: string) => within(screen.getByTestId(`itin-${date}`))
-const head = (name: RegExp) => within(screen.getByRole('heading', { level: 3, name })).getByRole('button')
+const head = (name: RegExp) => screen.getByRole('heading', { level: 2, name })
+const meta = (date: string) => dayBox(date).getByText((_, el) => !!el?.classList.contains('doc-day-meta'))
+const strip = () => within(screen.getByRole('navigation', { name: 'days' }))
+async function search(text: string) {
+  if (!screen.queryByRole('searchbox', { name: 'search the plan' })) await userEvent.click(screen.getByRole('button', { name: 'search the plan' }))
+  const box = screen.getByRole('searchbox', { name: 'search the plan' })
+  await userEvent.type(box, text)
+  return box
+}
 
 beforeEach(() => {
   localStorage.clear()
@@ -64,13 +78,12 @@ beforeEach(() => {
   ]
 })
 
-it('shows every day as a heading with its date, areas and count, then its lines with times', () => {
+it('shows every day open, headed by its date with its areas, then its lines with times and kinds', () => {
   show(tokyo())
-  const h = head(/fri 19 sep/)
-  expect(h).toHaveAttribute('aria-expanded', 'true')
-  expect(h).toHaveTextContent('narita · harajuku · shibuya')
-  // no count on the heading
-  expect(h).not.toHaveTextContent(/\d$/)
+  expect(head(/friday 19 september/)).toBeInTheDocument()
+  expect(meta('2025-09-19')).toHaveTextContent('narita')
+  expect(meta('2025-09-19')).toHaveTextContent('harajuku')
+  expect(screen.queryAllByRole('button', { expanded: false })).toHaveLength(0)
   const lines = dayBox('2025-09-19').getAllByTestId('itin-line')
   // a live line's time is in its boxes; an empty start reads "any"
   const shown = (l: HTMLElement) => {
@@ -79,27 +92,21 @@ it('shows every day as a heading with its date, areas and count, then its lines 
   }
   expect(lines.map(shown)).toEqual(['09:00', '17:00–18:30', 'any'])
   expect(lines[2]).toHaveTextContent('cafe · tokyo')
-  expect(screen.getAllByRole('heading', { level: 3 }).map((x) => x.textContent?.slice(0, 10))).toEqual(['thu 18 sep', 'fri 19 sep', 'sat 20 sep'])
+  expect(lines[2].querySelector('.cat')).toHaveAttribute('title', 'cafe')
+  expect(screen.getAllByRole('heading', { level: 2 }).map((x) => x.textContent)).toEqual(['thursday 18 september', 'friday 19 september', 'saturday 20 september'])
 })
 
-it('a heading folds its day, and the fold is remembered on this device', async () => {
-  const { unmount } = show(tokyo())
-  await userEvent.click(head(/fri 19 sep/))
-  expect(head(/fri 19 sep/)).toHaveAttribute('aria-expanded', 'false')
-  expect(dayBox('2025-09-19').queryAllByTestId('itin-line')).toHaveLength(0)
-  unmount()
+it('nothing folds: there are no day toggles to open', () => {
   show(tokyo())
-  expect(head(/fri 19 sep/)).toHaveAttribute('aria-expanded', 'false')
+  expect(document.querySelectorAll('[aria-expanded]')).toHaveLength(0)
+  for (const d of ['2025-09-18', '2025-09-19', '2025-09-20']) expect(dayBox(d).getAllByTestId('itin-line').length).toBeGreaterThan(0)
 })
 
-it('search finds every line, marks it, and steps through them, folding days with nothing', async () => {
+it('search opens from the strip, finds every line, marks it and steps through, hiding days with nothing', async () => {
   show(tokyo())
-  await userEvent.click(head(/thu 18 sep/))
-  const box = screen.getByRole('searchbox', { name: 'search the itinerary' })
-  await userEvent.type(box, 'IYOSHI')
+  const box = await search('IYOSHI')
   expect(screen.getByTestId('match-count')).toHaveTextContent('1 of 2')
-  expect(head(/thu 18 sep/)).toHaveAttribute('aria-expanded', 'false')
-  expect(head(/fri 19 sep/)).toHaveAttribute('aria-expanded', 'true')
+  expect(document.querySelectorAll('#itin-2025-09-18 [data-testid="itin-line"]')).toHaveLength(0)
   expect(document.querySelector('[data-line="iyoshi"]')).toHaveClass('current')
   expect(document.querySelector('[data-line="iyoshi"] mark')).toHaveTextContent('Iyoshi')
   expect(day()).toBe('2025-09-19')
@@ -111,21 +118,14 @@ it('search finds every line, marks it, and steps through them, folding days with
   expect(screen.getByTestId('match-count')).toHaveTextContent('1 of 2')
   await userEvent.click(screen.getByRole('button', { name: 'previous match' }))
   expect(screen.getByTestId('match-count')).toHaveTextContent('2 of 2')
-  // the strip marks the days with a match
-  const strip = within(screen.getByRole('navigation', { name: 'days' }))
-  expect(strip.getByRole('button', { name: /19 sep/ })).toHaveClass('hit')
-  expect(strip.getByRole('button', { name: /18 sep/ })).not.toHaveClass('hit')
-  // clearing puts the folds back the way they were
-  await userEvent.clear(box)
-  expect(head(/thu 18 sep/)).toHaveAttribute('aria-expanded', 'false')
-  expect(head(/sat 20 sep/)).toHaveAttribute('aria-expanded', 'true')
-  expect(screen.queryByTestId('match-count')).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'done' }))
+  expect(screen.queryByRole('searchbox')).toBeNull()
+  expect(dayBox('2025-09-18').getAllByTestId('itin-line')).toHaveLength(1)
 })
 
 it('a match in the notes shows that bit of the notes; no match says 0', async () => {
   show(tokyo())
-  const box = screen.getByRole('searchbox', { name: 'search the itinerary' })
-  await userEvent.type(box, 'mve5')
+  const box = await search('mve5')
   expect(screen.getByTestId('match-count')).toHaveTextContent('1 of 1')
   expect(document.querySelector('[data-line="enji"] .itin-snippet mark')).toHaveTextContent('MVE5')
   await userEvent.clear(box)
@@ -134,21 +134,18 @@ it('a match in the notes shows that bit of the notes; no match says 0', async ()
   expect(screen.queryByRole('button', { name: 'next match' })).toBeDisabled()
 })
 
-it('tapping a folded day in the strip opens it', async () => {
-  show(tokyo())
-  await userEvent.click(head(/sat 20 sep/))
-  expect(head(/sat 20 sep/)).toHaveAttribute('aria-expanded', 'false')
-  await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /20 sep/ }))
-  expect(head(/sat 20 sep/)).toHaveAttribute('aria-expanded', 'true')
-})
-
 it('the day strip jumps to a day and makes it the day you are reading, leaving the link alone', async () => {
   show(tokyo())
-  await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /20 sep/ }))
+  await userEvent.click(strip().getByRole('button', { name: /20 september/ }))
   expect(day()).toBe('2025-09-20')
   expect(linkDay()).toBeNull()
-  expect(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /20 sep/ })).toHaveAttribute('aria-current', 'true')
+  expect(strip().getByRole('button', { name: /20 september/ })).toHaveAttribute('aria-current', 'true')
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+})
+
+it('the strip names the month where it starts', () => {
+  show(tokyo())
+  expect(screen.getByRole('navigation', { name: 'days' })).toHaveTextContent(/^sep/)
 })
 
 it('the › on a line opens its card', async () => {
@@ -227,14 +224,43 @@ it('journeys and stays stay tap-to-open', async () => {
   expect(db.open).toHaveBeenCalledWith('fl', '2025-09-18')
 })
 
-it('every open day ends with a line to type into', async () => {
-  show(tokyo())
+it('every day ends with a line to type into, on a phone too', async () => {
+  show(tokyo(), undefined, false)
   expect(dayBox('2025-09-19').getByRole('group', { name: 'add to fri 19 sept' })).toBeInTheDocument()
-  await userEvent.click(head(/fri 19 sep/))
-  expect(screen.queryByRole('group', { name: 'add to fri 19 sept' })).toBeNull()
 })
 
-it("a side trip's days sit in place, headed with its name; saved ideas stay out; undated stops go last", () => {
+it('between located lines, the walk is a link to google maps directions', () => {
+  db.stops = [
+    stop({ id: 'a', trip_id: 'tk', day: '2025-09-19', time: '09:00', title: 'a', place: place({ lat: 35.66, lng: 139.70 }) }),
+    stop({ id: 'b', trip_id: 'tk', day: '2025-09-19', time: '10:00', title: 'b', place: place({ lat: 35.67, lng: 139.71 }) }),
+  ]
+  show(tokyo())
+  const walk = dayBox('2025-09-19').getByRole('link', { name: /directions|walk/ })
+  expect(walk.getAttribute('href')).toContain('google.com/maps/dir/')
+})
+
+it('untimed lines reorder by keyboard on their handle; timed lines have none', async () => {
+  db.stops = [
+    stop({ id: 'x', trip_id: 'tk', day: '2025-09-19', time: '09:00', title: 'timed' }),
+    stop({ id: 'p', trip_id: 'tk', day: '2025-09-19', title: 'first', position: 0 }),
+    stop({ id: 'q', trip_id: 'tk', day: '2025-09-19', title: 'second', position: 1 }),
+  ]
+  show(tokyo(), undefined, false)
+  expect(screen.queryByRole('button', { name: /move timed/ })).toBeNull()
+  const grip = screen.getByRole('button', { name: /move second/ })
+  grip.focus()
+  await userEvent.keyboard('{ArrowUp}')
+  expect(db.save).toHaveBeenCalledWith({ id: 'q', position: 0 })
+  expect(db.save).toHaveBeenCalledWith({ id: 'p', position: 1 })
+})
+
+it('a line with tickets says so', () => {
+  db.files = [{ id: 'f', stop_id: 'neel', path: 'x', name: 'x.pdf', mime: 'application/pdf' }]
+  show(tokyo())
+  expect(document.querySelector('[data-line="neel"]')).toContainElement(screen.getByLabelText('1 ticket'))
+})
+
+it("a side trip's days sit in place, headed with its name; nothing undated is in the plan", () => {
   const eu = trip({ id: 'eu', name: 'exchange', start_date: '2027-02-18', end_date: '2027-02-24' })
   const paris = trip({ id: 'paris', parent_id: 'eu', name: 'paris', start_date: '2027-02-20', end_date: '2027-02-21', color: 2 })
   db.trips = [eu, paris]
@@ -244,10 +270,10 @@ it("a side trip's days sit in place, headed with its name; saved ideas stay out;
     stop({ id: 'loose', trip_id: 'eu', day: null, title: 'onsen someday' }),
   ]
   show(eu, '/trip/eu?tab=itinerary')
-  expect(head(/sat 20 feb/)).toHaveTextContent('paris')
-  expect(head(/thu 18 feb/)).not.toHaveTextContent('paris')
+  expect(meta('2027-02-20')).toHaveTextContent('paris')
+  expect(meta('2027-02-18')).not.toHaveTextContent('paris')
   expect(screen.queryByText('maybe a museum')).toBeNull()
-  expect(within(screen.getByRole('region', { name: 'no date' })).getByDisplayValue('onsen someday')).toBeInTheDocument()
+  expect(screen.queryByDisplayValue('onsen someday')).toBeNull()
 })
 
 it("a line typed on a side trip's day goes to the side trip", async () => {
@@ -258,4 +284,110 @@ it("a line typed on a side trip's day goes to the side trip", async () => {
   show(eu, '/trip/eu?tab=itinerary')
   await userEvent.type(screen.getByRole('textbox', { name: 'add to sat 20 feb' }), 'louvre{Enter}')
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'paris', day: '2027-02-20', title: 'louvre' }))
+})
+
+it('phone reading opens activity details without entering edit mode', async () => {
+  show(tokyo(), undefined, false)
+  expect(screen.queryByRole('textbox', { name: 'change narita airport t2' })).toBeNull()
+  await userEvent.click(dayBox('2025-09-19').getByRole('button', { name: /narita airport t2/ }))
+  expect(db.open).toHaveBeenCalledWith('narita', '2025-09-19')
+})
+
+it('scrolling Whole trip tracks the visible day after the header scrolls away', async () => {
+  const bar = document.createElement('div'); bar.className = 'trip-bar'
+  bar.getBoundingClientRect = () => ({ bottom: -400, height: 130 } as DOMRect)
+  document.body.appendChild(bar)
+  try {
+    show(tokyo(), undefined, false)
+    const dates = ['2025-09-18', '2025-09-19', '2025-09-20']
+    dates.forEach((date, index) => {
+      screen.getByTestId(`itin-${date}`).getBoundingClientRect = () => ({ top: [-300, 5, 500][index] } as DOMRect)
+    })
+    fireEvent.scroll(window)
+    await vi.waitFor(() => expect(day()).toBe('2025-09-19'))
+  } finally { bar.remove() }
+})
+
+it('keeps the reading day visible when the viewport changes its scroll container', async () => {
+  let isWide = false
+  const listeners = new Set<() => void>()
+  window.matchMedia = ((q: string) => ({ matches: isWide && q.includes('1024'), media: q,
+    addEventListener: (_: string, cb: () => void) => listeners.add(cb), removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
+  })) as never
+  render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><ReadingDayProvider><ItineraryTab trip={tokyo()} /><Probe /></ReadingDayProvider></MemoryRouter></QueryClientProvider>)
+  await userEvent.click(within(screen.getByRole('navigation', { name: 'days' })).getByRole('button', { name: /19 september/ }))
+  const scroll = vi.fn()
+  screen.getByTestId('itin-2025-09-19').scrollIntoView = scroll
+  act(() => { isWide = true; for (const cb of [...listeners]) cb() })
+  await vi.waitFor(() => expect(scroll).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' }))
+  expect(day()).toBe('2025-09-19')
+})
+
+it('side trips whose dates overlap say so in words, with a way to change them', async () => {
+  const eu = trip({ id: 'eu', name: 'euro summer', start_date: '2027-06-01', end_date: '2027-07-01' })
+  db.trips = [eu, trip({ id: 'rome', parent_id: 'eu', name: 'rome', start_date: '2027-06-12', end_date: '2027-06-16' }), trip({ id: 'flo', parent_id: 'eu', name: 'florence', start_date: '2027-06-14', end_date: '2027-06-18' })]
+  db.stops = []
+  show(eu, '/trip/eu')
+  expect(screen.getByText('dates clash')).toBeInTheDocument()
+  expect(screen.getByText(/rome and florence/)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'adjust dates' }))
+  expect(screen.getByRole('dialog', { name: 'edit trip' })).toBeInTheDocument()
+})
+
+describe('a long trip with side trips', () => {
+  const eu = () => trip({ id: 'eu', name: 'exchange', start_date: '2027-01-28', end_date: '2027-07-13' })
+  beforeEach(() => {
+    db.trips = [eu(), trip({ id: 'paris', parent_id: 'eu', name: 'paris', start_date: '2027-02-19', end_date: '2027-02-23', color: 2 })]
+    db.stops = [
+      stop({ id: 'museum', trip_id: 'eu', day: '2027-01-30', title: 'van abbemuseum' }),
+      stop({ id: 'louvre', trip_id: 'paris', day: '2027-02-20', title: 'louvre', status: 'to_book' }),
+    ]
+  })
+
+  it('is a month calendar: side trips colour their days and open from it, the trip\'s own days have dots', async () => {
+    show(eu(), '/trip/eu?day=2027-02-19', false)
+    const cal = screen.getByRole('group', { name: 'february 2027' })
+    expect(within(cal).getByRole('link', { name: /paris/ })).toHaveAttribute('href', '/trip/paris')
+    expect(cal.querySelector('[data-day="2027-02-20"]')).toHaveAttribute('data-side')
+    expect(screen.queryByText('louvre')).toBeNull()
+    // the side trips of the month, each a line that opens it
+    const list = within(screen.getByRole('list', { name: 'side trips this month' }))
+    expect(list.getByRole('link', { name: /paris.*19 – 23 feb.*1 place.*1 to book/ })).toHaveAttribute('href', '/trip/paris')
+    // no long list of every day
+    expect(screen.queryByRole('navigation', { name: 'days' })).toBeNull()
+  })
+
+  it('picking one of the trip\'s own days shows that day under the calendar', async () => {
+    show(eu(), '/trip/eu?day=2027-02-19', false)
+    await userEvent.click(screen.getByRole('button', { name: 'previous month' }))
+    const cal = screen.getByRole('group', { name: 'january 2027' })
+    expect(cal.querySelector('[data-day="2027-01-30"]')).toHaveAttribute('data-planned')
+    await userEvent.click(within(cal).getByRole('button', { name: 'sat 30 jan' }))
+    expect(screen.getByRole('heading', { level: 2, name: 'saturday 30 january' })).toBeInTheDocument()
+    expect(screen.getByText('van abbemuseum')).toBeInTheDocument()
+    expect(linkDay()).toBe('2027-01-30')
+  })
+
+  it('search still finds what is inside the side trips', async () => {
+    show(eu(), '/trip/eu', false)
+    await search('louvre')
+    expect(screen.getByTestId('match-count')).toHaveTextContent('1 of 1')
+    expect(screen.getByText('louvre')).toBeInTheDocument()
+  })
+
+  it('while a side trip is on, the top says so and opens it on today', () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2027-02-21T10:00:00'))
+    try {
+      show(eu(), '/trip/eu', false)
+      const now = screen.getByRole('link', { name: /now · day 3 of 5/ })
+      expect(now).toHaveAttribute('href', '/trip/paris?day=2027-02-21')
+    } finally { vi.useRealTimers() }
+  })
+})
+
+it('a booking ref keeps its capitals', () => {
+  db.trips = [tokyo()]
+  db.stops = [stop({ id: 'fl', trip_id: 'tk', kind: 'journey', day: '2025-09-18', time: '22:00', title: 'sq 638', ref: 'KL934', origin: place({ name: 'changi' }), destination: place({ name: 'narita' }) })]
+  show(tokyo(), undefined, false)
+  expect(screen.getByText('KL934')).toHaveClass('keep-case')
 })

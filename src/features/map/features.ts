@@ -6,13 +6,14 @@ import { ancestors, descendants } from '../../lib/countries'
 import { mapBed } from '../../lib/legs'
 import { distanceKm } from '../../lib/guess'
 import { hasPoint } from '../../lib/walk'
+import { categoryIcon, categoryOf } from '../../lib/categories'
 
-export type PinProps = { id: string; number: number; color: string; day: string }
+export type PinProps = { id: string; number: number; color: string; day: string; icon: string }
 export type EndProps = { id: string; color: string }
 export type BedProps = { id: string }
 export type NameProps = { name: string }
 export type LineProps = { kind: 'day' | 'journey' | 'spoke'; color: string; mode?: string; day: string | null }
-export type SavedProps = { id: string; saved: boolean }
+export type SavedProps = { id: string; saved: boolean; icon: string }
 export type Filter = 'all' | 'saved' | string
 export type MapData = {
   pins: FeatureCollection<Point, PinProps>
@@ -63,7 +64,7 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
       const s = e.stop
       if (s.kind === 'journey') {
         if (hasPoint(s.origin)) {
-          pins.push(pt(s.origin, { id: s.id, number: n, color, day: date }))
+          pins.push(pt(s.origin, { id: s.id, number: n, color, day: date, icon: s.mode === 'flight' ? 'plane' : s.mode ?? 'train' }))
           name(s.origin, s.origin.name)
         }
         if (hasPoint(s.destination)) {
@@ -74,7 +75,7 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
         continue
       }
       if (!hasPoint(s.place)) continue
-      pins.push(pt(s.place, { id: s.id, number: n, color, day: date }))
+      pins.push(pt(s.place, { id: s.id, number: n, color, day: date, icon: categoryIcon(categoryOf(s)) }))
       name(s.place, s.title || s.place.name)
       path.push(xy(s.place))
     }
@@ -89,19 +90,19 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
   }
   if (filter === 'all') {
     for (const s of mine.filter(s => !s.day)) {
-      if (s.kind !== 'journey' && hasPoint(s.place)) saved.push(pt(s.place, { id: s.id, saved: s.saved }))
+      if (s.kind !== 'journey' && hasPoint(s.place)) saved.push(pt(s.place, { id: s.id, saved: s.saved, icon: categoryIcon(categoryOf(s)) }))
     }
   } else {
     const top = ancestors(trip.id, trips)[0] ?? trip
     const family = new Set(descendants(top.id, trips))
-    const dated = new Set(trips.filter(t => t.start_date).map(t => t.id))
     const onDay = new Set(pins.map(f => f.properties.id))
     const anchors = [...pins, ...ends, ...beds].map(f => ({ lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }))
     for (const s of stops) {
       const at = s.place
       if (!family.has(s.trip_id) || s.kind !== 'place' || !hasPoint(at) || onDay.has(s.id)) continue
-      if (!(s.saved || (!s.day && dated.has(s.trip_id)))) continue
-      if (anchors.some(a => distanceKm(a, at) <= NEAR_KM)) saved.push(pt(at, { id: s.id, saved: s.saved }))
+      // ideas are the places without a day
+      if (s.day) continue
+      if (anchors.some(a => distanceKm(a, at) <= NEAR_KM)) saved.push(pt(at, { id: s.id, saved: s.saved, icon: categoryIcon(categoryOf(s)) }))
     }
   }
   return { pins: fc(pins), ends: fc(ends), beds: fc(beds), names: fc(names), lines: fc(lines), saved: fc(saved) }
@@ -110,8 +111,8 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
 function savedOnly(trip: Trip, trips: Trip[], stops: Stop[]): FeatureCollection<Point, SavedProps> {
   const ids = new Set(descendants(trip.id, trips))
   return fc(stops
-    .filter(s => ids.has(s.trip_id) && s.saved && s.kind !== 'journey' && hasPoint(s.place))
-    .map(s => pt(s.place!, { id: s.id, saved: s.saved })))
+    .filter(s => ids.has(s.trip_id) && !s.day && s.kind !== 'journey' && hasPoint(s.place))
+    .map(s => pt(s.place!, { id: s.id, saved: s.saved, icon: categoryIcon(categoryOf(s)) })))
 }
 
 export function busyDays(trip: Trip, trips: Trip[], stops: Stop[]): string[] {

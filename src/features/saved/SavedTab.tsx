@@ -1,158 +1,150 @@
 import { useMemo, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import type { Stop, Trip } from '../../lib/types'
-import { useLinks, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
+import type { Link, Stop, Trip } from '../../lib/types'
+import { useLinks, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
-import { descendants } from '../../lib/countries'
 import { fmtDay, tripDays } from '../../lib/dates'
 import { loadState } from '../../lib/load'
+import { categoryOf } from '../../lib/categories'
+import { scheduleChange, unscheduled } from '../../lib/schedule'
+import { normal } from '../../lib/itinerary'
+import { descendants } from '../../lib/countries'
 import { EmptyState } from '../../components/EmptyState'
 import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
-import { TwoTapDelete } from '../../components/TwoTapDelete'
-import { LinkCard } from './LinkCard'
-import { ItemMenu } from './ItemMenu'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Sheet } from '../../components/Sheet'
 import { CountryFlag } from '../../components/CountryFlag'
 import { useStopSheet } from '../stops/StopSheet'
 import { TripForm } from '../home/TripForm'
+import { Chip } from '../itinerary/ItinLine'
+import { stopTitle } from '../plan/StopRow'
+import { LinkCard } from './LinkCard'
+import { JotLine } from './JotLine'
 
-function PlaceItem({ stop, trip, trips, pick }: { stop: Stop; trip: Trip; trips: Trip[]; pick?: { on: boolean; onToggle: () => void } }) {
-  const sheet = useStopSheet()
+// put an idea on a day right from its row: the trip's days, or any date when the trip has none yet
+export function DayPick({ stop, home, label = 'add to day' }: { stop: Stop; home: Trip; label?: string }) {
   const save = useSave('stops')
-  const remove = useRemove('stops')
   const stops = useStops().data ?? []
   const canEdit = useCanEdit()
-  const home = trips.find((t) => t.id === stop.trip_id) ?? trip
   const days = tripDays(home)
-  const toDay = (d: string) => {
-    const last = Math.max(-1, ...stops.filter((s) => s.trip_id === stop.trip_id && s.day === d).map((s) => s.position))
-    save.mutate({ id: stop.id, day: d, position: last + 1, saved: false })
-  }
+  const go = (d: string) => { if (d) save.mutate(scheduleChange(stop, d, stops)) }
+  if (!canEdit) return null
+  return days.length ? (
+    <select className="text-select" aria-label={`${label}: ${stopTitle(stop)}`} value="" onChange={(e) => go(e.target.value)}>
+      <option value="">{label}</option>
+      {days.map((d) => <option key={d} value={d}>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</option>)}
+    </select>
+  ) : (
+    <label className="text-select date-pick"><span>{label}</span><input type="date" aria-label={`${label}: ${stopTitle(stop)}`} value="" onChange={(e) => go(e.target.value)} /></label>
+  )
+}
+
+function IdeaRow({ stop, trips, links }: { stop: Stop; trips: Trip[]; links: Link[] }) {
+  const sheet = useStopSheet()
+  const home = trips.find((t) => t.id === stop.trip_id)
+  const c = categoryOf(stop)
+  const n = links.filter((l) => l.stop_id === stop.id).length
+  const where = stop.place?.area || stop.place?.city || ''
+  // the side trip it's for, unless that's just the city again
+  const side = home && home.parent_id && home.name.toLowerCase() !== where.toLowerCase() ? home.name : ''
+  const sub = [c === 'place' || c === 'note' ? '' : c, where, side, n ? `${n} ${n === 1 ? 'link' : 'links'}` : '']
+    .filter(Boolean).join(' · ').toLowerCase()
   return (
-    <li className="saved-place">
-      {pick ? <input type="checkbox" className="pick" aria-label={stop.title || stop.place?.name || 'place'} checked={pick.on} onChange={pick.onToggle} />
-        : <Icon name={stop.saved ? 'bookmark' : 'pin'} size={18} />}
-      <span className="stack-xs saved-name">
-        <span>{stop.title || stop.place?.name}</span>
-        {stop.place?.address && <span className="muted">{stop.place.address}</span>}
-      </span>
-      {canEdit && !pick && (
-        <ItemMenu title={stop.title || stop.place?.name || 'place'}>
-          {(close) => (<>
-            <button type="button" className="btn ghost" onClick={() => { close(); sheet?.editStop(stop.id) }}>edit idea</button>
-            {days.length > 0 && (
-              <label className="field">
-                <span className="label">add to day</span>
-                <select value="" onChange={(e) => { if (e.target.value) { toDay(e.target.value); close() } }}>
-                  <option value="" disabled>choose a day</option>
-                  {days.map((d) => <option key={d} value={d}>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</option>)}
-                </select>
-              </label>
-            )}
-            <label className="field">
-              <span className="label">move to trip</span>
-              <select value={stop.trip_id} onChange={(e) => save.mutate({ id: stop.id, trip_id: e.target.value })}>
-                {[...trips].sort((a, b) => a.name.localeCompare(b.name)).map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
-              </select>
-            </label>
-            <div className="row"><TwoTapDelete label="remove" onConfirm={() => remove.mutate(stop.id)} /></div>
-          </>)}
-        </ItemMenu>
-      )}
+    <li className="doc-row idea-row" data-stop={stop.id}>
+      <Chip stop={stop} quiet />
+      <button type="button" className="doc-row-main" onClick={() => sheet?.openStop(stop.id)}>
+        <span className="doc-row-title">{stopTitle(stop)}</span>
+        {sub && <span className="muted">{sub}</span>}
+      </button>
+      {home && <DayPick stop={stop} home={home} />}
       <SaveFailed table="stops" id={stop.id} />
     </li>
   )
 }
 
-const has = (q: string, ...xs: (string | null | undefined)[]) => xs.some((x) => x?.toLowerCase().includes(q))
+const has = (q: string, ...xs: (string | null | undefined)[]) => !q || xs.some((x) => !!x && normal(x).includes(q))
 
-export function SavedTab({ trip, view }: { trip: Trip; view?: 'ideas' | 'links' }) {
+// everything without a day: places and notes to fit in, and side trips still to date
+export function SavedTab({ trip }: { trip: Trip }) {
   const tq = useTrips()
   const lq = useLinks()
   const sq = useStops()
   const canEdit = useCanEdit()
-  const removeStop = useRemove('stops')
-  const removeLink = useRemove('links')
   const [dating, setDating] = useState<Trip | null>(null)
-  const [selected, setSide] = useState<'ideas' | 'links'>('ideas')
-  const side = view ?? selected
-  const [query, setQuery] = useState({ ideas: '', links: '' })
-  const [picking, setPicking] = useState(false)
-  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [query, setQuery] = useState('')
   const trips = tq.data ?? []
   const links = lq.data ?? []
   const stops = sq.data ?? []
   const load = loadState(tq, lq, sq)
-  const ids = useMemo(() => new Set(descendants(trip.id, trips)), [trip.id, trips])
-  if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
+  if (load.state !== 'ready' && !stops.length) return <LoadState load={load} blocks={2} />
 
-  const q = query[side].trim().toLowerCase()
-  // a dated trip keeps its undated plans and side trips here, off the calendar
-  const dated = tripDays(trip).length > 0
-  const someday = (dated ? trips.filter((t) => t.parent_id === trip.id && !t.start_date) : [])
-    .filter((t) => has(q, t.name)).sort((a, b) => a.name.localeCompare(b.name))
-  const ideas = stops.filter((s) => ids.has(s.trip_id) && (s.saved || (dated && s.trip_id === trip.id && !s.day)))
-    .filter((s) => has(q, s.title, s.place?.name, s.place?.address, s.notes))
-  const mine = links.filter((l) => l.trip_id && ids.has(l.trip_id)).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
-    .filter((l) => has(q, l.title, l.url, l.note))
-  const shown = side === 'ideas' ? ideas.map((s) => s.id) : mine.map((l) => l.id)
-  const count = shown.filter((id) => picked.has(id)).length
-
-  const switchTo = (s: 'ideas' | 'links') => { setSide(s); setPicking(false); setPicked(new Set()) }
-  const toggle = (id: string) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
-  const pick = (id: string) => (picking ? { on: picked.has(id), onToggle: () => toggle(id) } : undefined)
-  function removePicked() {
-    for (const id of shown.filter((x) => picked.has(x))) (side === 'ideas' ? removeStop : removeLink).mutate(id)
-    setPicked(new Set()); setPicking(false)
-  }
+  const q = normal(query.trim())
+  const someday = trips.filter((t) => t.parent_id === trip.id && !t.start_date && has(q, t.name)).sort((a, b) => a.name.localeCompare(b.name))
+  const ideas = unscheduled(trip, trips, stops).filter((s) => has(q, s.title, s.place?.name, s.place?.address, s.place?.city, s.place?.area, s.notes, s.category))
+  const nothing = !someday.length && !ideas.length
 
   return (
-    <div className="saved stack">
+    <div className="ideas">
       <LoadState load={load} />
-      {!view && <div className="segmented saved-switch" role="group" aria-label="show">
-        <button type="button" aria-pressed={side === 'ideas'} onClick={() => switchTo('ideas')}>ideas</button>
-        <button type="button" aria-pressed={side === 'links'} onClick={() => switchTo('links')}>links</button>
-      </div>}
-      <div className="saved-tools">
-        <label className="search-box">
-          <Icon name="search" size={18} />
-          <input type="search" role="searchbox" aria-label={`search ${side}`} placeholder={`search ${side}`} value={query[side]}
-            onChange={(e) => setQuery((x) => ({ ...x, [side]: e.target.value }))} />
-        </label>
-        {canEdit && shown.length > 0 && (
-          <button type="button" className="btn ghost small" onClick={() => { setPicking((v) => !v); setPicked(new Set()) }}>
-            {picking ? 'done' : 'select'}
-          </button>
-        )}
-      </div>
-      {picking && (
-        <div className="pick-bar">
-          <button type="button" className="btn ghost small" onClick={() => setPicked(new Set(shown))}>select all</button>
-          <span className="muted num">{count} selected</span>
-          <TwoTapDelete label={`delete ${count}`} disabled={!count} onConfirm={removePicked} />
-        </div>
-      )}
-      {side === 'ideas' ? (
-        someday.length + ideas.length === 0 ? <EmptyState title={q ? 'nothing found' : 'no ideas yet'} /> : (
-          <ul className="list" aria-label="ideas">
+      <label className="search-box ideas-search">
+        <Icon name="search" size={18} />
+        <input type="search" role="searchbox" aria-label="search ideas" placeholder="search ideas" value={query} onChange={(e) => setQuery(e.target.value)} />
+      </label>
+      <JotLine trip={trip} />
+      {nothing && <EmptyState title={q ? 'nothing found' : 'no ideas yet'} />}
+      {someday.length > 0 && (
+        <section aria-label="side trips without dates">
+          <h3 className="mono-label">no dates yet</h3>
+          <ul className="doc-list">
             {someday.map((t) => (
-              <li key={t.id} className="saved-place">
-                <RouterLink to={`/trip/${t.id}`} className="saved-name nodate-name"><CountryFlag code={t.base?.country} />{t.name}</RouterLink>
-                <button type="button" className="btn ghost small" disabled={!canEdit} onClick={() => setDating(t)}>set dates</button>
+              <li key={t.id} className="doc-row">
+                <RouterLink to={`/trip/${t.id}`} className="doc-row-main"><span className="doc-row-title"><CountryFlag code={t.base?.country} />{t.name}</span></RouterLink>
+                <button type="button" className="text-select" disabled={!canEdit} onClick={() => setDating(t)}>set dates</button>
               </li>
             ))}
-            {ideas.map((s) => <PlaceItem key={s.id} stop={s} trip={trip} trips={trips} pick={pick(s.id)} />)}
           </ul>
-        )
-      ) : (
-        mine.length === 0 ? <EmptyState title={q ? 'nothing found' : 'no links yet'} />
-          : <div className="link-list">{mine.map((l) => <LinkCard key={l.id} link={l} trips={trips} pick={pick(l.id)} />)}</div>
+        </section>
+      )}
+      {ideas.length > 0 && (
+        <section aria-label="places">
+          <h3 className="mono-label">places &amp; notes · {ideas.length}</h3>
+          <ul className="doc-list" aria-label="ideas">{ideas.map((s) => <IdeaRow key={s.id} stop={s} trips={trips} links={links} />)}</ul>
+        </section>
       )}
       <Sheet page open={!!dating} title="edit trip" onClose={() => setDating(null)}>
         {dating && <TripForm key={dating.id} trip={dating} onDone={() => setDating(null)} onDeleted={() => setDating(null)} />}
       </Sheet>
+    </div>
+  )
+}
+
+// the trip's saved links (reels, videos, pages), newest first, each maybe tied to a place
+export function LinksTab({ trip }: { trip: Trip }) {
+  const tq = useTrips()
+  const lq = useLinks()
+  const sq = useStops()
+  const [query, setQuery] = useState('')
+  const trips = tq.data ?? []
+  const links = lq.data ?? []
+  const stops = sq.data ?? []
+  const load = loadState(tq, lq)
+  const ids = useMemo(() => new Set(descendants(trip.id, trips)), [trip.id, trips])
+  if (load.state !== 'ready' && !links.length) return <LoadState load={load} blocks={2} />
+  const q = normal(query.trim())
+  const shown = links.filter((l) => l.trip_id && ids.has(l.trip_id))
+    .filter((l) => has(q, l.title, l.url, l.note, stops.find((s) => s.id === l.stop_id)?.title))
+    .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
+  return (
+    <div className="ideas">
+      <LoadState load={load} />
+      <label className="search-box ideas-search">
+        <Icon name="search" size={18} />
+        <input type="search" role="searchbox" aria-label="search links" placeholder="search links" value={query} onChange={(e) => setQuery(e.target.value)} />
+      </label>
+      {shown.length === 0 ? <EmptyState title={q ? 'nothing found' : 'no links yet'} /> : (
+        <div className="link-list" aria-label="links">{shown.map((l) => <LinkCard key={l.id} link={l} trips={trips} />)}</div>
+      )}
     </div>
   )
 }

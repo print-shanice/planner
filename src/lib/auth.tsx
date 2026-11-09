@@ -77,7 +77,8 @@ export function Asleep() {
 export function AuthGate({ children }: { children: ReactNode }) {
   const { status } = useAuth()
   // checking who you are: the wordmark breathes instead of a blank screen
-  if (status === 'loading') return <main className="center-screen" role="status" aria-label="loading"><h1 className="wordmark big pulse">planner</h1></main>
+  // checking who you are: the wordmark, and totoro under it, instead of a blank screen
+  if (status === 'loading') return <main className="center-screen" role="status" aria-label="loading"><h1 className="wordmark big pulse">planner</h1><img className="totoro-img" src={`${import.meta.env.BASE_URL}loading.gif`} alt="" /></main>
   if (status === 'asleep') return <Asleep />
   if (status === 'signed-out') return <SignIn />
   return <>{children}</>

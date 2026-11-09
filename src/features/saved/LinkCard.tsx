@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Link, Trip } from '../../lib/types'
-import { useRemove, useSave } from '../../lib/queries'
+import { useRemove, useSave, useStops } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { hostOf, safeUrl } from '../../lib/embed'
 import { Icon } from '../../components/Icon'
@@ -8,7 +8,9 @@ import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { ItemMenu } from './ItemMenu'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Sheet } from '../../components/Sheet'
-import { LinkForm } from './LinkForm'
+import { CaptureForm } from '../capture/CaptureForm'
+import { stopTitle } from '../plan/StopRow'
+import { useStopSheet } from '../stops/StopSheet'
 
 // the website's own icon, from its domain; the plain link icon if it can't load
 export function SiteIcon({ url }: { url: string }) {
@@ -28,6 +30,8 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
   const canEdit = useCanEdit()
   const title = link.title || hostOf(link.url)
   const site = [hostOf(link.url), link.note].filter(Boolean).join(' · ')
+  const place = useStops().data?.find((s) => s.id === link.stop_id)
+  const sheet = useStopSheet()
 
   return (
     <article className="link-card" data-testid="link-card">
@@ -40,6 +44,7 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
             <span className="muted">{site}</span>
           </span>
         </a>
+        {place && <button type="button" className="text-select link-place" onClick={() => sheet?.openStop(place.id)}>{stopTitle(place).toLowerCase()} →</button>}
         {canEdit && !pick && (
           <ItemMenu title={title}>
             {(close) => (<>
@@ -57,7 +62,7 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
         )}
       </div>
       <Sheet page open={editing} title="edit link" onClose={() => setEditing(false)}>
-        <LinkForm tripId={link.trip_id} link={link} onDone={() => setEditing(false)} />
+        <CaptureForm initial={null} tripId={link.trip_id} link={link} onDone={() => setEditing(false)} />
       </Sheet>
       <SaveFailed table="links" id={link.id} />
     </article>

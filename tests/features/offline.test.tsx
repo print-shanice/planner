@@ -37,6 +37,7 @@ it('offline: trip from the persisted cache renders and edit controls are disable
   expect(screen.getByRole('link', { name: 'back to all trips' })).toBeInTheDocument()
   expect(screen.getByText('arktikum')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'add' })).toBeDisabled()
+  expect(screen.queryByRole('group', { name: 'add to monday 8 february' })).toBeNull()
   expect(screen.getByText('offline')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'add a place' })).toBeNull()
   act(() => { window.dispatchEvent(new Event('online')) })

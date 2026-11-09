@@ -1,44 +1,61 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { useSearchParams } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
-import { useStops, useTrips } from '../../lib/queries'
+import { useFiles, useSave, useStops, useTrips } from '../../lib/queries'
 import { loadState } from '../../lib/load'
-import { todayISO, type DayEntry } from '../../lib/dates'
+import { daysBetween, fmtDay, fmtRange, todayISO } from '../../lib/dates'
 import { chosenDay, validDay } from '../../lib/agenda'
-import { dayAreas, findMatches, itineraryDays, normal, type ItinDay } from '../../lib/itinerary'
+import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, overviewItems, type ItinDay, type OverviewItem, type SideRow } from '../../lib/itinerary'
+import { dayLegs, type Leg } from '../../lib/legs'
+import { positionsAfterMove } from '../../lib/order'
+import { directionsUrl } from '../../lib/gmaps'
+import { walkWords } from '../../lib/google/routes'
 import { LoadState } from '../../components/States'
+import { EmptyState } from '../../components/EmptyState'
 import { Icon } from '../../components/Icon'
-import { dayLabel, tint } from '../../components/MonthCalendar'
-import { fmtDay } from '../../lib/dates'
+import { tint } from '../../components/MonthCalendar'
 import { useStopSheet } from '../stops/StopSheet'
 import { useHighlight } from '../trip/highlight'
 import { useReadingDay } from '../trip/readingDay'
+import { useWalks, type WalkAnswer } from '../plan/useWalks'
 import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
+import { ParentCalendar } from './ParentCalendar'
+import { useWide } from '../../lib/useWide'
+import { clashPairs, type Clash } from '../../lib/clash'
+import { descendants } from '../../lib/countries'
+import { ClashRow } from '../trip/ClashRow'
+import { Sheet } from '../../components/Sheet'
+import { TripForm } from '../home/TripForm'
+import { useCanEdit } from '../../lib/offline'
 
-const foldKey = (id: string) => `itinerary-folded-${id}`
-function readFolds(id: string): Set<string> {
-  try { return new Set(JSON.parse(localStorage.getItem(foldKey(id)) ?? '[]') as string[]) } catch { return new Set() }
+// only a fixed or sticky bar covers a scrolled day
+function coveredTop() {
+  let bottom = 0
+  for (const el of document.querySelectorAll<HTMLElement>('.trip-bar, .doc-tools')) {
+    const pos = getComputedStyle(el).position
+    if (pos === 'sticky' || pos === 'fixed') bottom = Math.max(bottom, el.getBoundingClientRect().bottom)
+  }
+  return Math.max(0, bottom)
 }
-function writeFolds(id: string, s: Set<string>) {
-  try { localStorage.setItem(foldKey(id), JSON.stringify([...s])) } catch { /* no storage: folds last this visit only */ }
-}
-
-// the sticky bar's height, so a day or a match lands just under it
 function underBar(root: HTMLElement | null) {
-  const bar = document.querySelector<HTMLElement>('.trip-bar')
-  root?.style.setProperty('--bar-h', `${bar?.offsetHeight ?? 0}px`)
+  root?.style.setProperty('--bar-h', `${coveredTop()}px`)
 }
 
-type Props = { trip: Trip; slot?: HTMLElement | null }
+const monthOf = (d: string) => fmtDay(d, { month: 'long' })
 
-// the whole trip as one doc: every day folds, and search finds every line a place is on
-export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
+// the whole trip as one document: every listed day open, its lines, the walks between them.
+// a long trip lists only days with something on them (and today while it's on)
+// searchSlot: where the trip page wants the search button (its header, beside the +); without one it sits above the strip
+export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { trip: Trip; searchSlot?: HTMLElement | null }) {
+  const wide = useWide()
+  const canEdit = useCanEdit()
   const tq = useTrips()
   const sq = useStops()
   const trips = tq.data ?? []
   const stops = sq.data ?? []
+  const files = useFiles().data ?? []
   const load = loadState(tq, sq)
   const sheet = useStopSheet()
   const lit = useHighlight()
@@ -46,86 +63,87 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
   const reading = useReadingDay()
   const root = useRef<HTMLDivElement>(null)
   const strip = useRef<HTMLElement>(null)
+  const today = todayISO()
 
-  const it = useMemo(() => itineraryDays(trip, trips, stops), [trip, trips, stops])
-  const [folded, setFolded] = useState(() => readFolds(trip.id))
+  const it = useMemo(() => itineraryDays(trip, trips, stops, today), [trip, trips, stops, today])
+  const [searching, setSearching] = useState(false)
   const [q, setQ] = useState('')
   const [cur, setCur] = useState(0)
-  // days opened by hand while searching; forgotten when the search changes
-  const [peek, setPeek] = useState<Set<string>>(new Set())
-  const searching = normal(q.trim()) !== ''
-  const matches = useMemo(() => findMatches(it, q), [it, q])
-  const hitDays = useMemo(() => new Set(matches.map((m) => m.date ?? 'none')), [matches])
+  const query = searching ? q : ''
+  // a long trip with side trips is an overview (one row per side trip); searching always looks through everything
+  const fold = foldsSideTrips(trip, trips) && !query
+  // folded, the calendar is the way around; the list below is only for a trip that isn't
+  const items: OverviewItem[] = useMemo(() => fold ? [] : it.days.map((day) => ({ kind: 'day' as const, day })), [fold, it])
+  const dateOf = (i: OverviewItem) => (i.kind === 'side' ? i.date : i.day.date)
+  const matches = useMemo(() => findMatches({ ...it, undated: [] }, query), [it, query])
+  const hitDays = useMemo(() => new Set(matches.map((m) => m.date ?? '')), [matches])
   const current = matches[cur] ?? null
+  // a clash shows on every trip it touches, and on the trips above them
+  const clashes = useMemo(() => {
+    const ids = new Set(descendants(trip.id, trips))
+    return clashPairs(trips, stops).filter((c) => ids.has(c.a.tripId) || ids.has(c.b.tripId))
+  }, [trips, stops, trip.id])
+  const [adjusting, setAdjusting] = useState<Trip | null>(null)
+  const adjust = (c: Clash) => { if (c.kind === 'stay') sheet?.editStop(c.b.id); else setAdjusting(trips.find((t) => t.id === c.b.id) ?? null) }
+  const fileCount = useMemo(() => { const m = new Map<string, number>(); for (const f of files) m.set(f.stop_id, (m.get(f.stop_id) ?? 0) + 1); return m }, [files])
 
   const asked = params.get('day')
-  // where the doc opens: the calendar's day, else today in the trip, else its first day
-  const opensOn = validDay(asked) ? asked : chosenDay(trip, trips, stops, null, todayISO())
-  const onDay = reading.day ?? it.days.find((d) => d.date >= (opensOn ?? ''))?.date ?? it.days[0]?.date ?? null
+  // where the document opens: the link's day, else today in the trip, else its first day
+  const opensOn = validDay(asked) ? asked : chosenDay(trip, trips, stops, null, today)
+  const onDay = reading.day ?? items.map(dateOf).find((d) => d >= (opensOn ?? '')) ?? (items[0] ? dateOf(items[0]) : null)
   const readingRef = useRef(reading)
   readingRef.current = reading
   function setDay(d: string | null) {
     if (d && d !== readingRef.current.day) readingRef.current.set(d)
   }
-  // leaving the itinerary, the map and the + go back to the calendar's day
   useEffect(() => () => readingRef.current.set(null), [])
 
-  function scrollTo(el: Element | null | undefined, block: ScrollLogicalPosition) {
+  function scrollTo(el: Element | null | undefined, block: ScrollLogicalPosition, smooth = true) {
     underBar(root.current)
-    el?.scrollIntoView?.({ behavior: 'smooth', block })
+    el?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block })
   }
-
-  // a day you jump to opens, if you'd folded it
   function jumpDay(d: string) {
     setDay(d)
-    if (searching) setPeek((p) => new Set(p).add(d))
-    else if (folded.has(d)) setFolded((f) => { const n = new Set(f); n.delete(d); writeFolds(trip.id, n); return n })
-    scrollTo(document.getElementById(`itin-${d}`), 'start')
+    scrollTo(document.querySelector(`.doc [data-date="${d}"]`), 'start')
   }
-
   function goMatch(i: number) {
     if (!matches.length) return
     const n = (i + matches.length) % matches.length
     setCur(n)
-    const m = matches[n]
-    if (m.date) setDay(m.date)
+    if (matches[n].date) setDay(matches[n].date)
   }
+  useEffect(() => { setCur(0); if (matches[0]?.date) setDay(matches[0].date) }, [query]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (current) scrollTo(document.querySelector(`[data-line="${current.id}"]`), 'center') }, [current?.id, cur]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // a new search starts at its first match
-  useEffect(() => {
-    setCur(0)
-    setPeek(new Set())
-    if (matches[0]?.date) setDay(matches[0].date)
-  }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // the current match comes into view once its day has opened
-  useEffect(() => {
-    if (current) scrollTo(document.querySelector(`[data-line="${current.id}"]`), 'center')
-  }, [current?.id, cur]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // opening the doc lands on the day you're on
+  // opening lands on the day you're on; a laptop/phone switch lands there again
   const landed = useRef(false)
-  useEffect(() => {
-    if (landed.current || load.state !== 'ready' || !it.days.length) return
+  useLayoutEffect(() => {
+    if (landed.current || load.state !== 'ready' || !items.length || fold) return
     landed.current = true
-    const target = it.days.find((d) => d.date >= (opensOn ?? ''))?.date
-    if (!target || target === it.days[0].date) return
-    // once the search and the strip have moved into the bar, so the day lands just under it
-    const land = () => { underBar(root.current); document.getElementById(`itin-${target}`)?.scrollIntoView?.({ block: 'start' }) }
+    const target = items.map(dateOf).find((d) => d >= (opensOn ?? ''))
+    if (!target || target === dateOf(items[0])) return
+    const land = () => scrollTo(document.querySelector(`.doc [data-date="${target}"]`), 'start', false)
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => requestAnimationFrame(land))
     else land()
-  }, [load.state, it.days.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [load.state, items.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  const wasWide = useRef(wide)
+  useLayoutEffect(() => {
+    if (wasWide.current === wide) return
+    wasWide.current = wide
+    const d = readingRef.current.day
+    if (d) requestAnimationFrame?.(() => scrollTo(document.querySelector(`.doc [data-date="${d}"]`), 'start', false))
+  }, [wide])
 
-  // the day nearest the top is the day you're on: the map, the + and the calendar follow it
+  // the day nearest the top is the day you're reading: the map and the + follow it
   useEffect(() => {
     const scroller = root.current?.closest<HTMLElement>('.trip-wide .trip-main') ?? null
     const target: HTMLElement | Window = scroller ?? window
     let frame = 0
     const check = () => {
       frame = 0
-      const top = (document.querySelector('.trip-bar')?.getBoundingClientRect().bottom ?? 0) + 12
+      const top = Math.max(scroller?.getBoundingClientRect().top ?? 0, coveredTop()) + 12
       let at: string | null = null
-      for (const el of root.current?.querySelectorAll<HTMLElement>('.itin-day[data-date]') ?? []) {
+      for (const el of root.current?.querySelectorAll<HTMLElement>('.doc-day[data-date]') ?? []) {
         if (el.getBoundingClientRect().top <= top) at = el.dataset.date ?? null
         else break
       }
@@ -134,126 +152,224 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, slot }: Props) {
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(check) }
     target.addEventListener('scroll', onScroll, { passive: true })
     return () => { target.removeEventListener('scroll', onScroll); if (frame) cancelAnimationFrame(frame) }
-  }) // re-attaches each render so it reads the latest link
+  })
 
-  // the strip only moves when the day you're on has gone out of sight, and then glides just far enough
+  // the strip only moves when the day you're on has gone out of sight
   useEffect(() => {
     const box = strip.current
     const chip = box?.querySelector<HTMLElement>('[aria-current="true"]')
     if (!box || !chip || typeof box.scrollTo !== 'function') return
-    const pad = 16
-    const left = chip.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft
-    const right = left + chip.offsetWidth
-    if (left < box.scrollLeft + pad) box.scrollTo({ left: left - pad, behavior: 'smooth' })
-    else if (right > box.scrollLeft + box.clientWidth - pad) box.scrollTo({ left: right - box.clientWidth + pad, behavior: 'smooth' })
+    const left = chip.offsetLeft - 48, right = chip.offsetLeft + chip.offsetWidth + 16
+    if (left < box.scrollLeft) box.scrollTo({ left, behavior: 'smooth' })
+    else if (right > box.scrollLeft + box.clientWidth) box.scrollTo({ left: right - box.clientWidth, behavior: 'smooth' })
   }, [onDay])
 
   if (load.state !== 'ready' && !it.days.length) return <LoadState load={load} blocks={2} />
-
-  const isOpen = (key: string) => (searching ? hitDays.has(key) || peek.has(key) : !folded.has(key))
-  function toggle(key: string) {
-    if (searching) {
-      setPeek((p) => { const n = new Set(p); if (n.has(key)) n.delete(key); else n.add(key); return n })
-      return
-    }
-    setFolded((f) => {
-      const n = new Set(f)
-      if (n.has(key)) n.delete(key); else n.add(key)
-      writeFolds(trip.id, n)
-      return n
-    })
-  }
+  // where you are (or go next) when the trip is folded: straight into that side trip
+  const sideRows = fold ? overviewItems(trip, trips, stops, today).filter((i): i is SideRow => i.kind === 'side') : []
+  const sideNow = sideRows.find((i) => i.date <= today && i.end >= today)
+  const sideNext = !sideNow ? sideRows.find((i) => i.date > today) : undefined
   const onOpen = sheet ? (s: Stop, day?: string | null) => sheet.openStop(s.id, day) : undefined
+  const inTrip = !!trip.start_date && !!trip.end_date && today >= trip.start_date && today <= trip.end_date
 
+  const searchButton = !searching && (
+    <button type="button" className="icon-btn" aria-label="search the plan" onClick={() => setSearching(true)}><Icon name="search" size={20} /></button>
+  )
   const tools = (
-    <div className="itin-tools">
-      <div className="itin-search">
-        <label className="search-box">
-          <Icon name="search" size={18} />
-          <input type="search" role="searchbox" aria-label="search the itinerary" placeholder="search" value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); goMatch(cur + (e.shiftKey ? -1 : 1)) } }} />
-          {searching && <span className="muted num match-count" data-testid="match-count">{matches.length ? `${cur + 1} of ${matches.length}` : '0'}</span>}
-        </label>
-        {searching && <>
+    <div className="doc-tools">
+      {!searchSlot && searchButton}
+      {searching ? (
+        <div className="doc-search">
+          <label className="search-box">
+            <Icon name="search" size={18} />
+            <input type="search" role="searchbox" aria-label="search the plan" placeholder="search the plan" value={q} autoFocus
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); goMatch(cur + (e.shiftKey ? -1 : 1)) } if (e.key === 'Escape') { setSearching(false); setQ('') } }} />
+            {normal(q.trim()) && <span className="mono match-count" data-testid="match-count">{matches.length ? `${cur + 1} of ${matches.length}` : '0'}</span>}
+          </label>
           <button type="button" className="icon-btn" aria-label="previous match" disabled={!matches.length} onClick={() => goMatch(cur - 1)}><Icon name="up" size={18} /></button>
           <button type="button" className="icon-btn" aria-label="next match" disabled={!matches.length} onClick={() => goMatch(cur + 1)}><Icon name="down" size={18} /></button>
-        </>}
-      </div>
-      {it.days.length > 0 && (
-        <nav className="chips itin-strip" aria-label="days" ref={strip}>
-          {it.days.map((d) => (
-            <button key={d.date} type="button" className={`chip${searching && hitDays.has(d.date) ? ' hit' : ''}`} aria-label={dayLabel(d.date)}
-              aria-current={onDay === d.date ? 'true' : undefined} onClick={() => jumpDay(d.date)}>
-              <span className="muted">{fmtDay(d.date, { weekday: 'short' })}</span>
-              <span className="num">{+d.date.slice(8)}</span>
-              <span className="muted">{fmtDay(d.date, { month: 'short' })}</span>
-            </button>
-          ))}
-        </nav>
+          <button type="button" className="text-link" onClick={() => { setSearching(false); setQ('') }}>done</button>
+        </div>
+      ) : (
+        <div className="doc-strip-row">
+          {inTrip && !fold && <button type="button" className="today-chip" aria-label="jump to today" onClick={() => jumpDay(today)}>today</button>}
+          {!fold && <nav className="doc-strip" aria-label="days" ref={strip}>
+            {items.map((item, i) => {
+              const date = dateOf(item)
+              const newMonth = i === 0 || monthOf(date) !== monthOf(dateOf(items[i - 1]))
+              const month = newMonth && <span className="strip-month" aria-hidden="true">{fmtDay(date, { month: 'short' })}</span>
+              if (item.kind === 'side') return null
+              const d = item.day
+              const side = d.owner.id !== trip.id ? d.owner : null
+              return (
+                <span key={d.date} className="strip-item">
+                  {month}
+                  <button type="button" className={`strip-day${side ? ' side' : ''}`} style={side ? tint(side.color) : undefined}
+                    aria-label={fmtDay(d.date, { weekday: 'long', day: 'numeric', month: 'long' })} aria-current={onDay === d.date ? 'true' : undefined} onClick={() => jumpDay(d.date)}>
+                    <span className="strip-wd">{fmtDay(d.date, { weekday: 'narrow' })}</span><span className="strip-n">{+d.date.slice(8)}</span>
+                  </button>
+                </span>
+              )
+            })}
+          </nav>}
+        </div>
       )}
     </div>
   )
 
   return (
-    <div className="itin" ref={root}>
-      {slot ? createPortal(tools, slot) : tools}
+    <div className="doc" ref={root}>
+      {searchSlot && searchButton && createPortal(searchButton, searchSlot)}
+      {tools}
       <LoadState load={load} />
-      {it.days.map((d) => (
-        <Day key={d.date} day={d} trip={trip} open={isOpen(d.date)} onToggle={() => toggle(d.date)}
-          q={searching ? q : ''} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} />
-      ))}
-      {it.undated.length > 0 && (
-        <section className="itin-day" aria-label="no date">
-          <h3 className="itin-head">
-            <button type="button" aria-expanded={isOpen('none')} onClick={() => toggle('none')}>
-              <Icon name="chevron" size={16} /><span className="itin-date">no date</span>
-            </button>
-          </h3>
-          {isOpen('none') && <div className="itin-lines">
-            {it.undated.map((s) => <ItinLine key={s.id} entry={{ kind: 'stop', stop: s }} any={false} q={searching ? q : ''} current={current?.id === s.id} onOpen={onOpen} onLight={lit.set} />)}
-            <AddLine trip={trip} day={null} />
-          </div>}
-        </section>
+      {clashes.map((c) => <ClashRow key={`${c.a.id}-${c.b.id}`} clash={c} canEdit={canEdit} onAdjust={adjust} />)}
+      {(sideNow || sideNext) && (
+        <Link className="side-now" to={`/trip/${(sideNow ?? sideNext)!.trip.id}${sideNow ? `?day=${today}` : ''}`} style={tint((sideNow ?? sideNext)!.trip.color)}>
+          <span className="mono-label">{sideNow ? `now · day ${daysBetween(sideNow.date, today) + 1} of ${sideNow.nights + 1}` : `next · in ${daysBetween(today, sideNext!.date)} ${daysBetween(today, sideNext!.date) === 1 ? 'day' : 'days'}`}</span>
+          <span className="side-now-name">{(sideNow ?? sideNext)!.trip.name} →</span>
+        </Link>
       )}
+      {!fold && !items.length && load.state === 'ready' && <EmptyState title="nothing planned yet" />}
+      {fold && <ParentCalendar trip={trip} trips={trips} stops={stops} today={today} onDay={setDay}
+        renderDay={(d) => <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q="" hidden={false}
+          current={null} onOpen={onOpen} onLight={lit.set} files={fileCount} />} />}
+      {items.map((item) => {
+        if (item.kind === 'side') return <SideTrip key={`side-${item.trip.id}`} row={item} today={today} />
+        const d = item.day
+        return <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
+          hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} files={fileCount} />
+      })}
+      <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
+        {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
+      </Sheet>
     </div>
   )
 })
 
-type DayProps = {
-  day: ItinDay
-  trip: Trip
-  open: boolean
-  onToggle: () => void
-  q: string
-  current: string | null
-  onOpen?: (s: Stop, day?: string | null) => void
-  onLight: (id: string | null) => void
+// a side trip on its parent's plan: one row that opens it, with what's in it at a glance
+function SideTrip({ row, today }: { row: SideRow; today: string }) {
+  const on = row.date <= today && row.end >= today
+  const what = [row.places ? `${row.places} ${row.places === 1 ? 'place' : 'places'}` : '', on ? 'on now' : ''].filter(Boolean).join(' · ')
+  return (
+    <section className="doc-day side-row" id={`itin-side-${row.trip.id}`} data-date={row.date} style={tint(row.trip.color)} aria-label={row.trip.name}>
+      <Link className="side-row-link" to={`/trip/${row.trip.id}${on ? `?day=${today}` : ''}`}>
+        <span className="side-row-bar" aria-hidden="true" />
+        <span className="side-row-body">
+          <span className="mono-label">{fmtRange(row.date, row.end)} · {row.nights} {row.nights === 1 ? 'night' : 'nights'}</span>
+          <span className="side-row-name">{row.trip.name}</span>
+          {(what || row.toBook > 0) && <span className="side-row-what muted">{what}{row.toBook > 0 && <>{what ? ' · ' : ''}<span className="warn-text">{row.toBook} to book</span></>}</span>}
+        </span>
+        <span className="side-row-go" aria-hidden="true">→</span>
+      </Link>
+    </section>
+  )
 }
 
-function Day({ day, trip, open, onToggle, q, current, onOpen, onLight }: DayProps) {
+type DayProps = {
+  day: ItinDay; trip: Trip; today: string; editing: boolean; canEdit: boolean; q: string; hidden: boolean; current: string | null
+  onOpen?: (s: Stop, day?: string | null) => void; onLight: (id: string | null) => void; files: Map<string, number>
+}
+
+// a day is only asked for its walks once it's (nearly) on screen
+function useOnScreen<T extends Element>(): [React.RefObject<T>, boolean] {
+  const ref = useRef<T>(null)
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || on) return
+    if (typeof IntersectionObserver === 'undefined') { setOn(true); return }
+    const io = new IntersectionObserver((xs) => { if (xs.some((x) => x.isIntersecting)) setOn(true) }, { rootMargin: '300px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [on])
+  return [ref, on]
+}
+
+function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, files }: DayProps) {
+  const save = useSave('stops')
+  const [box, onScreen] = useOnScreen<HTMLElement>()
+  const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
   const areas = dayAreas(day.entries)
   const side = day.owner.id !== trip.id ? day.owner : null
   const timed = day.entries.some((e) => e.kind === 'stop' && e.stop?.time)
+  const legs = useMemo(() => dayLegs(day.entries), [day.entries])
+  const walk = useWalks(legs, onScreen)
+  // only untimed lines move by hand; timed ones keep their time's place
+  const movable = day.entries.filter((e) => e.kind === 'stop' && e.stop && !e.stop.time).map((e) => e.stop!)
+  const n = trip.start_date ? daysBetween(trip.start_date, day.date) + 1 : null
+
+  function move(s: Stop, by: number) {
+    const from = movable.findIndex((x) => x.id === s.id)
+    const to = from + by
+    if (from < 0 || to < 0 || to >= movable.length) return
+    for (const c of positionsAfterMove(movable.map((x) => x.id), from, to, movable.map((x) => x.position))) save.mutate(c)
+  }
+  function key(e: KeyboardEvent<HTMLButtonElement>, s: Stop) {
+    if (e.key === 'ArrowUp') { e.preventDefault(); move(s, -1) }
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(s, 1) }
+  }
+  // drag with a mouse, a finger or a pen
+  function grab(e: RPointerEvent<HTMLButtonElement>, s: Stop) {
+    if (!box.current) return
+    e.preventDefault()
+    const from = movable.findIndex((x) => x.id === s.id)
+    const mids = movable.map((x) => { const r = box.current!.querySelector<HTMLElement>(`[data-line="${x.id}"]`)?.getBoundingClientRect(); return r ? r.top + r.height / 2 : 0 })
+    const startY = e.clientY
+    let to = from
+    setDrag({ id: s.id, dy: 0 })
+    const moveTo = (ev: PointerEvent) => { const dy = ev.clientY - startY; to = mids.filter((m, i) => i !== from && m < mids[from] + dy).length; setDrag({ id: s.id, dy }) }
+    const up = () => {
+      window.removeEventListener('pointermove', moveTo); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up)
+      setDrag(null)
+      if (to !== from) for (const c of positionsAfterMove(movable.map((x) => x.id), from, to, movable.map((x) => x.position))) save.mutate(c)
+    }
+    window.addEventListener('pointermove', moveTo); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up)
+  }
+
+  if (hidden) return <section id={`itin-${day.date}`} data-date={day.date} className="doc-day folded-out" ref={box} />
   return (
-    <section className="itin-day" id={`itin-${day.date}`} data-date={day.date} data-testid={`itin-${day.date}`} style={side ? tint(side.color) : undefined}>
-      <h3 className="itin-head">
-        <button type="button" aria-expanded={open} onClick={onToggle}>
-          <Icon name="chevron" size={16} />
-          {side && <span className="itin-side"><span className="dot" />{side.name}</span>}
-          <span className="itin-date">{dayLabel(day.date)}</span>
-          <span className="itin-areas muted">{areas.slice(0, 3).join(' · ')}</span>
-        </button>
-      </h3>
-      {open && (
-        <div className="itin-lines">
-          {day.entries.map((e) => (
-            <ItinLine key={`${e.stop!.id}-${e.kind}`} entry={e} any={timed && e.kind === 'stop'} q={q}
-              current={current === e.stop!.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
-          ))}
-          <AddLine trip={day.owner} day={day.date} />
-        </div>
-      )}
+    <section className={`doc-day${day.date === today ? ' is-today' : ''}`} id={`itin-${day.date}`} data-date={day.date} data-testid={`itin-${day.date}`} ref={box}
+      style={tint((side ?? trip).color)} aria-labelledby={`h-${day.date}`}>
+      <header className="doc-day-head">
+        <h2 className="doc-date" id={`h-${day.date}`}>{fmtDay(day.date, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+        <p className="doc-day-meta mono">
+          {day.date === today && <span className="today-tag">today</span>}
+          {n != null && n > 0 && <span>day {n}</span>}
+          {side && <Link className="side-tag" to={`/trip/${side.id}`}><span className="dot" />{side.name}</Link>}
+          {areas.slice(0, 3).map((a) => <span key={a}>{a.toLowerCase()}</span>)}
+        </p>
+      </header>
+      <div className="doc-lines">
+        {day.entries.map((e) => {
+          const s = e.stop!
+          const isMove = canEdit && e.kind === 'stop' && !s.time && movable.length > 1
+          const grip = isMove ? (
+            <button type="button" className="grip" aria-label={`move ${s.title || 'line'} (arrow keys)`} onPointerDown={(ev) => grab(ev, s)} onKeyDown={(ev) => key(ev, s)}>
+              <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true"><g fill="currentColor">{[3, 9, 15].flatMap((y) => [<circle key={`a${y}`} cx="3" cy={y} r="1.4" />, <circle key={`b${y}`} cx="9" cy={y} r="1.4" />])}</g></svg>
+            </button>
+          ) : undefined
+          const after = legs.filter((l) => l.from.id === s.id && l.fromKind === e.kind)
+          return (
+            <div key={`${s.id}-${e.kind}`} className={drag?.id === s.id && e.kind === 'stop' ? 'dragging' : undefined} style={drag?.id === s.id && e.kind === 'stop' ? { transform: `translateY(${drag.dy}px)` } : undefined}>
+              <ItinLine editing={editing} entry={e} any={timed && e.kind === 'stop'} q={q} grip={grip} files={files.get(s.id)}
+                current={current === s.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
+              {after.map((l) => <WalkLine key={l.to.id} leg={l} answer={walk(l.a, l.b)} />)}
+            </div>
+          )
+        })}
+        {canEdit && <AddLine trip={day.owner} day={day.date} />}
+      </div>
     </section>
+  )
+}
+
+// the walk on to the next place: time and distance once known, always a way to google maps
+function WalkLine({ leg, answer }: { leg: Leg; answer: WalkAnswer }) {
+  const words = walkWords(answer)
+  return (
+    <a className={`walk${answer === undefined ? ' pulse' : ''}`} href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
+      <Icon name="walk" size={14} /><span>{words ?? 'directions'}</span><span aria-hidden="true">→</span>
+    </a>
   )
 }

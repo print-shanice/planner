@@ -1,10 +1,12 @@
 :root {
+  /* white, like totoro's own background, so the loading animation sits in the page with no box around it */
   --ground: #FFFFFF;
+  --paper-2: #F3F4F6;
   --card: #FFFFFF;
   --ink: #16181D;
   --ink-2: #5D626B;
-  --line: #E3E2DC;
-  --soft: #F1F1EE;
+  --line: #E3E5E9;
+  --soft: #F1F2F5;
   --ink-3: #8E9197;
 
   --brand: #E60023;
@@ -44,6 +46,8 @@
 
   --f-head: "Bricolage Grotesque Variable", "Hanken Grotesk Variable", system-ui, sans-serif;
   --f-body: "Hanken Grotesk Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* times, dates and small labels: the system's own mono, nothing to download */
+  --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --radius: 20px;
   --shadow: 0 1px 0 var(--line);

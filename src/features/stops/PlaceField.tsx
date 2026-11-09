@@ -1,11 +1,14 @@
 import type { Place } from '../../lib/types'
-import { SearchStatus, usePlaceSearch } from '../plan/usePlaceSearch'
+import { HitRow, PoweredBy, SearchStatus, usePlaceSearch } from '../plan/usePlaceSearch'
+import { usePick } from '../plan/usePick'
 import { Icon } from '../../components/Icon'
+import { Pending } from '../../components/Pending'
 
 type Props = { id: string; label: string; value: Place | null; onChange: (p: Place | null) => void; near?: { lat: number; lng: number } | null }
 
 export function PlaceField({ id, label, value, onChange, near }: Props) {
-  const { q, results, failed, busy, change, run, clear } = usePlaceSearch(near)
+  const { q, results, failed, busy, change, run, clear, pick: resolve } = usePlaceSearch(near)
+  const { pick, picking, failed: lost } = usePick(resolve, (p) => { onChange(p); clear() })
 
   return (
     <div className="field">
@@ -29,16 +32,12 @@ export function PlaceField({ id, label, value, onChange, near }: Props) {
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); run(q, 1) } }} />
           </div>
           <SearchStatus busy={busy} failed={failed} results={results} onRetry={() => run(q, 1)} />
+          {picking && <div className="search-note"><Pending label="finding the place" /></div>}
+          {lost && <p className="warn-line search-note">couldn't get that place</p>}
           {results && results.length > 0 && (
             <ul className="results">
-              {results.map((p, i) => (
-                <li key={p.osm_id ?? i}>
-                  <button type="button" className="result" onClick={() => { onChange(p); clear() }}>
-                    <Icon name="pin" size={18} />
-                    <span className="result-text"><span>{p.name}</span>{p.address && <span className="muted">{p.address}</span>}</span>
-                  </button>
-                </li>
-              ))}
+              {results.map((h) => <li key={h.key}><HitRow hit={h} onPick={() => pick(h)} /></li>)}
+              <li><PoweredBy /></li>
             </ul>
           )}
         </>

@@ -1,6 +1,8 @@
 import type { Place } from '../../lib/types'
 import { Icon } from '../../components/Icon'
-import { SearchStatus, usePlaceSearch } from '../plan/usePlaceSearch'
+import { Pending } from '../../components/Pending'
+import { HitRow, PoweredBy, SearchStatus, usePlaceSearch } from '../plan/usePlaceSearch'
+import { usePick } from '../plan/usePick'
 
 type Props = {
   label: string; name: string; place: Place | null; near?: { lat: number; lng: number } | null; autoFocus?: boolean
@@ -10,7 +12,8 @@ type Props = {
 // one field for a name and its place: typing searches for real places, picking one fills both;
 // your own words still work without a place on the map
 export function NamePlace({ label, name, place, near, autoFocus, onName, onPlace }: Props) {
-  const { results, failed, busy, change, run, clear } = usePlaceSearch(near)
+  const { results, failed, busy, change, run, clear, pick: resolve } = usePlaceSearch(near)
+  const { pick, picking, failed: lost } = usePick(resolve, (p) => { onPlace(p); clear() })
   return (
     <div className="name-place">
       <input className="title-input" aria-label={label} placeholder={label} value={name} autoFocus={autoFocus} autoComplete="off"
@@ -24,16 +27,12 @@ export function NamePlace({ label, name, place, near, autoFocus, onName, onPlace
       ) : (
         <>
           <SearchStatus busy={busy} failed={failed} results={null} onRetry={() => run(name, 1)} />
+          {picking && <div className="search-note"><Pending label="finding the place" /></div>}
+          {lost && <p className="warn-line search-note">couldn't get that place</p>}
           {results && results.length > 0 && (
             <ul className="results" aria-label="places">
-              {results.map((p, i) => (
-                <li key={p.osm_id ?? i}>
-                  <button type="button" className="result" onClick={() => { onPlace(p); clear() }}>
-                    <Icon name="pin" size={18} />
-                    <span className="result-text"><span>{p.name}</span>{p.address && <span className="muted">{p.address}</span>}</span>
-                  </button>
-                </li>
-              ))}
+              {results.map((h) => <li key={h.key}><HitRow hit={h} onPick={() => pick(h)} /></li>)}
+              <li><PoweredBy /></li>
             </ul>
           )}
         </>

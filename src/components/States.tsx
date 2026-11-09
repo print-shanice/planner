@@ -1,19 +1,10 @@
 import type { Load } from '../lib/load'
 import { EmptyState } from './EmptyState'
+import { Loading } from './Loading'
 
-// grey stand-ins for cards; they fade in late, so a quick load from the device never flashes
-export function Skeleton({ blocks = 2 }: { blocks?: number }) {
-  return (
-    <div className="skeleton" role="status" aria-label="loading">
-      {Array.from({ length: blocks }, (_, i) => (
-        <div key={i} className="skeleton-card" aria-hidden="true">
-          <span className="bone w45" />
-          <span className="bone" />
-          <span className="bone w70" />
-        </div>
-      ))}
-    </div>
-  )
+// anything still loading shows totoro (blocks is kept for older callers; the animation is the same everywhere)
+export function Skeleton(_: { blocks?: number }) {
+  return <Loading />
 }
 
 export function LoadNotice({ onRetry }: { onRetry: () => void }) {

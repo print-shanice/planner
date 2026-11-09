@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, useLocation } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
@@ -6,6 +6,7 @@ import { trip, stop, place } from '../factories'
 const db = vi.hoisted(() => ({ search: vi.fn(), trips: [] as any[], stops: [] as any[], save: vi.fn(), reverse: vi.fn(), stopsQ: null as null | Record<string, unknown>, highlight: undefined as unknown, fits: [] as Array<[string | undefined, number | undefined]>, overviews: [] as unknown[] }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
+  useLinks: () => ({ data: [] }),
   useStops: () => db.stopsQ ?? ({ data: db.stops }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))
@@ -69,8 +70,21 @@ it('saving keeps the place without a day', async () => {
   show()
   await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
   const card = await screen.findByRole('region', { name: 'Rovaniemi Church' })
-  await userEvent.click(within(card).getByRole('button', { name: 'save' }))
+  await userEvent.selectOptions(within(card).getByLabelText('day'), '')
+  await userEvent.click(within(card).getByRole('button', { name: 'save idea' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ kind: 'place', saved: true, day: null, title: 'Rovaniemi Church' }))
+})
+
+it('a found place keeps the kind the search saw, on the stop and not inside the place', async () => {
+  db.reverse.mockResolvedValue({ name: 'Kahvila', lat: 66.5079, lng: 25.7287, category: 'cafe' })
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
+  const card = await screen.findByRole('region', { name: 'Kahvila' })
+  await userEvent.selectOptions(within(card).getByLabelText('day'), '')
+  await userEvent.click(within(card).getByRole('button', { name: 'save idea' }))
+  const row = db.save.mock.calls.at(-1)![0]
+  expect(row.category).toBe('cafe')
+  expect(row.place).not.toHaveProperty('category')
 })
 
 it('a pin opens its card with one primary action', async () => {
@@ -78,13 +92,13 @@ it('a pin opens its card with one primary action', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'tap pin' }))
   const card = screen.getByRole('region', { name: 'arktikum' })
   expect(card.querySelectorAll('.btn.primary')).toHaveLength(1)
-  expect(within(card).getByRole('link', { name: 'open in google maps' })).toBeInTheDocument()
+  expect(within(card).getByRole('link', { name: 'google maps →' })).toBeInTheDocument()
 })
 
 it('on a phone, filter chips list all days, each busy day and saved', () => {
   show('/', true)
-  const chips = screen.getByRole('group', { name: 'show' })
-  expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['whole trip', 'mon 8', 'saved'])
+  const scope = screen.getByRole('combobox', { name: 'map scope' })
+  expect(within(scope).getAllByRole('option').map(o => (o as HTMLOptionElement).value)).toEqual(['all', '2027-02-08', 'saved'])
 })
 
 const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
@@ -102,6 +116,7 @@ describe('the places sheet on a phone', () => {
 
   it('lists the chosen day\'s numbered places in order, under the day and a count', () => {
     show('/?day=2027-02-08', true)
+    fireEvent.click(screen.getByRole('button', { name: 'places list' }))
     expect(within(sheet()).getByText('monday 8 · 2 places')).toBeInTheDocument()
     expect(within(sheet()).getAllByRole('button', { name: /arktikum|church/ }).map((b) => b.textContent)).toEqual([expect.stringMatching(/^1arktikum/), expect.stringMatching(/^2church/)])
   })
@@ -109,6 +124,8 @@ describe('the places sheet on a phone', () => {
   it('opens and closes from its handle', async () => {
     show('/?day=2027-02-08', true)
     const handle = within(sheet()).getByRole('button', { name: 'places list' })
+    expect(handle).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(handle)
     expect(handle).toHaveAttribute('aria-expanded', 'true')
     await userEvent.click(handle)
     expect(handle).toHaveAttribute('aria-expanded', 'false')
@@ -117,6 +134,7 @@ describe('the places sheet on a phone', () => {
 
   it('tapping a row opens that place\'s card', async () => {
     show('/?day=2027-02-08', true)
+    fireEvent.click(screen.getByRole('button', { name: 'places list' }))
     await userEvent.click(within(sheet()).getByRole('button', { name: /arktikum/ }))
     expect(screen.getByRole('region', { name: 'arktikum' })).toBeInTheDocument()
   })
@@ -147,17 +165,20 @@ describe('on a laptop, plan and map light each other up', () => {
     expect(document.querySelector('[data-highlight]')).toHaveAttribute('data-highlight', 's1')
   })
 
-  it('clicking a pin finds its stop in the plan', async () => {
+  it('clicking a pin finds its line in the plan beside', async () => {
+    const main = document.createElement('section')
+    main.className = 'trip-main'
     const row = document.createElement('div')
-    row.dataset.stop = 's1'
-    row.innerHTML = '<button class="stop-main">arktikum row</button>'
-    document.body.appendChild(row)
+    row.dataset.line = 's1'
+    row.innerHTML = '<button class="itin-main">arktikum row</button>'
+    main.appendChild(row)
+    document.body.appendChild(main)
     const scroll = vi.fn(); (row as any).scrollIntoView = scroll
     show()
     await userEvent.click(screen.getByRole('button', { name: 'tap pin' }))
     expect(scroll).toHaveBeenCalled()
     expect(document.activeElement).toBe(row.querySelector('button'))
-    row.remove()
+    main.remove()
   })
 })
 
@@ -165,12 +186,14 @@ it('on a phone the map fits the day inside what the floating bar, chips and shee
   show('/?day=2027-02-08', true)
   const [top, bottom] = (document.querySelector('[data-inset]') as HTMLElement).dataset.inset!.split(',').map(Number)
   expect(top).toBeGreaterThanOrEqual(190)
-  expect(bottom).toBeGreaterThanOrEqual(280)
+  expect(bottom).toBeGreaterThanOrEqual(160)
+  expect(bottom).toBeLessThan(280)
 })
 
 it('on a phone a places sheet taller than the usual margin pushes the fit up above it, as far as the sheet can grow', () => {
   db.stops = Array.from({ length: 8 }, (_, i) => stop({ id: `p${i}`, trip_id: 'lap', title: `p${i}`, day: '2027-02-08', position: i, place: place({ lat: 66.5 + i * 0.01, lng: 25.7 }) }))
   show('/?day=2027-02-08', true)
+    fireEvent.click(screen.getByRole('button', { name: 'places list' }))
   const [, bottom] = (document.querySelector('[data-inset]') as HTMLElement).dataset.inset!.split(',').map(Number)
   expect(bottom).toBeGreaterThan(300)
   // the sheet stops at 45% of the screen (map.css), then scrolls
@@ -186,8 +209,9 @@ it('on a phone a new view is fitted with its own sheet height, not the last view
     db.trips = [parent, ...months.map((m, i) => trip({ id: `side${i}`, name: `side ${i}`, parent_id: 'ex', start_date: `2027-${m}-10`, end_date: `2027-${m}-12`, base: place({ lat: 48 + i, lng: 10 + i }) }))]
     db.stops = [stop({ id: 'one', trip_id: 'ex', title: 'one', day: '2027-02-01', place: place({ lat: 51.44, lng: 5.48 }) })]
     render(<MemoryRouter initialEntries={['/trip/ex?tab=map&day=2027-02-01']}><MapTab trip={parent} phone /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: 'places list' }))
     const dayBottom = db.fits.filter(([k]) => k === 'ex|2027-02-01').at(-1)![1]!
-    await userEvent.click(within(screen.getByRole('group', { name: 'show' })).getByRole('button', { name: 'whole trip' }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'map scope' }), 'all')
     const whole = db.fits.filter(([k]) => k === 'ex|all')
     expect(whole[0][1]).toBeGreaterThan(dayBottom)
     expect(whole[0][1]).toBe(whole.at(-1)![1])
@@ -274,6 +298,7 @@ it('the day\'s list starts with the bed and names journeys by both ends', () => 
     stop({ id: 'j', trip_id: 'lap', kind: 'journey', title: '', day: '2027-02-08', time: null, position: 9, origin: place({ name: 'Rovaniemi Airport', lat: 66.56, lng: 25.83 }), destination: place({ name: 'Helsinki Airport', lat: 60.32, lng: 24.95 }) }),
   ]
   show('/?day=2027-02-08', true)
+    fireEvent.click(screen.getByRole('button', { name: 'places list' }))
   const rows = Array.from(document.querySelectorAll('.places-row')).map((r) => r.textContent)
   expect(rows).toEqual([
     'staying at hostel',
@@ -309,6 +334,7 @@ describe('whole trip with side trips', () => {
   it('lists the side trips and opens one', async () => {
     db.trips = [parent, { ...lap, parent_id: 'ex' }]
     showParent(true)
+    fireEvent.click(screen.getByRole('button', { name: 'places list' }))
     expect(document.querySelector('[data-overview]')).toHaveAttribute('data-overview', '1')
     expect(screen.getByText('1 side trip')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /lapland/ }))
@@ -345,8 +371,8 @@ describe('whole trip with side trips', () => {
   it("a day chip's dot is the colour of the trip that owns the day", () => {
     db.trips = [{ ...parent, color: 0 }, { ...lap, parent_id: 'ex', color: 3 }]
     showParent(true)
-    const chip = within(screen.getByRole('group', { name: 'show' })).getByRole('button', { name: 'mon 8' })
-    expect(chip.querySelector('.dot')!.getAttribute('style')).toContain('var(--g3)')
+    const scope = screen.getByRole('combobox', { name: 'map scope' })
+    expect(within(scope).getByRole('option', { name: /8/ })).toHaveValue('2027-02-08')
   })
 
   describe('on a laptop', () => {

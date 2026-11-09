@@ -99,6 +99,10 @@ create table if not exists public.links (
   updated_at timestamptz not null default now()
 );
 
+-- a saved reel or page can belong to a place in the plan; deleting the place keeps the link
+alter table public.links add column if not exists stop_id uuid references public.stops(id) on delete set null;
+create index if not exists links_stop on public.links(stop_id);
+
 create table if not exists public.packing (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips(id) on delete cascade,
