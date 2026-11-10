@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { countdown, fmtRange, nights } from '../../lib/dates'
@@ -49,27 +49,59 @@ export function Lead({ trip, today, href }: { trip: Trip; today: string; href: s
   )
 }
 
-// a list on a phone (side trips tucked under their parent), tiles on a laptop (each side trip says whose it is)
-export function TripList({ items, today }: { items: Item[]; today: string }) {
+const FEW = 3
+
+// one card per trip with its side trips inside it, so a side trip never reads as a trip of its own.
+// past the first few, a "+n" opens the rest; a side trip's own side trips are named on it
+export function TripFamilies({ tops, trips, today, keepEnded = false }: { tops: Trip[]; trips: Trip[]; today: string; keepEnded?: boolean }) {
+  const kidsOf = (id: string) => trips.filter((c) => c.parent_id === id && (keepEnded || countdown(c, today).kind !== 'done')).sort(byStart)
   return (
-    <ul className="trip-list">
-      {items.map(({ trip: t, depth, parent }, i) => {
-        const extra = [fmtRange(t.start_date, t.end_date), when(t, today)].filter(Boolean)
-        return (
-          <li key={t.id} style={{ '--i': Math.min(i, 12) } as CSSProperties}>
-            <Link to={`/trip/${t.id}`} className="trip-item" data-testid="trip-item" data-depth={depth} style={tint(t.color)}>
-              <span className="dot" aria-hidden="true" />
-              <span className="trip-item-text">
-                <span className="trip-item-name">{t.name}</span>
-                <span className="muted num">
-                  {parent && <span className="trip-item-parent">{parent.name}{extra.length ? ' · ' : ''}</span>}
-                  {extra.join(' · ')}
-                </span>
-              </span>
-            </Link>
-          </li>
-        )
-      })}
+    <ul className="trip-families">
+      {tops.map((t, i) => <Family key={t.id} trip={t} sides={kidsOf(t.id)} kidsOf={kidsOf} today={today} i={i} />)}
     </ul>
+  )
+}
+
+function Family({ trip: t, sides, kidsOf, today, i }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; today: string; i: number }) {
+  const [all, setAll] = useState(false)
+  const shown = all || sides.length <= FEW + 1 ? sides : sides.slice(0, FEW)
+  const hidden = sides.length - shown.length
+  const line = [fmtRange(t.start_date, t.end_date), when(t, today)].filter(Boolean).join(' · ')
+  return (
+    <li className="family" data-testid="trip-family" style={{ ...tint(t.color), '--i': Math.min(i, 12) } as CSSProperties}>
+      <Link to={`/trip/${t.id}`} className="trip-item family-head" data-testid="trip-item" data-depth={0}>
+        <span className="dot" aria-hidden="true" />
+        <span className="trip-item-text">
+          <span className="trip-item-name">{t.name}</span>
+          <span className="muted num">{line}</span>
+        </span>
+        {sides.length > 0 && <span className="mono-label family-count">{sides.length} side {sides.length === 1 ? 'trip' : 'trips'}</span>}
+      </Link>
+      {sides.length > 0 && (
+        <ul className="family-sides">
+          {shown.map((c) => {
+            const grand = kidsOf(c.id)
+            const extra = [fmtRange(c.start_date, c.end_date), when(c, today)].filter(Boolean).join(' · ')
+            return (
+              <li key={c.id}>
+                <Link to={`/trip/${c.id}`} className="side-item" data-testid="side-item" style={tint(c.color)}>
+                  <span className="dot" aria-hidden="true" />
+                  <span className="trip-item-text">
+                    <span className="side-name">{c.name}</span>
+                    {extra && <span className="muted num">{extra}</span>}
+                    {grand.length > 0 && <span className="muted side-grand">+ {grand.length > 2 ? `${grand.length} side trips` : grand.map((g) => g.name).join(', ')}</span>}
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
+          {hidden > 0 && (
+            <li>
+              <button type="button" className="side-more" aria-label={`show ${hidden} more side trips`} onClick={() => setAll(true)}>+{hidden}</button>
+            </li>
+          )}
+        </ul>
+      )}
+    </li>
   )
 }

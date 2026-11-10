@@ -15,7 +15,7 @@ import { Loading } from '../../components/Loading'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
-import { Lead, TripList, leadTrip, tripItems } from './Trips'
+import { Lead, TripFamilies, leadTrip } from './Trips'
 import { Calendar } from './Calendar'
 import { Travels } from './Travels'
 import { TripForm } from './TripForm'
@@ -77,8 +77,8 @@ export function HomePage() {
 
   const top = trips.filter((t) => !t.parent_id)
   const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
-  const upcoming = tripItems(top.filter((t) => countdown(t, today).kind !== 'done').sort(byStart), trips, today)
-  const past = tripItems(top.filter((t) => countdown(t, today).kind === 'done').sort((a, b) => byStart(b, a)), trips, today, true).filter((i) => i.depth === 0)
+  const upcoming = top.filter((t) => countdown(t, today).kind !== 'done').sort(byStart)
+  const past = top.filter((t) => countdown(t, today).kind === 'done').sort((a, b) => byStart(b, a))
   const lead = leadTrip(trips, today)
   const resume = resumePlan(trips, stops, today)
   // "open the plan" goes back to the day you were on, when it was this trip
@@ -128,14 +128,14 @@ export function HomePage() {
                 </div>
                 {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
                 {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-                {upcoming.length > 0 && <TripList items={upcoming} today={today} />}
+                {upcoming.length > 0 && <TripFamilies tops={upcoming} trips={trips} today={today} />}
               </section>
             </div>
             {/* only shows once a trip has ended */}
             {past.length > 0 && (
               <section className="home-section home-past">
                 <div className="section-head"><h2 className="head">past</h2></div>
-                <TripList items={past} today={today} />
+                <TripFamilies tops={past} trips={trips} today={today} keepEnded />
               </section>
             )}
           </div>

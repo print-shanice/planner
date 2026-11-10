@@ -431,14 +431,32 @@ describe('trips, the view home opens on', () => {
     expect(lead).toHaveTextContent('28 jan – 13 jul · 166 nights')
     expect(within(lead).getByRole('link', { name: 'open the plan →' }).getAttribute('href')).toMatch(/^\/trip\/ex/)
     expect(screen.getByRole('heading', { level: 2, name: 'upcoming' })).toBeInTheDocument()
+    // one card per trip, its side trips inside it
+    const families = screen.getAllByTestId('trip-family')
+    expect(families).toHaveLength(2)
     expect(items().map((r) => r.textContent)).toEqual([
-      expect.stringMatching(/europe exchange 2027.*28 jan – 13 jul.*in 84 days/),
-      expect.stringMatching(/lapland.*europe exchange 2027.*7 – 11 feb.*in 94 days/),
-      expect.stringMatching(/paris.*europe exchange 2027.*5 – 8 mar.*in 120 days/),
+      expect.stringMatching(/europe exchange 2027.*28 jan – 13 jul.*in 84 days.*2 side trips/),
       expect.stringMatching(/summer.*1 – 10 jun.*in 208 days/),
     ])
-    expect(items().map((r) => r.getAttribute('data-depth'))).toEqual(['0', '1', '1', '0'])
-    expect(items()[1]).toHaveAttribute('href', '/trip/lap')
+    const sides = within(families[0]).getAllByTestId('side-item')
+    expect(sides.map((r) => r.textContent)).toEqual([
+      expect.stringMatching(/lapland.*7 – 11 feb.*in 94 days/), expect.stringMatching(/paris.*5 – 8 mar.*in 120 days/),
+    ])
+    expect(sides[0]).toHaveAttribute('href', '/trip/lap')
+    expect(within(families[1]).queryAllByTestId('side-item')).toHaveLength(0)
+  })
+
+  it('a trip with many side trips shows the first three and a "+n" that opens the rest; their own side trips are named', async () => {
+    const kids = ['a', 'b', 'c', 'd', 'e'].map((n, i) => trip({ id: n, parent_id: 'ex', name: `side ${n}`, start_date: `2027-02-0${i + 1}`, end_date: `2027-02-0${i + 1}` }))
+    db.trips = [trip({ id: 'ex', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13' }), ...kids,
+      trip({ id: 'mon', parent_id: 'a', name: 'montserrat', start_date: '2027-02-01', end_date: '2027-02-01' })]
+    show()
+    const family = screen.getByTestId('trip-family')
+    expect(within(family).getAllByTestId('side-item').map((r) => r.querySelector('.side-name')!.textContent)).toEqual(['side a', 'side b', 'side c'])
+    expect(within(family).getAllByTestId('side-item')[0]).toHaveTextContent('+ montserrat')
+    await userEvent.click(within(family).getByRole('button', { name: 'show 2 more side trips' }))
+    expect(within(family).getAllByTestId('side-item')).toHaveLength(5)
+    expect(within(family).queryByRole('button', { name: /more side trips/ })).toBeNull()
   })
 
   it('has the month calendar under the banner, opening on the month the soonest trip starts', () => {
