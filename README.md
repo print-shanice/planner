@@ -11,7 +11,7 @@ a little travel planner for two. i made it to plan my europe exchange with a fri
 - **a map beside the plan.** on a laptop it stays on the right and follows the day you're reading. on a phone it has its own tab. numbered pins, walking routes, a whole-trip view, and links out to google maps when it's time to go.
 - **places have a kind.** café, restaurant, museum, park, shop, stay… each with its own icon. search with google places when it's set up (openstreetmap otherwise), or just write something down.
 - **ideas before dates.** jot a place or a note without deciding when to go. search your ideas and put one on a day when you're ready. whole side trips can wait without dates too.
-- **links have their own place.** instagram reels, tiktoks, youtube videos and random pages: share them to the planner or paste them in. keep them in the home inbox, file them under a trip, or attach them to a place.
+- **links have their own place.** instagram reels, tiktoks, youtube videos and random pages: share them to the planner or paste them in. on an iphone a shortcut in the share sheet asks which trip and saves it there without leaving instagram (it signs in with a save key from the account sheet). keep them in the home inbox, file them under a trip, or attach them to a place.
 - **bookings and tickets.** mark something to book or booked, keep the reference and booking link, and attach pdfs or screenshots. overlapping stays and side trips get a heads-up in the plan.
 - **money.** paid costs and estimates, a budget, totals by category and currency conversion. split a cost evenly or by exact amounts, see who owes who across the whole trip, and record a payback.
 - **packing.** a little checklist for each trip, with room for your own things.

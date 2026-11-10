@@ -26,6 +26,8 @@ vi.mock('../../src/lib/queries', () => ({
 }))
 const env = vi.hoisted(() => ({ online: true, signOut: vi.fn(), forget: vi.fn() }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => env.online, forgetDevice: env.forget }))
+const keyApi = vi.hoisted(() => ({ has: vi.fn(), make: vi.fn() }))
+vi.mock('../../src/lib/saveKey', () => ({ hasSaveKey: keyApi.has, newSaveKey: keyApi.make }))
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: 'signed-in', email: 'shanice@x.com', userId: 'u1', signOut: env.signOut }) }))
 vi.mock('../../src/features/home/Globe', () => ({
   Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[] }) => {
@@ -56,6 +58,7 @@ beforeEach(() => {
   localStorage.clear()
   db.trips = []; db.stops = []; db.links = []; db.save.mockClear(); db.remove.mockClear()
   db.globe = null; env.online = true
+  keyApi.has.mockReset().mockResolvedValue(false); keyApi.make.mockReset().mockResolvedValue('a1'.repeat(32))
   db.members = []; env.signOut.mockReset().mockResolvedValue(undefined); env.forget.mockReset().mockResolvedValue(undefined)
 })
 afterEach(() => vi.useRealTimers())
@@ -303,11 +306,45 @@ it('account shows who is signed in, and signing out forgets this device', async 
   await waitFor(() => expect(env.forget).toHaveBeenCalledWith(expect.any(QueryClient)))
 })
 
+it('account makes a save key for the share sheet, shows it once and copies it', async () => {
+  const write = vi.fn(() => Promise.resolve())
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText: write }, configurable: true })
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'account' }))
+  const sheet = screen.getByRole('dialog', { name: 'account' })
+  await userEvent.click(await within(sheet).findByRole('button', { name: 'make a save key' }))
+  expect(keyApi.make).toHaveBeenCalledTimes(1)
+  expect(await within(sheet).findByText('a1'.repeat(32))).toHaveClass('keep-case')
+  await userEvent.click(within(sheet).getByRole('button', { name: 'copy save key' }))
+  expect(write).toHaveBeenCalledWith('a1'.repeat(32))
+})
+
+it('replacing a save key takes two taps', async () => {
+  keyApi.has.mockResolvedValue(true)
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'account' }))
+  const sheet = screen.getByRole('dialog', { name: 'account' })
+  await userEvent.click(await within(sheet).findByRole('button', { name: 'new save key' }))
+  expect(keyApi.make).not.toHaveBeenCalled()
+  await userEvent.click(within(sheet).getByRole('button', { name: 'tap again · the old key stops working' }))
+  expect(keyApi.make).toHaveBeenCalledTimes(1)
+  expect(await within(sheet).findByText('a1'.repeat(32))).toBeInTheDocument()
+})
+
+it('a save key needs a connection, and a failed one says so', async () => {
+  keyApi.make.mockRejectedValue(new Error('network'))
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'account' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'make a save key' }))
+  expect(await screen.findByText("couldn't make a save key")).toHaveClass('warn-line')
+})
+
 it('sign out waits for a connection', async () => {
   env.online = false
   show()
   await userEvent.click(screen.getByRole('button', { name: 'account' }))
   expect(screen.getByRole('button', { name: 'sign out' })).toBeDisabled()
+  expect(await screen.findByRole('button', { name: 'make a save key' })).toBeDisabled()
 })
 
 it('a failed sign out says so and keeps the data', async () => {

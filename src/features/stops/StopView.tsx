@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Cost, Member, Stop } from '../../lib/types'
 import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
@@ -12,6 +12,7 @@ import { safeUrl } from '../../lib/embed'
 import { Pill } from '../../components/Pill'
 import { Icon } from '../../components/Icon'
 import { Button } from '../../components/Button'
+import { Copy } from '../../components/Copy'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { FilesSection, filesOf } from './FilesSection'
 import { Reviews } from './Reviews'
@@ -33,20 +34,6 @@ const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 
 // the next stop as the day lists it; a journey by where you board it
 const nextName = (l: Leg) => (l.to.kind === 'journey' ? l.b.name || stopTitle(l.to) : stopTitle(l.to) || l.b.name)
 
-function Copy({ text, label }: { text: string; label: string }) {
-  const [done, setDone] = useState(false)
-  async function copy(e: MouseEvent<HTMLButtonElement>) {
-    try {
-      await navigator.clipboard.writeText(text)
-    } catch {
-      const el = e.currentTarget.parentElement?.querySelector('.copy-text')
-      if (el) { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel?.removeAllRanges(); sel?.addRange(r) }
-    }
-    setDone(true)
-    setTimeout(() => setDone(false), 1500)
-  }
-  return <button type="button" className="icon-btn" aria-label={label} onClick={copy}><Icon name={done ? 'check' : 'copy'} size={18} /></button>
-}
 
 // who a cost is for, in a few words
 export function splitLine(c: Cost, members: Member[]): string {

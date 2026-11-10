@@ -112,3 +112,5 @@
 .totals-tip strong::before { display: none; }
 @keyframes totals-tip-in { from { opacity: 0; transform: translate(-50%, calc(-100% - 6px)); } }
 .travels-card { overflow: visible; }
+.save-key { gap: 8px; }
+.save-key .copy-text { font-size: 13px; overflow-wrap: anywhere; }

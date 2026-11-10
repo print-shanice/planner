@@ -207,3 +207,139 @@ do $$ begin
     alter publication supabase_realtime add table public.reviews;
   end if;
 end $$;
+
+-- saving from the phone's share sheet (an apple shortcut) without signing in there.
+-- each member can make a save key; only its sha256 is kept and the key itself is shown once.
+-- a key can do two things: list the trips' names and add a link. a new key replaces the old one.
+create table if not exists public.save_keys (
+  email text primary key references public.members(email) on delete cascade on update cascade,
+  hash bytea not null unique,
+  created_at timestamptz not null default now()
+);
+alter table public.save_keys enable row level security;
+revoke all on public.save_keys from public, anon, authenticated;
+
+create or replace function public.new_save_key() returns text
+language plpgsql volatile security definer set search_path = public as $$
+declare m text; k text;
+begin
+  select email into m from public.members where lower(email) = lower(auth.email());
+  if m is null then raise exception 'not a member' using errcode = '42501'; end if;
+  k := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+  insert into public.save_keys(email, hash) values (m, sha256(convert_to(k, 'UTF8')))
+    on conflict (email) do update set hash = excluded.hash, created_at = now();
+  return k;
+end $$;
+
+create or replace function public.has_save_key() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.save_keys s join public.members m on m.email = s.email where lower(m.email) = lower(auth.email()))
+$$;
+
+-- whose key this is (null when it isn't one)
+create or replace function public.save_key_member(key text) returns text
+language sql stable security definer set search_path = public as $$
+  select s.email from public.save_keys s
+  where char_length(coalesce(key, '')) between 32 and 200 and s.hash = sha256(convert_to(key, 'UTF8'))
+$$;
+
+-- the shortcut's menu: inbox, then each trip with side trips under it ("parent · side trip"), soonest first
+create or replace function public.trip_labels() returns table(id uuid, label text, ord text[])
+language sql stable security definer set search_path = public as $$
+  with recursive tree as (
+    select t.id, lower(trim(t.name)) as name, lower(trim(t.name)) as label,
+      array[coalesce(t.start_date::text, '9999-12-31') || ' ' || lower(t.name) || ' ' || t.id::text] as ord
+    from public.trips t where t.parent_id is null
+    union all
+    select c.id, lower(trim(c.name)), tree.name || ' · ' || lower(trim(c.name)),
+      tree.ord || (coalesce(c.start_date::text, '9999-12-31') || ' ' || lower(c.name) || ' ' || c.id::text)
+    from public.trips c join tree on c.parent_id = tree.id
+    where cardinality(tree.ord) < 8
+  ), named as (
+    select null::uuid as id, 'inbox'::text as label, array['']::text[] as ord
+    union all select tree.id, tree.label, tree.ord from tree
+  )
+  select x.id, case when x.n = 1 then x.label else x.label || ' ' || x.n end, x.ord
+  from (select named.*, row_number() over (partition by named.label order by named.ord) as n from named) x
+$$;
+
+-- the site a link is on, like the app's host(): lowercased, without www. m. vm. vt.
+create or replace function public.link_host(u text) returns text
+language sql immutable set search_path = public as $$
+  select regexp_replace(lower(substring(u from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^/?#@]*@)?([^/?#:]+)')), '^(www|m|vm|vt)\.', '')
+$$;
+
+-- one key per thing saved, the same as linkKey() in src/lib/capture.ts
+create or replace function public.link_key(u text) returns text
+language plpgsql immutable set search_path = public as $$
+declare h text; p text; q text; m text[];
+begin
+  h := coalesce(public.link_host(u), '');
+  p := coalesce(substring(u from '^[a-zA-Z][a-zA-Z0-9+.-]*://[^/?#]*([^?#]*)'), '');
+  if h in ('instagram.com', 'instagr.am') then
+    m := regexp_match(p, '/(reel|reels|p|tv)/([^/]+)');
+    if m is not null then return 'instagram:' || m[2]; end if;
+  elsif h = 'tiktok.com' then
+    m := regexp_match(p, '/video/([^/]+)');
+    if m is not null then return 'tiktok:' || m[1]; end if;
+  elsif h in ('youtube.com', 'youtu.be', 'music.youtube.com') then
+    if h = 'youtu.be' then m := regexp_match(p, '^/([^/]+)');
+    else
+      m := regexp_match(u, '[?&]v=([^&#]+)');
+      if m is null then m := regexp_match(p, '^/(?:shorts|embed|live)/([^/]+)'); end if;
+    end if;
+    if m is not null then return 'youtube:' || m[1]; end if;
+  end if;
+  select string_agg(case when x like '%=%' then x else x || '=' end, '&' order by lower(split_part(x, '=', 1)), split_part(x, '=', 1))
+    into q
+    from unnest(string_to_array(substring(u from '\?([^#]*)'), '&')) x
+    where x <> '' and split_part(x, '=', 1) !~* '^(utm_\w+|igsh|igshid|si|fbclid|gclid|mc_\w+|ref|ref_src|is_from_webapp|sender_device|feature|t|s|_r)$';
+  return h || lower(regexp_replace(p, '/+$', '')) || coalesce('?' || q, '');
+end $$;
+
+create or replace function public.shortcut_trips(key text) returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if public.save_key_member(key) is null then raise exception 'save key not recognised' using errcode = '28000'; end if;
+  return (select json_agg(t.label order by t.ord) from public.trip_labels() t);
+end $$;
+
+-- saves the first link in what was shared to the trip picked from shortcut_trips; the same reel again moves it there
+create or replace function public.shortcut_save(key text, url text, trip text default 'inbox') returns text
+language plpgsql volatile security definer set search_path = public as $$
+#variable_conflict use_column
+declare who text; uid uuid; raw text; u text; t uuid; lbl text; k text; was public.links;
+begin
+  who := public.save_key_member(shortcut_save.key);
+  if who is null then raise exception 'save key not recognised' using errcode = '28000'; end if;
+  raw := coalesce(shortcut_save.url, '');
+  if char_length(raw) > 10000 then raise exception 'link too long' using errcode = '22023'; end if;
+  u := substring(raw from '(?i)(https?://[^\s<>"'']+|www\.[^\s<>"'']+)');
+  if u is null then raise exception 'no link found' using errcode = '22023'; end if;
+  u := regexp_replace(u, '[).,!?;:]+$', '');
+  if u !~* '^https?://' then u := 'https://' || u; end if;
+  if char_length(u) > 2048 then raise exception 'link too long' using errcode = '22023'; end if;
+
+  lbl := lower(trim(coalesce(nullif(trim(shortcut_save.trip), ''), 'inbox')));
+  select l.id, l.label into t, lbl from public.trip_labels() l where l.label = lbl;
+  if not found then raise exception 'trip not found' using errcode = '22023'; end if;
+
+  select user_id into uid from public.members where email = who;
+  k := public.link_key(u);
+  select * into was from public.links l where public.link_key(l.url) = k order by l.created_at limit 1;
+  if found then
+    update public.links set trip_id = t, stop_id = case when was.trip_id is not distinct from t then was.stop_id end where id = was.id;
+    return 'already saved · now in ' || lbl;
+  end if;
+  insert into public.links(trip_id, url, title, created_by)
+    values (t, u, case public.link_host(u)
+      when 'instagram.com' then 'instagram' when 'instagr.am' then 'instagram' when 'tiktok.com' then 'tiktok'
+      when 'youtube.com' then 'youtube' when 'youtu.be' then 'youtube' when 'music.youtube.com' then 'youtube'
+      else regexp_replace(lower(substring(u from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^/?#@]*@)?([^/?#:]+)')), '^www\.', '') end, uid);
+  return 'saved to ' || lbl;
+end $$;
+
+revoke all on function public.save_key_member(text), public.trip_labels(), public.link_host(text), public.link_key(text) from public, anon, authenticated;
+revoke all on function public.new_save_key(), public.has_save_key(), public.shortcut_trips(text), public.shortcut_save(text, text, text) from public, anon, authenticated;
+grant execute on function public.new_save_key(), public.has_save_key() to authenticated;
+grant execute on function public.shortcut_trips(text), public.shortcut_save(text, text, text) to anon, authenticated;

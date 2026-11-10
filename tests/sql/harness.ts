@@ -17,13 +17,17 @@ grant usage on schema auth, storage, public to authenticated, anon;
 grant execute on all functions in schema auth to authenticated, anon;
 grant select, insert, update, delete on storage.objects to authenticated;
 create publication supabase_realtime;
+-- like supabase: anything new in public is open to anon and authenticated unless schema.sql takes it back
+alter default privileges in schema public grant all on tables to anon, authenticated;
+alter default privileges in schema public grant all on functions to anon, authenticated;
 `
 
 export type Db = {
   db: PGlite
   as: (email: string, uid?: string) => Promise<void>
   admin: () => Promise<void>
-  q: (sql: string) => Promise<{ rows: any[] }>
+  anon: () => Promise<void>
+  q:(sql: string) => Promise<{ rows: any[] }>
 }
 
 export async function makeDb(extraSql = ''): Promise<Db> {
@@ -38,6 +42,10 @@ export async function makeDb(extraSql = ''): Promise<Db> {
       await db.exec(`reset role; select set_config('test.email', '${email}', false); select set_config('test.uid', '${uid}', false); set role authenticated;`)
     },
     admin: async () => { await db.exec('reset role;') },
+    // signed out: what a phone shortcut calling the api with only the publishable key is
+    anon: async () => {
+      await db.exec(`reset role; select set_config('test.email', '', false); select set_config('test.uid', '', false); set role anon;`)
+    },
     q: (sql) => db.query(sql) as Promise<{ rows: any[] }>,
   }
 }
