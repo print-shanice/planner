@@ -34,10 +34,12 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
   ])
   // Journey endpoints are a fallback: an airport at home is not a holiday destination.
   const countries = destinations.length ? destinations : codes(planned.map(s => s.destination?.country))
-  const flags = countries.length > 0 && (
-    <span className="trip-flags" title={countries.map(countryName).join(', ')}>
-      {countries.slice(0, 4).map(code => <CountryFlag key={code} code={code} />)}
-      {countries.length > 4 && <span className="trip-flags-more" aria-label={countries.slice(4).map(countryName).join(', ')}>+{countries.length - 4}</span>}
+  // the first country sits beside the title; a trip through several shows the others with its dates
+  const others = countries.slice(1)
+  const flags = others.length > 0 && (
+    <span className="trip-flags">
+      {others.slice(0, 4).map(code => <CountryFlag key={code} code={code} />)}
+      {others.length > 4 && <span className="trip-flags-more" aria-label={others.slice(4).map(countryName).join(', ')}>+{others.length - 4}</span>}
     </span>
   )
   const n = nights(trip.start_date, trip.end_date)
@@ -58,6 +60,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
         </button>
       </div>
       <div className="trip-title-row">
+        {countries[0] && <span className="title-flag"><CountryFlag code={countries[0]} /></span>}
         <h1 className="head one-line">
           {family ? (
             <button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>

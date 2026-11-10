@@ -211,7 +211,7 @@ it('sections never repeat their own name as a heading', () => {
   expect(screen.queryByRole('heading', { level: 2, name: 'money' })).toBeNull()
 })
 
-it('flags sit in the line under the title, which is only the name', () => {
+it('the first flag sits beside the title, the others under it, and the title is only the name', () => {
   db.trips = [trip({ id: 'parent', name: 'exchange', base: place({ country: 'NL' }) }), trip({ id: 'lap', name: 'lapland', parent_id: 'parent', base: null, start_date: '2027-02-07', end_date: '2027-02-11' })]
   db.stops = [stop({ trip_id: 'lap', place: place({ country: 'FI' }) }), stop({ trip_id: 'lap', place: place({ country: 'fi' }) }), stop({ trip_id: 'lap', place: place({ country: 'SE' }) }), stop({ trip_id: 'lap', place: place({ country: 'FR' }), saved: true, day: null })]
   show('/trip/lap')
@@ -219,16 +219,17 @@ it('flags sit in the line under the title, which is only the name', () => {
   expect(title).toHaveTextContent(/^lapland$/)
   expect(within(title).queryAllByRole('img')).toHaveLength(0)
   const meta = screen.getByText(/7 – 11 feb/).closest('.trip-meta') as HTMLElement
-  expect(within(meta).getAllByRole('img').map((f) => f.getAttribute('aria-label'))).toEqual(['Finland', 'Sweden'])
+  expect(within(document.querySelector('.title-flag') as HTMLElement).getByRole('img')).toHaveAttribute('alt', 'Finland')
+  expect(within(meta).getAllByRole('img').map((f) => f.getAttribute('alt'))).toEqual(['Sweden'])
 })
 
-it('the line under the title shows up to four flags, then a count', () => {
+it('the line under the title shows up to four more flags, then a count', () => {
   db.trips = [trip({ id: 'europe', name: 'europe exchange', base: place({ country: 'NL' }) })]
   db.stops = ['FI', 'SE', 'FR', 'ES', 'IT'].map(country => stop({ trip_id: 'europe', place: place({ country }) }))
   show('/trip/europe')
   const meta = document.querySelector('.trip-meta') as HTMLElement
   expect(within(meta).getAllByRole('img')).toHaveLength(4)
-  expect(within(meta).getByText('+2')).toBeInTheDocument()
+  expect(within(meta).getByText('+1')).toBeInTheDocument()
 })
 
 it('a long name stays whole in the heading', () => {

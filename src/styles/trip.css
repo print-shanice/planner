@@ -15,7 +15,9 @@
 .one-line .title-btn { max-width: 100%; }
 .trip-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; }
 .trip-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-flags { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 4px; flex: none; font-size: 16px; line-height: 1; }
+.trip-flags { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 4px; flex: none; line-height: 1; }
+.flag { flex: none; width: 1.05em; height: 1.05em; border-radius: 50%; vertical-align: -0.16em; box-shadow: 0 0 0 1px var(--line); }
+.title-flag { flex: none; display: inline-flex; font-size: 24px; }
 .trip-flags-more { font-family: var(--f-body); font-size: 12px; font-weight: 600; color: var(--ink-2); }
 /* with side trips or a parent, the title opens the trip family */
 .title-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; letter-spacing: inherit; text-align: left; border-radius: 8px; }
