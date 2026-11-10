@@ -177,13 +177,73 @@ it('a failed save keeps the sheet open with the reason', async () => {
   expect(within(d).getByLabelText('name')).toHaveValue('arktikum museum')
 })
 
-it('moving to another trip moves its cost too', async () => {
-  db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1' })]
+it('moving to another trip moves all its costs too', async () => {
+  db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1' }), cost({ id: 'c2', trip_id: 'lap', stop_id: 's1' })]
   show(<Opener id="s1" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   await userEvent.selectOptions(within(screen.getByRole('dialog')).getByLabelText('trip'), 'par')
   expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', trip_id: 'par' })
   expect(db.save).toHaveBeenCalledWith('costs', { id: 'c1', trip_id: 'par' })
+  expect(db.save).toHaveBeenCalledWith('costs', { id: 'c2', trip_id: 'par' })
+})
+
+// a booking's money lives on its card: every cost attached to it, each a tap away from changing who paid
+describe('a booking\'s costs on its card', () => {
+  const two = () => {
+    db.costs = [
+      cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', title: 'deposit', amount: 120, status: 'paid', paid_by: 'u2' }),
+      cost({ id: 'c2', trip_id: 'lap', stop_id: 's1', title: 'balance', amount: 30, status: 'estimate', paid_by: null }),
+    ]
+  }
+
+  it('lists each cost with who paid and how it is split', async () => {
+    two()
+    show(<Opener id="s1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    const money = within(screen.getByRole('dialog')).getByRole('region', { name: 'money' })
+    const rows = within(money).getAllByRole('button', { name: /paid|not paid/ })
+    expect(rows.map((r) => r.textContent)).toEqual([
+      expect.stringMatching(/deposit.*€120.*paid by kai.*split evenly/s),
+      expect.stringMatching(/balance.*€30.*not paid.*split evenly/s),
+    ])
+  })
+
+  it('a tap on a cost opens it to edit: who paid, the amount, the split; it can be removed there', async () => {
+    two()
+    show(<Opener id="s1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /balance/ }))
+    const form = screen.getByRole('dialog', { name: 'edit cost' })
+    expect(within(form).getByLabelText('amount')).toHaveValue('30')
+    await userEvent.click(within(form).getByRole('switch', { name: 'paid already' }))
+    await userEvent.click(within(form).getByRole('button', { name: 'kai' }))
+    await userEvent.click(within(form).getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ id: 'c2', amount: 30, status: 'paid', paid_by: 'u2' }))
+    const saved = db.save.mock.calls.find(([t]) => t === 'costs')![1]
+    expect(saved.stop_id).toBeUndefined() // an edit never re-sends what did not change
+    expect(screen.queryByRole('dialog', { name: 'edit cost' })).toBeNull()
+  })
+
+  it('"add a cost →" attaches another cost to the booking, named after it and dated its day', async () => {
+    two()
+    show(<Opener id="s1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'add a cost →' }))
+    const form = screen.getByRole('dialog', { name: 'new cost' })
+    expect(within(form).getByLabelText('name')).toHaveValue('arktikum')
+    await userEvent.type(within(form).getByLabelText('amount'), '45')
+    await userEvent.click(within(form).getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({
+      id: 'new-id', trip_id: 'lap', stop_id: 's1', title: 'arktikum', amount: 45, date: '2027-02-08', category: 'activities', status: 'estimate',
+    }))
+  })
+
+  it('with no cost yet, the card still offers to add one; offline it does not', async () => {
+    show(<Opener id="s1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'add a cost →' })).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).queryByRole('region', { name: 'money' })).toBeNull()
+  })
 })
 
 it('a ticket not saved on this device says so', async () => {
@@ -266,6 +326,17 @@ it('the stop view says whether it is paid', async () => {
   show(<Opener id="s1" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   expect(within(screen.getByRole('dialog')).getByText(/not paid/)).toBeInTheDocument()
+})
+
+it('offline, a booking\'s costs are read-only and nothing offers to add one', async () => {
+  db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'paid', paid_by: 'u2' })]
+  db.canEdit = false
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  expect(within(d).getByText(/paid by kai/)).toBeInTheDocument()
+  expect(within(d).queryByRole('button', { name: 'add a cost →' })).toBeNull()
+  expect(within(d).queryByRole('button', { name: /paid by kai/ })).toBeNull()
 })
 
 it('a new journey shows its essentials and keeps the rest under "more", with save always there', async () => {

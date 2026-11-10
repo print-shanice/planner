@@ -149,6 +149,14 @@
 .fact-copy .copy-text { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .fact-copy > .icon-btn { margin-left: -4px; }
 .fact-link { align-items: center; color: var(--ink-2); text-decoration: none; font-weight: 600; }
+/* a booking's money: each cost a row you can tap to change, then "add a cost →" */
+.card-money { display: grid; gap: 2px; padding-top: 4px; border-top: 1px solid var(--line); }
+.card-money .mono-label { padding-top: 10px; }
+.money-rows { display: grid; }
+.money-rows .fact:first-of-type { border-top: 0; }
+.fact-cost { width: 100%; background: none; border: 0; border-top: 1px solid var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fact-cost:active { filter: brightness(.92); }
+.cost-words { min-width: 0; overflow-wrap: anywhere; }
 .notes { white-space: pre-wrap; color: var(--ink-2); }
 .files { display: grid; gap: 4px; }
 .file-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 12px; background: var(--ground); }

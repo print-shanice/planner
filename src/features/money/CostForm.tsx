@@ -10,11 +10,12 @@ import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { Pick } from '../../components/Pick'
 import { checkCost, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from '../stops/CostFields'
 
-type Props = { trip: Trip; cost?: Cost; day?: string | null; onDone: () => void }
+// stopId: a new cost attached to a booking (named after it unless told otherwise); edits keep the cost's own stop
+type Props = { trip: Trip; cost?: Cost; day?: string | null; stopId?: string | null; defaults?: { title?: string; category?: string }; onDone: () => void }
 
 type Draft = { id: string; title: string; category: string; date: string; money: CostDraft }
 
-export function CostForm({ trip, cost, day, onDone }: Props) {
+export function CostForm({ trip, cost, day, stopId = null, defaults, onDone }: Props) {
   const members = useMembers().data ?? []
   const people = members.map((m) => m.user_id).filter((x): x is string => !!x)
   const rates = useRates().data ?? null
@@ -22,8 +23,8 @@ export function CostForm({ trip, cost, day, onDone }: Props) {
   const remove = useRemove('costs')
   const canEdit = useCanEdit()
   // a new cost is kept as a draft for this trip, with one id, so saving again after a failure sends the same row
-  const [form, update, settle] = useDraft<Draft>(cost ? null : draftKey(trip.id, 'cost'), () => ({
-    id: cost?.id ?? newId(), title: cost?.title ?? '', category: cost?.category ?? 'food', date: cost?.date ?? day ?? '',
+  const [form, update, settle] = useDraft<Draft>(cost ? null : draftKey(trip.id, stopId ? `cost:${stopId}` : 'cost'), () => ({
+    id: cost?.id ?? newId(), title: cost?.title ?? defaults?.title ?? '', category: cost?.category ?? defaults?.category ?? 'food', date: cost?.date ?? day ?? '',
     money: costDraft(cost, trip.currency, rates, people),
   }))
   const { id, title, category, date, money } = form
@@ -41,7 +42,7 @@ export function CostForm({ trip, cost, day, onDone }: Props) {
     void run(async () => {
       await save.mutateAsync({
         id,
-        ...(cost ? {} : { trip_id: trip.id, stop_id: null }),
+        ...(cost ? {} : { trip_id: trip.id, stop_id: stopId }),
         title: title.trim(), category, date: date || null, ...costValues(money, people)!,
       })
       onDone()

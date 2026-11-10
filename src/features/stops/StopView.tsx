@@ -27,6 +27,8 @@ import { tripDays } from '../../lib/dates'
 import { hostOf as host } from '../../lib/embed'
 import { Sheet } from '../../components/Sheet'
 import { CaptureForm } from '../capture/CaptureForm'
+import { CostForm } from '../money/CostForm'
+import { expenseCategory } from '../../lib/categories'
 import { SiteIcon } from '../saved/LinkCard'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
@@ -67,10 +69,13 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const remove = useRemove('stops')
   const [problem, setProblem] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
+  // a cost being changed on the card, or 'new' for one being added to this booking
+  const [costing, setCosting] = useState<Cost | 'new' | null>(null)
   const inspiration = (useLinks().data ?? []).filter((l) => l.stop_id === stop.id)
   const picker = useRef<{ open: () => void }>(null)
   const navigate = useNavigate()
-  const linked = costs.find((c) => c.stop_id === stop.id)
+  // every cost attached to this booking (a deposit and a balance can be two), oldest first
+  const linked = costs.filter((c) => c.stop_id === stop.id).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
   const maps = gmapsUrl(stop)
   const address = stop.place ? [stop.place.name, stop.place.address].filter(Boolean).join(', ') : ''
 
@@ -98,7 +103,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
 
   const moveTrip = (tripId: string) => run(async () => {
     await save.mutateAsync({ id: stop.id, trip_id: tripId })
-    if (linked) await saveCost.mutateAsync({ id: linked.id, trip_id: tripId })
+    for (const c of linked) await saveCost.mutateAsync({ id: c.id, trip_id: tripId })
   })
 
   const del = () => run(async () => {
@@ -186,7 +191,6 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         {address && stop.kind !== 'journey' && (
           <div className="fact fact-copy"><Icon name="pin" size={18} /><span className="copy-text">{address}</span><Copy text={address} label="copy address" /></div>
         )}
-        {linked && <p className="fact num"><Icon name="money" size={18} /><span>{costLine(linked, members)}</span></p>}
         {stop.ref && (
           <div className="fact fact-copy"><Icon name="note" size={18} /><span className="muted">ref</span><span className="copy-text keep-case num">{stop.ref}</span><Copy text={stop.ref} label="copy ref" /></div>
         )}
@@ -205,6 +209,38 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
             <CaptureForm initial={null} tripId={stop.trip_id} stopId={stop.id} onDone={() => setLinking(false)} />
           </Sheet>
         </section>
+      )}
+
+      {/* the booking's money: each cost a tap away from changing the amount, who paid or the split */}
+      {(linked.length > 0 || canEdit) && (
+        <div className="card-money">
+          {linked.length > 0 && (
+            <section className="money-rows" aria-label="money">
+              <p className="mono-label">money</p>
+              {linked.map((c) => {
+                const words = <>
+                  <Icon name="money" size={18} />
+                  <span className="stack-xs cost-words">
+                    {c.title && c.title !== stopTitle(stop) && <span>{c.title}</span>}
+                    <span className={`num${c.title && c.title !== stopTitle(stop) ? ' muted' : ''}`}>{costLine(c, members)}</span>
+                  </span>
+                </>
+                return canEdit
+                  ? <button key={c.id} type="button" className="fact fact-cost" onClick={() => setCosting(c)}>{words}</button>
+                  : <p key={c.id} className="fact">{words}</p>
+              })}
+            </section>
+          )}
+          {canEdit && <button type="button" className="text-link" onClick={() => setCosting('new')}>add a cost →</button>}
+          {home && (
+            <Sheet page open={!!costing} title={costing === 'new' ? 'new cost' : 'edit cost'} onClose={() => setCosting(null)}>
+              {costing && (
+                <CostForm key={costing === 'new' ? 'new' : costing.id} trip={home} cost={costing === 'new' ? undefined : costing} day={stop.day}
+                  stopId={stop.id} defaults={{ title: stopTitle(stop), category: expenseCategory({ kind: stop.kind, category: stop.category }) }} onDone={() => setCosting(null)} />
+              )}
+            </Sheet>
+          )}
+        </div>
       )}
 
       {(stop.kind === 'place' || stop.kind === 'stay') && <Reviews stop={stop} />}
