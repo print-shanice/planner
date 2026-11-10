@@ -28,6 +28,7 @@ import { hostOf as host } from '../../lib/embed'
 import { Sheet } from '../../components/Sheet'
 import { CaptureForm } from '../capture/CaptureForm'
 import { CostForm } from '../money/CostForm'
+import { PlaceDetails } from './PlaceDetails'
 import { expenseCategory } from '../../lib/categories'
 import { SiteIcon } from '../saved/LinkCard'
 
@@ -150,6 +151,8 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
           {what && <p className="muted">{what}</p>}
         </div>
       )}
+      {stop.place?.gid && <PlaceDetails place={stop.place} day={stop.day} />}
+
       <div className="stop-actions" role="group" aria-label="actions">
         <button type="button" className="stop-action" onClick={showOnMap}><span className="ico"><Icon name="map" /></span>map</button>
         {maps

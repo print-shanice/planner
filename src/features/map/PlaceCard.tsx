@@ -12,6 +12,7 @@ import { useStopSheet } from '../stops/StopSheet'
 import { stopSub, stopTitle } from '../plan/StopRow'
 import { Chip } from '../itinerary/ItinLine'
 import { saveError } from '../../lib/errors'
+import { PlaceDetails } from '../stops/PlaceDetails'
 
 // looking: a tap on the map is still being turned into a place name
 type Props = { trip: Trip; place: Place; stop?: Stop; day?: string | null; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
@@ -56,6 +57,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
         <div className="stack-xs place-card-words">
           {looking ? <h3 className="head"><Pending label="finding the place" /></h3> : <h3 className="head">{title}</h3>}
           {sub && <p className="muted">{sub}</p>}
+          {!looking && place.gid && <PlaceDetails place={place} day={opened ?? stop?.day ?? null} compact />}
         </div>
         <button type="button" className="text-link" onClick={onClose}>close</button>
       </div>

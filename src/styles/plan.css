@@ -133,6 +133,14 @@
 .stop-view { gap: 18px; }
 .stop-kicker { display: grid; justify-items: start; gap: 6px; margin-top: -6px; }
 .stop-kicker .muted { font-size: 15px; }
+/* what google says about the place: a photo, then its rating, what it is and its hours */
+.place-details { display: grid; gap: 10px; }
+.place-photo { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 14px; background: var(--soft); }
+.place-details-words { display: grid; gap: 2px; font-size: 14px; }
+.place-rating { font-weight: 600; }
+.place-details.compact { gap: 0; }
+.place-details.compact .place-details-words { font-size: 13px; }
+.place-details .text-link { justify-self: start; margin-top: 4px; }
 /* the four things you'd do with a place, as big round buttons */
 .stop-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .stop-action {
