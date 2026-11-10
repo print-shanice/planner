@@ -16,7 +16,7 @@ a little travel planner for two. i made it to plan my europe exchange with a fri
 - **money.** paid costs and estimates, a budget, totals by category and currency conversion. split a cost evenly or by exact amounts, see who owes who across the whole trip, and record a payback.
 - **packing.** a little checklist for each trip, with room for your own things.
 - **your own reviews.** after a trip, each of us can mark a visit done or skipped, rate it, say whether we'd return and leave a note. past visits to the same place show up there too.
-- **home is where you left off.** the trip you're on (or the next one) leads, with upcoming trips and side trips under it and past ones below. an inbox holds links that don't have a trip yet, and a spinning globe colours the countries we've been to or have planned, with counts of countries, cities and trips.
+- **home is where you left off.** the trip you're on (or the next one) leads, with upcoming trips and side trips under it and past ones below. an inbox holds links that don't have a trip yet (sort them one by one or several at once). travels is a spinning globe that colours the countries we've been to or have planned, with a scrapbook underneath: tickets for every flight and train (open one and the globe draws its routes), a passport stamp for each country, and polaroids of our favourite places.
 - **works offline.** previously loaded plans and tickets saved on the device stay readable without signal. editing, place search and the trip map need a connection.
 - **shared and live.** we both sign in with our email, and changes show up on the other person's phone straight away. the site is public but the trip data is only for the emails on the list.
 - **add to home screen** on a phone and it opens like an app.

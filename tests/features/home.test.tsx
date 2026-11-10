@@ -11,7 +11,8 @@ const db = vi.hoisted(() => ({
   stops: [] as unknown[],
   links: [] as unknown[],
   members: [] as unknown[],
-  globe: null as null | { pins: { code: string }[] },
+  reviews: [] as unknown[],
+  globe: null as null | { pins: { code: string }[]; routes?: [number, number][][]; focus?: { code: string; n: number } | null },
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   remove: vi.fn(() => Promise.resolve()),
 }))
@@ -20,6 +21,7 @@ vi.mock('../../src/lib/queries', () => ({
   useStops: () => ({ data: db.stops, isLoading: false }),
   useLinks: () => ({ data: db.links }),
   useMembers: () => ({ data: db.members }),
+  useReviews: () => ({ data: db.reviews }),
   useRates: () => ({ data: null }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, isPending: false }),
@@ -30,7 +32,7 @@ const keyApi = vi.hoisted(() => ({ has: vi.fn(), make: vi.fn() }))
 vi.mock('../../src/lib/saveKey', () => ({ hasSaveKey: keyApi.has, newSaveKey: keyApi.make }))
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: 'signed-in', email: 'shanice@x.com', userId: 'u1', signOut: env.signOut }) }))
 vi.mock('../../src/features/home/Globe', () => ({
-  Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[] }) => {
+  Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[]; routes?: [number, number][][]; focus?: { code: string; n: number } | null }) => {
     db.globe = p
     return <button onClick={() => p.onCountry('FI')}>globe</button>
   },
@@ -56,7 +58,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-11-05T10:00:00'))
   localStorage.clear()
-  db.trips = []; db.stops = []; db.links = []; db.save.mockClear(); db.remove.mockClear()
+  db.trips = []; db.stops = []; db.links = []; db.reviews = []; db.save.mockClear(); db.remove.mockClear()
   db.globe = null; env.online = true
   keyApi.has.mockReset().mockResolvedValue(false); keyApi.make.mockReset().mockResolvedValue('a1'.repeat(32))
   db.members = []; env.signOut.mockReset().mockResolvedValue(undefined); env.forget.mockReset().mockResolvedValue(undefined)
@@ -634,5 +636,79 @@ describe('moving between views', () => {
     expect(body()).toHaveClass('from-left')
     await userEvent.click(views()[2])
     expect(body()).toHaveClass('from-right')
+  })
+})
+
+describe('travels, the scrapbook under the globe', () => {
+  const ein = place({ name: 'eindhoven', city: 'eindhoven', country: 'NL', lat: 51.44, lng: 5.48 })
+  const rvn = place({ name: 'rovaniemi', city: 'rovaniemi', country: 'FI', lat: 66.5, lng: 25.73 })
+  const par = place({ name: 'paris nord', city: 'paris', country: 'FR', lat: 48.88, lng: 2.35 })
+  function trips() {
+    vi.setSystemTime(new Date('2027-03-01T10:00:00'))
+    db.trips = europe().map((t) => (t.id === 'ex' ? { ...t, base: ein } : t))
+    db.stops = [
+      stop({ id: 'f1', trip_id: 'lap', kind: 'journey', mode: 'flight', day: '2027-02-07', origin: ein, destination: rvn }),
+      stop({ id: 'f2', trip_id: 'lap', kind: 'journey', mode: 'flight', day: '2027-02-11', origin: rvn, destination: ein }),
+      stop({ id: 'ark', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: rvn }),
+      stop({ id: 'tr', trip_id: 'par', kind: 'journey', mode: 'train', day: '2027-03-05', origin: ein, destination: par }),
+    ] as Stop[]
+    db.reviews = [{ id: 'r1', stop_id: 'ark', author_id: 'u1', rating: 5, return_choice: 'yes', outcome: 'done', comments: '' }]
+  }
+
+  it('getting around: the distance, and a ticket per kind of journey taken so far', () => {
+    trips()
+    show('/?view=travels')
+    expect(screen.getByRole('heading', { level: 2, name: 'getting around' })).toBeInTheDocument()
+    expect(screen.getByText(/\d,\d{3} km/)).toBeInTheDocument()
+    expect(screen.getByText(/of the way round the world/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'flights · 2' })).toHaveAttribute('aria-expanded', 'false')
+    // the train to paris hasn't happened yet
+    expect(screen.queryByRole('button', { name: /^trains/ })).toBeNull()
+  })
+
+  it('opening a ticket lists its routes and draws them on the globe; closing it clears them', async () => {
+    trips()
+    show('/?view=travels')
+    const flights = screen.getByRole('button', { name: 'flights · 2' })
+    await userEvent.click(flights)
+    expect(flights).toHaveAttribute('aria-expanded', 'true')
+    const list = screen.getByRole('list', { name: 'flights' })
+    expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      expect.stringMatching(/eindhoven → rovaniemi.*7 feb/), expect.stringMatching(/rovaniemi → eindhoven.*11 feb/),
+    ])
+    await screen.findByRole('button', { name: 'globe' })
+    expect(db.globe!.routes).toEqual([[[5.48, 51.44], [25.73, 66.5]], [[25.73, 66.5], [5.48, 51.44]]])
+    await userEvent.click(flights)
+    expect(db.globe!.routes).toEqual([])
+  })
+
+  it('passport: a stamp per country, dated the day you first arrived; tapping one turns the globe there', async () => {
+    trips()
+    show('/?view=travels')
+    expect(screen.getByRole('heading', { level: 2, name: 'passport' })).toBeInTheDocument()
+    const stamps = screen.getAllByRole('button', { name: /first stamped/ })
+    expect(stamps.map((b) => b.getAttribute('aria-label'))).toEqual(['netherlands · first stamped 28 jan 2027', 'finland · first stamped 7 feb 2027'])
+    await screen.findByRole('button', { name: 'globe' })
+    await userEvent.click(stamps[1])
+    expect(db.globe!.focus).toEqual(expect.objectContaining({ code: 'FI' }))
+  })
+
+  it('favourites: the places you loved, each opening its card', () => {
+    trips()
+    show('/?view=travels')
+    expect(screen.getByRole('heading', { level: 2, name: 'favourites' })).toBeInTheDocument()
+    const fav = screen.getByRole('link', { name: /arktikum/ })
+    expect(fav).toHaveAttribute('href', '/trip/lap?day=2027-02-08&open=ark')
+    expect(within(fav).getByLabelText('5 stars')).toBeInTheDocument()
+    expect(fav).toHaveTextContent('would go back')
+  })
+
+  it('a section with nothing in it stays away', () => {
+    db.trips = europe()
+    show('/?view=travels')
+    expect(screen.queryByRole('heading', { name: 'getting around' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'passport' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'favourites' })).toBeNull()
+    expect(screen.getByTestId('totals')).toBeInTheDocument()
   })
 })

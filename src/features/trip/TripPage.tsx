@@ -91,6 +91,14 @@ function TripScreen() {
   const selected = trip ? chosenDay(trip, trips, stops, params.get('day'), todayISO()) : null
   // the day being read in the plan; the + adds to it and the map shows it
   const onDay = tab === 'plan' ? reading.day ?? selected : null
+  // ?open=<stop id> (from a favourite on home) opens that place's card, then leaves the address
+  const sheet = useStopSheet()
+  const opening = params.get('open')
+  useEffect(() => {
+    if (!opening || !sq.data) return
+    if (stops.some((s) => s.id === opening)) sheet?.openStop(opening, params.get('day'))
+    setParams((p) => { const n = new URLSearchParams(p); n.delete('open'); return n }, { replace: true })
+  }, [opening, !!sq.data]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (trip && tab === 'plan' && tq.data && sq.data) rememberPlan({ tripId: trip.id, day: reading.day ?? selected })
   }, [trip?.id, tab, reading.day, selected, tq.data, sq.data])

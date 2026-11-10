@@ -40,7 +40,7 @@ export function countryName(code: string): string {
   try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code } catch { return code }
 }
 
-type Visit = { code: string; place: Place; city: string | null; been: boolean; when: string }
+type Visit = { code: string; place: Place; city: string | null; been: boolean; when: string; tripId: string }
 
 const cityOf = (p: Place, journey: boolean) => p.city ?? (journey ? p.name : null)
 
@@ -49,16 +49,16 @@ const cityOf = (p: Place, journey: boolean) => p.city ?? (journey ? p.name : nul
 function visits(trips: Trip[], stops: Stop[], today: string): Visit[] {
   const byId = new Map(trips.map((t) => [t.id, t]))
   const out: Visit[] = []
-  const add = (p: Place, city: string | null, been: boolean, when: string) => {
+  const add = (p: Place, city: string | null, been: boolean, when: string, tripId: string) => {
     const code = cc(p)
-    if (code) out.push({ code, place: p, city, been, when })
+    if (code) out.push({ code, place: p, city, been, when, tripId })
   }
-  for (const t of trips) if (t.base) add(t.base, t.base.city ?? null, !!t.start_date && t.start_date <= today, t.start_date ?? '9999')
+  for (const t of trips) if (t.base) add(t.base, t.base.city ?? null, !!t.start_date && t.start_date <= today, t.start_date ?? '9999', t.id)
   for (const s of stops) {
     const t = byId.get(s.trip_id)
     const been = s.day ? s.day <= today : !s.saved && !!t?.end_date && t.end_date < today
     const when = s.day ?? t?.start_date ?? '9999'
-    for (const p of placesOf(s)) add(p, cityOf(p, s.kind === 'journey'), been, when)
+    for (const p of placesOf(s)) add(p, cityOf(p, s.kind === 'journey'), been, when, s.trip_id)
   }
   return out
 }
@@ -70,6 +70,17 @@ function statusOf(all: Visit[]): Map<string, 'been' | 'planned'> {
     else if (!out.has(v.code)) out.set(v.code, 'planned')
   }
   return out
+}
+
+// each country you've been to, with the day you first got there and the trip that took you
+export function firstVisits(trips: Trip[], stops: Stop[], today: string): { code: string; when: string; tripId: string }[] {
+  const first = new Map<string, { code: string; when: string; tripId: string }>()
+  for (const v of visits(trips, stops, today)) {
+    if (!v.been) continue
+    const was = first.get(v.code)
+    if (!was || v.when < was.when) first.set(v.code, { code: v.code, when: v.when, tripId: v.tripId })
+  }
+  return [...first.values()].sort((a, b) => a.when.localeCompare(b.when) || a.code.localeCompare(b.code))
 }
 
 export function countryStatus(trips: Trip[], stops: Stop[], today: string): Map<string, 'been' | 'planned'> {

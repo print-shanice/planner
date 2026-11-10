@@ -1,6 +1,6 @@
 import { lazy, Suspense, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useLinks, useStops, useTrips } from '../../lib/queries'
+import { useLinks, useReviews, useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
 import { countdown, todayISO } from '../../lib/dates'
 import { resumePlan } from '../../lib/resume'
@@ -17,6 +17,7 @@ import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
 import { Lead, TripList, leadTrip, tripItems } from './Trips'
 import { Calendar } from './Calendar'
+import { Travels } from './Travels'
 import { TripForm } from './TripForm'
 import { AccountButton } from './Account'
 import { Inbox } from './Inbox'
@@ -41,6 +42,7 @@ export function HomePage() {
   const sq = useStops()
   const trips = tq.data ?? []
   const stops = sq.data ?? []
+  const reviews = useReviews().data ?? []
   const load = loadState(tq, sq)
   const canEdit = useCanEdit()
   const navigate = useNavigate()
@@ -154,18 +156,20 @@ export function HomePage() {
         )}
 
         {view === 'travels' && (
-          /* a summary of where your travels have taken you: the globe and its numbers in one card */
-          <div className="travels-card">
-            <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
-              <Globe status={status} pins={pins} onCountry={pickCountry} />
-            </Suspense>
-            {trips.length > 0 && (
-              <div className="totals-block">
-                <p className="head totals-title" id={travelsId}>life well lived</p>
-                <Totals {...totals} lists={lists} labelledBy={travelsId} />
-              </div>
-            )}
-          </div>
+          <Travels trips={trips} stops={stops} reviews={reviews} today={today} globe={({ routes, focus }) => (
+            /* the globe and its numbers in one card */
+            <div className="travels-card">
+              <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
+                <Globe status={status} pins={pins} onCountry={pickCountry} routes={routes} focus={focus} />
+              </Suspense>
+              {trips.length > 0 && (
+                <div className="totals-block">
+                  <p className="head totals-title" id={travelsId}>life well lived</p>
+                  <Totals {...totals} lists={lists} labelledBy={travelsId} />
+                </div>
+              )}
+            </div>
+          )} />
         )}
       </div>
 

@@ -15,6 +15,7 @@ vi.mock('../../src/lib/queries', () => ({
   useFiles: () => ({ data: [] }),
   useMembers: () => ({ data: [{ email: 'shanice@x.com', user_id: 'u1', name: 'shanice', color: 0 }] }),
   useRates: () => ({ data: null }),
+  useReviews: () => ({ data: [] }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
@@ -413,4 +414,11 @@ it('the plan\'s search sits in the header beside the +, and only on the plan', a
 it('other sections have no search button in the header', () => {
   show('/trip/summer?tab=money')
   expect(screen.queryByRole('button', { name: 'search the plan' })).toBeNull()
+})
+
+it('?open= opens that place\'s card, then leaves the address clean', async () => {
+  db.stops = [stop({ id: 'ark', trip_id: 'eu2027', title: 'arktikum', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) })]
+  show('/trip/eu2027?day=2027-02-08&open=ark')
+  expect(await screen.findByRole('dialog', { name: /arktikum/ })).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByTestId('loc').textContent).not.toContain('open='))
 })

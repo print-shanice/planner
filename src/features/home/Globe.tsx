@@ -6,7 +6,9 @@ import { GlobeTip } from './GlobeTip'
 import { openLayer } from '../../lib/layers'
 
 type Status = Map<string, 'been' | 'planned'>
-type Props = { status: Status; pins: GlobePin[]; onCountry: (code: string) => void }
+type LngLat = [number, number]
+// routes: lines to draw (an opened ticket's journeys); focus: a country to turn to and point at (a tapped passport stamp)
+type Props = { status: Status; pins: GlobePin[]; onCountry: (code: string) => void; routes?: [LngLat, LngLat][]; focus?: { code: string; n: number } | null }
 type Placed = { pin: GlobePin; marker: maplibregl.Marker; el: HTMLButtonElement }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -112,7 +114,7 @@ function dot(radius: number) {
 }
 const DOTS: Record<string, number> = { 'city-dot': 4.8, 'capital-dot': 6.4 }
 
-export function Globe({ status, pins, onCountry }: Props) {
+export function Globe({ status, pins, onCountry, routes = [], focus = null }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const moved = useRef(false)
@@ -186,6 +188,7 @@ export function Globe({ status, pins, onCountry }: Props) {
         countries: { type: 'geojson', data: `${import.meta.env.BASE_URL}countries-110m.geojson` },
         'country-names': { type: 'geojson', data: EMPTY },
         cities: { type: 'geojson', data: EMPTY },
+        routes: { type: 'geojson', data: EMPTY },
       },
       layers: [
         { id: 'water', type: 'background', paint: { 'background-color': css('--globe-water') } },
@@ -193,6 +196,10 @@ export function Globe({ status, pins, onCountry }: Props) {
         { id: 'countries-line', type: 'line', source: 'countries', paint: { 'line-color': css('--ground'), 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.6, 6, 1.2] } },
         { id: 'been-edge', type: 'line', source: 'countries', minzoom: NEAR[0], filter: edgeFor(latest.current.status),
           paint: { 'line-color': css('--been'), 'line-width': ['interpolate', ['linear'], ['zoom'], NEAR[0], 0, NEAR[1], 1.6] } },
+        { id: 'routes-line', type: 'line', source: 'routes', filter: ['==', ['geometry-type'], 'LineString'],
+          layout: { 'line-cap': 'round' }, paint: { 'line-color': css('--ink'), 'line-width': 2, 'line-dasharray': [1.5, 1.5] } },
+        { id: 'routes-ends', type: 'circle', source: 'routes', filter: ['==', ['geometry-type'], 'Point'],
+          paint: { 'circle-radius': 3.5, 'circle-color': css('--ink'), 'circle-stroke-color': css('--card'), 'circle-stroke-width': 1.5 } },
         ...nameLayers(),
       ],
     }
@@ -264,6 +271,41 @@ export function Globe({ status, pins, onCountry }: Props) {
     if (m.isStyleLoaded()) apply()
     else m.once('load', apply)
   }, [status])
+
+  // an opened ticket draws its journeys, and the globe turns to take them all in
+  const routesKey = JSON.stringify(routes)
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    const apply = () => {
+      const features: GeoJSON.Feature[] = routes.flatMap(([a, b]) => [
+        { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [a, b] } },
+        { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: a } },
+        { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: b } },
+      ])
+      m.getSource<GeoJSONSource>('routes')?.setData({ type: 'FeatureCollection', features })
+      if (!routes.length) return
+      const pts = routes.flat()
+      const lngs = pts.map((p) => p[0]), lats = pts.map((p) => p[1])
+      still.current = { held: false, until: 'next' }
+      try {
+        m.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 48, maxZoom: CLOSE, duration: reduced() ? 0 : 1200 })
+      } catch { /* a view maplibre can't fit: the lines are still drawn */ }
+    }
+    if (m.isStyleLoaded()) apply()
+    else m.once('load', apply)
+  }, [routesKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // a tapped stamp turns the globe to its country and shows that country's tip
+  useEffect(() => {
+    const m = map.current
+    if (!m || !focus) return
+    const hit = placed.current.find((x) => x.pin.code === focus.code)
+    if (!hit) return
+    still.current = { held: false, until: 'next' }
+    m.once('moveend', () => show(focus.code))
+    m.flyTo({ center: [hit.pin.lng, hit.pin.lat], zoom: Math.max(m.getZoom(), CLOSE), duration: reduced() ? 0 : 1400 })
+  }, [focus?.n]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // the slow spin: only zoomed out, never while someone holds it (pins and tips only show once it stops), never with reduced motion
   useEffect(() => {
