@@ -19,6 +19,30 @@
 }
 .home-view:hover { color: var(--ink); }
 .home-view[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+.home-views { position: relative; }
+.home-view { transition: color .2s; }
+/* once measured, one underline slides between the views instead of each one drawing its own */
+.home-views.inked .home-view[aria-current="page"] { border-bottom-color: transparent; }
+.home-views-ink {
+  position: absolute; left: 0; bottom: -1px; height: 2px; width: 0; border-radius: 2px; background: var(--ink); pointer-events: none;
+  transition: transform .34s cubic-bezier(.3, .8, .2, 1), width .34s cubic-bezier(.3, .8, .2, 1);
+}
+.home-views:not(.inked) .home-views-ink { display: none; }
+
+/* switching views: the new one slides in from the side you moved towards, its rows rising in one after another */
+.home { overflow-x: clip; }
+.home-body { display: grid; gap: 28px; min-width: 0; }
+.home-body.from-right { animation: view-from-right .36s cubic-bezier(.2, .8, .2, 1); }
+.home-body.from-left { animation: view-from-left .36s cubic-bezier(.2, .8, .2, 1); }
+@keyframes view-from-right { from { opacity: 0; transform: translateX(32px); } }
+@keyframes view-from-left { from { opacity: 0; transform: translateX(-32px); } }
+.trip-list > li, .home-inbox .doc-list > li { animation: rise-in .42s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 32ms + 60ms); }
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } }
+.lead { animation: rise-in .45s cubic-bezier(.2, .8, .2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .home-body, .trip-list > li, .home-inbox .doc-list > li, .lead { animation: none; }
+  .home-views-ink { transition: none; }
+}
 .home-trips, .home-inbox-view, .home-plans { display: grid; gap: 24px; min-width: 0; }
 .home-inbox-view .resume-plan { margin-inline: 0; }
 

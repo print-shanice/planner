@@ -619,3 +619,20 @@ describe('the inbox, a few at a time', () => {
     expect(db.remove).not.toHaveBeenCalled()
   })
 })
+
+describe('moving between views', () => {
+  it('the new view slides in from the side you moved towards, under an underline that slides along', async () => {
+    db.trips = europe()
+    show()
+    const body = () => document.querySelector('.home-body') as HTMLElement
+    expect(document.querySelector('.home-views-ink')).not.toBeNull()
+    expect(body()).not.toHaveClass('from-right')
+    expect(body()).not.toHaveClass('from-left')
+    await userEvent.click(views()[2])
+    expect(body()).toHaveClass('from-right')
+    await userEvent.click(views()[1])
+    expect(body()).toHaveClass('from-left')
+    await userEvent.click(views()[2])
+    expect(body()).toHaveClass('from-right')
+  })
+})

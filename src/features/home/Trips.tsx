@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { countdown, fmtRange, nights } from '../../lib/dates'
@@ -52,10 +53,10 @@ export function Lead({ trip, today, href }: { trip: Trip; today: string; href: s
 export function TripList({ items, today }: { items: Item[]; today: string }) {
   return (
     <ul className="trip-list">
-      {items.map(({ trip: t, depth, parent }) => {
+      {items.map(({ trip: t, depth, parent }, i) => {
         const extra = [fmtRange(t.start_date, t.end_date), when(t, today)].filter(Boolean)
         return (
-          <li key={t.id}>
+          <li key={t.id} style={{ '--i': Math.min(i, 12) } as CSSProperties}>
             <Link to={`/trip/${t.id}`} className="trip-item" data-testid="trip-item" data-depth={depth} style={tint(t.color)}>
               <span className="dot" aria-hidden="true" />
               <span className="trip-item-text">

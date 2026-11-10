@@ -1,4 +1,4 @@
-import { lazy, Suspense, useId, useMemo, useState } from 'react'
+import { lazy, Suspense, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLinks, useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
@@ -34,6 +34,9 @@ export function HomePage() {
   const [params] = useSearchParams()
   // one view at a time; home always opens on trips
   const view: View = VIEWS.find((v) => v === params.get('view')) ?? 'trips'
+  // the new view slides in from the side you moved towards (the first one just appears)
+  const [shown, setShown] = useState<{ view: View; from: '' | 'from-left' | 'from-right' }>({ view, from: '' })
+  if (shown.view !== view) setShown({ view, from: VIEWS.indexOf(view) > VIEWS.indexOf(shown.view) ? 'from-right' : 'from-left' })
   const tq = useTrips()
   const sq = useStops()
   const trips = tq.data ?? []
@@ -48,6 +51,22 @@ export function HomePage() {
   const [linking, setLinking] = useState(false)
   const inbox = (useLinks().data ?? []).filter((l) => !l.trip_id)
   const waiting = peekPending()
+  // the underline slides to the chosen view
+  const nav = useRef<HTMLElement>(null)
+  const [ink, setInk] = useState<{ x: number; w: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = nav.current
+    if (!el) return
+    const measure = () => {
+      const on = el.querySelector<HTMLElement>('[aria-current="page"]')
+      if (on) setInk((was) => (was && was.x === on.offsetLeft && was.w === on.offsetWidth ? was : { x: on.offsetLeft, w: on.offsetWidth }))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [view, inbox.length, !!waiting])
 
   const status = useMemo(() => countryStatus(trips, stops, today), [trips, stops, today])
   const pins = useMemo(() => globePins(trips, stops, today), [trips, stops, today])
@@ -79,73 +98,76 @@ export function HomePage() {
           <img src={`${import.meta.env.BASE_URL}wordmark.svg`} alt="planner" width="1367" height="468" />
         </h1>
         <OfflineBadge inline />
-        <nav className="home-views" aria-label="home">
+        <nav ref={nav} className={`home-views${ink ? ' inked' : ''}`} aria-label="home">
           {VIEWS.map((v) => (
             <Link key={v} to={v === 'trips' ? '/' : `/?view=${v}`} className="home-view" aria-current={view === v ? 'page' : undefined}>
               {v === 'inbox' && waitingCount > 0 ? `inbox · ${waitingCount}` : v}
             </Link>
           ))}
+          <span className="home-views-ink" aria-hidden="true" style={ink ? { width: ink.w, transform: `translateX(${ink.x}px)` } : undefined} />
         </nav>
         <AccountButton />
       </header>
 
-      {view === 'trips' && (
-        <div className="home-trips">
-          <LoadState load={load} blocks={1} />
-          {lead && <Lead trip={lead} today={today} href={leadHref} />}
-          {/* on a laptop the calendar sits beside the upcoming tiles */}
-          <div className="home-plans">
-            {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
-            <section className="home-section home-upcoming">
-              <div className="section-head">
-                <h2 className="head">upcoming</h2>
-                <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
-                  <Icon name="plus" />
-                </button>
-              </div>
-              {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
-              {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-              {upcoming.length > 0 && <TripList items={upcoming} today={today} />}
-            </section>
-          </div>
-          {/* only shows once a trip has ended */}
-          {past.length > 0 && (
-            <section className="home-section home-past">
-              <div className="section-head"><h2 className="head">past</h2></div>
-              <TripList items={past} today={today} />
-            </section>
-          )}
-        </div>
-      )}
-
-      {view === 'inbox' && (
-        <div className="home-inbox-view">
-          {waiting && (
-            <Link className="resume-plan waiting" to="/save">
-              <span className="mono-label">not saved yet</span>
-              <span className="head resume-name">{waiting.url || waiting.text || 'a link'}</span>
-              <span className="text-link">save it →</span>
-            </Link>
-          )}
-          {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
-          {inbox.length === 0 && !waiting && <EmptyState title="inbox is empty" />}
-        </div>
-      )}
-
-      {view === 'travels' && (
-        /* a summary of where your travels have taken you: the globe and its numbers in one card */
-        <div className="travels-card">
-          <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
-            <Globe status={status} pins={pins} onCountry={pickCountry} />
-          </Suspense>
-          {trips.length > 0 && (
-            <div className="totals-block">
-              <p className="head totals-title" id={travelsId}>life well lived</p>
-              <Totals {...totals} lists={lists} labelledBy={travelsId} />
+      <div key={view} className={`home-body ${shown.from}`.trim()}>
+        {view === 'trips' && (
+          <div className="home-trips">
+            <LoadState load={load} blocks={1} />
+            {lead && <Lead trip={lead} today={today} href={leadHref} />}
+            {/* on a laptop the calendar sits beside the upcoming tiles */}
+            <div className="home-plans">
+              {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
+              <section className="home-section home-upcoming">
+                <div className="section-head">
+                  <h2 className="head">upcoming</h2>
+                  <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
+                    <Icon name="plus" />
+                  </button>
+                </div>
+                {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
+                {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
+                {upcoming.length > 0 && <TripList items={upcoming} today={today} />}
+              </section>
             </div>
-          )}
-        </div>
-      )}
+            {/* only shows once a trip has ended */}
+            {past.length > 0 && (
+              <section className="home-section home-past">
+                <div className="section-head"><h2 className="head">past</h2></div>
+                <TripList items={past} today={today} />
+              </section>
+            )}
+          </div>
+        )}
+
+        {view === 'inbox' && (
+          <div className="home-inbox-view">
+            {waiting && (
+              <Link className="resume-plan waiting" to="/save">
+                <span className="mono-label">not saved yet</span>
+                <span className="head resume-name">{waiting.url || waiting.text || 'a link'}</span>
+                <span className="text-link">save it →</span>
+              </Link>
+            )}
+            {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
+            {inbox.length === 0 && !waiting && <EmptyState title="inbox is empty" />}
+          </div>
+        )}
+
+        {view === 'travels' && (
+          /* a summary of where your travels have taken you: the globe and its numbers in one card */
+          <div className="travels-card">
+            <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
+              <Globe status={status} pins={pins} onCountry={pickCountry} />
+            </Suspense>
+            {trips.length > 0 && (
+              <div className="totals-block">
+                <p className="head totals-title" id={travelsId}>life well lived</p>
+                <Totals {...totals} lists={lists} labelledBy={travelsId} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <Sheet open={menu} title="add" onClose={() => setMenu(false)}>
         <ul className="add-options">
