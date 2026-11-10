@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Review, Stop, Trip } from '../../lib/types'
 import { fmtDay } from '../../lib/dates'
@@ -7,7 +7,7 @@ import { tint } from '../../components/MonthCalendar'
 import { stopTitle } from '../plan/StopRow'
 import { Stamp } from './Stamp'
 
-export type GlobeAsk = { routes: [LngLat, LngLat][]; focus: { code: string; n: number } | null }
+export type GlobeAsk = { routes: [LngLat, LngLat][]; focus: { code: string; n: number } | null; ready: boolean }
 
 type Props = { trips: Trip[]; stops: Stop[]; reviews: Review[]; today: string; globe: (ask: GlobeAsk) => ReactNode }
 
@@ -23,6 +23,9 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
   const [focus, setFocus] = useState<GlobeAsk['focus']>(null)
   const routes = open ? t[open].map((r) => r.line).filter((l): l is [LngLat, LngLat] => !!l) : []
   const kinds = KINDS.filter(([k]) => t[k].length > 0)
+  // the globe starts drawing once the view has slid in, so the slide never stutters (its space is kept meanwhile)
+  const [settled, setSettled] = useState(false)
+  useEffect(() => { const id = setTimeout(() => setSettled(true), 380); return () => clearTimeout(id) }, [])
 
   function turnTo(code: string) {
     setFocus((was) => ({ code, n: (was?.n ?? 0) + 1 }))
@@ -32,7 +35,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
 
   return (
     <div className="travels">
-      <div className="travels-globe">{globe({ routes, focus })}</div>
+      <div className="travels-globe">{globe({ routes, focus, ready: settled })}</div>
       <div className="scrapbook">
         {kinds.length > 0 && (
           <section className="scrap" aria-labelledby="scrap-around">
