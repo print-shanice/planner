@@ -1,3 +1,4 @@
+import { dayLabel } from '../../components/MonthCalendar'
 import { useId, useState, type FormEvent } from 'react'
 import type { Mode, Place, Stop, StopStatus, Trip } from '../../lib/types'
 import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '../../lib/queries'
@@ -168,7 +169,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
 
   return (
     <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
-      {trip && <p className="form-context">{trip.name}{d.day ? ` · ${d.day}` : stop.saved ? ' · saved for later' : ' · no date yet'}</p>}
+      {trip && <p className="form-context">{trip.name}{d.day ? ` · ${dayLabel(d.day)}` : stop.saved ? ' · saved for later' : ' · no date yet'}</p>}
       {kind === 'stay' && (<>
         {q('where are you staying?')}
         {named('name')}

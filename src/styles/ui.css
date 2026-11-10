@@ -362,7 +362,10 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .page-form .fold-head { min-height: 44px; padding: 0 28px 0 0; }
 .page-form .fold-toggle { flex: none; font-size: 14px; font-weight: 600; color: var(--ink-2); text-decoration: underline dashed var(--ink-3); text-underline-offset: 4px; }
 .page-form .fold-toggle::before { inset: 0 -28px 0 0; }
-.page-form .fold-head::after { right: auto; left: 52px; }
+/* the chevron follows the words, however long they are */
+.page-form .fold-head::after { position: static; order: 1; flex: none; margin-left: 2px; transform: translateY(-25%) rotate(45deg); }
+.page-form .form-fold[data-open] .fold-head::after { transform: translateY(25%) rotate(-135deg); }
+.page-form .fold-extra { order: 2; margin-left: auto; }
 .page-form .fold-body { padding: 4px 0 0; }
 
 /* the app's own calendar for dates */
