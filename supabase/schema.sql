@@ -322,7 +322,12 @@ begin
   raw := coalesce(shortcut_save.url, '');
   if char_length(raw) > 10000 then raise exception 'link too long' using errcode = '22023'; end if;
   u := substring(raw from '(?i)(https?://[^\s<>"'']+|www\.[^\s<>"'']+)');
-  if u is null then raise exception 'no link found' using errcode = '22023'; end if;
+  if u is null then
+    -- say what arrived, so a share that carries no link can be told apart from an empty one
+    raw := btrim(regexp_replace(raw, '\s+', ' ', 'g'));
+    if raw = '' then raise exception 'nothing was shared' using errcode = '22023'; end if;
+    raise exception 'no link in what was shared: “%”', left(raw, 60) || case when char_length(raw) > 60 then '…' else '' end using errcode = '22023';
+  end if;
   u := regexp_replace(u, '[).,!?;:]+$', '');
   if u !~* '^https?://' then u := 'https://' || u; end if;
   if char_length(u) > 2048 then raise exception 'link too long' using errcode = '22023'; end if;

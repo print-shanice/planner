@@ -158,7 +158,9 @@ describe('the shortcut', () => {
   it('no link, a strange link or a huge one is refused', async () => {
     const k = await makeKey()
     await d.anon()
-    await expect(save(k, 'just words')).rejects.toThrow(/no link/)
+    await expect(save(k, 'just words')).rejects.toThrow('no link in what was shared: “just words”')
+    await expect(save(k, '  ')).rejects.toThrow('nothing was shared')
+    await expect(save(k, `caption ${'x'.repeat(200)}`)).rejects.toThrow(/^no link in what was shared: “caption x{52}…”$/)
     await expect(save(k, 'javascript:alert(1)')).rejects.toThrow(/no link/)
     await expect(save(k, `https://example.com/${'a'.repeat(2100)}`)).rejects.toThrow(/link too long/)
     expect(await links()).toHaveLength(0)
