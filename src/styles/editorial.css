@@ -39,14 +39,15 @@ body { background: var(--ground); color: var(--ink); }
 .home { width: min(1180px, 100%); padding: 24px 28px 64px; gap: 30px; }
 .home-top { min-height: 54px; border-bottom: 1px solid var(--ink); padding-bottom: 11px; align-items: flex-start; gap: 28px; }
 .home-mark { font-size: 30px; }
+.home-mark img { filter: grayscale(1) brightness(.24); opacity: .92; }
 .home-views { gap: 22px; border-bottom: 0; }
 .home-view { min-height: 34px; font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
 .home-view[aria-current='page'] { border-bottom-width: 1px; }
 .account-name { font-family: var(--f-head); font-size: 18px; font-weight: 400; }
-.lead { border-radius: 0; padding: 22px 24px 18px; background: var(--c); border: 1px solid var(--ink); color: var(--card); }
-.lead-name { font-size: clamp(42px, 6vw, 78px); line-height: .86; }
+.lead { position: relative; border-radius: 0; padding: 21px 24px 18px 29px; background: var(--paper-2); border: 1px solid var(--line); border-left: 6px solid var(--c); color: var(--ink); }
+.lead-name { font-size: clamp(38px, 5vw, 64px); line-height: .88; }
 .lead-dates { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; }
-.lead .lead-go { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; border-bottom: 1px solid currentColor; }
+.lead .lead-go { color: var(--ink); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; border-bottom: 1px solid currentColor; }
 .section-head { border-bottom: 1px solid var(--ink); padding-bottom: 9px; }
 .section-head h2 { font-size: 32px; }
 .family { border-radius: 0; background: var(--card); border-color: var(--line); }
@@ -62,6 +63,7 @@ body { background: var(--ground); color: var(--ink); }
 .rows, .list, .link-list, .travels-card { border-radius: 0; background: var(--card); border-color: var(--line); }
 .trip-row { min-height: 60px; }
 .trip-row-name { font-family: var(--f-head); font-size: 20px; font-weight: 400; }
+.family-head .trip-mark, .side-item .trip-mark { filter: saturate(.72); }
 
 /* Trip view: an editorial document on desktop, a focused reading surface on phone. */
 .trip-header { grid-template-columns: minmax(0, 1fr); padding: 18px 24px 8px; }
@@ -111,8 +113,8 @@ body { background: var(--ground); color: var(--ink); }
   .home-mark { font-size: 25px; }
   .home-views { gap: 16px; overflow-x: auto; }
   .home-view { font-size: 10px; }
-  .lead { padding: 18px 16px 15px; }
-  .lead-name { font-size: 49px; }
+  .lead { padding: 18px 16px 15px 20px; }
+  .lead-name { font-size: 43px; }
   .section-head h2 { font-size: 28px; }
   .trip-header { grid-template-columns: minmax(0, 1fr); padding-inline: 16px; }
   .section-tabs { margin-inline: 16px; gap: 18px; overflow-x: auto; }
