@@ -8,7 +8,7 @@
   --ink-3: #9b9489;
   --line: #cfc7bb;
   --soft: #e8e1d6;
-  --brand: #9d4a38;
+  --accent: #9d4a38;
   --ok: #456b58;
   --ok-bg: #dce7dd;
   --warn: #8d6418;
@@ -31,7 +31,7 @@ body { background: var(--ground); color: var(--ink); }
 .btn, .icon-btn, .pill, .cat-chip, .select-all, .today-chip, .text-select, .action { border-radius: 0; }
 .btn, .icon-btn { box-shadow: none; }
 .btn.primary, .icon-btn.filled, .plus-btn { background: var(--ink); color: var(--ground); }
-.btn.primary:hover, .icon-btn.filled:hover, .plus-btn:hover:not(:disabled) { filter: none; background: var(--brand); }
+.btn.primary:hover, .icon-btn.filled:hover, .plus-btn:hover:not(:disabled) { filter: none; background: var(--accent); }
 .btn.ghost, .btn.secondary, .pill { border-color: var(--ink); background: transparent; }
 .btn.ghost:hover, .btn.secondary:hover, .pill:hover { background: var(--ink); color: var(--ground); }
 
@@ -64,11 +64,11 @@ body { background: var(--ground); color: var(--ink); }
 .trip-row-name { font-family: var(--f-head); font-size: 20px; font-weight: 400; }
 
 /* Trip view: an editorial document on desktop, a focused reading surface on phone. */
-.trip-header { padding: 18px 24px 8px; }
+.trip-header { grid-template-columns: minmax(0, 1fr); padding: 18px 24px 8px; }
 .trip-phone .trip-main { width: min(760px, 100%); }
 .trip-title-row h1 { font-size: clamp(40px, 5vw, 72px); line-height: .85; }
 .trip-meta { font-family: var(--f-mono); font-size: 11px; letter-spacing: .04em; }
-.trip-bar { background: var(--ground); }
+.trip-bar { position: sticky; top: 0; background: var(--ground); }
 .section-tabs { margin-inline: 24px; gap: 24px; }
 .section-tabs button { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 .tab-bar { background: color-mix(in srgb, var(--ground) 94%, transparent); border-bottom: 1px solid var(--line); }
@@ -85,7 +85,7 @@ body { background: var(--ground); color: var(--ink); }
 .itin-sub, .itin-time { font-size: 12px; }
 .cat { border-radius: 0; }
 .trip-wide .trip-main { border-right-color: var(--line); }
-.split-handle:hover::after, .split-handle.dragging::after, .split-handle:focus-visible::after { background: var(--brand); }
+.split-handle:hover::after, .split-handle.dragging::after, .split-handle:focus-visible::after { background: var(--accent); }
 
 /* Sheets and feature tabs share the same quiet, square language. */
 .sheet { border-radius: 0; background: var(--ground); border-color: var(--ink); }
@@ -114,7 +114,7 @@ body { background: var(--ground); color: var(--ink); }
   .lead { padding: 18px 16px 15px; }
   .lead-name { font-size: 49px; }
   .section-head h2 { font-size: 28px; }
-  .trip-header { padding-inline: 16px; }
+  .trip-header { grid-template-columns: minmax(0, 1fr); padding-inline: 16px; }
   .section-tabs { margin-inline: 16px; gap: 18px; overflow-x: auto; }
   .doc { padding-inline: 16px; }
   .doc-tools { margin-inline: -16px; }
@@ -131,3 +131,16 @@ body { background: var(--ground); color: var(--ink); }
 .home-inbox-view .resume-plan { margin-inline: 0; background: var(--paper-2); padding-inline: 16px; }
 .home-inbox-view .resume-name { font-family: var(--f-head); font-size: 24px; font-weight: 400; }
 .travels-card .totals-block { background: var(--paper-2); }
+
+/* Trip feature refinements: every tab is a different working sheet, not a new visual language. */
+.trip-section > .saved-switch { border-bottom: 1px solid var(--ink); padding-bottom: 10px; }
+.trip-section .section-head, .trip-section .money-head { border-bottom: 1px solid var(--ink); }
+.cost-row, .pack-list > li, .doc-row, .link-card { border-left: 0; border-right: 0; }
+.cost-row:first-child, .pack-list > li:first-child, .doc-row:first-child { border-top: 1px solid var(--line); }
+.money-total, .pack-count { font-family: var(--f-head); font-weight: 400; }
+.money-total strong, .pack-count p { font-family: var(--f-head); font-size: 32px; font-weight: 400; letter-spacing: -.05em; }
+.sheet-root .sheet-backdrop { background: color-mix(in srgb, var(--ink) 32%, transparent); }
+.sheet.page, .sheet.side { box-shadow: none; }
+.sheet-foot { border-top: 1px solid var(--ink); }
+.form-actions .btn { border-radius: 0; }
+.trip-map .map-float, .map-float { border-radius: 0; }
