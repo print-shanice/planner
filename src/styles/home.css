@@ -308,3 +308,8 @@
   .way, .stamp, .polaroid, .world-bar i, .way-routes { animation: none; }
   .stamp-art, .polaroid, .way-ico, .way-chevron { transition: none; }
 }
+
+/* a trip wears the flags of where it goes (a trip with no country yet keeps its colour dot) */
+.trip-mark { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 18px; line-height: 1; }
+.side-item .trip-mark { font-size: 16px; }
+@media (min-width: 1024px) { .family-head .trip-mark { font-size: 22px; } }

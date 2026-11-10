@@ -32,6 +32,8 @@ type Props = {
   marked?: (d: string) => boolean
   // inside a trip, side-trip bars are real links with the side trip's flag
   linkBars?: boolean
+  // a country's flag to pin on a day (home: the day a trip starts)
+  flag?: (d: string) => string | null | undefined
 }
 
 function Week({ week, p }: { week: (string | null)[]; p: Props }) {
@@ -65,7 +67,8 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           'data-planned': p.marked?.(d) || undefined,
           style: { gridColumn: i + 1, ...(t ? tint(t.color) : st ? tint(st.color) : {}) },
         }
-        const n = <span className="cal-n num">{+d.slice(8)}</span>
+        const code = p.flag?.(d)
+        const n = <><span className="cal-n num">{+d.slice(8)}</span>{code && <span className="cal-flag"><CountryFlag code={code} /></span>}</>
         const pickable = p.canPick?.(d) ?? true
         if (p.onDay && pickable) {
           return (

@@ -156,3 +156,18 @@ export function homeLists(trips: Trip[], stops: Stop[], today: string): { countr
     trips: sorted(l.trips.map((t) => t.name.toLowerCase())),
   }
 }
+
+// the countries a trip goes to, for its flags: its base first, then its side trips' bases and the places planned in it.
+// a journey's end is only a fallback: an airport at home is not a destination
+export function tripCountries(trip: Trip, trips: Trip[], stops: Stop[]): string[] {
+  const ids = new Set(descendants(trip.id, trips))
+  const planned = stops.filter((s) => ids.has(s.trip_id) && (!s.saved || s.day))
+  const codes = (values: (string | null | undefined)[]) => [...new Set(values
+    .map((code) => code?.trim().toUpperCase()).filter((code): code is string => !!code && /^[A-Z]{2}$/.test(code)))]
+  const destinations = codes([
+    trip.base?.country,
+    ...trips.filter((t) => t.id !== trip.id && ids.has(t.id)).map((t) => t.base?.country),
+    ...planned.map((s) => s.place?.country),
+  ])
+  return destinations.length ? destinations : codes(planned.map((s) => s.destination?.country))
+}

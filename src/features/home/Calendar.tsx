@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Trip } from '../../lib/types'
+import type { Stop, Trip } from '../../lib/types'
+import { tripCountries } from '../../lib/countries'
 import { innermostDay, openingMonth, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { MonthCalendar } from '../../components/MonthCalendar'
 
@@ -8,7 +9,7 @@ const spans = (ts: Trip[]) => ts.map(tripSpan).filter((x): x is Span => !!x)
 
 // the month at a glance: each day wears its innermost trip's colour, so a side trip takes over its days from its parent.
 // opens on this month while a trip is on, else the month the soonest one starts. a day with a trip opens that day in it
-export function Calendar({ trips, today }: { trips: Trip[]; today: string }) {
+export function Calendar({ trips, stops = [], today }: { trips: Trip[]; stops?: Stop[]; today: string }) {
   const [month, setMonth] = useState(() => openingMonth(trips, today))
   // a first trip added while home is open gives the calendar a month
   const m = month ?? openingMonth(trips, today)
@@ -19,12 +20,15 @@ export function Calendar({ trips, today }: { trips: Trip[]; today: string }) {
     return (s: Span) => of(s.trip)
   }, [trips])
   const navigate = useNavigate()
+  // the day a trip starts wears its flag (its own country: a side trip with none shows none)
+  const flags = useMemo(() => new Map(trips.map((t) => [t.id, tripCountries(t, trips.filter((x) => x.id === t.id), stops)[0] ?? null])), [trips, stops])
+  const flag = (d: string) => { const s = innermostDay(d, all, depth); return s?.trip && s.start === d ? flags.get(s.trip.id) ?? null : null }
   const owner = (d: string) => innermostDay(d, all, depth)?.trip
   if (!m) return null
   return (
     <div className="home-cal">
       <MonthCalendar month={m} onPrev={() => setMonth(shiftMonth(m, -1))} onNext={() => setMonth(shiftMonth(m, 1))}
-        today={today} ribbon={(d) => innermostDay(d, all, depth)} bars={[]}
+        today={today} ribbon={(d) => innermostDay(d, all, depth)} bars={[]} flag={flag}
         canPick={(d) => !!owner(d)} onDay={(d) => { const t = owner(d); if (t) navigate(`/trip/${t.id}?day=${d}`) }} />
     </div>
   )

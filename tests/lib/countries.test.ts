@@ -204,3 +204,22 @@ describe('bad coordinates', () => {
     expect(countryStatus([ex], stops, '2027-03-01').get('JP')).toBe('been')
   })
 })
+
+import { tripCountries } from '../../src/lib/countries'
+import { place as pl, stop as st, trip as tr } from '../factories'
+
+describe('tripCountries: the flags a trip wears', () => {
+  it("starts with the trip's base, then its side trips' bases and the places planned in it, each once", () => {
+    const ex = tr({ id: 'ex', base: pl({ country: 'NL' }) })
+    const lap = tr({ id: 'lap', parent_id: 'ex', base: pl({ country: 'fi' }) })
+    const stops = [st({ trip_id: 'lap', place: pl({ country: 'SE' }) }), st({ trip_id: 'ex', place: pl({ country: 'NL' }) }), st({ trip_id: 'other', place: pl({ country: 'JP' }) })]
+    expect(tripCountries(ex, [ex, lap], stops)).toEqual(['NL', 'FI', 'SE'])
+    expect(tripCountries(lap, [ex, lap], stops)).toEqual(['FI', 'SE'])
+  })
+  it('an idea saved for later is not a destination; a journey only counts when nothing else says where', () => {
+    const t = tr({ id: 't', base: null })
+    const fly = st({ trip_id: 't', kind: 'journey', origin: pl({ country: 'NL' }), destination: pl({ country: 'GR' }) })
+    expect(tripCountries(t, [t], [st({ trip_id: 't', saved: true, day: null, place: pl({ country: 'FR' }) }), fly])).toEqual(['GR'])
+    expect(tripCountries(t, [t], [])).toEqual([])
+  })
+})

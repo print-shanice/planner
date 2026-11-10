@@ -467,6 +467,40 @@ describe('trips, the view home opens on', () => {
     expect(within(family).queryByRole('button', { name: /more side trips/ })).toBeNull()
   })
 
+  it('a trip and its side trips wear the flags of where they go instead of a colour; one with no country keeps its colour', () => {
+    db.trips = [
+      trip({ id: 'ex', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13', base: place({ country: 'NL' }) }),
+      trip({ id: 'ib', parent_id: 'ex', name: 'madrid · lisbon', start_date: '2027-04-10', end_date: '2027-04-18', base: place({ country: 'ES' }) }),
+      trip({ id: 'loop', parent_id: 'ex', name: 'the rail loop', start_date: '2027-04-24', end_date: '2027-05-08', base: null }),
+    ]
+    db.stops = [stop({ trip_id: 'ib', day: '2027-04-15', place: place({ country: 'PT' }) })]
+    show()
+    const family = screen.getByTestId('trip-family')
+    const flags = (el: HTMLElement) => within(el).queryAllByRole('img').map((f) => f.getAttribute('alt'))
+    expect(flags(within(family).getByTestId('trip-item'))).toEqual(['Netherlands'])
+    expect(within(family).getByTestId('trip-item').querySelector('.dot')).toBeNull()
+    const [iberia, loop] = within(family).getAllByTestId('side-item')
+    expect(flags(iberia)).toEqual(['Spain', 'Portugal'])
+    expect(iberia.querySelector('.dot')).toBeNull()
+    expect(flags(loop)).toEqual([])
+    expect(loop.querySelector('.dot')).not.toBeNull()
+    db.stops = []
+  })
+
+  it("the calendar puts a trip's flag on the day it starts", () => {
+    db.trips = [
+      trip({ id: 'ex', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13', base: place({ country: 'NL' }) }),
+      trip({ id: 'ams', parent_id: 'ex', name: 'amsterdam', start_date: '2027-01-30', end_date: '2027-01-31', base: null }),
+    ]
+    show()
+    const cal = document.querySelector('.home-cal') as HTMLElement
+    const flagOn = (d: string) => cal.querySelector(`[data-day="${d}"] img.flag`)?.getAttribute('alt') ?? null
+    expect(flagOn('2027-01-28')).toBe('Netherlands')
+    expect(flagOn('2027-01-29')).toBeNull()
+    // a side trip with no country of its own shows none
+    expect(flagOn('2027-01-30')).toBeNull()
+  })
+
   it('has the month calendar under the banner, opening on the month the soonest trip starts', () => {
     db.trips = europe()
     show()

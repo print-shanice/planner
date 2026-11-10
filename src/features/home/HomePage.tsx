@@ -128,8 +128,8 @@ export function HomePage() {
               {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
               {upcoming.length > 0 && (
                 <div className="home-plans">
-                  <Calendar trips={trips} today={today} />
-                  <TripFamilies tops={upcoming} trips={trips} today={today} />
+                  <Calendar trips={trips} stops={stops} today={today} />
+                  <TripFamilies tops={upcoming} trips={trips} stops={stops} today={today} />
                 </div>
               )}
             </section>
@@ -137,7 +137,7 @@ export function HomePage() {
             {past.length > 0 && (
               <section className="home-section home-past">
                 <div className="section-head"><h2 className="head">past trips</h2></div>
-                <TripFamilies tops={past} trips={trips} today={today} keepEnded />
+                <TripFamilies tops={past} trips={trips} stops={stops} today={today} keepEnded />
               </section>
             )}
           </div>

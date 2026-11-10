@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
-import { ancestors, countryName, descendants } from '../../lib/countries'
+import { ancestors, countryName, descendants, tripCountries } from '../../lib/countries'
 import { fmtRange, nights } from '../../lib/dates'
 import { useMembers, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -23,17 +23,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
   const parent = path.at(-1)
   // the title switches between trips of one family: the top trip and every side trip under it
   const family = descendants(path[0]?.id ?? trip.id, trips).length > 1
-  const ids = new Set(descendants(trip.id, trips))
-  const planned = stops.filter(s => ids.has(s.trip_id) && (!s.saved || s.day))
-  const codes = (values: (string | null | undefined)[]) => [...new Set(values
-    .map(code => code?.trim().toUpperCase()).filter((code): code is string => !!code && /^[A-Z]{2}$/.test(code)))]
-  const destinations = codes([
-    trip.base?.country,
-    ...trips.filter(t => t.id !== trip.id && ids.has(t.id)).map(t => t.base?.country),
-    ...planned.map(s => s.place?.country),
-  ])
-  // Journey endpoints are a fallback: an airport at home is not a holiday destination.
-  const countries = destinations.length ? destinations : codes(planned.map(s => s.destination?.country))
+  const countries = tripCountries(trip, trips, stops)
   // the first country sits beside the title; a trip through several shows the others with its dates
   const others = countries.slice(1)
   const flags = others.length > 0 && (
