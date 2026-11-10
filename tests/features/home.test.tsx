@@ -39,10 +39,10 @@ vi.mock('../../src/features/home/Globe', () => ({
 import { HomePage } from '../../src/features/home/HomePage'
 import { TripForm } from '../../src/features/home/TripForm'
 
-function show() {
+function show(path = '/') {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/trip/:id" element={<p>opened trip</p>} />
@@ -71,76 +71,6 @@ function europe() {
   return [sum, lap, ex, par] as Trip[]
 }
 
-const legend = () => screen.getAllByTestId('cal-row').map((r) => r.textContent)
-
-it('next up is a calendar that opens on the month the soonest trip starts', () => {
-  db.trips = europe()
-  show()
-  expect(screen.getByRole('heading', { name: 'next up' })).toBeInTheDocument()
-  const cal = screen.getByTestId('calendar')
-  expect(within(cal).getByText('january')).toBeInTheDocument()
-  expect(within(cal).getByText('2027')).toBeInTheDocument()
-  expect(cal.querySelectorAll('[data-day]')).toHaveLength(31)
-  expect(cal.querySelector('[data-day="2027-01-28"]')).toHaveAttribute('data-ribbon', 'start')
-  expect(cal.querySelector('[data-day="2027-01-29"]')).toHaveAttribute('data-ribbon', 'on')
-  expect(cal.querySelector('[data-day="2027-01-27"]')).not.toHaveAttribute('data-ribbon')
-  // every upcoming trip stays listed, the ones on the calendar first
-  expect(legend()).toEqual([
-    expect.stringMatching(/europe exchange 2027.*28 jan – 13 jul · in 84 days/),
-    expect.stringMatching(/summer.*1 – 10 jun · in 208 days/),
-  ])
-  expect(screen.getAllByTestId('cal-row')[0]).toHaveAttribute('href', '/trip/ex')
-  expect(screen.queryByTestId('trip-card')).toBeNull()
-})
-
-it('the calendar moves by month, and a side trip takes over its days the way its parent shows', async () => {
-  const user = userEvent.setup()
-  db.trips = europe()
-  show()
-  await user.click(screen.getByRole('button', { name: 'next month' }))
-  const cal = screen.getByTestId('calendar')
-  expect(within(cal).getByText('february')).toBeInTheDocument()
-  const day = (d: string) => cal.querySelector(`[data-day="${d}"]`) as HTMLElement
-  expect(day('2027-02-06')).toHaveAttribute('data-ribbon', 'on')
-  expect(day('2027-02-06').style.getPropertyValue('--c')).toBe('var(--g0)')
-  // lapland's own days wear lapland's ribbon, first and last filled; no pills
-  expect(day('2027-02-07')).toHaveAttribute('data-ribbon', 'start')
-  expect(day('2027-02-07').style.getPropertyValue('--c')).toBe('var(--g1)')
-  expect(day('2027-02-09')).toHaveAttribute('data-ribbon', 'on')
-  expect(day('2027-02-11')).toHaveAttribute('data-ribbon', 'end')
-  expect(day('2027-02-12')).toHaveAttribute('data-ribbon', 'on')
-  expect(day('2027-02-12').style.getPropertyValue('--c')).toBe('var(--g0)')
-  expect(within(cal).queryAllByTestId('cal-bar')).toHaveLength(0)
-  expect(within(cal).queryByText('lapland')).toBeNull()
-  expect(legend()).toEqual([
-    expect.stringContaining('europe exchange 2027'),
-    expect.stringMatching(/lapland.*7 – 11 feb/),
-    expect.stringContaining('summer'),
-  ])
-  expect(screen.getAllByTestId('cal-row')[1]).toHaveAttribute('data-depth', '1')
-  await user.click(screen.getByRole('button', { name: 'previous month' }))
-  await user.click(screen.getByRole('button', { name: 'previous month' }))
-  expect(within(screen.getByTestId('calendar')).getByText('december')).toBeInTheDocument()
-  expect(within(screen.getByTestId('calendar')).getByText('2026')).toBeInTheDocument()
-})
-
-it('a trip that is on now opens on this month, rings today and says which day it is', () => {
-  vi.setSystemTime(new Date('2027-02-09T10:00:00'))
-  db.trips = [trip({ id: 'fin', name: 'finland', start_date: '2027-02-07', end_date: '2027-02-11' })]
-  show()
-  const cal = screen.getByTestId('calendar')
-  expect(within(cal).getByText('february')).toBeInTheDocument()
-  expect(cal.querySelector('[aria-current="date"]')).toHaveAttribute('data-day', '2027-02-09')
-  expect(cal.querySelector('[data-day="2027-02-11"]')).toHaveAttribute('data-ribbon', 'end')
-  expect(legend()).toEqual([expect.stringMatching(/finland.*7 – 11 feb · day 3/)])
-  expect(document.querySelector('.pill.ok')).toBeNull()
-})
-
-it('an upcoming trip without dates is still listed', () => {
-  db.trips = [...europe(), trip({ id: 'maybe', name: 'someday japan', start_date: null, end_date: null })]
-  show()
-  expect(legend().at(-1)).toContain('someday japan')
-})
 
 it('home has one +, which adds a trip or saves a link', async () => {
   db.trips = europe()
@@ -151,45 +81,17 @@ it('home has one +, which adds a trip or saves a link', async () => {
   expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== '')).toEqual(['trip', 'link'])
 })
 
-it('no trips shows only the empty title', () => {
-  show()
-  expect(screen.getByText('no trips yet')).toBeVisible()
-  expect(screen.queryByTestId('calendar')).toBeNull()
-  expect(screen.queryByRole('heading', { name: 'past trips' })).toBeNull()
-  expect(screen.queryByTestId('totals')).toBeNull()
-})
-
-it('past appears once a top-level trip has ended', () => {
-  db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' })]
-  show()
-  expect(screen.getByRole('heading', { name: 'past trips' })).toBeInTheDocument()
-  expect(screen.getByText('bali')).toBeInTheDocument()
-})
-
 it('totals count countries, cities and trips', () => {
   db.trips = europe()
   db.stops = [
     stop({ trip_id: 'lap', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
     stop({ trip_id: 'par', place: place({ name: 'louvre', city: 'paris', country: 'FR' }) }),
   ] as Stop[]
-  show()
+  show('/?view=travels')
   const totals = screen.getByTestId('totals')
   expect(totals).toHaveTextContent(/2\s*countries/)
   expect(totals).toHaveTextContent(/2\s*cities/)
   expect(totals).toHaveTextContent(/4\s*trips/)
-})
-
-it('the globe and its numbers share one card under "your travels, wrapped"', () => {
-  db.trips = europe()
-  show()
-  const heading = screen.getByRole('heading', { level: 2, name: 'your travels, wrapped' })
-  const totals = screen.getByTestId('totals')
-  expect(totals.closest('.travels-card')).not.toBeNull()
-  expect(totals).toHaveAttribute('aria-labelledby', heading.id)
-  // "life well lived" titles the numbers, inside the card
-  const title = screen.getByText('life well lived')
-  expect(title.closest('.travels-card')).not.toBeNull()
-  expect(title.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 it('trip form saves dates and currency', async () => {
@@ -240,7 +142,7 @@ it('choosing a country with two trips opens a chooser', async () => {
     stop({ trip_id: 'lap', place: place({ country: 'FI' }) }),
     stop({ trip_id: 'sum', place: place({ country: 'FI' }) }),
   ] as Stop[]
-  show()
+  show('/?view=travels')
   await userEvent.click(await screen.findByRole('button', { name: 'globe' }))
   const sheet = screen.getByRole('dialog', { name: /finland/i })
   expect(within(sheet).getByText('lapland')).toBeInTheDocument()
@@ -250,30 +152,22 @@ it('choosing a country with two trips opens a chooser', async () => {
 it('choosing a country with one trip opens it', async () => {
   db.trips = europe()
   db.stops = [stop({ trip_id: 'lap', place: place({ country: 'FI' }) })] as Stop[]
-  show()
+  show('/?view=travels')
   await userEvent.click(await screen.findByRole('button', { name: 'globe' }))
   expect(screen.getByText('opened trip')).toBeInTheDocument()
-})
-
-it('home has next up, the inbox of links without a trip, your travels and past trips', () => {
-  db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' }), ...europe()]
-  db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
-  show()
-  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['next up', 'inbox', 'your travels, wrapped', 'past trips'])
-  expect(screen.getByText('cafe reel')).toBeInTheDocument()
 })
 
 it('a link in the inbox goes to a trip from its own row', async () => {
   db.trips = europe()
   db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
-  show()
+  show('/?view=inbox')
   await userEvent.selectOptions(screen.getByLabelText('move cafe reel to a trip'), 'par')
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'l1', trip_id: 'par' }))
 })
 
 it('an inbox link is named by your note, with the site\'s own icon', () => {
   db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'instagram', note: 'rooftop bar' }]
-  show()
+  show('/?view=inbox')
   const row = screen.getByRole('link', { name: /rooftop bar/ })
   expect(row).toHaveTextContent('instagram.com')
   expect(row).not.toHaveTextContent('instagram.com · rooftop bar')
@@ -286,7 +180,7 @@ it('a long swipe either way removes an inbox link, without opening it', () => {
     { id: 'l2', trip_id: null, url: 'https://example.com/b', title: 'b', note: '' },
   ]
   db.remove.mockClear()
-  show()
+  show('/?view=inbox')
   for (const [id, to] of [['l1', 400], ['l2', 100]] as const) {
     const row = screen.getByRole('link', { name: id === 'l1' ? /^a/ : /^b/ }).closest('li') as HTMLElement
     fireEvent.pointerDown(row, { clientX: 250, pointerId: 1 })
@@ -301,32 +195,17 @@ it('a long swipe either way removes an inbox link, without opening it', () => {
 it('a short swipe on an inbox link does nothing', () => {
   db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
   db.remove.mockClear()
-  show()
+  show('/?view=inbox')
   const row = screen.getByRole('link', { name: /^a/ }).closest('li') as HTMLElement
   fireEvent.pointerDown(row, { clientX: 250, pointerId: 1 })
   fireEvent.pointerUp(row, { clientX: 290, pointerId: 1 })
   expect(db.remove).not.toHaveBeenCalled()
 })
 
-it('on a laptop the inbox sits with the globe, above it', () => {
-  db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
-  show()
-  const side = screen.getByRole('heading', { name: 'inbox' }).closest('.home-side')
-  expect(side).not.toBeNull()
-  expect(side!.querySelectorAll('h2')[1]).toHaveTextContent('your travels, wrapped')
-})
-
-it('when every trip is over, next up says so', () => {
-  db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' })]
-  show()
-  expect(screen.getByText('nothing coming up')).toBeInTheDocument()
-  expect(screen.queryByTestId('calendar')).toBeNull()
-})
-
 it('the globe gets a pin for each country with a located place', async () => {
   db.trips = europe()
   db.stops = [stop({ trip_id: 'lap', place: place({ country: 'FI', lat: 66.5, lng: 25.7 }) })] as Stop[]
-  show()
+  show('/?view=travels')
   await screen.findByRole('button', { name: 'globe' })
   expect(db.globe!.pins.map((p) => p.code)).toEqual(['FI'])
 })
@@ -466,14 +345,6 @@ it('signing out says so while it happens', async () => {
   expect(screen.getByRole('button', { name: /^signing out/ })).toHaveAttribute('aria-busy', 'true')
 })
 
-it('the globe sits under its own heading, like next up', () => {
-  db.trips = europe()
-  show()
-  const heading = screen.getByRole('heading', { level: 2, name: 'your travels, wrapped' })
-  const world = document.querySelector('.home-world') as HTMLElement
-  expect(world.firstElementChild).toContainElement(heading)
-})
-
 describe('the totals say what they count', () => {
   beforeEach(() => {
     db.trips = europe()
@@ -485,7 +356,7 @@ describe('the totals say what they count', () => {
   const item = (label: string) => within(screen.getByTestId('totals')).getByText(label).closest('[tabindex]') as HTMLElement
 
   it('hovering a number shows the tooltip listing them', async () => {
-    show()
+    show('/?view=travels')
     await userEvent.hover(item('countries'))
     const tip = screen.getByRole('tooltip')
     expect(tip).toHaveClass('globe-tip')
@@ -496,7 +367,7 @@ describe('the totals say what they count', () => {
   })
 
   it('cities and trips list theirs too', async () => {
-    show()
+    show('/?view=travels')
     await userEvent.hover(item('cities'))
     expect(screen.getByRole('tooltip')).toHaveTextContent('paris · rovaniemi')
     await userEvent.hover(item('trips'))
@@ -504,7 +375,7 @@ describe('the totals say what they count', () => {
   })
 
   it('a tap or tab shows it too, and escape hides it', async () => {
-    show()
+    show('/?view=travels')
     await userEvent.click(item('cities'))
     expect(screen.getByRole('tooltip')).toHaveTextContent('2 cities')
     expect(item('cities')).toHaveAttribute('aria-describedby', screen.getByRole('tooltip').id)
@@ -516,10 +387,119 @@ describe('the totals say what they count', () => {
 it('a total\'s tooltip floats above the page, so showing it can never move the page', async () => {
   db.trips = europe()
   db.stops = [stop({ trip_id: 'lap', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) })] as Stop[]
-  show()
+  show('/?view=travels')
   const cities = within(screen.getByTestId('totals')).getByText('cities').closest('[tabindex]') as HTMLElement
   await userEvent.hover(cities)
   const tip = screen.getByRole('tooltip')
   expect(tip.style.position).toBe('fixed')
   expect(tip.parentElement).toBe(document.body)
+})
+
+const items = () => screen.getAllByTestId('trip-item')
+const views = () => within(screen.getByRole('navigation', { name: 'home' })).getAllByRole('link')
+
+describe('trips, the view home opens on', () => {
+  it('leads with the next trip, then lists what is coming with side trips under their parent', () => {
+    db.trips = europe()
+    show()
+    expect(views().map((v) => v.textContent)).toEqual(['trips', 'inbox', 'travels'])
+    expect(views()[0]).toHaveAttribute('aria-current', 'page')
+    const lead = screen.getByTestId('lead')
+    expect(lead).toHaveTextContent('next · in 84 days')
+    expect(lead).toHaveTextContent('europe exchange 2027')
+    expect(lead).toHaveTextContent('28 jan – 13 jul · 166 nights')
+    expect(within(lead).getByRole('link', { name: 'open the plan →' }).getAttribute('href')).toMatch(/^\/trip\/ex/)
+    expect(screen.getByRole('heading', { level: 2, name: 'upcoming' })).toBeInTheDocument()
+    expect(items().map((r) => r.textContent)).toEqual([
+      expect.stringMatching(/europe exchange 2027.*28 jan – 13 jul.*in 84 days/),
+      expect.stringMatching(/lapland.*europe exchange 2027.*7 – 11 feb.*in 94 days/),
+      expect.stringMatching(/paris.*europe exchange 2027.*5 – 8 mar.*in 120 days/),
+      expect.stringMatching(/summer.*1 – 10 jun.*in 208 days/),
+    ])
+    expect(items().map((r) => r.getAttribute('data-depth'))).toEqual(['0', '1', '1', '0'])
+    expect(items()[1]).toHaveAttribute('href', '/trip/lap')
+    expect(screen.queryByTestId('calendar')).toBeNull()
+  })
+
+  it('a trip that is on now leads, saying which day it is', () => {
+    vi.setSystemTime(new Date('2027-02-08T10:00:00'))
+    db.trips = europe()
+    show()
+    const lead = screen.getByTestId('lead')
+    expect(lead).toHaveTextContent('now · day 12 of 167')
+    expect(lead).toHaveTextContent('europe exchange 2027')
+    expect(items()[0]).toHaveTextContent('now')
+  })
+
+  it('a trip without dates is listed last and never leads', () => {
+    db.trips = [trip({ id: 'maybe', name: 'someday japan', start_date: null, end_date: null })]
+    show()
+    expect(screen.queryByTestId('lead')).toBeNull()
+    expect(items().map((r) => r.textContent)).toEqual([expect.stringContaining('someday japan')])
+  })
+
+  it('no trips shows only the empty title, with the + to add one', () => {
+    show()
+    expect(screen.getByText('no trips yet')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'add' })).toBeInTheDocument()
+    expect(screen.queryByTestId('lead')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'past' })).toBeNull()
+  })
+
+  it('past trips follow once one has ended, newest first', () => {
+    db.trips = [trip({ id: 'b', name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' }), trip({ id: 'c', name: 'crete', start_date: '2026-05-01', end_date: '2026-05-04' })]
+    show()
+    expect(screen.getByText('nothing coming up')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'past' })).toBeInTheDocument()
+    expect(items().map((r) => r.textContent)).toEqual([expect.stringContaining('crete'), expect.stringContaining('bali')])
+  })
+
+  it('shows neither the inbox nor the globe', () => {
+    db.trips = europe()
+    db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
+    show()
+    expect(screen.queryByText('example.com')).toBeNull()
+    expect(screen.queryByTestId('totals')).toBeNull()
+    expect(db.globe).toBeNull()
+  })
+})
+
+describe('the switch', () => {
+  it('counts what waits in the inbox, and opens each view', async () => {
+    db.trips = europe()
+    db.links = [
+      { id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' },
+      { id: 'l2', trip_id: 'ex', url: 'https://example.com/b', title: 'b', note: '' },
+    ]
+    show()
+    expect(views().map((v) => v.textContent)).toEqual(['trips', 'inbox · 1', 'travels'])
+    await userEvent.click(views()[1])
+    expect(views()[1]).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: /^a/ })).toBeInTheDocument()
+    expect(screen.queryByTestId('lead')).toBeNull()
+    await userEvent.click(views()[2])
+    expect(screen.getByTestId('totals')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'globe' })).toBeInTheDocument()
+  })
+
+  it('an empty inbox says so in a few words', () => {
+    show('/?view=inbox')
+    expect(screen.getByText('inbox is empty')).toBeInTheDocument()
+  })
+
+  it('a link shared before signing in waits at the top of the inbox', () => {
+    localStorage.setItem('planner-capture', JSON.stringify({ url: 'https://example.com/z', title: '', text: '' }))
+    show('/?view=inbox')
+    expect(screen.getByRole('link', { name: /not saved yet/ })).toHaveAttribute('href', '/save')
+    expect(screen.queryByText('inbox is empty')).toBeNull()
+  })
+
+  it('travels holds the globe and its numbers, titled "life well lived"', () => {
+    db.trips = europe()
+    show('/?view=travels')
+    const totals = screen.getByTestId('totals')
+    const title = screen.getByText('life well lived')
+    expect(totals).toHaveAttribute('aria-labelledby', title.id)
+    expect(totals.closest('.travels-card')).not.toBeNull()
+  })
 })

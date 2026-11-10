@@ -9,24 +9,69 @@
 .home-mark { flex: 1; min-width: 0; line-height: 1; }
 .home-mark img { display: block; width: 180px; max-width: 100%; height: auto; }
 .account-name { font-size: 20px; font-weight: 700; }
-.home-world { display: grid; gap: 16px; }
-.home-main, .home-side { display: grid; gap: 28px; min-width: 0; }
 
-/* laptop: plans on the left, the inbox and the globe on the right, like the trip page */
+/* one view at a time: trips, inbox, travels. on a phone the switch sits under the wordmark; on a laptop beside it */
+.home-top { flex-wrap: wrap; }
+.home-views { order: 3; flex-basis: 100%; display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
+.home-view {
+  display: inline-flex; align-items: center; min-height: 44px; margin-bottom: -1px; border-bottom: 2px solid transparent;
+  color: var(--ink-3); font-size: 15px; font-weight: 700; text-decoration: none;
+}
+.home-view:hover { color: var(--ink); }
+.home-view[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+.home-trips, .home-inbox-view { display: grid; gap: 24px; min-width: 0; }
+.home-inbox-view .resume-plan { margin-inline: 0; }
+
+/* the trip you're on, or the next one: a banner in its own colour */
+.lead {
+  display: grid; gap: 10px; padding: 18px 18px 14px; border-radius: var(--radius);
+  background: var(--c); color: var(--card);
+}
+.lead-text { display: grid; gap: 4px; min-width: 0; }
+.lead .lead-when { color: inherit; opacity: .85; }
+.lead-name { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; overflow-wrap: anywhere; }
+.lead-dates { font-size: 14px; opacity: .9; }
+.lead .lead-go { justify-self: start; min-height: 32px; color: inherit; font-size: 14px; }
+
+/* trips: a list on a phone, side trips tucked under their parent */
+.trip-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.trip-item {
+  display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 2px;
+  border-bottom: 1px solid var(--line); color: inherit; text-decoration: none;
+}
+.trip-item:hover { background: var(--soft); }
+.trip-item[data-depth="1"] { padding-left: 24px; }
+.trip-item[data-depth="2"] { padding-left: 46px; }
+.trip-item .dot { background: var(--c); }
+.trip-item:not([data-depth="0"]) .dot { width: 8px; height: 8px; margin-inline: 1px; }
+.trip-item-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.trip-item-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-item-text .muted { font-size: 14px; }
+/* on a phone the nesting already says whose side trip it is */
+.trip-item-parent { display: none; }
+
 @media (min-width: 1024px) {
-  .home {
-    width: min(1120px, 100%); padding-inline: 32px; column-gap: 56px; align-items: start;
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
-    /* the tall right column must not stretch the gap under next up */
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas: "top top" "main side" "past side";
+  .home { width: min(1120px, 100%); padding-inline: 32px; gap: 32px; }
+  .home-top { flex-wrap: nowrap; gap: 28px; }
+  .home-views { order: 0; flex-basis: auto; border-bottom: 0; }
+  .lead { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 24px 28px; }
+  .lead-name { font-size: 40px; }
+  .lead .lead-go { justify-self: end; }
+  /* tiles, three to a row, all the same size so the rows line up */
+  .trip-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; border-top: 0; }
+  .trip-item, .trip-item[data-depth] {
+    height: 100%; min-height: 96px; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 10px;
+    padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius);
   }
-  .home-top { grid-area: top; }
-  .home-main { grid-area: main; }
-  .home-past { grid-area: past; }
-  /* the right column stays in view while scrolling, unless an inbox makes it too tall to */
-  .home-side { grid-area: side; position: sticky; top: 24px; }
-  .home-side:has(.home-inbox) { position: static; }
+  .trip-item .dot, .trip-item:not([data-depth="0"]) .dot { width: 32px; height: 4px; margin: 0; border-radius: 2px; }
+  .trip-item-text { width: 100%; }
+  .trip-item-name { font-family: var(--f-head); font-size: 19px; font-weight: 700; }
+  .trip-item-parent { display: inline; }
+  /* travels: the globe with its numbers beside it */
+  .travels-card { grid-template-columns: minmax(0, 1fr) 280px; align-items: center; }
+  .travels-card .globe-wrap { width: min(100% - 48px, 520px); margin: 28px auto; }
+  .travels-card .totals-block { border-top: 0; border-left: 1px solid var(--line); align-self: stretch; align-content: center; padding: 24px; }
+  .travels-card .totals { grid-template-columns: 1fr; gap: 18px; }
 }
 
 /* only the round globe takes touches; its square corners still scroll the page */
@@ -75,12 +120,6 @@
 .home-section { display: grid; gap: 12px; }
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
 .section-head h2 { font-size: 22px; font-weight: 700; }
-
-.cal-wrap { display: grid; gap: 12px; min-width: 0; }
-.cal-row .dot { background: var(--c); }
-.cal-row[data-depth]:not([data-depth="0"]) .dot { width: 8px; height: 8px; margin-inline: 1px; }
-.cal-row-text { flex: 1; min-width: 0; display: grid; padding-block: 8px; }
-.cal-row-text .muted { font-size: 14px; }
 
 .rows { display: grid; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .trip-row {

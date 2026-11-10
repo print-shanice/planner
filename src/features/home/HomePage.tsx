@@ -1,8 +1,8 @@
 import { lazy, Suspense, useId, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLinks, useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
-import { countdown, todayISO, fmtDay } from '../../lib/dates'
+import { countdown, todayISO } from '../../lib/dates'
 import { resumePlan } from '../../lib/resume'
 import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
@@ -15,7 +15,7 @@ import { Loading } from '../../components/Loading'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
-import { Calendar } from './Calendar'
+import { Lead, TripList, leadTrip, tripItems } from './Trips'
 import { TripForm } from './TripForm'
 import { AccountButton } from './Account'
 import { Inbox } from './Inbox'
@@ -25,8 +25,14 @@ import { peekPending } from '../../lib/capture'
 // maplibre is large and needs webgl; load it after the page shows
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
+type View = 'trips' | 'inbox' | 'travels'
+const VIEWS: View[] = ['trips', 'inbox', 'travels']
+
 export function HomePage() {
   const travelsId = useId()
+  const [params] = useSearchParams()
+  // one view at a time; home always opens on trips
+  const view: View = VIEWS.find((v) => v === params.get('view')) ?? 'trips'
   const tq = useTrips()
   const sq = useStops()
   const trips = tq.data ?? []
@@ -49,10 +55,13 @@ export function HomePage() {
 
   const top = trips.filter((t) => !t.parent_id)
   const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
-  const upcoming = top.filter((t) => countdown(t, today).kind !== 'done').sort(byStart)
-  const past = top.filter((t) => countdown(t, today).kind === 'done').sort((a, b) => byStart(b, a))
+  const upcoming = tripItems(top.filter((t) => countdown(t, today).kind !== 'done').sort(byStart), trips, today)
+  const past = tripItems(top.filter((t) => countdown(t, today).kind === 'done').sort((a, b) => byStart(b, a)), trips, today, true).filter((i) => i.depth === 0)
+  const lead = leadTrip(trips, today)
   const resume = resumePlan(trips, stops, today)
-  const resumeTrip = trips.find(t => t.id === resume?.tripId)
+  // "open the plan" goes back to the day you were on, when it was this trip
+  const leadHref = lead ? (resume?.tripId === lead.id && resume.day ? `/trip/${lead.id}?day=${resume.day}` : `/trip/${lead.id}`) : ''
+  const waitingCount = inbox.length + (waiting ? 1 : 0)
 
   const choices = country ? tripsInCountry(country, trips, stops) : []
 
@@ -69,66 +78,68 @@ export function HomePage() {
           <img src={`${import.meta.env.BASE_URL}wordmark.svg`} alt="planner" width="1367" height="468" />
         </h1>
         <OfflineBadge inline />
+        <nav className="home-views" aria-label="home">
+          {VIEWS.map((v) => (
+            <Link key={v} to={v === 'trips' ? '/' : `/?view=${v}`} className="home-view" aria-current={view === v ? 'page' : undefined}>
+              {v === 'inbox' && waitingCount > 0 ? `inbox · ${waitingCount}` : v}
+            </Link>
+          ))}
+        </nav>
         <AccountButton />
       </header>
 
-      {/* on a laptop: plans on the left (what's waiting, where you were, next up, then past trips); the inbox and the globe on the right */}
-      <div className="home-main">
-        {waiting && (
-          <Link className="resume-plan waiting" to="/save">
-            <span className="mono-label">not saved yet</span>
-            <span className="head resume-name">{waiting.url || waiting.text || 'a link'}</span>
-            <span className="text-link">save it →</span>
-          </Link>
-        )}
-        {resumeTrip && resume && (
-          <Link className="resume-plan" to={`/trip/${resumeTrip.id}${resume.day ? `?day=${resume.day}` : ''}`}>
-            <span className="mono-label">{resume.day === today ? 'today' : 'continue'}</span>
-            <span className="head resume-name">{resumeTrip.name}</span>
-            <span className="text-link">{resume.day ? fmtDay(resume.day, { weekday: 'long', day: 'numeric', month: 'long' }) : 'open the plan'} →</span>
-          </Link>
-        )}
-
-        <section className="home-section home-next">
-          <div className="section-head">
-            <h2 className="head">next up</h2>
-            <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
-              <Icon name="plus" />
-            </button>
-          </div>
+      {view === 'trips' && (
+        <div className="home-trips">
           <LoadState load={load} blocks={1} />
-          {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
-          {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-          {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
-        </section>
-      </div>
-
-      <div className="home-side">
-        {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
-
-        <div className="home-world">
-          {/* a summary of where your travels have taken you: the globe and its numbers in one card */}
-          <div className="section-head"><h2 id={travelsId} className="head">your travels, wrapped</h2></div>
-          <div className="travels-card">
-            <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
-              <Globe status={status} pins={pins} onCountry={pickCountry} />
-            </Suspense>
-            {trips.length > 0 && (
-              <div className="totals-block">
-                <p className="head totals-title">life well lived</p>
-                <Totals {...totals} lists={lists} labelledBy={travelsId} />
-              </div>
-            )}
-          </div>
+          {lead && <Lead trip={lead} today={today} href={leadHref} />}
+          <section className="home-section">
+            <div className="section-head">
+              <h2 className="head">upcoming</h2>
+              <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
+                <Icon name="plus" />
+              </button>
+            </div>
+            {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
+            {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
+            {upcoming.length > 0 && <TripList items={upcoming} today={today} />}
+          </section>
+          {/* only shows once a trip has ended */}
+          {past.length > 0 && (
+            <section className="home-section home-past">
+              <div className="section-head"><h2 className="head">past</h2></div>
+              <TripList items={past} today={today} />
+            </section>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* only shows once a trip has ended */}
-      {past.length > 0 && (
-        <section className="home-section home-past">
-          <div className="section-head"><h2 className="head">past trips</h2></div>
-          <div className="rows">{past.map((t) => <TripRow key={t.id} trip={t} />)}</div>
-        </section>
+      {view === 'inbox' && (
+        <div className="home-inbox-view">
+          {waiting && (
+            <Link className="resume-plan waiting" to="/save">
+              <span className="mono-label">not saved yet</span>
+              <span className="head resume-name">{waiting.url || waiting.text || 'a link'}</span>
+              <span className="text-link">save it →</span>
+            </Link>
+          )}
+          {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
+          {inbox.length === 0 && !waiting && <EmptyState title="inbox is empty" />}
+        </div>
+      )}
+
+      {view === 'travels' && (
+        /* a summary of where your travels have taken you: the globe and its numbers in one card */
+        <div className="travels-card">
+          <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
+            <Globe status={status} pins={pins} onCountry={pickCountry} />
+          </Suspense>
+          {trips.length > 0 && (
+            <div className="totals-block">
+              <p className="head totals-title" id={travelsId}>life well lived</p>
+              <Totals {...totals} lists={lists} labelledBy={travelsId} />
+            </div>
+          )}
+        </div>
       )}
 
       <Sheet open={menu} title="add" onClose={() => setMenu(false)}>

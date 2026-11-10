@@ -39,8 +39,7 @@ export function Inbox({ links, trips }: { links: Link[]; trips: Trip[] }) {
   const ordered = top.flatMap((t) => descendants(t.id, trips).map((id) => trips.find((x) => x.id === id)!).filter(Boolean))
   const sorted = [...links].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
   return (
-    <section className="home-section home-inbox" aria-labelledby="inbox-title">
-      <div className="section-head"><h2 id="inbox-title" className="head">inbox</h2><span className="mono-label">{links.length}</span></div>
+    <section className="home-section home-inbox" aria-label="inbox">
       <ul className="doc-list">
         {sorted.map((l) => (
           <Row key={l.id} link={l} trips={ordered} canEdit={canEdit} onMove={(trip) => save.mutate({ id: l.id, trip_id: trip })} onRemove={() => removeLater(l.id)} />

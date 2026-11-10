@@ -169,7 +169,7 @@ h3.mono-label { margin: 22px 0 6px; }
 .resume-name { font-size: 26px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resume-plan .text-link { min-height: 32px; font-size: 14px; }
 .resume-plan.waiting { border-top-color: var(--warn); }
-.home-inbox .doc-list { margin-top: 4px; }
+.home-inbox .doc-list { border-top: 0; }
 
 /* ---------- capture ---------- */
 .capture-page { width: min(560px, 100%); margin: 0 auto; padding: calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 32px); }
