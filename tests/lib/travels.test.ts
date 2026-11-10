@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aroundTheWorld, favourites, stamps, tickets, km } from '../../src/lib/travels'
+import { arc, aroundTheWorld, favourites, stamps, tickets, km } from '../../src/lib/travels'
 import { place, stop, trip } from '../factories'
 import type { Review, Stop } from '../../src/lib/types'
 
@@ -44,6 +44,25 @@ describe('tickets', () => {
     expect(r.flights).toHaveLength(1)
     expect(r.flights[0].line).toBeNull()
     expect(r.km).toBe(0)
+  })
+})
+
+describe('arc', () => {
+  it('bends a flight over the earth: it starts and ends at the two places, with points between', () => {
+    const pts = arc([5.48, 51.44], [139.7, 35.7])
+    expect(pts[0]).toEqual([5.48, 51.44])
+    expect(pts[pts.length - 1]).toEqual([139.7, 35.7])
+    expect(pts.length).toBeGreaterThan(8)
+    // a great circle from europe to japan goes north of the straight line
+    const mid = pts[Math.floor(pts.length / 2)]
+    expect(mid[1]).toBeGreaterThan(60)
+  })
+
+  it('a short hop is still a line from a to b', () => {
+    const pts = arc([5.48, 51.44], [5.5, 51.5])
+    expect(pts[0]).toEqual([5.48, 51.44])
+    expect(pts[pts.length - 1]).toEqual([5.5, 51.5])
+    expect(pts.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))).toBe(true)
   })
 })
 

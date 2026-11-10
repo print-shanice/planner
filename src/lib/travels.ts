@@ -6,6 +6,8 @@ import { countryName, firstVisits } from './countries'
 
 export type LngLat = [number, number]
 export type Route = { id: string; tripId: string; mode: Stop['mode']; from: string; to: string; day: string; line: [LngLat, LngLat] | null }
+// a route as the globe draws it: its two ends and how you went (a flight bends over the earth, the rest run straight)
+export type GlobeRoute = { line: [LngLat, LngLat]; mode: Stop['mode'] }
 
 const EARTH = 40075
 const at = (p: Place | null): LngLat | null =>
@@ -21,6 +23,26 @@ export function km(a: LngLat, b: LngLat): number {
 }
 
 const nameOf = (p: Place | null) => (p?.city || p?.name || '').toLowerCase()
+
+// the great circle from a to b as a run of points (a flight's path, bending towards the pole on a long haul)
+export function arc(a: LngLat, b: LngLat, segments = 32): LngLat[] {
+  const r = (d: number) => (d * Math.PI) / 180
+  const deg = (x: number) => (x * 180) / Math.PI
+  const [l1, f1, l2, f2] = [r(a[0]), r(a[1]), r(b[0]), r(b[1])]
+  const d = 2 * Math.asin(Math.min(1, Math.sqrt(Math.sin((f2 - f1) / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin((l2 - l1) / 2) ** 2)))
+  if (!(d > 1e-9)) return [a, b]
+  const out: LngLat[] = [a]
+  for (let i = 1; i < segments; i++) {
+    const f = i / segments
+    const A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d)
+    const x = A * Math.cos(f1) * Math.cos(l1) + B * Math.cos(f2) * Math.cos(l2)
+    const y = A * Math.cos(f1) * Math.sin(l1) + B * Math.cos(f2) * Math.sin(l2)
+    const z = A * Math.sin(f1) + B * Math.sin(f2)
+    out.push([deg(Math.atan2(y, x)), deg(Math.atan2(z, Math.sqrt(x * x + y * y)))])
+  }
+  out.push(b)
+  return out
+}
 
 export function tickets(trips: Trip[], stops: Stop[], today: string): { flights: Route[]; trains: Route[]; ground: Route[]; km: number } {
   const known = new Set(trips.map((t) => t.id))

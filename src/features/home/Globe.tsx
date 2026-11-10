@@ -2,14 +2,15 @@ import { useEffect, useId, useRef, useState } from 'react'
 import maplibregl, { type ExpressionSpecification, type GeoJSONSource, type LayerSpecification, type StyleSpecification } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GlobePin } from '../../lib/countries'
+import { arc, type GlobeRoute, type LngLat } from '../../lib/travels'
+import { iconPath } from '../../components/Icon'
 import { GlobeTip } from './GlobeTip'
 import { Loading } from '../../components/Loading'
 import { openLayer } from '../../lib/layers'
 
 type Status = Map<string, 'been' | 'planned'>
-type LngLat = [number, number]
-// routes: lines to draw (an opened ticket's journeys); focus: a country to turn to and point at (a tapped passport stamp)
-type Props = { status: Status; pins: GlobePin[]; onCountry: (code: string) => void; routes?: [LngLat, LngLat][]; focus?: { code: string; n: number } | null }
+// routes: journeys to draw (an opened way of getting around); focus: a country to turn to and point at (a tapped passport stamp)
+type Props = { status: Status; pins: GlobePin[]; onCountry: (code: string) => void; routes?: GlobeRoute[]; focus?: { code: string; n: number } | null }
 type Placed = { pin: GlobePin; marker: maplibregl.Marker; el: HTMLButtonElement }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -35,6 +36,16 @@ const RESUME_MS = 3000
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const globeFile = (name: string) => `${import.meta.env.BASE_URL}globe/${name}`
+
+// a glyph for how you went, sitting on the middle of its route: a plane, a train, a bus, a ferry
+function glyphElement(mode: string): HTMLDivElement {
+  const el = document.createElement('div')
+  el.className = 'globe-glyph'
+  el.setAttribute('aria-hidden', 'true')
+  const name = mode === 'flight' ? 'plane' : mode
+  el.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${iconPath(name)}"/></svg>`
+  return el
+}
 
 // a map pin whose point sits on the place
 const PIN = '<svg viewBox="0 0 24 32" width="24" height="32" aria-hidden="true"><path d="M12 30.5s-9.5-9.9-9.5-17.6a9.5 9.5 0 0 1 19 0c0 7.7-9.5 17.6-9.5 17.6z"/><circle cx="12" cy="12.6" r="3.6"/></svg>'
@@ -122,6 +133,7 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
   const aimed = useRef(false)
   const map = useRef<maplibregl.Map | null>(null)
   const placed = useRef<Placed[]>([])
+  const glyphs = useRef<maplibregl.Marker[]>([])
   const open = useRef<string | null>(null)
   const touch = useRef(false)
   // the spin holds while someone has hold of the globe, then waits a few seconds ('next' = start waiting next frame)
@@ -153,6 +165,8 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
     }
     if (!at) open.current = null
     setTip(at && open.current ? { code: open.current, x: at.x, y: at.y } : null)
+    // a glyph round the back of the globe hides too
+    for (const g of glyphs.current) g.getElement().style.visibility = m.transform.isLocationOccluded(g.getLngLat()) ? 'hidden' : ''
   }
 
   function show(code: string) { open.current = code; place() }
@@ -199,8 +213,11 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
         { id: 'countries-line', type: 'line', source: 'countries', paint: { 'line-color': css('--ground'), 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.6, 6, 1.2] } },
         { id: 'been-edge', type: 'line', source: 'countries', minzoom: NEAR[0], filter: edgeFor(latest.current.status),
           paint: { 'line-color': css('--been'), 'line-width': ['interpolate', ['linear'], ['zoom'], NEAR[0], 0, NEAR[1], 1.6] } },
-        { id: 'routes-line', type: 'line', source: 'routes', filter: ['==', ['geometry-type'], 'LineString'],
-          layout: { 'line-cap': 'round' }, paint: { 'line-color': css('--ink'), 'line-width': 2, 'line-dasharray': [1.5, 1.5] } },
+        // flights bend over the earth as a dashed arc; trains, buses and ferries run as a solid line
+        { id: 'routes-flight', type: 'line', source: 'routes', filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'mode'], 'flight']],
+          layout: { 'line-cap': 'round' }, paint: { 'line-color': css('--ink'), 'line-width': 1.8, 'line-dasharray': [1.5, 2] } },
+        { id: 'routes-ground', type: 'line', source: 'routes', filter: ['all', ['==', ['geometry-type'], 'LineString'], ['!=', ['get', 'mode'], 'flight']],
+          layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': css('--ink'), 'line-width': 2 } },
         { id: 'routes-ends', type: 'circle', source: 'routes', filter: ['==', ['geometry-type'], 'Point'],
           paint: { 'circle-radius': 3.5, 'circle-color': css('--ink'), 'circle-stroke-color': css('--card'), 'circle-stroke-width': 1.5 } },
         ...nameLayers(),
@@ -262,6 +279,8 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
     return () => {
       for (const x of placed.current) x.marker.remove()
       placed.current = []
+      for (const g of glyphs.current) g.remove()
+      glyphs.current = []
       m.remove()
       map.current = null
     }
@@ -278,21 +297,37 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
     else m.once('load', apply)
   }, [status])
 
-  // an opened ticket draws its journeys, and the globe turns to take them all in
+  // an opened way of getting around draws its journeys (a flight as an arc, the rest straight), puts its glyph
+  // on the middle of each distinct route, and the globe turns to take them all in
   const routesKey = JSON.stringify(routes)
   useEffect(() => {
     const m = map.current
     if (!m) return
     const apply = () => {
-      const features: GeoJSON.Feature[] = routes.flatMap(([a, b]) => [
-        { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [a, b] } },
-        { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: a } },
-        { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: b } },
-      ])
+      for (const g of glyphs.current) g.remove()
+      glyphs.current = []
+      const features: GeoJSON.Feature[] = []
+      const seen = new Set<string>()
+      const drawn: LngLat[] = []
+      for (const { line: [a, b], mode } of routes) {
+        const path = mode === 'flight' ? arc(a, b) : [a, b]
+        drawn.push(...path)
+        features.push(
+          { type: 'Feature', properties: { mode }, geometry: { type: 'LineString', coordinates: path } },
+          { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: a } },
+          { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: b } },
+        )
+        // the same route flown twice gets one glyph, so a busy year never crowds the globe
+        const mid = path[Math.floor(path.length / 2)]
+        const key = `${mode}:${[a, b].map((p) => p.map((v) => v.toFixed(1)).join(',')).sort().join('|')}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        glyphs.current.push(new maplibregl.Marker({ element: glyphElement(mode ?? 'train') }).setLngLat(mid).addTo(m))
+      }
       m.getSource<GeoJSONSource>('routes')?.setData({ type: 'FeatureCollection', features })
-      if (!routes.length) return
-      const pts = routes.flat()
-      const lngs = pts.map((p) => p[0]), lats = pts.map((p) => p[1])
+      place()
+      if (!drawn.length) return
+      const lngs = drawn.map((p) => p[0]), lats = drawn.map((p) => p[1])
       still.current = { held: false, until: 'next' }
       try {
         m.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 48, maxZoom: CLOSE, duration: reduced() ? 0 : 1200 })

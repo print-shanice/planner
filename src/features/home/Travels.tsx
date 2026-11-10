@@ -2,16 +2,18 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { Link } from 'react-router-dom'
 import type { Review, Stop, Trip } from '../../lib/types'
 import { fmtDay } from '../../lib/dates'
-import { aroundTheWorld, favourites, stamps, tickets, type LngLat, type Route } from '../../lib/travels'
+import { aroundTheWorld, favourites, stamps, tickets, type GlobeRoute, type Route } from '../../lib/travels'
+import { Icon } from '../../components/Icon'
 import { tint } from '../../components/MonthCalendar'
 import { stopTitle } from '../plan/StopRow'
 import { Stamp } from './Stamp'
 
-export type GlobeAsk = { routes: [LngLat, LngLat][]; focus: { code: string; n: number } | null; ready: boolean }
+export type GlobeAsk = { routes: GlobeRoute[]; focus: { code: string; n: number } | null; ready: boolean }
 
 type Props = { trips: Trip[]; stops: Stop[]; reviews: Review[]; today: string; globe: (ask: GlobeAsk) => ReactNode }
 
-const KINDS = [['flights', 'flights'], ['trains', 'trains'], ['ground', 'buses · ferries']] as const
+// each way of getting around, with its glyph (the same one the globe draws on the route)
+const KINDS = [['flights', 'flights', 'plane'], ['trains', 'trains', 'train'], ['ground', 'buses · ferries', 'bus']] as const
 
 // travels: the globe on top (beside, on a laptop), a scrapbook of where you've been underneath.
 // a ticket draws its routes on the globe; a stamp turns the globe to its country
@@ -21,7 +23,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
   const f = useMemo(() => favourites(trips, stops, reviews), [trips, stops, reviews])
   const [open, setOpen] = useState<(typeof KINDS)[number][0] | null>(null)
   const [focus, setFocus] = useState<GlobeAsk['focus']>(null)
-  const routes = open ? t[open].map((r) => r.line).filter((l): l is [LngLat, LngLat] => !!l) : []
+  const routes: GlobeRoute[] = open ? t[open].flatMap((r) => (r.line ? [{ line: r.line, mode: r.mode }] : [])) : []
   const kinds = KINDS.filter(([k]) => t[k].length > 0)
   // the globe starts drawing once the view has slid in, so the slide never stutters (its space is kept meanwhile)
   const [settled, setSettled] = useState(false)
@@ -49,12 +51,12 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
                 <span className="muted">{aroundTheWorld(t.km)}</span>
               </div>
             )}
-            <div className="stubs">
-              {kinds.map(([k, label], i) => (
-                <Ticket key={k} label={label} routes={t[k]} open={open === k} style={{ '--i': i } as CSSProperties}
+            <ul className="ways">
+              {kinds.map(([k, label, icon], i) => (
+                <Way key={k} label={label} icon={icon} routes={t[k]} open={open === k} style={{ '--i': i } as CSSProperties}
                   onToggle={() => setOpen((o) => (o === k ? null : k))} />
               ))}
-            </div>
+            </ul>
           </section>
         )}
 
@@ -108,23 +110,26 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
   )
 }
 
-function Ticket({ label, routes, open, onToggle, style }: { label: string; routes: Route[]; open: boolean; onToggle: () => void; style: CSSProperties }) {
+// one way of getting around: a hairline row with its glyph and count; open, it lists the routes (and the globe draws them)
+function Way({ label, icon, routes, open, onToggle, style }: { label: string; icon: string; routes: Route[]; open: boolean; onToggle: () => void; style: CSSProperties }) {
   return (
-    <div className={`stub${open ? ' open' : ''}`} style={style}>
-      <button type="button" className="stub-face" aria-expanded={open} aria-label={`${label} · ${routes.length}`} onClick={onToggle}>
-        <span className="stub-text"><span className="mono-label">ticket</span><span className="stub-name">{label}</span></span>
-        <span className="stub-n num">{routes.length}</span>
+    <li className={`way${open ? ' open' : ''}`} style={style}>
+      <button type="button" className="way-row" aria-expanded={open} aria-label={`${label} · ${routes.length}`} onClick={onToggle}>
+        <span className="way-ico" aria-hidden="true"><Icon name={icon} size={18} /></span>
+        <span className="way-name">{label}</span>
+        <span className="way-n num head">{routes.length}</span>
+        <span className="way-chevron" aria-hidden="true"><Icon name="chevron" size={16} /></span>
       </button>
       {open && (
-        <ul className="stub-routes" aria-label={label}>
+        <ul className="way-routes" aria-label={label}>
           {routes.map((r) => (
             <li key={r.id}>
-              <span>{r.from || '?'} → {r.to || '?'}</span>
+              <span className="way-route">{r.from || '?'} <span className="way-arrow">→</span> {r.to || '?'}</span>
               <span className="muted num">{fmtDay(r.day)}</span>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </li>
   )
 }

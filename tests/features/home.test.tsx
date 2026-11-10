@@ -12,7 +12,7 @@ const db = vi.hoisted(() => ({
   links: [] as unknown[],
   members: [] as unknown[],
   reviews: [] as unknown[],
-  globe: null as null | { pins: { code: string }[]; routes?: [number, number][][]; focus?: { code: string; n: number } | null },
+  globe: null as null | { pins: { code: string }[]; routes?: { line: [number, number][]; mode: string | null }[]; focus?: { code: string; n: number } | null },
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   remove: vi.fn(() => Promise.resolve()),
 }))
@@ -32,7 +32,7 @@ const keyApi = vi.hoisted(() => ({ has: vi.fn(), make: vi.fn() }))
 vi.mock('../../src/lib/saveKey', () => ({ hasSaveKey: keyApi.has, newSaveKey: keyApi.make }))
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: 'signed-in', email: 'shanice@x.com', userId: 'u1', signOut: env.signOut }) }))
 vi.mock('../../src/features/home/Globe', () => ({
-  Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[]; routes?: [number, number][][]; focus?: { code: string; n: number } | null }) => {
+  Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[]; routes?: { line: [number, number][]; mode: string | null }[]; focus?: { code: string; n: number } | null }) => {
     db.globe = p
     return <button onClick={() => p.onCountry('FI')}>globe</button>
   },
@@ -88,17 +88,34 @@ it('home has one +, which adds a trip or saves a link', async () => {
   expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== '')).toEqual(['trip', 'link'])
 })
 
-it('totals count countries, cities and trips', () => {
+// the totals are what has happened: once every trip is over they all count
+const lived = () => {
+  vi.setSystemTime(new Date('2027-07-20T10:00:00'))
   db.trips = europe()
   db.stops = [
-    stop({ trip_id: 'lap', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
-    stop({ trip_id: 'par', place: place({ name: 'louvre', city: 'paris', country: 'FR' }) }),
+    stop({ trip_id: 'lap', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
+    stop({ trip_id: 'par', day: '2027-03-06', place: place({ name: 'louvre', city: 'paris', country: 'FR' }) }),
   ] as Stop[]
+}
+
+it('totals count countries, cities and trips', () => {
+  lived()
   show('/?view=travels')
   const totals = screen.getByTestId('totals')
   expect(totals).toHaveTextContent(/2\s*countries/)
   expect(totals).toHaveTextContent(/2\s*cities/)
   expect(totals).toHaveTextContent(/4\s*trips/)
+})
+
+it('totals leave out what has not happened yet', () => {
+  lived()
+  // before lapland: nothing has been visited, and only the exchange itself has started
+  vi.setSystemTime(new Date('2027-02-01T10:00:00'))
+  show('/?view=travels')
+  const totals = screen.getByTestId('totals')
+  expect(totals).toHaveTextContent(/0\s*countries/)
+  expect(totals).toHaveTextContent(/0\s*cities/)
+  expect(totals).toHaveTextContent(/1\s*trips/)
 })
 
 it('trip form saves dates and currency', async () => {
@@ -367,13 +384,7 @@ it('signing out says so while it happens', async () => {
 })
 
 describe('the totals say what they count', () => {
-  beforeEach(() => {
-    db.trips = europe()
-    db.stops = [
-      stop({ trip_id: 'lap', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'par', place: place({ name: 'louvre', city: 'paris', country: 'FR' }) }),
-    ] as Stop[]
-  })
+  beforeEach(lived)
   const item = (label: string) => within(screen.getByTestId('totals')).getByText(label).closest('[tabindex]') as HTMLElement
 
   it('hovering a number shows the tooltip listing them', async () => {
@@ -406,8 +417,7 @@ describe('the totals say what they count', () => {
 })
 
 it('a total\'s tooltip floats above the page, so showing it can never move the page', async () => {
-  db.trips = europe()
-  db.stops = [stop({ trip_id: 'lap', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) })] as Stop[]
+  lived()
   show('/?view=travels')
   const cities = within(screen.getByTestId('totals')).getByText('cities').closest('[tabindex]') as HTMLElement
   await userEvent.hover(cities)
@@ -723,7 +733,7 @@ describe('travels, the scrapbook under the globe', () => {
       expect.stringMatching(/eindhoven → rovaniemi.*7 feb/), expect.stringMatching(/rovaniemi → eindhoven.*11 feb/),
     ])
     await screen.findByRole('button', { name: 'globe' })
-    expect(db.globe!.routes).toEqual([[[5.48, 51.44], [25.73, 66.5]], [[25.73, 66.5], [5.48, 51.44]]])
+    expect(db.globe!.routes).toEqual([{ line: [[5.48, 51.44], [25.73, 66.5]], mode: 'flight' }, { line: [[25.73, 66.5], [5.48, 51.44]], mode: 'flight' }])
     await userEvent.click(flights)
     expect(db.globe!.routes).toEqual([])
   })

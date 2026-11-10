@@ -51,6 +51,7 @@ const mk = vi.hoisted(() => {
     constructor(o: { element: HTMLElement; anchor?: string }) { this.el = o.element; this.anchor = o.anchor; markers.push(this) }
     setLngLat(ll: [number, number]) { this.ll = { lng: ll[0], lat: ll[1] }; return this }
     getLngLat() { return this.ll }
+    getElement() { return this.el }
     // like maplibre, adding a marker stamps a generic label on it
     addTo(m: FakeMap) { this.el.setAttribute('aria-label', 'Map marker'); m.container.appendChild(this.el); return this }
     remove() { this.el.remove(); return this }
@@ -654,4 +655,48 @@ it('a globe that never draws (a map error) doesn\'t leave totoro spinning foreve
   const m = mk.maps[mk.maps.length - 1]
   act(() => m.fire('error', { error: new Error('no tiles') }))
   expect(screen.queryByRole('status', { name: 'loading globe' })).toBeNull()
+})
+
+describe('routes: how you got around, drawn on the globe', () => {
+  const ein: [number, number] = [5.48, 51.44]
+  const tyo: [number, number] = [139.7, 35.7]
+  const par: [number, number] = [2.35, 48.88]
+  const drawn = (m: InstanceType<typeof mk.FakeMap>) => (m.getSource('routes').setData.mock.lastCall?.[0] as GeoJSON.FeatureCollection).features
+
+  it('a flight bends over the earth as an arc, a train runs straight, and each gets its glyph in the middle', () => {
+    const view = render(<Globe status={status()} pins={[portugal]} onCountry={vi.fn()} routes={[{ line: [ein, tyo], mode: 'flight' }, { line: [ein, par], mode: 'train' }]} />)
+    const m = mk.maps[mk.maps.length - 1]
+    act(() => m.fire('load'))
+    const lines = drawn(m).filter((f) => f.geometry.type === 'LineString')
+    expect(lines).toHaveLength(2)
+    const flight = lines.find((f) => f.properties?.mode === 'flight')!.geometry as GeoJSON.LineString
+    const train = lines.find((f) => f.properties?.mode === 'train')!.geometry as GeoJSON.LineString
+    expect(flight.coordinates.length).toBeGreaterThan(8)
+    expect(train.coordinates).toEqual([ein, par])
+    const glyphs = view.container.querySelectorAll('.globe-glyph')
+    expect(glyphs).toHaveLength(2)
+    expect(glyphs[0].querySelector('path')?.getAttribute('d')).toContain('M10 20l2-6') // the plane
+    expect(glyphs[1].querySelector('path')?.getAttribute('d')).toContain('M7 3h10a2') // the train
+  })
+
+  it('the same route twice gets one glyph, and closing the ticket clears everything', () => {
+    const view = render(<Globe status={status()} pins={[portugal]} onCountry={vi.fn()} routes={[{ line: [ein, tyo], mode: 'flight' }, { line: [tyo, ein], mode: 'flight' }]} />)
+    const m = mk.maps[mk.maps.length - 1]
+    act(() => m.fire('load'))
+    expect(view.container.querySelectorAll('.globe-glyph')).toHaveLength(1)
+    view.rerender(<Globe status={status()} pins={[portugal]} onCountry={vi.fn()} routes={[]} />)
+    expect(view.container.querySelectorAll('.globe-glyph')).toHaveLength(0)
+    expect(drawn(m)).toEqual([])
+  })
+
+  it('a glyph round the back of the globe hides, like a pin', () => {
+    const view = render(<Globe status={status()} pins={[portugal]} onCountry={vi.fn()} routes={[{ line: [ein, par], mode: 'train' }]} />)
+    const m = mk.maps[mk.maps.length - 1]
+    act(() => m.fire('load'))
+    const glyph = view.container.querySelector<HTMLElement>('.globe-glyph')!
+    expect(glyph.style.visibility).toBe('')
+    m.transform.isLocationOccluded.mockReturnValue(true)
+    act(() => m.fire('move'))
+    expect(glyph.style.visibility).toBe('hidden')
+  })
 })

@@ -71,24 +71,34 @@ describe('globe', () => {
     expect(out.map((t) => t.id)).toEqual(['c'])
   })
 
-  it('home totals', () => {
-    const p = trip({ id: 'p' })
-    const c = trip({ id: 'c', parent_id: 'p' })
-    expect(homeTotals([p, c], [
-      stop({ trip_id: 'c', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'c', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'p', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
-    ])).toEqual({ countries: 2, cities: 2, trips: 2 })
+  // the totals are a life lived, not a wish list: only what has happened counts
+  it('home totals count the countries, cities and trips that have happened', () => {
+    const p = trip({ id: 'p', start_date: '2027-01-28', end_date: '2027-07-13' })
+    const c = trip({ id: 'c', parent_id: 'p', start_date: '2027-02-07', end_date: '2027-02-11' })
+    const later = trip({ id: 'later', start_date: '2027-08-01', end_date: '2027-08-09', base: place({ city: 'tokyo', country: 'JP' }) })
+    const someday = trip({ id: 'someday', start_date: null, end_date: null })
+    const stops = [
+      stop({ trip_id: 'c', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
+      stop({ trip_id: 'c', day: '2027-02-09', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
+      stop({ trip_id: 'p', day: '2027-05-02', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
+      stop({ trip_id: 'later', day: '2027-08-02', place: place({ name: 'senso-ji', city: 'tokyo', country: 'JP' }) }),
+      stop({ trip_id: 'p', day: null, saved: true, place: place({ name: 'keukenhof', city: 'lisse', country: 'NL' }) }),
+    ]
+    expect(homeTotals([p, c, later, someday], stops, '2027-03-01')).toEqual({ countries: 1, cities: 1, trips: 2 })
+    expect(homeTotals([p, c, later, someday], stops, '2027-09-01')).toEqual({ countries: 3, cities: 3, trips: 3 })
+    expect(homeTotals([p, c, later, someday], stops, '2026-12-01')).toEqual({ countries: 0, cities: 0, trips: 0 })
   })
 
   it('home lists name what the totals count', () => {
-    const p = trip({ id: 'p', name: 'exchange' })
-    const c = trip({ id: 'c', parent_id: 'p', name: 'lapland' })
-    expect(homeLists([p, c], [
-      stop({ trip_id: 'c', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'c', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'p', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
-    ])).toEqual({ countries: ['finland', 'greece'], cities: ['athens', 'rovaniemi'], trips: ['exchange', 'lapland'] })
+    const p = trip({ id: 'p', name: 'exchange', start_date: '2027-01-28', end_date: '2027-07-13' })
+    const c = trip({ id: 'c', parent_id: 'p', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
+    const later = trip({ id: 'later', name: 'japan', start_date: '2027-08-01', end_date: '2027-08-09' })
+    expect(homeLists([p, c, later], [
+      stop({ trip_id: 'c', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
+      stop({ trip_id: 'c', day: '2027-02-09', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
+      stop({ trip_id: 'p', day: '2027-02-20', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
+      stop({ trip_id: 'later', day: '2027-08-02', place: place({ name: 'senso-ji', city: 'tokyo', country: 'JP' }) }),
+    ], '2027-03-01')).toEqual({ countries: ['finland', 'greece'], cities: ['athens', 'rovaniemi'], trips: ['exchange', 'lapland'] })
   })
 })
 

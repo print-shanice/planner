@@ -72,8 +72,8 @@ export function HomePage() {
 
   const status = useMemo(() => countryStatus(trips, stops, today), [trips, stops, today])
   const pins = useMemo(() => globePins(trips, stops, today), [trips, stops, today])
-  const totals = useMemo(() => homeTotals(trips, stops), [trips, stops])
-  const lists = useMemo(() => homeLists(trips, stops), [trips, stops])
+  const totals = useMemo(() => homeTotals(trips, stops, today), [trips, stops, today])
+  const lists = useMemo(() => homeLists(trips, stops, today), [trips, stops, today])
 
   const top = trips.filter((t) => !t.parent_id)
   const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)

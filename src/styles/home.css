@@ -243,26 +243,25 @@
 .world-bar i { display: block; height: 100%; border-radius: 3px; background: var(--ink); animation: grow-in 1.4s cubic-bezier(.2, .8, .2, 1) both; transform-origin: left; }
 @keyframes grow-in { from { transform: scaleX(0); } }
 
-/* tickets: a stub per kind of journey; open, it lists the routes (and the globe draws them) */
-.stubs { display: grid; gap: 12px; }
-.stub {
-  position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-  transition: border-color .2s, box-shadow .2s; animation: rise-in .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 60ms);
+/* getting around: one hairline row per way of travelling, its glyph and count; open, it lists the routes (and the globe draws them) */
+.ways { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.way { border-bottom: 1px solid var(--line); animation: rise-in .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.way-row {
+  display: grid; grid-template-columns: 28px 1fr auto 20px; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 6px 0;
+  border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit;
 }
-.stub::before, .stub::after {
-  content: ''; position: absolute; right: 70px; width: 14px; height: 14px; border-radius: 50%;
-  background: var(--ground); border: 1px solid var(--line); transition: border-color .2s;
-}
-.stub::before { top: -8px; clip-path: inset(50% 0 0 0); }
-.stub::after { top: calc(100% - 7px); clip-path: inset(0 0 50% 0); }
-.stub.open { border-color: var(--ink); box-shadow: 0 8px 24px rgba(22, 24, 29, .08); }
-.stub.open::before, .stub.open::after { border-color: var(--ink); }
-.stub-face { display: flex; align-items: stretch; width: 100%; min-height: 68px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
-.stub-text { flex: 1; display: grid; align-content: center; gap: 2px; padding: 12px 16px; }
-.stub-name { font-size: 18px; font-weight: 700; }
-.stub-n { display: grid; place-items: center; width: 77px; border-left: 1.5px dashed var(--line); font-family: var(--f-head); font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
-.stub-routes { list-style: none; margin: 0; padding: 10px 16px 14px; border-top: 1.5px dashed var(--line); display: grid; gap: 8px; animation: rise-in .3s ease-out; }
-.stub-routes li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.way-ico { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); color: var(--ink); transition: background .2s, color .2s, border-color .2s; }
+.way.open .way-ico { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.way-name { font-size: 16px; font-weight: 600; }
+.way-n { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
+.way-chevron { display: grid; place-items: center; color: var(--ink-3); transition: transform .25s; }
+.way.open .way-chevron { transform: rotate(180deg); }
+.way-routes { list-style: none; margin: 0; padding: 2px 0 14px 40px; display: grid; gap: 8px; animation: rise-in .3s ease-out; }
+.way-routes li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.way-arrow { color: var(--ink-3); }
+
+/* the glyph on the middle of a drawn route */
+.globe-glyph { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--card); color: var(--ink); border: 1px solid var(--ink); box-shadow: 0 1px 4px rgba(22, 24, 29, .18); pointer-events: none; }
 
 /* passport: one stamp per country, landing with a thump one after another */
 .passport { display: flex; flex-wrap: wrap; gap: 2px 4px; }
@@ -302,6 +301,6 @@
 .polaroid-stars { font-size: 13px; letter-spacing: 1px; color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) {
-  .stub, .stamp, .polaroid, .world-bar i, .stub-routes { animation: none; }
-  .stamp-art, .polaroid { transition: none; }
+  .way, .stamp, .polaroid, .world-bar i, .way-routes { animation: none; }
+  .stamp-art, .polaroid, .way-ico, .way-chevron { transition: none; }
 }
