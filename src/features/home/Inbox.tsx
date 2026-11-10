@@ -25,78 +25,64 @@ export function tripChoices(trips: Trip[], today = todayISO()): Choice[] {
     .map(({ trip, depth }) => ({ value: trip.id, label: trip.name.toLowerCase(), color: trip.color, depth }))
 }
 
-type RowProps = { link: Link; choices: Choice[]; canEdit: boolean; onMove: (trip: string) => void; onRemove: () => void }
+type RowProps = { link: Link; choices: Choice[]; canEdit: boolean; on: boolean; onToggle: () => void; onMove: (trip: string) => void; onRemove: () => void }
 
-function Row({ link, choices, canEdit, onMove, onRemove }: RowProps) {
+// a checkbox before the icon picks it for doing several at once; the rest of the row still opens the link
+function Row({ link, choices, canEdit, on, onToggle, onMove, onRemove }: RowProps) {
   const swipe = useSwipeAway(onRemove, canEdit)
   const name = linkName(link)
   return (
-    <li className="doc-row inbox-row" {...swipe}>
+    <li className={`doc-row inbox-row${on ? ' on' : ''}`} {...swipe}>
+      <label className="inbox-pick">
+        <input type="checkbox" className="pick-box" aria-label={`select ${name.title}`} checked={on} disabled={!canEdit} onChange={onToggle} />
+        <span className="tick" aria-hidden="true"><Icon name="check" size={14} /></span>
+      </label>
       <a className="doc-row-main" href={safeUrl(link.url) ?? undefined} target="_blank" rel="noopener noreferrer">
         <SiteIcon url={link.url} />
         <span className="stack-xs"><span className="doc-row-title">{name.title}</span>{name.sub && <span className="muted">{name.sub}</span>}</span>
       </a>
-      <ChoiceMenu label="to a trip" ariaLabel={`move ${name.title} to a trip`} options={choices} onPick={onMove} disabled={!canEdit} />
+      <ChoiceMenu label="add to a trip" ariaLabel={`move ${name.title} to a trip`} options={choices} onPick={onMove} disabled={!canEdit} />
       <SaveFailed table="links" id={link.id} />
     </li>
   )
 }
 
-// while picking: the whole row is the tick, and nothing opens
-function PickRow({ link, on, onToggle }: { link: Link; on: boolean; onToggle: () => void }) {
-  const name = linkName(link)
-  return (
-    <li className={`doc-row inbox-row picking${on ? ' on' : ''}`}>
-      <label className="doc-row-main">
-        <input type="checkbox" className="pick-box" aria-label={name.title} checked={on} onChange={onToggle} />
-        <span className="tick" aria-hidden="true">{on && <Icon name="check" size={16} />}</span>
-        <SiteIcon url={link.url} />
-        <span className="stack-xs"><span className="doc-row-title">{name.title}</span>{name.sub && <span className="muted">{name.sub}</span>}</span>
-      </label>
-    </li>
-  )
-}
-
-// links kept without a trip yet: each goes to a trip from its row or is swiped away; "select" does several at once
+// links kept without a trip yet: each goes to a trip from its row or is swiped away; ticked ones go together from the bar
 export function Inbox({ links: all, trips }: { links: Link[]; trips: Trip[] }) {
   const save = useSave('links')
   const canEdit = useCanEdit()
   const removeLater = useUndoRemove('links')
   const choices = tripChoices(trips)
   const sorted = [...all].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
-  const [picking, setPicking] = useState(false)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   // only links still here count (one may have been moved by the other person meanwhile)
   const chosen = sorted.filter((l) => picked.has(l.id)).map((l) => l.id)
   const n = chosen.length
+  const every = n > 0 && n === sorted.length
 
-  const stop = () => { setPicking(false); setPicked(new Set()) }
+  const clear = () => setPicked(new Set())
   const toggle = (id: string) => setPicked((p) => { const next = new Set(p); if (next.has(id)) next.delete(id); else next.add(id); return next })
 
   return (
     <section className="home-section home-inbox" aria-label="inbox">
       <div className="inbox-tools">
-        {picking ? (
-          <>
-            <button type="button" className="text-link" onClick={() => setPicked(new Set(sorted.map((l) => l.id)))}>all</button>
-            <button type="button" className="text-link" onClick={stop}>done</button>
-          </>
-        ) : (
-          <button type="button" className="text-link" disabled={!canEdit} onClick={() => setPicking(true)}>select</button>
-        )}
+        <button type="button" className="select-all" disabled={!canEdit}
+          onClick={() => setPicked(every ? new Set() : new Set(sorted.map((l) => l.id)))}>{every ? 'deselect all' : 'select all'}</button>
       </div>
       <ul className="doc-list">
-        {sorted.map((l) => picking
-          ? <PickRow key={l.id} link={l} on={picked.has(l.id)} onToggle={() => toggle(l.id)} />
-          : <Row key={l.id} link={l} choices={choices} canEdit={canEdit} onMove={(trip) => save.mutate({ id: l.id, trip_id: trip })} onRemove={() => removeLater(l.id)} />)}
+        {sorted.map((l) => (
+          <Row key={l.id} link={l} choices={choices} canEdit={canEdit} on={picked.has(l.id)} onToggle={() => toggle(l.id)}
+            onMove={(trip) => save.mutate({ id: l.id, trip_id: trip })} onRemove={() => removeLater(l.id)} />
+        ))}
       </ul>
-      {picking && (
+      {n > 0 && (
         <div className="bulk-bar" role="region" aria-label="selected links">
           <span className="bulk-count">{n} selected</span>
-          <ChoiceMenu label="to a trip" ariaLabel={`move ${links(n)} to a trip`} options={choices} disabled={!n || !canEdit}
-            onPick={(trip) => { chosen.forEach((id) => save.mutate({ id, trip_id: trip })); stop() }} />
-          <button type="button" className="text-link bulk-delete" aria-label={`delete ${links(n)}`} disabled={!n || !canEdit}
-            onClick={() => { removeLater(chosen); stop() }}>delete</button>
+          <ChoiceMenu label="add to a trip" ariaLabel={`move ${links(n)} to a trip`} options={choices} disabled={!canEdit}
+            onPick={(trip) => { chosen.forEach((id) => save.mutate({ id, trip_id: trip })); clear() }} />
+          <button type="button" className="text-link bulk-delete" aria-label={`delete ${links(n)}`} disabled={!canEdit}
+            onClick={() => { removeLater(chosen); clear() }}>delete</button>
+          <button type="button" className="icon-btn bulk-x" aria-label="clear selection" onClick={clear}><Icon name="close" size={18} /></button>
         </div>
       )}
     </section>

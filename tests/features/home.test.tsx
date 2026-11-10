@@ -256,6 +256,7 @@ it('account makes a save key for the share sheet, shows it once and copies it', 
   show()
   await userEvent.click(screen.getByRole('button', { name: 'account' }))
   const sheet = screen.getByRole('dialog', { name: 'account' })
+  expect(within(sheet).queryByText('share sheet')).toBeNull()
   await userEvent.click(await within(sheet).findByRole('button', { name: 'make a save key' }))
   expect(keyApi.make).toHaveBeenCalledTimes(1)
   expect(await within(sheet).findByText('a1'.repeat(32))).toHaveClass('keep-case')
@@ -588,21 +589,21 @@ describe('the inbox, a few at a time', () => {
     { id: 'l2', trip_id: null, url: 'https://example.com/b', title: 'b', note: '', created_at: '2026-11-02' },
     { id: 'l3', trip_id: null, url: 'https://example.com/c', title: 'c', note: '', created_at: '2026-11-01' },
   ]
-  const pick = (name: string) => screen.getByRole('checkbox', { name })
+  const pick = (name: string) => screen.getByRole('checkbox', { name: `select ${name}` })
 
-  it('"select" puts a tick on each row; tapping rows picks them instead of opening them', async () => {
+  it('every row has a checkbox before its icon; the link and its own "to a trip" still work', async () => {
     db.trips = europe()
     db.links = three()
     show('/?view=inbox')
-    expect(screen.queryByRole('checkbox')).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'select' }))
-    expect(screen.getAllByRole('checkbox')).toHaveLength(3)
-    expect(screen.queryByRole('button', { name: 'move a to a trip' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'select' })).toBeNull()
+    expect(screen.getAllByRole('checkbox', { name: /^select [abc]$/ })).toHaveLength(3)
+    const row = pick('a').closest('li')!
+    expect(pick('a').compareDocumentPosition(row.querySelector('.site-icon, .icon')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('link', { name: /^a/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'move a to a trip' })).toHaveTextContent('add to a trip')
+    expect(screen.queryByRole('region', { name: 'selected links' })).toBeNull()
     await userEvent.click(pick('a'))
-    await userEvent.click(screen.getByText('c'))
-    expect(pick('a')).toBeChecked()
-    expect(pick('b')).not.toBeChecked()
-    expect(pick('c')).toBeChecked()
+    await userEvent.click(pick('c'))
     expect(screen.getByRole('region', { name: 'selected links' })).toHaveTextContent('2 selected')
   })
 
@@ -611,34 +612,37 @@ describe('the inbox, a few at a time', () => {
     db.links = three()
     db.save.mockClear()
     show('/?view=inbox')
-    await userEvent.click(screen.getByRole('button', { name: 'select' }))
     await userEvent.click(pick('a'))
     await userEvent.click(pick('b'))
     await userEvent.click(screen.getByRole('button', { name: 'move 2 links to a trip' }))
     await userEvent.click(screen.getByRole('option', { name: 'paris' }))
     expect(db.save.mock.calls.map((c) => c[0])).toEqual([{ id: 'l1', trip_id: 'par' }, { id: 'l2', trip_id: 'par' }])
-    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(pick('a')).not.toBeChecked()
+    expect(screen.queryByRole('region', { name: 'selected links' })).toBeNull()
   })
 
-  it('"all" picks every link, and delete removes them together', async () => {
+  it('"select all" picks every link (then reads "deselect all"), and delete removes them together', async () => {
     db.links = three()
     db.remove.mockClear()
     show('/?view=inbox')
-    await userEvent.click(screen.getByRole('button', { name: 'select' }))
-    await userEvent.click(screen.getByRole('button', { name: 'all' }))
+    expect(screen.queryByRole('checkbox', { name: 'select all' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'select all' }))
     expect(screen.getByRole('region', { name: 'selected links' })).toHaveTextContent('3 selected')
+    await userEvent.click(screen.getByRole('button', { name: 'deselect all' }))
+    expect(screen.queryByRole('region', { name: 'selected links' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'select all' }))
     await userEvent.click(screen.getByRole('button', { name: 'delete 3 links' }))
     await waitFor(() => expect(db.remove.mock.calls.map((c) => (c as unknown[])[0])).toEqual(['l1', 'l2', 'l3']))
   })
 
-  it('nothing picked: the bar waits, and "done" leaves without changing anything', async () => {
+  it('the bar\'s ✕ lets go of the picks without changing anything', async () => {
     db.links = three()
     db.save.mockClear(); db.remove.mockClear()
     show('/?view=inbox')
-    await userEvent.click(screen.getByRole('button', { name: 'select' }))
-    expect(screen.getByRole('button', { name: 'delete 0 links' })).toBeDisabled()
-    await userEvent.click(screen.getByRole('button', { name: 'done' }))
-    expect(screen.queryByRole('checkbox')).toBeNull()
+    await userEvent.click(pick('b'))
+    await userEvent.click(screen.getByRole('button', { name: 'clear selection' }))
+    expect(pick('b')).not.toBeChecked()
+    expect(screen.queryByRole('region', { name: 'selected links' })).toBeNull()
     expect(db.save).not.toHaveBeenCalled()
     expect(db.remove).not.toHaveBeenCalled()
   })

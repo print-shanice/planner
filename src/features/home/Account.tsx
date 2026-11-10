@@ -84,7 +84,6 @@ function SaveKey({ online }: { online: boolean }) {
 
   return (
     <div className="stack-xs save-key">
-      <p className="mono-label">share sheet</p>
       {key && (
         <>
           <div className="fact-copy row"><span className="copy-text keep-case mono">{key}</span><Copy text={key} label="copy save key" /></div>

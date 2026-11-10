@@ -28,6 +28,7 @@ const P: Record<string, string> = {
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   upload: 'M12 16V4M7 9l5-5 5 5M4 16v4h16v-4',
   check: 'M5 12l5 5L20 7',
+  minus: 'M5 12h14',
   up: 'M12 19V5M6 11l6-6 6 6',
   down: 'M12 5v14M6 13l6 6 6-6',
   file: 'M7 3h7l5 5v13H7zM14 3v5h5',
