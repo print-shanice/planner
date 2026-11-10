@@ -13,10 +13,11 @@ export function SheetFooter({ children }: { children: ReactNode }) {
   return slot ? createPortal(children, slot) : null
 }
 
-// page: a form opens full screen on a phone (the left column on a laptop), with save at the top
-type Props = { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; page?: boolean }
+// page: a form opens full screen on a phone, with save at the top
+// side: on a laptop trip it's a panel on the right, over the map, so the plan stays in view (forms are too)
+type Props = { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; page?: boolean; side?: boolean }
 
-export function Sheet({ open, title, onClose, children, footer, page }: Props) {
+export function Sheet({ open, title, onClose, children, footer, page, side }: Props) {
   const id = useId()
   const panel = useRef<HTMLDivElement>(null)
   const backdrop = useRef<HTMLDivElement>(null)
@@ -67,11 +68,11 @@ export function Sheet({ open, title, onClose, children, footer, page }: Props) {
 
   if (!open) return null
   return createPortal(
-    <div className={`app sheet-root${page ? ' page' : ''}`}>
+    <div className={`app sheet-root${page ? ' page' : ''}${side ? ' side' : ''}`}>
       <div ref={backdrop} className="sheet-backdrop"
         onMouseDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget }}
         onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) onClose() }}>
-        <div ref={panel} className={`sheet${page ? ' page' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1}>
+        <div ref={panel} className={`sheet${page ? ' page' : ''}${side ? ' side' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1}>
           <header className="sheet-head">
             <h2 id={id} className="head">{title}</h2>
             <button type="button" className="icon-btn sheet-x" aria-label="close" onClick={onClose}><Icon name="close" /></button>
