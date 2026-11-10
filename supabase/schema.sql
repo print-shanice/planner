@@ -305,17 +305,14 @@ begin
 end $$;
 
 -- saves the first link in what was shared to the trip picked from shortcut_trips; the same reel again moves it there.
--- it answers {"message": …}, the field an error comes back in too, so the shortcut shows either one
-do $$ begin
-  if to_regprocedure('public.shortcut_save(text, text, text)') is not null
-    and (select prorettype from pg_proc where oid = to_regprocedure('public.shortcut_save(text, text, text)')) = 'text'::regtype then
-    drop function public.shortcut_save(text, text, text);
-  end if;
-end $$;
-create or replace function public.shortcut_save(key text, url text, trip text default 'inbox') returns json
+-- the note is your own reminder of why you kept it. it answers {"message": …}, the field an error comes back in too,
+-- so the shortcut shows either one
+-- earlier versions took no note (and the first answered in plain text): one version only, so the api can't pick the wrong one
+drop function if exists public.shortcut_save(text, text, text);
+create or replace function public.shortcut_save(key text, url text, trip text default 'inbox', note text default '') returns json
 language plpgsql volatile security definer set search_path = public as $$
 #variable_conflict use_column
-declare who text; uid uuid; raw text; u text; t uuid; lbl text; k text; was public.links;
+declare who text; uid uuid; raw text; u text; t uuid; lbl text; k text; n text; was public.links;
 begin
   who := public.save_key_member(shortcut_save.key);
   if who is null then raise exception 'save key not recognised' using errcode = '28000'; end if;
@@ -336,22 +333,24 @@ begin
   select l.id, l.label into t, lbl from public.trip_labels() l where l.label = lbl;
   if not found then raise exception 'trip not found' using errcode = '22023'; end if;
 
+  n := left(btrim(regexp_replace(coalesce(shortcut_save.note, ''), '\s+', ' ', 'g')), 1000);
   select user_id into uid from public.members where email = who;
   k := public.link_key(u);
   select * into was from public.links l where public.link_key(l.url) = k order by l.created_at limit 1;
   if found then
-    update public.links set trip_id = t, stop_id = case when was.trip_id is not distinct from t then was.stop_id end where id = was.id;
+    update public.links set trip_id = t, stop_id = case when was.trip_id is not distinct from t then was.stop_id end,
+      note = case when n <> '' then n else was.note end where id = was.id;
     return json_build_object('message', 'already saved · now in ' || lbl);
   end if;
-  insert into public.links(trip_id, url, title, created_by)
+  insert into public.links(trip_id, url, title, note, created_by)
     values (t, u, case public.link_host(u)
       when 'instagram.com' then 'instagram' when 'instagr.am' then 'instagram' when 'tiktok.com' then 'tiktok'
       when 'youtube.com' then 'youtube' when 'youtu.be' then 'youtube' when 'music.youtube.com' then 'youtube'
-      else regexp_replace(lower(substring(u from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^/?#@]*@)?([^/?#:]+)')), '^www\.', '') end, uid);
+      else regexp_replace(lower(substring(u from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^/?#@]*@)?([^/?#:]+)')), '^www\.', '') end, n, uid);
   return json_build_object('message', 'saved to ' || lbl);
 end $$;
 
 revoke all on function public.save_key_member(text), public.trip_labels(), public.link_host(text), public.link_key(text) from public, anon, authenticated;
-revoke all on function public.new_save_key(), public.has_save_key(), public.shortcut_trips(text), public.shortcut_save(text, text, text) from public, anon, authenticated;
+revoke all on function public.new_save_key(), public.has_save_key(), public.shortcut_trips(text), public.shortcut_save(text, text, text, text) from public, anon, authenticated;
 grant execute on function public.new_save_key(), public.has_save_key() to authenticated;
-grant execute on function public.shortcut_trips(text), public.shortcut_save(text, text, text) to anon, authenticated;
+grant execute on function public.shortcut_trips(text), public.shortcut_save(text, text, text, text) to anon, authenticated;

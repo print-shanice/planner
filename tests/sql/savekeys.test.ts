@@ -22,8 +22,8 @@ async function trip(name: string, extra: { parent?: string; start?: string } = {
 }
 
 const trips = async (key: string) => (await d.q(`select shortcut_trips(${lit(key)}) as t`)).rows[0].t
-const save = async (key: string, url: string, tripLabel = 'inbox') =>
-  (await d.q(`select shortcut_save(${lit(key)}, ${lit(url)}, ${lit(tripLabel)}) as r`)).rows[0].r
+const save = async (key: string, url: string, tripLabel = 'inbox', note?: string) =>
+  (await d.q(`select shortcut_save(${lit(key)}, ${lit(url)}, ${lit(tripLabel)}${note === undefined ? '' : `, ${lit(note)}`}) as r`)).rows[0].r
 const links = async () => { await d.admin(); return (await d.q('select * from links order by created_at')).rows }
 
 describe('save keys', () => {
@@ -78,18 +78,19 @@ describe('save keys', () => {
 describe('the shortcut', () => {
   it('saving answers with a message, the same field an error comes back in', async () => {
     await d.admin()
-    const t = (await d.q("select pg_get_function_result('public.shortcut_save(text, text, text)'::regprocedure) as t")).rows[0].t
+    const t = (await d.q("select pg_get_function_result('public.shortcut_save(text, text, text, text)'::regprocedure) as t")).rows[0].t
     expect(t).toBe('json')
   })
 
-  it('rerunning the schema replaces the first version, which answered in plain text', async () => {
+  it.each(['text', 'json'])('rerunning the schema replaces an earlier version without a note (answering %s)', async (type) => {
     await d.admin()
-    await d.q('drop function public.shortcut_save(text, text, text)')
-    await d.q("create function public.shortcut_save(key text, url text, trip text default 'inbox') returns text language sql as $$ select 'old' $$")
+    await d.q('drop function public.shortcut_save(text, text, text, text)')
+    await d.q(`create function public.shortcut_save(key text, url text, trip text default 'inbox') returns ${type} language sql as $$ select null::${type} $$`)
     await d.db.exec(readFileSync('supabase/schema.sql', 'utf8'))
+    expect((await d.q("select count(*)::int as n from pg_proc where proname = 'shortcut_save'")).rows[0].n).toBe(1)
     const k = await makeKey()
     await d.anon()
-    expect(await save(k, 'https://example.com')).toEqual({ message: 'saved to inbox' })
+    expect(await save(k, 'https://example.com', 'inbox', 'x')).toEqual({ message: 'saved to inbox' })
   })
 
   it('a wrong, empty or missing key gets nothing', async () => {
@@ -170,6 +171,26 @@ describe('the shortcut', () => {
     const k = await makeKey()
     await d.anon()
     await expect(save(k, 'https://example.com', 'atlantis')).rejects.toThrow(/trip not found/)
+  })
+
+  it('keeps your note with the link, tidied and kept to a sensible length', async () => {
+    const k = await makeKey()
+    await d.anon()
+    await save(k, 'https://example.com/a', 'inbox', '  best croissant  ')
+    await save(k, 'https://example.com/b', 'inbox', 'x'.repeat(1500))
+    await save(k, 'https://example.com/c', 'inbox')
+    expect((await links()).map((l) => l.note.length > 20 ? l.note.length : l.note)).toEqual(['best croissant', 1000, ''])
+  })
+
+  it('the same reel again with a note takes the new note; without one keeps the old', async () => {
+    const k = await makeKey()
+    await d.anon()
+    await save(k, 'https://www.instagram.com/reel/C9x/', 'inbox', 'rooftop bar')
+    await save(k, 'https://www.instagram.com/reel/C9x/', 'inbox', '')
+    expect((await links())[0].note).toBe('rooftop bar')
+    await d.anon()
+    await save(k, 'https://www.instagram.com/reel/C9x/', 'inbox', 'go at sunset')
+    expect((await links())[0].note).toBe('go at sunset')
   })
 
   it('the same reel twice is one link, moved to where it was shared now', async () => {
