@@ -1,7 +1,7 @@
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 import type { Trip, Stop } from '../../src/lib/types'
 
@@ -41,13 +41,18 @@ vi.mock('../../src/features/home/Globe', () => ({
 import { HomePage } from '../../src/features/home/HomePage'
 import { TripForm } from '../../src/features/home/TripForm'
 
+function Where() {
+  const l = useLocation()
+  return <output data-testid="loc">{l.pathname + l.search}</output>
+}
+
 function show(path = '/') {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/trip/:id" element={<p>opened trip</p>} />
+          <Route path="/trip/:id" element={<><p>opened trip</p><Where /></>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -465,6 +470,23 @@ describe('trips, the view home opens on', () => {
     await user.click(screen.getByRole('button', { name: 'previous month' }))
     await user.click(screen.getByRole('button', { name: 'previous month' }))
     expect(within(screen.getByTestId('calendar')).getByText('december')).toBeInTheDocument()
+  })
+
+  it('a day in the calendar opens that day in the trip it belongs to (a side trip\'s own day in the side trip)', async () => {
+    db.trips = europe()
+    show()
+    const cal = screen.getByTestId('calendar')
+    expect(cal.querySelector('[data-day="2027-01-27"]')!.tagName).not.toBe('BUTTON')
+    await userEvent.click(within(cal).getByRole('button', { name: /29 jan/ }))
+    expect(screen.getByTestId('loc')).toHaveTextContent('/trip/ex?day=2027-01-29')
+  })
+
+  it('a side trip\'s day opens the side trip', async () => {
+    db.trips = europe()
+    show()
+    await userEvent.click(screen.getByRole('button', { name: 'next month' }))
+    await userEvent.click(within(screen.getByTestId('calendar')).getByRole('button', { name: /^mon 8 feb/ }))
+    expect(screen.getByTestId('loc')).toHaveTextContent('/trip/lap?day=2027-02-08')
   })
 
   it('while a trip is on, the calendar opens on this month and rings today', () => {

@@ -44,6 +44,8 @@
   .home-views-ink { transition: none; }
 }
 .home-trips, .home-inbox-view, .home-plans { display: grid; gap: 24px; min-width: 0; }
+/* on home only trip days can be tapped; the others still read as ordinary days, not greyed out */
+.home-cal .cal-day[data-out] .cal-n { color: inherit; font-weight: inherit; }
 .home-inbox-view .resume-plan { margin-inline: 0; }
 
 /* the trip you're on, or the next one: a banner in its own colour */
