@@ -423,3 +423,31 @@ it('?open= opens that place\'s card, then leaves the address clean', async () =>
   expect(await screen.findByRole('dialog', { name: /arktikum/ })).toBeInTheDocument()
   await waitFor(() => expect(screen.getByTestId('loc').textContent).not.toContain('open='))
 })
+
+it('on a laptop the line between plan and map can be dragged or moved with the arrow keys, and the width is remembered', async () => {
+  localStorage.clear()
+  wide(true)
+  Object.defineProperty(window, 'innerWidth', { value: 1440, configurable: true })
+  const first = show('/trip/summer')
+  const handle = screen.getByRole('separator', { name: 'resize plan and map' })
+  const page = document.querySelector('.trip') as HTMLElement
+  expect(page.style.getPropertyValue('--plan-w')).toBe('')
+  handle.focus()
+  await userEvent.keyboard('{ArrowRight}')
+  expect(page.style.getPropertyValue('--plan-w')).toBe('624px')
+  expect(handle).toHaveAttribute('aria-valuenow', '624')
+  await userEvent.keyboard('{ArrowLeft}{ArrowLeft}')
+  expect(page.style.getPropertyValue('--plan-w')).toBe('576px')
+  first.unmount()
+  show('/trip/summer')
+  expect((document.querySelector('.trip') as HTMLElement).style.getPropertyValue('--plan-w')).toBe('576px')
+  fireEvent.doubleClick(screen.getByRole('separator', { name: 'resize plan and map' }))
+  expect((document.querySelector('.trip') as HTMLElement).style.getPropertyValue('--plan-w')).toBe('')
+  expect(localStorage.getItem('planner.split')).toBeNull()
+})
+
+it('a phone has no line to drag', () => {
+  wide(false)
+  show('/trip/summer')
+  expect(screen.queryByRole('separator')).toBeNull()
+})

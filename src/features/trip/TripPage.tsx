@@ -29,6 +29,8 @@ import { CostForm } from '../money/CostForm'
 import { CaptureForm } from '../capture/CaptureForm'
 import { Icon } from '../../components/Icon'
 import { useCanEdit } from '../../lib/offline'
+import { SplitHandle, useSplit } from './SplitHandle'
+import type { CSSProperties } from 'react'
 
 const MapTab = lazy(() => import('../map/MapTab').then(m => ({ default: m.MapTab })))
 const MapWait = () => <div className="map-tab"><Loading label="loading map" /></div>
@@ -84,6 +86,13 @@ function TripScreen() {
   const bar = useRef<HTMLDivElement>(null)
   const sentinel = useRef<HTMLSpanElement>(null)
   const [stuck, setStuck] = useState(false)
+  const [planW, setPlanW] = useSplit()
+  // toasts and panels outside the page line up with the plan's column too
+  useEffect(() => {
+    const root = document.documentElement
+    if (wide && planW != null) root.style.setProperty('--plan-w', `${planW}px`); else root.style.removeProperty('--plan-w')
+    return () => { root.style.removeProperty('--plan-w') }
+  }, [wide, planW])
   // the plan's search button lives in the header, beside the +
   const [searchSlot, setSearchSlot] = useState<HTMLElement | null>(null)
   const scrolls = useRef<Partial<Record<Tab, number>>>({})
@@ -149,7 +158,7 @@ function TripScreen() {
   const menuTitle = onDay ? `add to ${dayLabel(onDay)}` : 'add'
 
   return (
-    <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}${switching ? ' switching' : ''}`} style={tint(trip.color)}>
+    <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}${switching ? ' switching' : ''}`} style={{ ...tint(trip.color), ...(wide && planW != null ? { '--plan-w': `${planW}px` } : null) } as CSSProperties}>
       <section className="trip-main" ref={main}>
         {phoneMap ? (
           <div className="map-float">
@@ -172,6 +181,7 @@ function TripScreen() {
         {tab === 'money' && <section className="trip-section" aria-label="money"><MoneyTab trip={trip} /></section>}
         {tab === 'packing' && <section className="trip-section" aria-label="packing"><PackingTab trip={trip} /></section>}
       </section>
+      {wide && <SplitHandle width={planW} onChange={setPlanW} />}
       {wide && <aside className="trip-map" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} ideas={tab === 'ideas'} /></Suspense></aside>}
       {!wide && <TripSummary bar tabs={PHONE_TABS} active={tab} onPick={pick} />}
       <AddSheet open={menu} title={menuTitle} onClose={() => setMenu(false)} onPick={k => { setMenu(false); setKind(k) }} />

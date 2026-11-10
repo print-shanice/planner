@@ -34,7 +34,14 @@ h3.mono-label { margin: 22px 0 6px; }
 .trip-section { padding: 12px 16px 32px; }
 .trip-section > .money, .trip-section > .stack { padding: 0; }
 
-.trip-wide { display: grid; grid-template-columns: minmax(440px, 600px) minmax(0, 1fr); height: 100dvh; }
+.trip-wide { position: relative; display: grid; grid-template-columns: var(--plan-w, minmax(440px, 600px)) minmax(0, 1fr); height: 100dvh; }
+/* the line between plan and map: wide enough to grab, drawn as a hairline that darkens */
+.split-handle { position: absolute; z-index: 20; top: 0; bottom: 0; left: var(--plan-w, 600px); width: 13px; margin-left: -7px; cursor: col-resize; touch-action: none; }
+.split-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 6px; width: 1px; background: transparent; transition: background .12s, width .12s, left .12s; }
+.split-handle:hover::after, .split-handle.dragging::after, .split-handle:focus-visible::after { left: 5px; width: 3px; background: var(--ink); }
+.split-handle:focus-visible { outline: none; }
+body:has(.split-handle.dragging) { cursor: col-resize; user-select: none; }
+body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .trip-wide .trip-main { width: 100%; height: 100dvh; overflow: auto; border-right: 1px solid var(--line); }
 .trip-wide .trip-map { position: relative; height: 100dvh; border-left: 0; }
 .section-tabs { margin: 6px 16px 0; gap: 24px; }

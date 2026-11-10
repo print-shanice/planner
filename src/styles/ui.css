@@ -134,7 +134,7 @@
 }
 body:has(.trip-phone) .toast-region { bottom: calc(env(safe-area-inset-bottom) + 84px); right: 88px; }
 body:has(.trip-phone.tab-is-map) .toast-region { right: 16px; }
-body:has(.trip-wide) .toast-region { right: auto; width: calc(max(420px, 100vw / 2.15) - 32px); }
+body:has(.trip-wide) .toast-region { right: auto; width: calc(var(--plan-w, 600px) - 32px); }
 .toast {
   display: flex; align-items: center; gap: 4px; min-height: 48px; max-width: 100%; padding: 2px 4px 2px 18px;
   border-radius: 14px; background: var(--ink); color: var(--card); font-size: 15px;
