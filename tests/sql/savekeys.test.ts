@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { makeDb, type Db } from './harness'
 import { linkKey } from '../../src/lib/capture'
 
@@ -75,6 +76,22 @@ describe('save keys', () => {
 })
 
 describe('the shortcut', () => {
+  it('saving answers with a message, the same field an error comes back in', async () => {
+    await d.admin()
+    const t = (await d.q("select pg_get_function_result('public.shortcut_save(text, text, text)'::regprocedure) as t")).rows[0].t
+    expect(t).toBe('json')
+  })
+
+  it('rerunning the schema replaces the first version, which answered in plain text', async () => {
+    await d.admin()
+    await d.q('drop function public.shortcut_save(text, text, text)')
+    await d.q("create function public.shortcut_save(key text, url text, trip text default 'inbox') returns text language sql as $$ select 'old' $$")
+    await d.db.exec(readFileSync('supabase/schema.sql', 'utf8'))
+    const k = await makeKey()
+    await d.anon()
+    expect(await save(k, 'https://example.com')).toEqual({ message: 'saved to inbox' })
+  })
+
   it('a wrong, empty or missing key gets nothing', async () => {
     await makeKey()
     await trip('euro summer')
@@ -91,7 +108,7 @@ describe('the shortcut', () => {
     const k = await makeKey()
     await d.anon()
     expect(await trips(` ${k}\n`)).toEqual(['inbox'])
-    expect(await save(`\t${k} `, 'https://example.com')).toBe('saved to inbox')
+    expect(await save(`\t${k} `, 'https://example.com')).toEqual({ message: 'saved to inbox' })
   })
 
   it('lists inbox then the trips, side trips under their parent, soonest first', async () => {
@@ -118,7 +135,7 @@ describe('the shortcut', () => {
     const eu = await trip('euro summer')
     const paris = await trip('paris', { parent: eu })
     await d.anon()
-    expect(await save(k, 'https://www.instagram.com/reel/C9x/?igsh=abc', 'euro summer · paris')).toBe('saved to euro summer · paris')
+    expect(await save(k, 'https://www.instagram.com/reel/C9x/?igsh=abc', 'euro summer · paris')).toEqual({ message: 'saved to euro summer · paris' })
     const [l] = await links()
     expect(l).toMatchObject({ trip_id: paris, url: 'https://www.instagram.com/reel/C9x/?igsh=abc', title: 'instagram', note: '', created_by: ME, stop_id: null })
   })
@@ -126,8 +143,8 @@ describe('the shortcut', () => {
   it('inbox, or no trip, saves without a trip', async () => {
     const k = await makeKey()
     await d.anon()
-    expect(await save(k, 'https://example.com/a')).toBe('saved to inbox')
-    expect((await d.q(`select shortcut_save(${lit(k)}, 'https://example.com/b') as r`)).rows[0].r).toBe('saved to inbox')
+    expect(await save(k, 'https://example.com/a')).toEqual({ message: 'saved to inbox' })
+    expect((await d.q(`select shortcut_save(${lit(k)}, 'https://example.com/b') as r`)).rows[0].r).toEqual({ message: 'saved to inbox' })
     expect((await links()).map((l) => [l.trip_id, l.title])).toEqual([[null, 'example.com'], [null, 'example.com']])
   })
 
@@ -158,7 +175,7 @@ describe('the shortcut', () => {
     const lapland = await trip('lapland')
     await d.anon()
     await save(k, 'https://www.instagram.com/reel/C9x/?igsh=abc')
-    expect(await save(k, 'https://instagram.com/reels/C9x?igsh=zzz', 'lapland')).toBe('already saved · now in lapland')
+    expect(await save(k, 'https://instagram.com/reels/C9x?igsh=zzz', 'lapland')).toEqual({ message: 'already saved · now in lapland' })
     const all = await links()
     expect(all).toHaveLength(1)
     expect(all[0].trip_id).toBe(lapland)

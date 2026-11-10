@@ -304,8 +304,15 @@ begin
   return (select json_agg(t.label order by t.ord) from public.trip_labels() t);
 end $$;
 
--- saves the first link in what was shared to the trip picked from shortcut_trips; the same reel again moves it there
-create or replace function public.shortcut_save(key text, url text, trip text default 'inbox') returns text
+-- saves the first link in what was shared to the trip picked from shortcut_trips; the same reel again moves it there.
+-- it answers {"message": …}, the field an error comes back in too, so the shortcut shows either one
+do $$ begin
+  if to_regprocedure('public.shortcut_save(text, text, text)') is not null
+    and (select prorettype from pg_proc where oid = to_regprocedure('public.shortcut_save(text, text, text)')) = 'text'::regtype then
+    drop function public.shortcut_save(text, text, text);
+  end if;
+end $$;
+create or replace function public.shortcut_save(key text, url text, trip text default 'inbox') returns json
 language plpgsql volatile security definer set search_path = public as $$
 #variable_conflict use_column
 declare who text; uid uuid; raw text; u text; t uuid; lbl text; k text; was public.links;
@@ -329,14 +336,14 @@ begin
   select * into was from public.links l where public.link_key(l.url) = k order by l.created_at limit 1;
   if found then
     update public.links set trip_id = t, stop_id = case when was.trip_id is not distinct from t then was.stop_id end where id = was.id;
-    return 'already saved · now in ' || lbl;
+    return json_build_object('message', 'already saved · now in ' || lbl);
   end if;
   insert into public.links(trip_id, url, title, created_by)
     values (t, u, case public.link_host(u)
       when 'instagram.com' then 'instagram' when 'instagr.am' then 'instagram' when 'tiktok.com' then 'tiktok'
       when 'youtube.com' then 'youtube' when 'youtu.be' then 'youtube' when 'music.youtube.com' then 'youtube'
       else regexp_replace(lower(substring(u from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^/?#@]*@)?([^/?#:]+)')), '^www\.', '') end, uid);
-  return 'saved to ' || lbl;
+  return json_build_object('message', 'saved to ' || lbl);
 end $$;
 
 revoke all on function public.save_key_member(text), public.trip_labels(), public.link_host(text), public.link_key(text) from public, anon, authenticated;
