@@ -236,11 +236,11 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.save_keys s join public.members m on m.email = s.email where lower(m.email) = lower(auth.email()))
 $$;
 
--- whose key this is (null when it isn't one)
+-- whose key this is (null when it isn't one); spaces or line breaks pasted around it don't count
 create or replace function public.save_key_member(key text) returns text
 language sql stable security definer set search_path = public as $$
-  select s.email from public.save_keys s
-  where char_length(coalesce(key, '')) between 32 and 200 and s.hash = sha256(convert_to(key, 'UTF8'))
+  select s.email from public.save_keys s, lateral (select btrim(coalesce(key, ''), E' \t\r\n') as k) x
+  where char_length(x.k) between 32 and 200 and s.hash = sha256(convert_to(x.k, 'UTF8'))
 $$;
 
 -- the shortcut's menu: inbox, then each trip with side trips under it ("parent · side trip"), soonest first

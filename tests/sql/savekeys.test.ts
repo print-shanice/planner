@@ -87,6 +87,13 @@ describe('the shortcut', () => {
     expect(await links()).toHaveLength(0)
   })
 
+  it('a key pasted with spaces or a line break around it still works', async () => {
+    const k = await makeKey()
+    await d.anon()
+    expect(await trips(` ${k}\n`)).toEqual(['inbox'])
+    expect(await save(`\t${k} `, 'https://example.com')).toBe('saved to inbox')
+  })
+
   it('lists inbox then the trips, side trips under their parent, soonest first', async () => {
     const k = await makeKey()
     const eu = await trip('Euro Summer', { start: '2027-06-01' })
