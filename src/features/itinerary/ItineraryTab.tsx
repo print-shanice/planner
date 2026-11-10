@@ -313,7 +313,6 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
   const walk = useWalks(legs, onScreen)
   // only untimed lines move by hand; timed ones keep their time's place
   const movable = day.entries.filter((e) => e.kind === 'stop' && e.stop && !e.stop.time).map((e) => e.stop!)
-  const n = trip.start_date ? daysBetween(trip.start_date, day.date) + 1 : null
 
   function move(s: Stop, by: number) {
     const from = movable.findIndex((x) => x.id === s.id)
@@ -349,12 +348,11 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
       style={tint((side ?? trip).color)} aria-labelledby={`h-${day.date}`}>
       <header className="doc-day-head">
         <h2 className="doc-date" id={`h-${day.date}`}>{fmtDay(day.date, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
-        <p className="doc-day-meta mono">
+        {(day.date === today || side || areas.length > 0) && <p className="doc-day-meta mono">
           {day.date === today && <span className="today-tag">today</span>}
-          {n != null && n > 0 && <span>day {n}</span>}
           {side && <Link className="side-tag" to={`/trip/${side.id}`}><span className="dot" />{side.name}</Link>}
           {areas.slice(0, 3).map((a) => <span key={a}>{a.toLowerCase()}</span>)}
-        </p>
+        </p>}
       </header>
       <div className="doc-lines">
         {day.entries.map((e) => {

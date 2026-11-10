@@ -304,7 +304,7 @@ it("a side trip's days sit in place, headed with its name; nothing undated is in
   ]
   show(eu, '/trip/eu?tab=itinerary')
   expect(meta('2027-02-20')).toHaveTextContent('paris')
-  expect(meta('2027-02-18')).not.toHaveTextContent('paris')
+  expect(screen.getByTestId('itin-2027-02-18').querySelector('.doc-day-head')).not.toHaveTextContent('paris')
   expect(screen.queryByText('maybe a museum')).toBeNull()
   expect(screen.queryByDisplayValue('onsen someday')).toBeNull()
 })
@@ -423,4 +423,13 @@ it('a booking ref keeps its capitals', () => {
   db.stops = [stop({ id: 'fl', trip_id: 'tk', kind: 'journey', day: '2025-09-18', time: '22:00', title: 'sq 638', ref: 'KL934', origin: place({ name: 'changi' }), destination: place({ name: 'narita' }) })]
   show(tokyo(), undefined, false)
   expect(screen.getByText('KL934')).toHaveClass('keep-case')
+})
+
+it('a day heading carries no "day n" count, and no empty line under it when there is nothing to say', () => {
+  show(tokyo())
+  expect(screen.queryByText(/^day \d+$/)).toBeNull()
+  // 18 sept has no area, side trip or today tag: nothing sits under its heading
+  expect(screen.getByTestId('itin-2025-09-18').querySelector('.doc-day-meta')).toBeNull()
+  // 19 sept still names where the day is
+  expect(meta('2025-09-19')).toHaveTextContent('shibuya')
 })
