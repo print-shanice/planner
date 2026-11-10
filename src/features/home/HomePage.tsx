@@ -116,10 +116,10 @@ export function HomePage() {
           <div className="home-trips">
             <LoadState load={load} blocks={1} />
             {lead && <Lead trip={lead} today={today} href={leadHref} />}
-              {/* "upcoming" heads both: the month, then each trip's card (on a laptop side by side) */}
+              {/* "upcoming trips" heads both: the month, then each trip's card (on a laptop side by side) */}
             <section className="home-section home-upcoming">
               <div className="section-head">
-                <h2 className="head">upcoming</h2>
+                <h2 className="head">upcoming trips</h2>
                 <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
                   <Icon name="plus" />
                 </button>
@@ -136,7 +136,7 @@ export function HomePage() {
             {/* only shows once a trip has ended */}
             {past.length > 0 && (
               <section className="home-section home-past">
-                <div className="section-head"><h2 className="head">past</h2></div>
+                <div className="section-head"><h2 className="head">past trips</h2></div>
                 <TripFamilies tops={past} trips={trips} today={today} keepEnded />
               </section>
             )}

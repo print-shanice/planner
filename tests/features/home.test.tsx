@@ -430,7 +430,7 @@ describe('trips, the view home opens on', () => {
     expect(lead).toHaveTextContent('europe exchange 2027')
     expect(lead).toHaveTextContent('28 jan – 13 jul · 166 nights')
     expect(within(lead).getByRole('link', { name: 'open the plan →' }).getAttribute('href')).toMatch(/^\/trip\/ex/)
-    expect(screen.getByRole('heading', { level: 2, name: 'upcoming' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'upcoming trips' })).toBeInTheDocument()
     // one card per trip, its side trips inside it
     const families = screen.getAllByTestId('trip-family')
     expect(families).toHaveLength(2)
@@ -463,7 +463,7 @@ describe('trips, the view home opens on', () => {
     const cal = screen.getByTestId('calendar')
     expect(screen.getByTestId('lead').compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // "upcoming" heads both the calendar and the trips
-    const heading = screen.getByRole('heading', { level: 2, name: 'upcoming' })
+    const heading = screen.getByRole('heading', { level: 2, name: 'upcoming trips' })
     expect(heading.compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(heading.closest('section')).toContainElement(cal)
     expect(cal.compareDocumentPosition(items()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -542,14 +542,14 @@ describe('trips, the view home opens on', () => {
     expect(screen.queryByTestId('calendar')).toBeNull()
     expect(screen.getByRole('button', { name: 'add' })).toBeInTheDocument()
     expect(screen.queryByTestId('lead')).toBeNull()
-    expect(screen.queryByRole('heading', { name: 'past' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'past trips' })).toBeNull()
   })
 
   it('past trips follow once one has ended, newest first', () => {
     db.trips = [trip({ id: 'b', name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' }), trip({ id: 'c', name: 'crete', start_date: '2026-05-01', end_date: '2026-05-04' })]
     show()
     expect(screen.getByText('nothing coming up')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: 'past' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'past trips' })).toBeInTheDocument()
     expect(items().map((r) => r.textContent)).toEqual([expect.stringContaining('crete'), expect.stringContaining('bali')])
   })
 
