@@ -638,3 +638,20 @@ it('one finger scrolls past the globe on a phone; two fingers turn it', () => {
   expect(rule).not.toMatch(/touch-action:\s*none/)
   expect(rule).toMatch(/touch-action:\s*pan-y/)
 })
+
+it('totoro shows until the globe has drawn its countries, then the globe fades in', () => {
+  render(<Globe status={status()} pins={[portugal]} onCountry={vi.fn()} />)
+  const m = mk.maps[mk.maps.length - 1]
+  expect(screen.getByRole('status', { name: 'loading globe' })).toBeInTheDocument()
+  expect(document.querySelector('.globe-wrap')).not.toHaveClass('drawn')
+  act(() => m.fire('load'))
+  expect(screen.queryByRole('status', { name: 'loading globe' })).toBeNull()
+  expect(document.querySelector('.globe-wrap')).toHaveClass('drawn')
+})
+
+it('a globe that never draws (a map error) doesn\'t leave totoro spinning forever', () => {
+  render(<Globe status={status()} pins={[portugal]} onCountry={vi.fn()} />)
+  const m = mk.maps[mk.maps.length - 1]
+  act(() => m.fire('error', { error: new Error('no tiles') }))
+  expect(screen.queryByRole('status', { name: 'loading globe' })).toBeNull()
+})

@@ -160,10 +160,10 @@ export function HomePage() {
             /* the globe and its numbers in one card */
             <div className="travels-card">
               {ready ? (
-                <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
+                <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" className="globe-loading" /></div>}>
                   <Globe status={status} pins={pins} onCountry={pickCountry} routes={routes} focus={focus} />
                 </Suspense>
-              ) : <div className="globe-wrap" />}
+              ) : <div className="globe-wrap"><Loading label="loading globe" size="small" className="globe-loading" /></div>}
               {trips.length > 0 && (
                 <div className="totals-block">
                   <p className="head totals-title" id={travelsId}>life well lived</p>

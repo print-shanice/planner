@@ -3,6 +3,7 @@ import maplibregl, { type ExpressionSpecification, type GeoJSONSource, type Laye
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GlobePin } from '../../lib/countries'
 import { GlobeTip } from './GlobeTip'
+import { Loading } from '../../components/Loading'
 import { openLayer } from '../../lib/layers'
 
 type Status = Map<string, 'been' | 'planned'>
@@ -126,6 +127,8 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
   // the spin holds while someone has hold of the globe, then waits a few seconds ('next' = start waiting next frame)
   const still = useRef<{ held: boolean; until: number | 'next' }>({ held: false, until: 0 })
   const [tip, setTip] = useState<{ code: string; x: number; y: number } | null>(null)
+  // totoro stays until the countries are drawn (or the map gives up), then the globe fades in
+  const [drawn, setDrawn] = useState(false)
   const tipId = useId()
   const latest = useRef({ status, onCountry, pins })
   latest.current = { status, onCountry, pins }
@@ -218,9 +221,12 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
         renderWorldCopies: false,
       })
     } catch {
+      setDrawn(true)
       return // no webgl: the rest of home still works
     }
     map.current = m
+    m.once('load', () => setDrawn(true))
+    m.on('error', () => setDrawn(true))
     aimed.current = latest.current.pins.length > 0
     m.touchZoomRotate.disableRotation()
 
@@ -429,8 +435,9 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
 
   const pin = tip ? pins.find((p) => p.code === tip.code) : undefined
   return (
-    <div ref={wrap} className="globe-wrap" onPointerDownCapture={(e) => { touch.current = e.pointerType === 'touch'; still.current.held = true }}>
+    <div ref={wrap} className={`globe-wrap${drawn ? ' drawn' : ''}`} onPointerDownCapture={(e) => { touch.current = e.pointerType === 'touch'; still.current.held = true }}>
       <div ref={box} className="globe" role="region" aria-label="globe" />
+      {!drawn && <Loading label="loading globe" size="small" className="globe-loading" />}
       {tip && pin && <GlobeTip id={tipId} pin={pin} x={tip.x} y={tip.y} width={box.current?.clientWidth ?? 0} />}
     </div>
   )
