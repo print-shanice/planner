@@ -1,4 +1,4 @@
-import { useId, type CSSProperties, type ReactNode } from 'react'
+import { useId, type CSSProperties } from 'react'
 import { iconPath } from '../../components/Icon'
 import { stampDate, stampStyle } from '../../lib/stampStyle'
 
@@ -10,8 +10,13 @@ const hash = (s: string) => [...s].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >
 
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 const MODE_ICON: Record<string, string> = { flight: 'plane', train: 'train', bus: 'bus', ferry: 'ferry' }
-const T = ({ className, x, y, children }: { className: string; x: number; y: number; children: ReactNode }) =>
-  <text className={className} x={x} y={y} textAnchor="middle" fill="currentColor" stroke="none">{children}</text>
+// about how wide one letter is in each lettering (mono, with its letter spacing), in the stamp's own units
+const PER: Record<string, number> = { 'stamp-big': 9.9, 'stamp-name': 7.2, 'stamp-small': 4.5, 'stamp-serial': 5.1, 'stamp-cc': 8 }
+// words centred at x,y. given the room they have (w), words that would be wider are squeezed to fit, so nothing spills over the stamp's edge
+const T = ({ className, x, y, w, children }: { className: string; x: number; y: number; w?: number; children: string }) => {
+  const tight = w != null && children.length * (PER[className] ?? 7) > w
+  return <text className={className} x={x} y={y} textAnchor="middle" fill="currentColor" stroke="none" {...(tight ? { textLength: w, lengthAdjust: 'spacingAndGlyphs' } : null)}>{children}</text>
+}
 
 type Props = { code: string; name: string; date: string; iso: string; port: string | null; mode: string | null }
 
@@ -23,7 +28,7 @@ export function Stamp({ code, name, date, iso, port, mode }: Props) {
   const ink = `url(#ink-${id})`
   const label = cut(name, 18)
   const style = stampStyle(code)
-  const where = cut(port ?? name, 20)
+  const where = cut(port ?? name, 14)
   const when = stampDate(iso, style)
   const icon = mode ? MODE_ICON[mode] : undefined
   return (
@@ -51,35 +56,35 @@ export function Stamp({ code, name, date, iso, port, mode }: Props) {
             <path d={iconPath(icon)} transform="translate(90.5 32.5) scale(.58)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           </g>}
           <T className="stamp-serial" x={97.5} y={icon ? 57 : 46}>{String((h % 900) + 100)}</T>
-          <T className="stamp-big" x={66} y={73}>{when}</T>
+          <T className="stamp-big" x={60} y={73} w={96}>{when}</T>
           <line x1="14" y1="79" x2="106" y2="79" strokeWidth="1" />
-          <T className="stamp-name" x={60} y={90}>{where}</T>
+          <T className="stamp-name" x={60} y={90} w={96}>{where}</T>
         </>)}
         {style === 'japan' && (<>
           <rect x="7" y="20" width="106" height="80" strokeWidth="2.6" />
           <rect x="11.5" y="24.5" width="97" height="71" strokeWidth="1" />
-          <T className="stamp-small" x={60} y={36}>landing permission</T>
+          <T className="stamp-small" x={60} y={36} w={88}>landing permission</T>
           <line x1="16" y1="41" x2="104" y2="41" strokeWidth="1" />
-          <T className="stamp-big" x={60} y={59}>{when}</T>
-          <T className="stamp-small" x={60} y={71}>temporary visitor</T>
+          <T className="stamp-big" x={60} y={59} w={88}>{when}</T>
+          <T className="stamp-small" x={60} y={71} w={88}>temporary visitor</T>
           <line x1="16" y1="77" x2="104" y2="77" strokeWidth="1" />
-          <T className="stamp-name" x={60} y={89}>{where}</T>
+          <T className="stamp-name" x={60} y={89} w={88}>{where}</T>
         </>)}
         {style === 'uk' && (<>
           <path d="M22 22h76l16 16v44l-16 16H22L6 82V38z" strokeWidth="2.6" />
           <T className="stamp-small" x={60} y={38}>immigration officer</T>
           <T className="stamp-serial" x={60} y={50}>{`✱ (${(h % 9000) + 1000}) ✱`}</T>
-          <T className="stamp-big" x={60} y={68}>{when}</T>
+          <T className="stamp-big" x={60} y={68} w={88}>{when}</T>
           <line x1="20" y1="75" x2="100" y2="75" strokeWidth="1" />
-          <T className="stamp-name" x={60} y={88}>{where}</T>
+          <T className="stamp-name" x={60} y={88} w={76}>{where}</T>
         </>)}
         {style === 'usa' && (<>
           <rect x="5" y="24" width="110" height="72" rx="30" strokeWidth="2.6" />
           <rect x="10" y="29" width="100" height="62" rx="25" strokeWidth="1" strokeDasharray="3 2" />
           <T className="stamp-name" x={60} y={46}>admitted</T>
-          <T className="stamp-big" x={60} y={64}>{when}</T>
+          <T className="stamp-big" x={60} y={64} w={84}>{when}</T>
           <T className="stamp-small" x={60} y={75}>class b2</T>
-          <T className="stamp-small" x={60} y={84}>{where}</T>
+          <T className="stamp-small" x={60} y={84} w={64}>{where}</T>
         </>)}
         {style === 'plain' && shape === 0 && (<>
           <circle cx="60" cy="60" r="54" strokeWidth="3" />
@@ -92,7 +97,7 @@ export function Stamp({ code, name, date, iso, port, mode }: Props) {
         {style === 'plain' && shape === 1 && (<>
           <rect x="8" y="22" width="104" height="76" rx="6" strokeWidth="3" />
           <rect x="14" y="28" width="92" height="64" rx="3" strokeWidth="1.2" />
-          <text className="stamp-name" x="60" y="44" textAnchor="middle" fill="currentColor" stroke="none">{label}</text>
+          <T className="stamp-name" x={60} y={44} w={84}>{label}</T>
           <line x1="22" y1="50" x2="98" y2="50" strokeWidth="1" />
           <text className="stamp-code" x="60" y="72" textAnchor="middle" fill="currentColor" stroke="none">{code.toLowerCase()}</text>
           <text className="stamp-date" x="60" y="86" textAnchor="middle" fill="currentColor" stroke="none">{date}</text>
@@ -100,7 +105,7 @@ export function Stamp({ code, name, date, iso, port, mode }: Props) {
         {style === 'plain' && shape === 2 && (<>
           <ellipse cx="60" cy="60" rx="56" ry="42" strokeWidth="3" />
           <ellipse cx="60" cy="60" rx="48" ry="34" strokeWidth="1.2" strokeDasharray="3 2" />
-          <text className="stamp-name" x="60" y="46" textAnchor="middle" fill="currentColor" stroke="none">{label}</text>
+          <T className="stamp-name" x={60} y={46} w={72}>{label}</T>
           <text className="stamp-code" x="60" y="70" textAnchor="middle" fill="currentColor" stroke="none">{code.toLowerCase()}</text>
           <text className="stamp-date" x="60" y="84" textAnchor="middle" fill="currentColor" stroke="none">{date}</text>
         </>)}

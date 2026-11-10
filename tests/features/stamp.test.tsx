@@ -33,6 +33,17 @@ describe('Stamp', () => {
     expect(el.textContent).toContain('28 jan 2027')
   })
   it('a long port name is cut short so it stays inside the stamp', () => {
-    expect(draw('NL', { port: 'amsterdam airport schiphol international' }).textContent).toContain('amsterdam airport s…')
+    expect(draw('NL', { port: 'amsterdam airport schiphol international' }).textContent).toContain('amsterdam air…')
+  })
+  it('words too wide for their stamp are squeezed to fit inside it, never spilling over the edge', () => {
+    const el = draw('JP', { iso: '2024-03-25', port: 'kansai international airport' })
+    const texts = [...el.querySelectorAll('text')]
+    const date = texts.find((t) => t.textContent === '25 mar 2024')!
+    expect(Number(date.getAttribute('textLength'))).toBeLessThanOrEqual(88)
+    expect(date).toHaveAttribute('lengthAdjust', 'spacingAndGlyphs')
+    const port = texts.find((t) => t.textContent === 'kansai intern…')!
+    expect(Number(port.getAttribute('textLength'))).toBeLessThanOrEqual(88)
+    // short words keep their natural width
+    expect(texts.find((t) => t.textContent === 'landing permission')).not.toHaveAttribute('textLength')
   })
 })
