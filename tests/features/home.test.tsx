@@ -431,7 +431,47 @@ describe('trips, the view home opens on', () => {
     ])
     expect(items().map((r) => r.getAttribute('data-depth'))).toEqual(['0', '1', '1', '0'])
     expect(items()[1]).toHaveAttribute('href', '/trip/lap')
-    expect(screen.queryByTestId('calendar')).toBeNull()
+  })
+
+  it('has the month calendar under the banner, opening on the month the soonest trip starts', () => {
+    db.trips = europe()
+    show()
+    const cal = screen.getByTestId('calendar')
+    expect(screen.getByTestId('lead').compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(cal.compareDocumentPosition(items()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(cal).getByText('january')).toBeInTheDocument()
+    expect(within(cal).getByText('2027')).toBeInTheDocument()
+    expect(cal.querySelectorAll('[data-day]')).toHaveLength(31)
+    expect(cal.querySelector('[data-day="2027-01-28"]')).toHaveAttribute('data-ribbon', 'start')
+    expect(cal.querySelector('[data-day="2027-01-29"]')).toHaveAttribute('data-ribbon', 'on')
+    expect(cal.querySelector('[data-day="2027-01-27"]')).not.toHaveAttribute('data-ribbon')
+  })
+
+  it('the calendar moves by month, and a side trip takes over its days from its parent', async () => {
+    const user = userEvent.setup()
+    db.trips = europe()
+    show()
+    await user.click(screen.getByRole('button', { name: 'next month' }))
+    const cal = screen.getByTestId('calendar')
+    expect(within(cal).getByText('february')).toBeInTheDocument()
+    const day = (d: string) => cal.querySelector(`[data-day="${d}"]`) as HTMLElement
+    expect(day('2027-02-06').style.getPropertyValue('--c')).toBe('var(--g0)')
+    expect(day('2027-02-07')).toHaveAttribute('data-ribbon', 'start')
+    expect(day('2027-02-07').style.getPropertyValue('--c')).toBe('var(--g1)')
+    expect(day('2027-02-11')).toHaveAttribute('data-ribbon', 'end')
+    expect(day('2027-02-12').style.getPropertyValue('--c')).toBe('var(--g0)')
+    await user.click(screen.getByRole('button', { name: 'previous month' }))
+    await user.click(screen.getByRole('button', { name: 'previous month' }))
+    expect(within(screen.getByTestId('calendar')).getByText('december')).toBeInTheDocument()
+  })
+
+  it('while a trip is on, the calendar opens on this month and rings today', () => {
+    vi.setSystemTime(new Date('2027-02-09T10:00:00'))
+    db.trips = [trip({ id: 'fin', name: 'finland', start_date: '2027-02-07', end_date: '2027-02-11' })]
+    show()
+    const cal = screen.getByTestId('calendar')
+    expect(within(cal).getByText('february')).toBeInTheDocument()
+    expect(cal.querySelector('[aria-current="date"]')).toHaveAttribute('data-day', '2027-02-09')
   })
 
   it('a trip that is on now leads, saying which day it is', () => {
@@ -454,6 +494,7 @@ describe('trips, the view home opens on', () => {
   it('no trips shows only the empty title, with the + to add one', () => {
     show()
     expect(screen.getByText('no trips yet')).toBeVisible()
+    expect(screen.queryByTestId('calendar')).toBeNull()
     expect(screen.getByRole('button', { name: 'add' })).toBeInTheDocument()
     expect(screen.queryByTestId('lead')).toBeNull()
     expect(screen.queryByRole('heading', { name: 'past' })).toBeNull()

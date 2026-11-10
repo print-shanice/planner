@@ -16,6 +16,7 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
 import { Lead, TripList, leadTrip, tripItems } from './Trips'
+import { Calendar } from './Calendar'
 import { TripForm } from './TripForm'
 import { AccountButton } from './Account'
 import { Inbox } from './Inbox'
@@ -92,17 +93,21 @@ export function HomePage() {
         <div className="home-trips">
           <LoadState load={load} blocks={1} />
           {lead && <Lead trip={lead} today={today} href={leadHref} />}
-          <section className="home-section">
-            <div className="section-head">
-              <h2 className="head">upcoming</h2>
-              <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
-                <Icon name="plus" />
-              </button>
-            </div>
-            {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
-            {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-            {upcoming.length > 0 && <TripList items={upcoming} today={today} />}
-          </section>
+          {/* on a laptop the calendar sits beside the upcoming tiles */}
+          <div className="home-plans">
+            {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
+            <section className="home-section home-upcoming">
+              <div className="section-head">
+                <h2 className="head">upcoming</h2>
+                <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
+                  <Icon name="plus" />
+                </button>
+              </div>
+              {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
+              {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
+              {upcoming.length > 0 && <TripList items={upcoming} today={today} />}
+            </section>
+          </div>
           {/* only shows once a trip has ended */}
           {past.length > 0 && (
             <section className="home-section home-past">

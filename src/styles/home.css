@@ -19,7 +19,7 @@
 }
 .home-view:hover { color: var(--ink); }
 .home-view[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
-.home-trips, .home-inbox-view { display: grid; gap: 24px; min-width: 0; }
+.home-trips, .home-inbox-view, .home-plans { display: grid; gap: 24px; min-width: 0; }
 .home-inbox-view .resume-plan { margin-inline: 0; }
 
 /* the trip you're on, or the next one: a banner in its own colour */
@@ -67,6 +67,11 @@
   .trip-item-text { width: 100%; }
   .trip-item-name { font-family: var(--f-head); font-size: 19px; font-weight: 700; }
   .trip-item-parent { display: inline; }
+  /* the month on the left, what's coming beside it, two tiles to a row */
+  .home-plans { grid-template-columns: 400px minmax(0, 1fr); column-gap: 32px; align-items: start; }
+  .home-plans:not(:has(.home-cal)) { grid-template-columns: minmax(0, 1fr); }
+  .home-upcoming .trip-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-plans:not(:has(.home-cal)) .trip-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* travels: the globe with its numbers beside it */
   .travels-card { grid-template-columns: minmax(0, 1fr) 280px; align-items: center; }
   .travels-card .globe-wrap { width: min(100% - 48px, 520px); margin: 28px auto; }
