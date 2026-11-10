@@ -14,6 +14,7 @@ import { stopSub, stopTitle } from '../plan/StopRow'
 import { readLine, type LineValues } from './LineEditor'
 import { categoryIcon, categoryOf } from '../../lib/categories'
 import type { ReactNode } from 'react'
+import { NO_INFO, type LineInfo } from '../../lib/lineInfo'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
@@ -70,8 +71,32 @@ type Props = {
   editing?: boolean
   // the reorder handle, for untimed lines
   grip?: ReactNode
-  // how many tickets or files it has
-  files?: number
+  // what the line holds beyond its name: note, ref, tickets, cost, links
+  info?: LineInfo
+}
+
+// the quiet row under a name: everything its card holds, so nothing is hidden behind the name
+function InfoRow({ info, q }: { info: LineInfo; q: string }) {
+  const bits = !!info.ref || info.tickets > 0 || !!info.cost
+  if (!bits && !info.note) return null
+  return (
+    <>
+      {info.note && <span className="itin-note"><Marked text={info.note} q={q} /></span>}
+      {bits && <span className="itin-bits mono">
+        {info.ref && <span className="bit"><span className="bit-key">ref</span><span className="keep-case"><Marked text={info.ref} q={q} /></span></span>}
+        {info.tickets > 0 && <span className="bit"><Icon name="file" size={13} /><span>{`${info.tickets} ${info.tickets === 1 ? 'ticket' : 'tickets'}`}</span></span>}
+        {info.cost && <span className={`bit${info.cost.paid ? ' paid' : ''}`}><Icon name="money" size={13} /><span>{info.cost.text}</span></span>}
+      </span>}
+    </>
+  )
+}
+const hasInfo = (i: LineInfo) => !!(i.note || i.ref || i.tickets || i.cost)
+
+// a line's links: one small icon each, right of the name
+function LineLinks({ info }: { info: LineInfo }) {
+  return <>{info.links.slice(0, 3).map((l) => (
+    <a key={l.url} className="icon-btn line-link" href={l.url} target="_blank" rel="noopener noreferrer" aria-label={`open ${l.label}`} title={l.label}><Icon name="link" size={16} /></a>
+  ))}</>
 }
 
 // one line of the doc: the time on the left, what it is on the right. a place or a note is live text you type over
@@ -86,16 +111,20 @@ export function ItinLine(props: Props) {
   return <StaticLine {...props} onEdit={editable ? () => setLive(true) : undefined} />
 }
 
-function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip, files }: Props & { onEdit?: () => void }) {
+function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip, info = NO_INFO }: Props & { onEdit?: () => void }) {
   const s = entry.stop!
   const stay = entry.kind !== 'stop'
   const title = stay ? `${STAY[entry.kind]} · ${s.title}` : stopTitle(s)
   const sub = stay ? '' : subOf(s)
-  const note = snippet(s, q)
+  const shows = entry.kind === 'stop' || entry.kind === 'checkin'
+  // a search shows the line of the notes it found, unless that line is already under the name
+  const found = snippet(s, q)
+  const note = found && !(shows && found.trim() === info.note) ? found : null
   const when = timeOf(entry, any)
   const words = <>
     <span className="itin-title"><Marked text={title} q={q} /></span>
     {sub && <span className="itin-sub muted"><Sub text={sub} refCode={s.ref} q={q} /></span>}
+    {shows && <InfoRow info={info} q={q} />}
     {note && <span className="itin-snippet muted"><Marked text={note} q={q} /></span>}
   </>
   return (
@@ -109,8 +138,8 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip
         <button type="button" className="itin-main" onClick={() => (onEdit ? onEdit() : onOpen?.(s, day))} disabled={!onEdit && !onOpen}
           onFocus={() => onLight?.(s.id)} onBlur={() => onLight?.(null)}>{words}</button>
         <span className="itin-end">
-          {!!files && <span className="itin-files" aria-label={`${files} ${files === 1 ? 'ticket' : 'tickets'}`}><Icon name="file" size={15} /></span>}
-          {(entry.kind === 'stop' || entry.kind === 'checkin') && <Pill status={s.status} />}
+          {shows && <LineLinks info={info} />}
+          {shows && <Pill status={s.status} />}
           {grip}
           {onEdit && onOpen && <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button>}
         </span>
@@ -128,7 +157,7 @@ function focusNext(from: HTMLElement | null) {
   all[all.indexOf(from as HTMLInputElement) + 1]?.focus()
 }
 
-function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, files: count }: Props & { autoFocus?: boolean }) {
+function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, info = NO_INFO }: Props & { autoFocus?: boolean }) {
   const s = entry.stop!
   const save = useSave('stops')
   const removeLater = useUndoRemove('stops')
@@ -216,10 +245,11 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, f
           <input ref={nameRef} type="text" className="doc-name" data-doc-name="" aria-label={`change ${title}`} value={v.title} autoComplete="off"
             enterKeyHint="next" autoFocus={autoFocus} onChange={(e) => put({ ...now.current, title: e.target.value })} onKeyDown={key} />
           {sub && <span className="itin-sub muted">{sub}</span>}
+          {hasInfo(info) && <button type="button" className="itin-info" aria-label={`details of ${title}`} onClick={() => onOpen?.(s, day)}><InfoRow info={info} q="" /></button>}
           {problem && <span className="warn-line">{problem}</span>}
         </span>
         <span className="itin-end">
-        {!!count && <span className="itin-files" aria-label={`${count} ${count === 1 ? 'ticket' : 'tickets'}`}><Icon name="file" size={15} /></span>}
+        <LineLinks info={info} />
         <Pill status={s.status} />
         {grip}
         {dirty

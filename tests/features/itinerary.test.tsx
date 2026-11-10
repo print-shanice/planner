@@ -5,10 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
 import type { Trip } from '../../src/lib/types'
 
-const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], files: [] as unknown[], open: vi.fn(), remove: vi.fn(), save: vi.fn((r: unknown) => Promise.resolve(r)) }))
+const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], files: [] as unknown[], links: [] as unknown[], costs: [] as unknown[], open: vi.fn(), remove: vi.fn(), save: vi.fn((r: unknown) => Promise.resolve(r)) }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
-  useLinks: () => ({ data: [] }),
+  useLinks: () => ({ data: db.links }),
+  useCosts: () => ({ data: db.costs }),
   useStops: () => ({ data: db.stops }),
   useFiles: () => ({ data: db.files }),
   useRates: () => ({ data: null }),
@@ -65,6 +66,8 @@ beforeEach(() => {
   db.save.mockClear()
   db.remove.mockClear()
   db.files = []
+  db.links = []
+  db.costs = []
   const t = tokyo()
   db.trips = [t]
   db.stops = [
@@ -257,7 +260,37 @@ it('untimed lines reorder by keyboard on their handle; timed lines have none', a
 it('a line with tickets says so', () => {
   db.files = [{ id: 'f', stop_id: 'neel', path: 'x', name: 'x.pdf', mime: 'application/pdf' }]
   show(tokyo())
-  expect(document.querySelector('[data-line="neel"]')).toContainElement(screen.getByLabelText('1 ticket'))
+  expect(within(document.querySelector('[data-line="neel"]') as HTMLElement).getByText('1 ticket')).toBeInTheDocument()
+})
+
+it('a line shows what it holds: its note, booking ref, cost and tickets, and they open its card', async () => {
+  db.stops = [stop({ id: 'nomad', trip_id: 'tk', day: '2025-09-19', title: 'nomad coffee', ref: 'MVE5DH', notes: 'ask for the window table\nsecond line' })]
+  db.files = [{ id: 'f', stop_id: 'nomad', path: 'x', name: 'x.pdf', mime: 'application/pdf' }, { id: 'g', stop_id: 'nomad', path: 'y', name: 'y.pdf', mime: 'application/pdf' }]
+  db.costs = [{ id: 'c', trip_id: 'tk', stop_id: 'nomad', title: '', amount: 12, currency: 'EUR', status: 'paid', category: 'food' }]
+  show(tokyo())
+  const line = within(document.querySelector('[data-line="nomad"]') as HTMLElement)
+  expect(line.getByText('ask for the window table')).toBeInTheDocument()
+  expect(line.queryByText(/second line/)).toBeNull()
+  expect(line.getByText('MVE5DH')).toHaveClass('keep-case')
+  expect(line.getByText('2 tickets')).toBeInTheDocument()
+  expect(line.getByText('€12')).toBeInTheDocument()
+  await userEvent.click(line.getByRole('button', { name: 'details of nomad coffee' }))
+  expect(db.open).toHaveBeenCalledWith('nomad', '2025-09-19')
+})
+
+it('a bare line has no details row', () => {
+  show(tokyo())
+  expect(within(document.querySelector('[data-line="neel"]') as HTMLElement).queryByRole('button', { name: /details of/ })).toBeNull()
+})
+
+it("a line's link is a small icon to the right of its name, never a pill", () => {
+  db.stops = [stop({ id: 'boq', trip_id: 'tk', day: '2025-09-19', title: 'la boqueria' })]
+  db.links = [{ id: 'l', trip_id: 'tk', stop_id: 'boq', url: 'https://instagram.com/reel/1', title: 'food finds', note: '' }]
+  show(tokyo())
+  const link = within(document.querySelector('[data-line="boq"]') as HTMLElement).getByRole('link', { name: 'open food finds' })
+  expect(link).toHaveAttribute('href', 'https://instagram.com/reel/1')
+  expect(link).toHaveAttribute('target', '_blank')
+  expect(link.textContent).toBe('')
 })
 
 it("a side trip's days sit in place, headed with its name; nothing undated is in the plan", () => {

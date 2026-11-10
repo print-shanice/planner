@@ -2,7 +2,8 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type Keybo
 import { Link, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import type { Stop, Trip } from '../../lib/types'
-import { useFiles, useSave, useStops, useTrips } from '../../lib/queries'
+import { useCosts, useFiles, useLinks, useSave, useStops, useTrips } from '../../lib/queries'
+import { lineInfo, type LineInfo } from '../../lib/lineInfo'
 import { loadState } from '../../lib/load'
 import { daysBetween, fmtDay, fmtRange, todayISO } from '../../lib/dates'
 import { chosenDay, validDay } from '../../lib/agenda'
@@ -56,6 +57,8 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   const trips = tq.data ?? []
   const stops = sq.data ?? []
   const files = useFiles().data ?? []
+  const costs = useCosts().data ?? []
+  const links = useLinks().data ?? []
   const load = loadState(tq, sq)
   const sheet = useStopSheet()
   const lit = useHighlight()
@@ -85,7 +88,20 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   }, [trips, stops, trip.id])
   const [adjusting, setAdjusting] = useState<Trip | null>(null)
   const adjust = (c: Clash) => { if (c.kind === 'stay') sheet?.editStop(c.b.id); else setAdjusting(trips.find((t) => t.id === c.b.id) ?? null) }
-  const fileCount = useMemo(() => { const m = new Map<string, number>(); for (const f of files) m.set(f.stop_id, (m.get(f.stop_id) ?? 0) + 1); return m }, [files])
+  // what each line holds beyond its name, worked out once for the whole plan
+  const infoOf = useMemo(() => {
+    const count = new Map<string, number>()
+    for (const f of files) count.set(f.stop_id, (count.get(f.stop_id) ?? 0) + 1)
+    const made = new Map<string, LineInfo>()
+    return (s: Stop) => {
+      let info = made.get(s.id)
+      if (!info) {
+        info = lineInfo(s, { files: count.get(s.id) ?? 0, costs: costs.filter((c) => c.stop_id === s.id), links: links.filter((l) => l.stop_id === s.id) })
+        made.set(s.id, info)
+      }
+      return info
+    }
+  }, [files, costs, links, stops])
 
   const asked = params.get('day')
   // where the document opens: the link's day, else today in the trip, else its first day
@@ -233,12 +249,12 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
       {!fold && !items.length && load.state === 'ready' && <EmptyState title="nothing planned yet" />}
       {fold && <ParentCalendar trip={trip} trips={trips} stops={stops} today={today} onDay={setDay}
         renderDay={(d) => <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q="" hidden={false}
-          current={null} onOpen={onOpen} onLight={lit.set} files={fileCount} />} />}
+          current={null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} />} />}
       {items.map((item) => {
         if (item.kind === 'side') return <SideTrip key={`side-${item.trip.id}`} row={item} today={today} />
         const d = item.day
         return <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
-          hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} files={fileCount} />
+          hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} />
       })}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
@@ -268,7 +284,7 @@ function SideTrip({ row, today }: { row: SideRow; today: string }) {
 
 type DayProps = {
   day: ItinDay; trip: Trip; today: string; editing: boolean; canEdit: boolean; q: string; hidden: boolean; current: string | null
-  onOpen?: (s: Stop, day?: string | null) => void; onLight: (id: string | null) => void; files: Map<string, number>
+  onOpen?: (s: Stop, day?: string | null) => void; onLight: (id: string | null) => void; infoOf: (s: Stop) => LineInfo
 }
 
 // a day is only asked for its walks once it's (nearly) on screen
@@ -286,7 +302,7 @@ function useOnScreen<T extends Element>(): [React.RefObject<T>, boolean] {
   return [ref, on]
 }
 
-function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, files }: DayProps) {
+function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, infoOf }: DayProps) {
   const save = useSave('stops')
   const [box, onScreen] = useOnScreen<HTMLElement>()
   const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
@@ -352,7 +368,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
           const after = legs.filter((l) => l.from.id === s.id && l.fromKind === e.kind)
           return (
             <div key={`${s.id}-${e.kind}`} className={drag?.id === s.id && e.kind === 'stop' ? 'dragging' : undefined} style={drag?.id === s.id && e.kind === 'stop' ? { transform: `translateY(${drag.dy}px)` } : undefined}>
-              <ItinLine editing={editing} entry={e} any={timed && e.kind === 'stop'} q={q} grip={grip} files={files.get(s.id)}
+              <ItinLine editing={editing} entry={e} any={timed && e.kind === 'stop'} q={q} grip={grip} info={infoOf(s)}
                 current={current === s.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
               {after.map((l) => <WalkLine key={l.to.id} leg={l} answer={walk(l.a, l.b)} />)}
             </div>

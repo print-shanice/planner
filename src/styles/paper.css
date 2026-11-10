@@ -289,3 +289,14 @@ h3.mono-label { margin: 22px 0 6px; }
 /* the header's actions: the plan's search, then the + */
 .trip-actions { flex: none; display: inline-flex; align-items: center; gap: 4px; }
 .search-slot { display: contents; }
+
+/* ---------- what a line holds: its note, then ref · tickets · cost; links are icons right of the name ---------- */
+.itin-note { font-size: 13.5px; line-height: 1.45; color: var(--ink-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.itin-bits { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; padding-top: 3px; font-size: 11.5px; letter-spacing: .03em; color: var(--ink-2); }
+.bit { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.bit-key { color: var(--ink-3); }
+.bit.paid { color: var(--ok); }
+.itin-info { display: grid; gap: 1px; width: 100%; padding: 0 0 4px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: 6px; }
+.itin-info:hover .itin-note, .itin-info:hover .itin-bits { color: var(--ink); }
+.line-link { width: 36px; height: 44px; color: var(--ink-2); }
+.line-link:hover { color: var(--ink); }
