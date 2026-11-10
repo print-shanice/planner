@@ -122,3 +122,12 @@ body { background: var(--ground); color: var(--ink); }
   .itin-title { font-size: 18px; }
   .trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 92px); }
 }
+
+/* Home index refinements: trip families read as a living register. */
+.home-upcoming .section-head .icon-btn { width: 38px; height: 38px; border-radius: 0; }
+.home-past { opacity: .86; }
+.home-past .section-head { border-bottom-color: var(--line); }
+.home-inbox-view .doc-list, .home-inbox-view .link-list { border-top-color: var(--ink); }
+.home-inbox-view .resume-plan { margin-inline: 0; background: var(--paper-2); padding-inline: 16px; }
+.home-inbox-view .resume-name { font-family: var(--f-head); font-size: 24px; font-weight: 400; }
+.travels-card .totals-block { background: var(--paper-2); }
