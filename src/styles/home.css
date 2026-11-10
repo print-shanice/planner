@@ -278,6 +278,10 @@
 .stamp-date { font-size: 8.5px; letter-spacing: .04em; }
 .stamp-ring { font-size: 9.5px; letter-spacing: .18em; }
 .stamp-name { font-size: 10px; }
+.stamp-big { font-family: var(--f-mono); font-size: 15px; font-weight: 700; letter-spacing: .06em; }
+.stamp-small, .stamp-serial { font-family: var(--f-mono); font-size: 6.6px; letter-spacing: .08em; }
+.stamp-serial { font-size: 7.5px; }
+.stamp-cc { font-family: var(--f-head); font-size: 12px; font-weight: 800; }
 @keyframes stamp-in { 0% { opacity: 0; transform: scale(1.6); } 60% { opacity: 1; transform: scale(.94); } 100% { transform: scale(1); } }
 
 /* favourites: polaroids, fanned, swiped through; each opens its place */

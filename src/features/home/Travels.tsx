@@ -72,7 +72,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
                 return (
                   <button key={st.code} type="button" className="stamp" style={{ ...tint(st.color), '--i': i } as CSSProperties}
                     aria-label={`${st.name} · first stamped ${date}`} onClick={() => turnTo(st.code)}>
-                    <Stamp code={st.code} name={st.name} date={date} />
+                    <Stamp code={st.code} name={st.name} date={date} iso={st.first} port={st.port} mode={st.mode} />
                   </button>
                 )
               })}

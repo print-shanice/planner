@@ -77,13 +77,22 @@ export function aroundTheWorld(total: number): string {
   return `about ${words} the way round the world`
 }
 
-export type Stamp = { code: string; name: string; first: string; color: number; tripId: string }
+// port and mode: where and how you first arrived (the first journey into the country), for the stamp's corner and foot
+export type Stamp = { code: string; name: string; first: string; color: number; tripId: string; port: string | null; mode: Stop['mode'] }
 
 export function stamps(trips: Trip[], stops: Stop[], today: string): Stamp[] {
   const byId = new Map(trips.map((t) => [t.id, t]))
-  return firstVisits(trips, stops, today).map((v) => ({
-    code: v.code, name: countryName(v.code).toLowerCase(), first: v.when, color: byId.get(v.tripId)?.color ?? 0, tripId: v.tripId,
-  }))
+  const cc = (p: Stop['place']) => p?.country?.toUpperCase() ?? null
+  const arrivals = stops
+    .filter((s) => s.kind === 'journey' && s.day && cc(s.destination) && cc(s.destination) !== cc(s.origin))
+    .sort((a, b) => a.day!.localeCompare(b.day!) || (a.time ?? '').localeCompare(b.time ?? ''))
+  return firstVisits(trips, stops, today).map((v) => {
+    const trip = byId.get(v.tripId)
+    const by = arrivals.find((s) => cc(s.destination) === v.code && s.day! <= v.when)
+    const base = trip && cc(trip.base) === v.code ? trip.base : null
+    const port = by ? by.destination!.name || by.destination!.city : base?.city || base?.name
+    return { code: v.code, name: countryName(v.code).toLowerCase(), first: v.when, color: trip?.color ?? 0, tripId: v.tripId, port: port?.toLowerCase() || null, mode: by?.mode ?? null }
+  })
 }
 
 export type Favourite = { stop: Stop; rating: number; back: boolean; code: string | null; color: number }

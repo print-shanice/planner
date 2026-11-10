@@ -86,9 +86,18 @@ describe('stamps', () => {
       stop({ trip_id: 'ex', day: '2027-05-02', place: par }),
     ]
     expect(stamps([ex, lap], stops, TODAY)).toEqual([
-      { code: 'NL', name: 'netherlands', first: '2027-01-28', color: 0, tripId: 'ex' },
-      { code: 'FI', name: 'finland', first: '2027-02-07', color: 1, tripId: 'lap' },
+      { code: 'NL', name: 'netherlands', first: '2027-01-28', color: 0, tripId: 'ex', port: 'eindhoven', mode: null },
+      { code: 'FI', name: 'finland', first: '2027-02-07', color: 1, tripId: 'lap', port: null, mode: null },
     ])
+  })
+
+  it('a stamp carries how you arrived and where: the first journey into the country', () => {
+    const ex = trip({ id: 'ex', start_date: '2027-01-28', end_date: '2027-07-13', base: ein, color: 0 })
+    const stops = [
+      stop({ trip_id: 'ex', kind: 'journey', mode: 'flight', day: '2027-01-28', origin: { name: 'changi', address: '', country: 'SG', lat: 1.36, lng: 103.99 }, destination: { name: 'Schiphol', address: '', city: 'Amsterdam', country: 'nl', lat: 52.31, lng: 4.76 } }),
+      stop({ trip_id: 'ex', kind: 'journey', mode: 'train', day: '2027-01-28', origin: { name: 'schiphol', address: '', country: 'NL', lat: 52.31, lng: 4.76 }, destination: ein }),
+    ]
+    expect(stamps([ex], stops, TODAY).find((s) => s.code === 'NL')).toMatchObject({ port: 'schiphol', mode: 'flight' })
   })
 })
 
