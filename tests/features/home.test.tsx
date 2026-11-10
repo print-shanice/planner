@@ -161,8 +161,21 @@ it('a link in the inbox goes to a trip from its own row', async () => {
   db.trips = europe()
   db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'cafe reel', note: '' }]
   show('/?view=inbox')
-  await userEvent.selectOptions(screen.getByLabelText('move cafe reel to a trip'), 'par')
+  await userEvent.click(screen.getByRole('button', { name: 'move cafe reel to a trip' }))
+  const list = screen.getByRole('listbox', { name: 'move cafe reel to a trip' })
+  expect(within(list).getAllByRole('option').map((o) => [o.textContent, o.getAttribute('data-depth')])).toEqual([
+    ['europe exchange 2027', '0'], ['lapland', '1'], ['paris', '1'], ['summer', '0'],
+  ])
+  await userEvent.click(within(list).getByRole('option', { name: 'paris' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'l1', trip_id: 'par' }))
+})
+
+it('"to a trip" lists what is coming first, then past trips newest first', async () => {
+  db.trips = [trip({ id: 'b', name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' }), trip({ id: 'c', name: 'crete', start_date: '2026-05-01', end_date: '2026-05-04' }), ...europe()]
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
+  show('/?view=inbox')
+  await userEvent.click(screen.getByRole('button', { name: 'move a to a trip' }))
+  expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['europe exchange 2027', 'lapland', 'paris', 'summer', 'crete', 'bali'])
 })
 
 it('an inbox link is named by your note, with the site\'s own icon', () => {
@@ -501,5 +514,67 @@ describe('the switch', () => {
     const title = screen.getByText('life well lived')
     expect(totals).toHaveAttribute('aria-labelledby', title.id)
     expect(totals.closest('.travels-card')).not.toBeNull()
+  })
+})
+
+describe('the inbox, a few at a time', () => {
+  const three = () => [
+    { id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '', created_at: '2026-11-03' },
+    { id: 'l2', trip_id: null, url: 'https://example.com/b', title: 'b', note: '', created_at: '2026-11-02' },
+    { id: 'l3', trip_id: null, url: 'https://example.com/c', title: 'c', note: '', created_at: '2026-11-01' },
+  ]
+  const pick = (name: string) => screen.getByRole('checkbox', { name })
+
+  it('"select" puts a tick on each row; tapping rows picks them instead of opening them', async () => {
+    db.trips = europe()
+    db.links = three()
+    show('/?view=inbox')
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'select' }))
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: 'move a to a trip' })).toBeNull()
+    await userEvent.click(pick('a'))
+    await userEvent.click(screen.getByText('c'))
+    expect(pick('a')).toBeChecked()
+    expect(pick('b')).not.toBeChecked()
+    expect(pick('c')).toBeChecked()
+    expect(screen.getByRole('region', { name: 'selected links' })).toHaveTextContent('2 selected')
+  })
+
+  it('moves every picked link to one trip at once', async () => {
+    db.trips = europe()
+    db.links = three()
+    db.save.mockClear()
+    show('/?view=inbox')
+    await userEvent.click(screen.getByRole('button', { name: 'select' }))
+    await userEvent.click(pick('a'))
+    await userEvent.click(pick('b'))
+    await userEvent.click(screen.getByRole('button', { name: 'move 2 links to a trip' }))
+    await userEvent.click(screen.getByRole('option', { name: 'paris' }))
+    expect(db.save.mock.calls.map((c) => c[0])).toEqual([{ id: 'l1', trip_id: 'par' }, { id: 'l2', trip_id: 'par' }])
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
+  it('"all" picks every link, and delete removes them together', async () => {
+    db.links = three()
+    db.remove.mockClear()
+    show('/?view=inbox')
+    await userEvent.click(screen.getByRole('button', { name: 'select' }))
+    await userEvent.click(screen.getByRole('button', { name: 'all' }))
+    expect(screen.getByRole('region', { name: 'selected links' })).toHaveTextContent('3 selected')
+    await userEvent.click(screen.getByRole('button', { name: 'delete 3 links' }))
+    await waitFor(() => expect(db.remove.mock.calls.map((c) => (c as unknown[])[0])).toEqual(['l1', 'l2', 'l3']))
+  })
+
+  it('nothing picked: the bar waits, and "done" leaves without changing anything', async () => {
+    db.links = three()
+    db.save.mockClear(); db.remove.mockClear()
+    show('/?view=inbox')
+    await userEvent.click(screen.getByRole('button', { name: 'select' }))
+    expect(screen.getByRole('button', { name: 'delete 0 links' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'done' }))
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(db.save).not.toHaveBeenCalled()
+    expect(db.remove).not.toHaveBeenCalled()
   })
 })
