@@ -409,9 +409,10 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
     position: fixed; top: 0; bottom: 0; left: var(--plan-w, 600px); right: 0; width: auto; height: auto; max-height: none; border-radius: 0;
     pointer-events: auto; border-left: 1px solid var(--line); box-shadow: none; animation: panel-in .18s ease-out;
   }
-  /* what's in it keeps a readable width, on the plan's side */
-  body:has(.trip-wide) :is(.sheet.page, .sheet.side) :is(.sheet-head, .sheet-body, .sheet-foot) { flex: none; width: min(640px, 100%); margin: 0; }
-  body:has(.trip-wide) :is(.sheet.page, .sheet.side) .sheet-body { flex: 1; }
+  /* the panel's own parts span it (✕ and the scrollbar sit at the screen's edge); what's inside keeps a readable width */
+  body:has(.trip-wide) :is(.sheet.page, .sheet.side) :is(.sheet-head, .sheet-body, .sheet-foot) { width: 100%; margin: 0; }
+  body:has(.trip-wide) :is(.sheet.page, .sheet.side) .sheet-body { flex: 1; padding-right: max(22px, calc(100% - 660px)); }
+  body:has(.trip-wide) .sheet.side:not(.page) .sheet-head { padding-right: 12px; }
 }
 @keyframes panel-in { from { transform: translateX(16px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sheet { animation: none !important; } }
