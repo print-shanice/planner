@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { countdown, fmtRange, nights } from '../../lib/dates'
@@ -49,10 +49,8 @@ export function Lead({ trip, today, href }: { trip: Trip; today: string; href: s
   )
 }
 
-const FEW = 3
-
-// one card per trip with its side trips inside it, so a side trip never reads as a trip of its own.
-// past the first few, a "+n" opens the rest; a side trip's own side trips are named on it
+// one card per trip with all its side trips inside it, so a side trip never reads as a trip of its own.
+// a side trip's own side trips are named on it
 export function TripFamilies({ tops, trips, today, keepEnded = false }: { tops: Trip[]; trips: Trip[]; today: string; keepEnded?: boolean }) {
   const kidsOf = (id: string) => trips.filter((c) => c.parent_id === id && (keepEnded || countdown(c, today).kind !== 'done')).sort(byStart)
   return (
@@ -63,9 +61,6 @@ export function TripFamilies({ tops, trips, today, keepEnded = false }: { tops: 
 }
 
 function Family({ trip: t, sides, kidsOf, today, i }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; today: string; i: number }) {
-  const [all, setAll] = useState(false)
-  const shown = all || sides.length <= FEW + 1 ? sides : sides.slice(0, FEW)
-  const hidden = sides.length - shown.length
   const line = [fmtRange(t.start_date, t.end_date), when(t, today)].filter(Boolean).join(' · ')
   return (
     <li className="family" data-testid="trip-family" style={{ ...tint(t.color), '--i': Math.min(i, 12) } as CSSProperties}>
@@ -79,7 +74,7 @@ function Family({ trip: t, sides, kidsOf, today, i }: { trip: Trip; sides: Trip[
       </Link>
       {sides.length > 0 && (
         <ul className="family-sides">
-          {shown.map((c) => {
+          {sides.map((c) => {
             const grand = kidsOf(c.id)
             const extra = [fmtRange(c.start_date, c.end_date), when(c, today)].filter(Boolean).join(' · ')
             return (
@@ -95,11 +90,6 @@ function Family({ trip: t, sides, kidsOf, today, i }: { trip: Trip; sides: Trip[
               </li>
             )
           })}
-          {hidden > 0 && (
-            <li>
-              <button type="button" className="side-more" aria-label={`show ${hidden} more side trips`} onClick={() => setAll(true)}>+{hidden}</button>
-            </li>
-          )}
         </ul>
       )}
     </li>

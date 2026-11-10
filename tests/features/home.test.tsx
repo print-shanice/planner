@@ -446,16 +446,14 @@ describe('trips, the view home opens on', () => {
     expect(within(families[1]).queryAllByTestId('side-item')).toHaveLength(0)
   })
 
-  it('a trip with many side trips shows the first three and a "+n" that opens the rest; their own side trips are named', async () => {
+  it('a trip shows all its side trips, however many; their own side trips are named', () => {
     const kids = ['a', 'b', 'c', 'd', 'e'].map((n, i) => trip({ id: n, parent_id: 'ex', name: `side ${n}`, start_date: `2027-02-0${i + 1}`, end_date: `2027-02-0${i + 1}` }))
     db.trips = [trip({ id: 'ex', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13' }), ...kids,
       trip({ id: 'mon', parent_id: 'a', name: 'montserrat', start_date: '2027-02-01', end_date: '2027-02-01' })]
     show()
     const family = screen.getByTestId('trip-family')
-    expect(within(family).getAllByTestId('side-item').map((r) => r.querySelector('.side-name')!.textContent)).toEqual(['side a', 'side b', 'side c'])
+    expect(within(family).getAllByTestId('side-item').map((r) => r.querySelector('.side-name')!.textContent)).toEqual(['side a', 'side b', 'side c', 'side d', 'side e'])
     expect(within(family).getAllByTestId('side-item')[0]).toHaveTextContent('+ montserrat')
-    await userEvent.click(within(family).getByRole('button', { name: 'show 2 more side trips' }))
-    expect(within(family).getAllByTestId('side-item')).toHaveLength(5)
     expect(within(family).queryByRole('button', { name: /more side trips/ })).toBeNull()
   })
 
