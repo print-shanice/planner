@@ -72,35 +72,37 @@ export function HomePage() {
         <AccountButton />
       </header>
 
-      {waiting && (
-        <Link className="resume-plan waiting" to="/save">
-          <span className="mono-label">not saved yet</span>
-          <span className="head resume-name">{waiting.url || waiting.text || 'a link'}</span>
-          <span className="text-link">save it →</span>
-        </Link>
-      )}
-      {resumeTrip && resume && (
-        <Link className="resume-plan" to={`/trip/${resumeTrip.id}${resume.day ? `?day=${resume.day}` : ''}`}>
-          <span className="mono-label">{resume.day === today ? 'today' : 'continue'}</span>
-          <span className="head resume-name">{resumeTrip.name}</span>
-          <span className="text-link">{resume.day ? fmtDay(resume.day, { weekday: 'long', day: 'numeric', month: 'long' }) : 'open the plan'} →</span>
-        </Link>
-      )}
+      {/* on a laptop: plans on the left (what's waiting, where you were, next up, then past trips); the inbox and the globe on the right */}
+      <div className="home-main">
+        {waiting && (
+          <Link className="resume-plan waiting" to="/save">
+            <span className="mono-label">not saved yet</span>
+            <span className="head resume-name">{waiting.url || waiting.text || 'a link'}</span>
+            <span className="text-link">save it →</span>
+          </Link>
+        )}
+        {resumeTrip && resume && (
+          <Link className="resume-plan" to={`/trip/${resumeTrip.id}${resume.day ? `?day=${resume.day}` : ''}`}>
+            <span className="mono-label">{resume.day === today ? 'today' : 'continue'}</span>
+            <span className="head resume-name">{resumeTrip.name}</span>
+            <span className="text-link">{resume.day ? fmtDay(resume.day, { weekday: 'long', day: 'numeric', month: 'long' }) : 'open the plan'} →</span>
+          </Link>
+        )}
 
-      <section className="home-section home-next">
-        <div className="section-head">
-          <h2 className="head">next up</h2>
-          <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
-            <Icon name="plus" />
-          </button>
-        </div>
-        <LoadState load={load} blocks={1} />
-        {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
-        {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-        {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
-      </section>
+        <section className="home-section home-next">
+          <div className="section-head">
+            <h2 className="head">next up</h2>
+            <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
+              <Icon name="plus" />
+            </button>
+          </div>
+          <LoadState load={load} blocks={1} />
+          {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
+          {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
+          {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
+        </section>
+      </div>
 
-      {/* on a laptop the inbox and the globe share the right-hand column, the inbox on top */}
       <div className="home-side">
         {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
 

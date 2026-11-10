@@ -10,22 +10,22 @@
 .home-mark img { display: block; width: 180px; max-width: 100%; height: auto; }
 .account-name { font-size: 20px; font-weight: 700; }
 .home-world { display: grid; gap: 16px; }
-.home-side { display: grid; gap: 28px; min-width: 0; }
+.home-main, .home-side { display: grid; gap: 28px; min-width: 0; }
 
-/* laptop: plans on the left, globe on the right, like the trip page */
+/* laptop: plans on the left, the inbox and the globe on the right, like the trip page */
 @media (min-width: 1024px) {
   .home {
     width: min(1120px, 100%); padding-inline: 32px; column-gap: 56px; align-items: start;
     grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
-    /* the tall globe column must not stretch the gap under next up */
+    /* the tall right column must not stretch the gap under next up */
     grid-template-rows: auto auto 1fr;
-    grid-template-areas: "top top" "next world" "past world";
+    grid-template-areas: "top top" "main side" "past side";
   }
   .home-top { grid-area: top; }
-  .home-next { grid-area: next; }
+  .home-main { grid-area: main; }
   .home-past { grid-area: past; }
-  /* the globe column stays in view while scrolling, unless an inbox makes it too tall to */
-  .home-side { grid-area: world; position: sticky; top: 24px; }
+  /* the right column stays in view while scrolling, unless an inbox makes it too tall to */
+  .home-side { grid-area: side; position: sticky; top: 24px; }
   .home-side:has(.home-inbox) { position: static; }
 }
 
@@ -73,7 +73,7 @@
 .totals dd { margin: 0; font-size: 13px; }
 
 .home-section { display: grid; gap: 12px; }
-.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
 .section-head h2 { font-size: 22px; font-weight: 700; }
 
 .cal-wrap { display: grid; gap: 12px; min-width: 0; }
@@ -117,4 +117,8 @@
 .travels-card { overflow: visible; }
 .save-key { gap: 8px; }
 .save-key .copy-text { font-size: 13px; overflow-wrap: anywhere; }
+/* a row swiped sideways slides under the edge instead of making the page wider (which let the phone pan the whole page) */
+.home-inbox .doc-list { overflow-x: clip; }
 .inbox-row { touch-action: pan-y; background: var(--ground); }
+/* "to a trip" sits against the right edge, however long the trip names in its list are */
+.inbox-row .text-select { margin-left: auto; field-sizing: content; text-align: right; text-align-last: right; }

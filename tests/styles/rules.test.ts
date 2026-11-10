@@ -102,3 +102,8 @@ it('a journey ticket can shrink to its column, so a long route never runs off a 
   expect(ticket).toMatch(/min-width:\s*0/)
   expect(ticket).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/)
 })
+
+it('a swiped inbox row is clipped at the edge, so the phone never pans the whole page', () => {
+  expect(rules.some(([sel, body]) => sel.trim().endsWith('.home-inbox .doc-list') && /overflow-x:\s*clip/.test(body))).toBe(true)
+  expect(rules.find(([sel]) => sel.trim().endsWith('\n.inbox-row') || sel.trim() === '.inbox-row')?.[1]).toMatch(/touch-action:\s*pan-y/)
+})
