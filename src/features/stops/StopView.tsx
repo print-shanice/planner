@@ -137,6 +137,8 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
     navigate(`/trip/${stop.trip_id}?${q}`)
   }
   const what = stop.kind === 'place' ? stopSub(stop) : ''
+  // without a spot on the map there's nothing for "map" to show; the card offers to add one instead
+  const spot = [stop.place, stop.destination, stop.origin].some((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
 
   // the way on to the next stop of the day it was opened from (else its own day); the top trip owns the day's legs
   const on = openedOn ?? stop.day
@@ -154,7 +156,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
       {stop.place?.gid && <PlaceDetails place={stop.place} day={stop.day} />}
 
       <div className="stop-actions" role="group" aria-label="actions">
-        <button type="button" className="stop-action" onClick={showOnMap}><span className="ico"><Icon name="map" /></span>map</button>
+        <button type="button" className="stop-action" disabled={!spot} onClick={showOnMap}><span className="ico"><Icon name="map" /></span>map</button>
         {maps
           ? <a className="stop-action" href={maps} target="_blank" rel="noopener noreferrer"><span className="ico"><Icon name="ext" /></span>directions</a>
           : <button type="button" className="stop-action" disabled><span className="ico"><Icon name="ext" /></span>directions</button>}
@@ -193,6 +195,9 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         )}
         {address && stop.kind !== 'journey' && (
           <div className="fact fact-copy"><Icon name="pin" size={18} /><span className="copy-text">{address}</span><Copy text={address} label="copy address" /></div>
+        )}
+        {!spot && canEdit && (
+          <p className="fact"><Icon name="pin" size={18} /><button type="button" className="text-link" onClick={onEdit}>add a location →</button></p>
         )}
         {stop.ref && (
           <div className="fact fact-copy"><Icon name="note" size={18} /><span className="muted">ref</span><span className="copy-text keep-case num">{stop.ref}</span><Copy text={stop.ref} label="copy ref" /></div>

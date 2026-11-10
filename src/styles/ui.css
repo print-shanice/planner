@@ -405,10 +405,13 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
   /* on a trip a place's card and every form is a panel on the right, over the map: the plan stays in view and in use */
   body:has(.trip-wide) :is(.sheet-root.page, .sheet-root.side) .sheet-backdrop { padding: 0; align-items: stretch; justify-content: flex-end; background: none; pointer-events: none; animation: none; }
   body:has(.trip-wide) :is(.sheet.page, .sheet.side) {
-    pointer-events: auto; width: min(440px, calc(100vw - var(--plan-w, 600px))); height: 100dvh; max-height: none; border-radius: 0;
-    border-left: 1px solid var(--line); box-shadow: -10px 0 40px rgba(22, 24, 29, .08); animation: panel-in .18s ease-out;
+    /* it takes the map's whole place, from the plan's edge to the screen's */
+    position: fixed; top: 0; bottom: 0; left: var(--plan-w, 600px); right: 0; width: auto; height: auto; max-height: none; border-radius: 0;
+    pointer-events: auto; border-left: 1px solid var(--line); box-shadow: none; animation: panel-in .18s ease-out;
   }
-  body:has(.trip-wide) :is(.sheet.page, .sheet.side) .sheet-body { flex: 1; width: 100%; }
+  /* what's in it keeps a readable width, on the plan's side */
+  body:has(.trip-wide) :is(.sheet.page, .sheet.side) :is(.sheet-head, .sheet-body, .sheet-foot) { flex: none; width: min(640px, 100%); margin: 0; }
+  body:has(.trip-wide) :is(.sheet.page, .sheet.side) .sheet-body { flex: 1; }
 }
 @keyframes panel-in { from { transform: translateX(16px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sheet { animation: none !important; } }

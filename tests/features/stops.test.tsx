@@ -582,6 +582,20 @@ describe('a stop reads like a place card', () => {
     expect(d.getByText('Arktikum, Pohjoisranta 4')).toBeInTheDocument()
   })
 
+  it('a place with no spot on the map says so: "map" is off and the card offers to add a location', async () => {
+    db.stops = [stop({ id: 's1', trip_id: 'lap', kind: 'stay', title: 'arktikum', day: '2027-02-08', end_date: '2027-02-10', place: null })]
+    const d = await open()
+    expect(d.getByRole('button', { name: 'map' })).toBeDisabled()
+    expect(d.getByRole('button', { name: 'directions' })).toBeDisabled()
+    await userEvent.click(d.getByRole('button', { name: 'add a location →' }))
+    expect(screen.getByRole('dialog', { name: 'edit' })).toBeInTheDocument()
+  })
+
+  it('a place that has a spot never offers to add one', async () => {
+    const d = await open()
+    expect(d.queryByRole('button', { name: 'add a location →' })).toBeNull()
+  })
+
   it('offline, changing the day and ticket are off', async () => {
     db.canEdit = false
     const d = await open()
