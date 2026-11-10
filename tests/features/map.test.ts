@@ -94,7 +94,18 @@ it("tonight's bed is drawn for a day", () => {
   const all = [...stops, bed]
   const out = mapFeatures(lap, trips, all, '2027-02-07')
   expect(out.beds.features.map((f) => f.properties.id)).toEqual(['bed'])
-  expect(mapFeatures(lap, trips, all, 'all').beds.features).toEqual([])
+})
+
+it('the whole trip draws every stay once, named, so a hotel is never missing from the map', () => {
+  const { trips, stops } = setup()
+  const hotel = stop({ id: 'bed', trip_id: 'lap', kind: 'stay', title: 'Hop Inn', day: '2027-02-06', end_date: '2027-02-09', place: at(66.5, 25.72) })
+  const later = stop({ id: 'bed2', trip_id: 'lap', kind: 'stay', title: 'Ryokan', day: '2027-02-09', end_date: '2027-02-11', place: at(66.7, 25.9) })
+  const unlocated = stop({ id: 'bed3', trip_id: 'lap', kind: 'stay', title: 'Somewhere', day: '2027-02-11', place: null })
+  const out = mapFeatures(lap, trips, [...stops, hotel, later, unlocated], 'all')
+  expect(out.beds.features.map((f) => f.properties.id)).toEqual(['bed', 'bed2'])
+  expect(out.names.features.map((f) => f.properties.name)).toEqual(expect.arrayContaining(['hop inn', 'ryokan']))
+  // stays are never numbered
+  expect(out.pins.features.map((f) => f.properties.id)).not.toContain('bed')
 })
 
 it('names sit beside pins, ends and the bed, lowercased', () => {

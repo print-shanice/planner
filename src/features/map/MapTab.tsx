@@ -112,11 +112,19 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
   const bedStop = isDay ? mapBed(dayEntries(trip, trips, stops, filter)) : null
   const bedName = bedStop ? bedStop.title || bedStop.place?.name || '' : ''
   const bed = bedName ? bedStop : null
+  // the whole trip lists every stay it draws, in order of check-in
+  const stayItems: PlaceItem[] = filter === 'all'
+    ? data.beds.features.flatMap((f) => {
+      const s = stops.find((x) => x.id === f.properties.id)
+      const nm = s ? s.title || s.place?.name || '' : ''
+      return nm ? [{ id: f.properties.id, n: null, icon: 'bed' as const, color: dayColor(trip.color), title: `staying at ${nm}`.toLowerCase(), sub: s?.day ? fmtDay(s.day, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '') : '' }] : []
+    })
+    : []
   const items: PlaceItem[] = overview
     ? overview.sides.map((s) => ({ id: s.id, n: null, color: s.color, title: s.name, sub: s.dates }))
     : bed
     ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...pinItems]
-    : pinItems
+    : [...stayItems, ...pinItems]
   const count = `${pinItems.length} ${pinItems.length === 1 ? 'place' : 'places'}`
   const listTitle = overview ? `${overview.sides.length} side ${overview.sides.length === 1 ? 'trip' : 'trips'}` : filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} ideas` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
   // a tall places sheet covers more than the usual margin, so the fit clears it

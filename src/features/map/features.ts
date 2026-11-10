@@ -89,6 +89,11 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
     }
   }
   if (filter === 'all') {
+    // every stay, once, where it is: a hotel belongs on the whole trip as much as any place
+    for (const s of mine.filter(s => s.kind === 'stay' && s.day && hasPoint(s.place)).sort((a, b) => a.day!.localeCompare(b.day!))) {
+      beds.push(pt(s.place!, { id: s.id }))
+      name(s.place!, s.title || s.place!.name)
+    }
     for (const s of mine.filter(s => !s.day)) {
       if (s.kind !== 'journey' && hasPoint(s.place)) saved.push(pt(s.place, { id: s.id, saved: s.saved, icon: categoryIcon(categoryOf(s)) }))
     }

@@ -419,4 +419,12 @@ describe('whole trip with side trips', () => {
     expect(document.querySelector('[data-overview]')).toHaveAttribute('data-overview', '')
     expect(within(screen.getByRole('region', { name: 'places' })).getByText('2 places')).toBeInTheDocument()
   })
+
+  it('the whole trip lists its stays too, before the numbered places', () => {
+    db.stops = [...db.stops, stop({ id: 'hostel', trip_id: 'lap', kind: 'stay', title: 'hostel', day: '2027-02-07', end_date: '2027-02-10', place: place({ name: 'Hostel', lat: 66.49, lng: 25.69 }) })]
+    show('/', true)
+    fireEvent.click(screen.getByRole('button', { name: 'places list' }))
+    const rows = Array.from(document.querySelectorAll('.places-row')).map((r) => r.textContent)
+    expect(rows).toEqual([expect.stringMatching(/^staying at hostelsun 7 feb/), expect.stringMatching(/^1arktikum/), expect.stringMatching(/^2church/)])
+  })
 })
