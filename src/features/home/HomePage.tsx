@@ -16,6 +16,7 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
 import { Lead, TripFamilies, leadTrip } from './Trips'
+import { useTripFlags } from '../../lib/tripGuess'
 import { Calendar } from './Calendar'
 import { Travels } from './Travels'
 import { TripForm } from './TripForm'
@@ -42,6 +43,7 @@ export function HomePage() {
   const sq = useStops()
   const trips = tq.data ?? []
   const stops = sq.data ?? []
+  const flagsOf = useTripFlags(trips, stops)
   const reviews = useReviews().data ?? []
   const load = loadState(tq, sq)
   const canEdit = useCanEdit()
@@ -128,8 +130,8 @@ export function HomePage() {
               {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
               {upcoming.length > 0 && (
                 <div className="home-plans">
-                  <Calendar trips={trips} stops={stops} today={today} />
-                  <TripFamilies tops={upcoming} trips={trips} stops={stops} today={today} />
+                  <Calendar trips={trips} flagsOf={flagsOf} today={today} />
+                  <TripFamilies tops={upcoming} trips={trips} flagsOf={flagsOf} today={today} />
                 </div>
               )}
             </section>
@@ -137,7 +139,7 @@ export function HomePage() {
             {past.length > 0 && (
               <section className="home-section home-past">
                 <div className="section-head"><h2 className="head">past trips</h2></div>
-                <TripFamilies tops={past} trips={trips} stops={stops} today={today} keepEnded />
+                <TripFamilies tops={past} trips={trips} flagsOf={flagsOf} today={today} keepEnded />
               </section>
             )}
           </div>

@@ -501,6 +501,21 @@ describe('trips, the view home opens on', () => {
     expect(flagOn('2027-01-30')).toBeNull()
   })
 
+  it('every stretch of colour on the month starts with its flag: a new row, a side trip taking over, the parent carrying on after it', async () => {
+    const user = userEvent.setup()
+    db.trips = [
+      trip({ id: 'ex', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13', base: place({ country: 'NL' }), color: 0 }),
+      trip({ id: 'lap', parent_id: 'ex', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', base: place({ country: 'FI' }), color: 1 }),
+    ]
+    show()
+    await user.click(screen.getByRole('button', { name: 'next month' }))
+    const cal = document.querySelector('.home-cal') as HTMLElement
+    const flagged = [...cal.querySelectorAll('[data-day]')].filter((d) => d.querySelector('img.flag')).map((d) => `${d.getAttribute('data-day')!.slice(8)} ${d.querySelector('img.flag')!.getAttribute('alt')}`)
+    // mondays start a row; lapland takes over on sunday the 7th and the exchange carries on from friday the 12th
+    expect(flagged).toEqual(['01 Netherlands', '07 Finland', '08 Finland', '12 Netherlands', '15 Netherlands', '22 Netherlands'])
+    expect(screen.queryByRole('list', { name: 'trips this month' })).toBeNull()
+  })
+
   it('has the month calendar under the banner, opening on the month the soonest trip starts', () => {
     db.trips = europe()
     show()

@@ -93,6 +93,6 @@ button.cal-day:is(:not([data-ribbon]), [data-ribbon="on"]):hover .cal-n { backgr
 .cal-label:hover { text-decoration: underline; }
 .cal-label:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 4px; }
 
-/* the flag of a trip, pinned to the corner of the day it starts */
-.cal-flag { position: absolute; top: 0; right: calc(50% - 22px); display: inline-flex; font-size: 13px; line-height: 1; pointer-events: none; }
+/* a ribbon's flag, on the corner of the first day of each stretch of it */
+.cal-flag { position: absolute; top: -2px; left: calc(50% - 25px); z-index: 1; display: inline-flex; font-size: 15px; line-height: 1; pointer-events: none; }
 .cal-flag .flag { box-shadow: 0 0 0 1.5px var(--card); }

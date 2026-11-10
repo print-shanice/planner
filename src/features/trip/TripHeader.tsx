@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
-import { ancestors, countryName, descendants, tripCountries } from '../../lib/countries'
+import { ancestors, countryName, descendants } from '../../lib/countries'
+import { useTripFlags } from '../../lib/tripGuess'
 import { fmtRange, nights } from '../../lib/dates'
 import { useMembers, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -23,7 +24,8 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
   const parent = path.at(-1)
   // the title switches between trips of one family: the top trip and every side trip under it
   const family = descendants(path[0]?.id ?? trip.id, trips).length > 1
-  const countries = tripCountries(trip, trips, stops)
+  const flagsOf = useTripFlags(trips, stops)
+  const countries = flagsOf(trip)
   // the first country sits beside the title; a trip through several shows the others with its dates
   const others = countries.slice(1)
   const flags = others.length > 0 && (
@@ -42,7 +44,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
       <OfflineBadge />
       <div className="trip-top">
         <Link to={up ? `/trip/${up.id}` : '/'} className="back-link" aria-label={`back to ${upName}`}>
-          <Icon name="back" />{up && <CountryFlag code={up.base?.country} />}<span>{upName}</span>
+          <Icon name="back" />{up && <CountryFlag code={flagsOf(up)[0]} />}<span>{upName}</span>
         </Link>
         {/* the people sharing the trip are also the way into its settings */}
         <button type="button" className="avatars trip-people" aria-label="edit trip" title={`shared with ${members.map(m => m.name || m.email).join(', ')}`} disabled={!canEdit} onClick={onEdit}>
@@ -62,7 +64,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
       </div>
       {(flags || when) && <p className="trip-meta muted num">{flags}{flags && when && <span aria-hidden="true">·</span>}{when && <span>{when}</span>}</p>}
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
-        <TripTree trips={trips} current={trip.id} onPick={() => setTree(false)} />
+        <TripTree trips={trips} current={trip.id} flagsOf={flagsOf} onPick={() => setTree(false)} />
         <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => { setTree(false); setAdding(true) }}><Icon name="plus" />add side trip</button>
       </Sheet>
       <Sheet page open={adding} title="new side trip" onClose={() => setAdding(false)}><TripForm parentId={trip.id} onDone={() => setAdding(false)} /></Sheet>

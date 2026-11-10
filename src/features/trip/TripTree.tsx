@@ -4,13 +4,14 @@ import type { Trip } from '../../lib/types'
 import { ancestors } from '../../lib/countries'
 import { fmtRange } from '../../lib/dates'
 import { Icon } from '../../components/Icon'
-import { CountryFlag } from '../../components/CountryFlag'
+import { TripMark } from '../../components/TripMark'
+import { tint } from '../../components/MonthCalendar'
 
 // side trips in date order, the undated ones last
 const order = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
 
 // the whole family of a trip, from the top: open along the way to the current trip, folded elsewhere
-export function TripTree({ trips, current, onPick }: { trips: Trip[]; current: string; onPick: () => void }) {
+export function TripTree({ trips, current, onPick, flagsOf }: { trips: Trip[]; current: string; onPick: () => void; flagsOf?: (t: Trip) => string[] }) {
   const path = ancestors(current, trips)
   const root = path[0] ?? trips.find((t) => t.id === current)!
   const [open, setOpen] = useState(() => new Set([...path.map((t) => t.id), current]))
@@ -24,7 +25,7 @@ export function TripTree({ trips, current, onPick }: { trips: Trip[]; current: s
       <li key={t.id}>
         <div className="tree-row" style={{ paddingLeft: Math.min(depth, 3) * 16 }}>
           <Link to={`/trip/${t.id}`} className="tree-link" aria-current={t.id === current ? 'page' : undefined} onClick={onPick}>
-            <CountryFlag code={t.base?.country} />
+            <span className="tree-mark" style={tint(t.color)}><TripMark codes={flagsOf?.(t) ?? []} max={depth === 0 ? 1 : 3} /></span>
             <span className="tree-name">{t.name}</span>
             <span className="muted num">{t.start_date ? fmtRange(t.start_date, t.end_date) : 'no dates'}</span>
           </Link>

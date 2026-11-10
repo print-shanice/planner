@@ -380,8 +380,14 @@ describe('a long trip with side trips', () => {
   it('is a month calendar: side trips colour their days and open from it, the trip\'s own days have dots', async () => {
     show(eu(), '/trip/eu?day=2027-02-19', false)
     const cal = screen.getByRole('group', { name: 'february 2027' })
-    expect(within(cal).getByRole('link', { name: /paris/ })).toHaveAttribute('href', '/trip/paris')
-    expect(cal.querySelector('[data-day="2027-02-20"]')).toHaveAttribute('data-side')
+    // the same ribbons as home's calendar: the side trip's days wear its colour, the trip's own days the trip's
+    expect(cal.querySelector('[data-day="2027-02-19"]')).toHaveAttribute('data-ribbon', 'start')
+    expect((cal.querySelector('[data-day="2027-02-20"]') as HTMLElement).style.getPropertyValue('--c')).toBe('var(--g2)')
+    expect((cal.querySelector('[data-day="2027-02-18"]') as HTMLElement).style.getPropertyValue('--c')).toBe('var(--g0)')
+    expect(cal.querySelector('.cal-label')).toBeNull()
+    // tapping a side trip's day opens that side trip on it
+    await userEvent.click(within(cal).getByRole('button', { name: 'sat 20 feb' }))
+    expect(screen.getByTestId('loc').textContent).toBe('?day=2027-02-20')
     expect(screen.queryByText('louvre')).toBeNull()
     // the side trips of the month, each a line that opens it
     const list = within(screen.getByRole('list', { name: 'side trips this month' }))

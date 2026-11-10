@@ -1,3 +1,4 @@
+import type { Trip } from '../lib/types'
 import type { CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { monthWeeks, weekBars, type Span } from '../lib/calendar'
@@ -32,8 +33,11 @@ type Props = {
   marked?: (d: string) => boolean
   // inside a trip, side-trip bars are real links with the side trip's flag
   linkBars?: boolean
-  // a country's flag to pin on a day (home: the day a trip starts)
-  flag?: (d: string) => string | null | undefined
+  // the flag a ribbon wears: it sits on the first day of every stretch of that ribbon, row by row,
+  // so each colour on the month says which country it is
+  flag?: (s: Span) => string | null | undefined
+  // the countries a trip goes to, for the flag on its label (else its base's)
+  codes?: (t: Trip) => string[]
 }
 
 function Week({ week, p }: { week: (string | null)[]; p: Props }) {
@@ -67,7 +71,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           'data-planned': p.marked?.(d) || undefined,
           style: { gridColumn: i + 1, ...(t ? tint(t.color) : st ? tint(st.color) : {}) },
         }
-        const code = p.flag?.(d)
+        const code = t && edge.includes('l') ? p.flag?.(t) : null
         const n = <><span className="cal-n num">{+d.slice(8)}</span>{code && <span className="cal-flag"><CountryFlag code={code} /></span>}</>
         const pickable = p.canPick?.(d) ?? true
         if (p.onDay && pickable) {
@@ -90,7 +94,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           return (
             <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} className="cal-label" title={b.span.name}
               style={{ gridColumn: `${b.from + 1} / ${b.to + 2}`, gridRow: b.lane + 2, ...tint(b.span.color) }}>
-              <CountryFlag code={b.span.trip.base?.country} /> {b.span.name}
+              <CountryFlag code={p.codes?.(b.span.trip)[0] ?? b.span.trip.base?.country} /> {b.span.name}
             </Link>
           )
         }
