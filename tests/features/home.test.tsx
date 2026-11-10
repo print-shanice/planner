@@ -271,6 +271,51 @@ it('a link in the inbox goes to a trip from its own row', async () => {
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'l1', trip_id: 'par' }))
 })
 
+it('an inbox link is named by your note, with the site\'s own icon', () => {
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://www.instagram.com/reel/Cx1/', title: 'instagram', note: 'rooftop bar' }]
+  show()
+  const row = screen.getByRole('link', { name: /rooftop bar/ })
+  expect(row).toHaveTextContent('instagram.com')
+  expect(row).not.toHaveTextContent('instagram.com · rooftop bar')
+  expect(row.querySelector('img.site-icon')).toHaveAttribute('src', 'https://www.google.com/s2/favicons?domain=instagram.com&sz=64')
+})
+
+it('a long swipe either way removes an inbox link, without opening it', () => {
+  db.links = [
+    { id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' },
+    { id: 'l2', trip_id: null, url: 'https://example.com/b', title: 'b', note: '' },
+  ]
+  db.remove.mockClear()
+  show()
+  for (const [id, to] of [['l1', 400], ['l2', 100]] as const) {
+    const row = screen.getByRole('link', { name: id === 'l1' ? /^a/ : /^b/ }).closest('li') as HTMLElement
+    fireEvent.pointerDown(row, { clientX: 250, pointerId: 1 })
+    fireEvent.pointerMove(row, { clientX: to, pointerId: 1 })
+    fireEvent.pointerUp(row, { clientX: to, pointerId: 1 })
+    const opened = fireEvent.click(screen.getByRole('link', { name: id === 'l1' ? /^a/ : /^b/ }))
+    expect(opened).toBe(false)
+  }
+  return waitFor(() => expect(db.remove.mock.calls.map((c) => (c as unknown[])[0])).toEqual(['l1', 'l2']))
+})
+
+it('a short swipe on an inbox link does nothing', () => {
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
+  db.remove.mockClear()
+  show()
+  const row = screen.getByRole('link', { name: /^a/ }).closest('li') as HTMLElement
+  fireEvent.pointerDown(row, { clientX: 250, pointerId: 1 })
+  fireEvent.pointerUp(row, { clientX: 290, pointerId: 1 })
+  expect(db.remove).not.toHaveBeenCalled()
+})
+
+it('on a laptop the inbox sits with the globe, above it', () => {
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
+  show()
+  const side = screen.getByRole('heading', { name: 'inbox' }).closest('.home-side')
+  expect(side).not.toBeNull()
+  expect(side!.querySelectorAll('h2')[1]).toHaveTextContent('your travels, wrapped')
+})
+
 it('when every trip is over, next up says so', () => {
   db.trips = [trip({ name: 'bali', start_date: '2025-06-01', end_date: '2025-06-09' })]
   show()

@@ -10,6 +10,7 @@
 .home-mark img { display: block; width: 180px; max-width: 100%; height: auto; }
 .account-name { font-size: 20px; font-weight: 700; }
 .home-world { display: grid; gap: 16px; }
+.home-side { display: grid; gap: 28px; min-width: 0; }
 
 /* laptop: plans on the left, globe on the right, like the trip page */
 @media (min-width: 1024px) {
@@ -23,7 +24,9 @@
   .home-top { grid-area: top; }
   .home-next { grid-area: next; }
   .home-past { grid-area: past; }
-  .home-world { grid-area: world; position: sticky; top: 24px; }
+  /* the globe column stays in view while scrolling, unless an inbox makes it too tall to */
+  .home-side { grid-area: world; position: sticky; top: 24px; }
+  .home-side:has(.home-inbox) { position: static; }
 }
 
 /* only the round globe takes touches; its square corners still scroll the page */
@@ -114,3 +117,4 @@
 .travels-card { overflow: visible; }
 .save-key { gap: 8px; }
 .save-key .copy-text { font-size: 13px; overflow-wrap: anywhere; }
+.inbox-row { touch-action: pan-y; background: var(--ground); }

@@ -3,6 +3,7 @@ import type { Link, Trip } from '../../lib/types'
 import { useRemove, useSave, useStops } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { hostOf, safeUrl } from '../../lib/embed'
+import { linkName } from '../../lib/capture'
 import { Icon } from '../../components/Icon'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { ItemMenu } from './ItemMenu'
@@ -12,12 +13,12 @@ import { CaptureForm } from '../capture/CaptureForm'
 import { stopTitle } from '../plan/StopRow'
 import { useStopSheet } from '../stops/StopSheet'
 
-// the website's own icon, from its domain; the plain link icon if it can't load
+// the website's own icon, from its domain (google's icon service knows instagram; others sent a grey arrow); the plain link icon if it can't load
 export function SiteIcon({ url }: { url: string }) {
   const host = hostOf(url)
   const [failed, setFailed] = useState(false)
   if (!host || failed) return <Icon name="link" size={18} />
-  return <img className="site-icon" src={`https://icons.duckduckgo.com/ip3/${host}.ico`} alt="" width={20} height={20} loading="lazy" onError={() => setFailed(true)} />
+  return <img className="site-icon" src={`https://www.google.com/s2/favicons?domain=${host}&sz=64`} alt="" width={20} height={20} loading="lazy" onError={() => setFailed(true)} />
 }
 
 type Pick = { on: boolean; onToggle: () => void }
@@ -28,8 +29,8 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
   const save = useSave('links')
   const remove = useRemove('links')
   const canEdit = useCanEdit()
-  const title = link.title || hostOf(link.url)
-  const site = [hostOf(link.url), link.note].filter(Boolean).join(' · ')
+  const name = linkName(link)
+  const title = name.title
   const place = useStops().data?.find((s) => s.id === link.stop_id)
   const sheet = useStopSheet()
 
@@ -40,8 +41,8 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
         <a href={href} target="_blank" rel="noopener noreferrer" className="link-text">
           <SiteIcon url={link.url} />
           <span className="stack-xs">
-            {link.title ? <span className="link-title">{link.title}</span> : null}
-            <span className="muted">{site}</span>
+            <span className="link-title">{name.title}</span>
+            {name.sub && <span className="muted">{name.sub}</span>}
           </span>
         </a>
         {place && <button type="button" className="text-select link-place" onClick={() => sheet?.openStop(place.id)}>{stopTitle(place).toLowerCase()} →</button>}

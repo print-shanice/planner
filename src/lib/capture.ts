@@ -1,4 +1,5 @@
 import type { Link } from './types'
+import { hostOf } from './embed'
 
 // a link arriving from a share sheet, a shortcut or a paste
 export type Incoming = { url: string; title: string; text: string }
@@ -95,4 +96,16 @@ export function takePending(): Incoming | null {
 
 export function forgetCapture(): void {
   try { localStorage.removeItem(KEY) } catch { /* nothing to forget */ }
+}
+
+// what a saved link is called in a list: a title someone typed, else their note, else the site.
+// the site's own name ("instagram", "example.com") is only a stand-in, so a note replaces it
+export function linkName(l: Pick<Link, 'url' | 'title' | 'note'>): { title: string; sub: string } {
+  const site = hostOf(l.url)
+  const title = l.title.trim()
+  const note = l.note.trim()
+  const standIn = !title || title.toLowerCase() === platformOf(l.url) || title.toLowerCase() === site.toLowerCase()
+  if (note && standIn) return { title: note, sub: site }
+  // the site isn't said twice when it is already the name
+  return { title: title || site, sub: [title ? site : '', note].filter(Boolean).join(' · ') }
 }

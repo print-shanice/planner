@@ -1,0 +1,35 @@
+import { useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+
+// a sideways swipe further than this removes a row (with undo)
+export const SWIPE = 80
+
+// either way counts; a row that was dragged doesn't also open the link under the finger
+export function useSwipeAway(onAway: () => void, enabled = true) {
+  const start = useRef<number | null>(null)
+  const moved = useRef(false)
+  const [dx, setDx] = useState(0)
+  const reset = () => { start.current = null; setDx(0) }
+  return {
+    style: dx ? { transform: `translateX(${dx}px)` } : undefined,
+    onPointerDown: (e: PointerEvent) => { if (enabled) { start.current = e.clientX; moved.current = false } },
+    onPointerMove: (e: PointerEvent) => {
+      if (start.current == null) return
+      const d = e.clientX - start.current
+      if (Math.abs(d) > 8) moved.current = true
+      setDx(d)
+    },
+    onPointerUp: (e: PointerEvent) => {
+      if (start.current == null) return
+      const far = Math.abs(e.clientX - start.current) > SWIPE
+      reset()
+      if (far) onAway()
+    },
+    onPointerCancel: reset,
+    onClickCapture: (e: MouseEvent) => {
+      if (!moved.current) return
+      moved.current = false
+      e.preventDefault()
+      e.stopPropagation()
+    },
+  }
+}

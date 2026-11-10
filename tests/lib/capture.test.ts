@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractUrl, linkKey, platformOf, findSaved, readShareParams, keepPending, takePending, peekPending, captureHref } from '../../src/lib/capture'
+import { extractUrl, linkKey, platformOf, findSaved, readShareParams, keepPending, takePending, peekPending, captureHref, linkName } from '../../src/lib/capture'
 import type { Link } from '../../src/lib/types'
 
 const link = (url: string, o: Partial<Link> = {}): Link => ({ id: url, trip_id: null, url, title: '', note: '', ...o })
@@ -53,5 +53,21 @@ describe('link capture', () => {
 
   it('builds the address the shortcut opens', () => {
     expect(captureHref('https://print-shanice.github.io/planner/', 'https://a.com/?x=1&y=2')).toBe('https://print-shanice.github.io/planner/#/save?url=https%3A%2F%2Fa.com%2F%3Fx%3D1%26y%3D2')
+  })
+})
+
+describe('linkName', () => {
+  const l = (p: Partial<Link>) => ({ id: 'l', trip_id: null, url: 'https://www.instagram.com/reel/C9x/', title: 'instagram', note: '', ...p }) as Link
+  it('your note names a link that only has the site as its title', () => {
+    expect(linkName(l({ note: 'rooftop bar' }))).toEqual({ title: 'rooftop bar', sub: 'instagram.com' })
+    expect(linkName(l({ title: '', note: 'rooftop bar' }))).toEqual({ title: 'rooftop bar', sub: 'instagram.com' })
+    expect(linkName(l({ url: 'https://example.com/a', title: 'example.com', note: 'menu' }))).toEqual({ title: 'menu', sub: 'example.com' })
+  })
+  it('a title someone typed stays, with the note beside the site', () => {
+    expect(linkName(l({ title: 'cafe reel', note: 'go early' }))).toEqual({ title: 'cafe reel', sub: 'instagram.com · go early' })
+  })
+  it('without a note it is the title, else the site', () => {
+    expect(linkName(l({}))).toEqual({ title: 'instagram', sub: 'instagram.com' })
+    expect(linkName(l({ title: '' }))).toEqual({ title: 'instagram.com', sub: '' })
   })
 })

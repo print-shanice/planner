@@ -100,21 +100,24 @@ export function HomePage() {
         {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
       </section>
 
-      {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
+      {/* on a laptop the inbox and the globe share the right-hand column, the inbox on top */}
+      <div className="home-side">
+        {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
 
-      <div className="home-world">
-        {/* a summary of where your travels have taken you: the globe and its numbers in one card */}
-        <div className="section-head"><h2 id={travelsId} className="head">your travels, wrapped</h2></div>
-        <div className="travels-card">
-          <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
-            <Globe status={status} pins={pins} onCountry={pickCountry} />
-          </Suspense>
-          {trips.length > 0 && (
-            <div className="totals-block">
-              <p className="head totals-title">life well lived</p>
-              <Totals {...totals} lists={lists} labelledBy={travelsId} />
-            </div>
-          )}
+        <div className="home-world">
+          {/* a summary of where your travels have taken you: the globe and its numbers in one card */}
+          <div className="section-head"><h2 id={travelsId} className="head">your travels, wrapped</h2></div>
+          <div className="travels-card">
+            <Suspense fallback={<div className="globe-wrap"><Loading label="loading globe" size="small" /></div>}>
+              <Globe status={status} pins={pins} onCountry={pickCountry} />
+            </Suspense>
+            {trips.length > 0 && (
+              <div className="totals-block">
+                <p className="head totals-title">life well lived</p>
+                <Totals {...totals} lists={lists} labelledBy={travelsId} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
