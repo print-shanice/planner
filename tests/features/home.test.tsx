@@ -462,6 +462,10 @@ describe('trips, the view home opens on', () => {
     show()
     const cal = screen.getByTestId('calendar')
     expect(screen.getByTestId('lead').compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // "upcoming" heads both the calendar and the trips
+    const heading = screen.getByRole('heading', { level: 2, name: 'upcoming' })
+    expect(heading.compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(heading.closest('section')).toContainElement(cal)
     expect(cal.compareDocumentPosition(items()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(cal).getByText('january')).toBeInTheDocument()
     expect(within(cal).getByText('2027')).toBeInTheDocument()

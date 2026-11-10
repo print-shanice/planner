@@ -116,21 +116,23 @@ export function HomePage() {
           <div className="home-trips">
             <LoadState load={load} blocks={1} />
             {lead && <Lead trip={lead} today={today} href={leadHref} />}
-            {/* on a laptop the calendar sits beside the upcoming tiles */}
-            <div className="home-plans">
-              {upcoming.length > 0 && <Calendar trips={trips} today={today} />}
-              <section className="home-section home-upcoming">
-                <div className="section-head">
-                  <h2 className="head">upcoming</h2>
-                  <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
-                    <Icon name="plus" />
-                  </button>
+              {/* "upcoming" heads both: the month, then each trip's card (on a laptop side by side) */}
+            <section className="home-section home-upcoming">
+              <div className="section-head">
+                <h2 className="head">upcoming</h2>
+                <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
+                  <Icon name="plus" />
+                </button>
+              </div>
+              {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
+              {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
+              {upcoming.length > 0 && (
+                <div className="home-plans">
+                  <Calendar trips={trips} today={today} />
+                  <TripFamilies tops={upcoming} trips={trips} today={today} />
                 </div>
-                {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
-                {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-                {upcoming.length > 0 && <TripFamilies tops={upcoming} trips={trips} today={today} />}
-              </section>
-            </div>
+              )}
+            </section>
             {/* only shows once a trip has ended */}
             {past.length > 0 && (
               <section className="home-section home-past">
