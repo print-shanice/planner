@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import type { Cost, Trip } from '../../lib/types'
 import { useCosts, useMembers, useRates, useRemove, useSave, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { useAuth } from '../../lib/auth'
 import { CATEGORIES, convert, formatMoney, totals } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
-import { balances, isPayback, transfers } from '../../lib/settle'
+import { balances, isPayback, standings, transfers } from '../../lib/settle'
 import { ancestors, descendants } from '../../lib/countries'
 import { fmtDay, todayISO } from '../../lib/dates'
 import { newId } from '../../lib/id'
@@ -67,7 +67,8 @@ export function MoneyTab({ trip }: { trip: Trip }) {
     if (!paid.length) return null
     const people = members.map((m) => m.user_id).filter((x): x is string => !!x)
     const bal = balances(paid, people, rates)
-    return { bal: Object.entries(bal).filter(([, v]) => Math.abs(v) > 0.005).sort((a, b) => b[1] - a[1]), moves: transfers(bal) }
+    const each = standings(paid, people, rates)
+    return { people: each, moves: transfers(bal), most: Math.max(...each.map((p) => Math.abs(p.balance)), 0.01) }
   }, [allCosts, top.id, trips, members, rates])
 
   if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
@@ -80,6 +81,31 @@ export function MoneyTab({ trip }: { trip: Trip }) {
     return formatMoney(converted ?? eur, converted == null ? 'EUR' : cur, { exact: true })
   }
   const left = budget != null && !over ? budget - total : null
+  // a eur amount in the currency on show, in whole units
+  const whole = (eur: number) => {
+    const converted = convert(eur, 'EUR', cur, rates)
+    return formatMoney(converted ?? eur, converted == null ? 'EUR' : cur, { whole: true })
+  }
+  const faceColor = (id: string) => `var(--g${(members.find((m) => m.user_id === id)?.color ?? 0) % 6})`
+  const Face = ({ id }: { id: string }) => <span className="avatar" aria-hidden="true" style={{ background: faceColor(id) }}>{(members.find((m) => m.user_id === id)?.name || '?').slice(0, 1)}</span>
+  // a breakdown row: its name and amount over a bar, paid in green and planned hatched, against the biggest row
+  const byTrip = [trip, ...kids].map((x) => {
+    const mine = x.id === trip.id ? costs.filter((c) => c.trip_id === trip.id) : costs.filter((c) => descendants(x.id, trips).includes(c.trip_id))
+    const sum = totals(mine, cur, rates)
+    return { id: x.id, name: x.name, color: x.color, paid: sum.paid, planned: sum.planned }
+  })
+  const cats = Object.entries(t.byCategory).map(([k, v]) => ({ k, label: LABEL[k] ?? k, ...v, sum: v.paid + v.planned })).sort((a, b) => b.sum - a.sum)
+  const Share = ({ label, paid, planned, most, dot }: { label: string; paid: number; planned: number; most: number; dot?: string }) => (
+    <li className="share-row">
+      <span className="share-top"><span>{dot && <span className="dot" style={{ background: dot }} />}{label}</span><span className="num">{show(paid + planned)}</span></span>
+      <span className="share-track" aria-hidden="true">
+        <span className="share-bar" style={{ width: `${Math.round(((paid + planned) / (most || 1)) * 100)}%` }}>
+          {paid > 0 && <span className="paid" style={{ flexGrow: paid }} />}
+          {planned > 0 && <span className="planned" style={{ flexGrow: planned }} />}
+        </span>
+      </span>
+    </li>
+  )
 
   return (
     <div className="money stack">
@@ -117,22 +143,38 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         <section className="settle-box" aria-label="settle up">
           <p className="label">settle up</p>
           <p className="settle-scope muted">{top.name} · with side trips</p>
-          {settle.moves.length === 0 ? <p className="settle-line"><Pill status="settled" /></p> : <>
-            {settle.bal.length > 2 && <ul className="settle-people">
-              {settle.bal.map(([id, v]) => (
-                <li key={id} className="num">{`${name(id)} · ${v > 0 ? 'owed' : owes(id)} ${debt(Math.abs(v))}`}</li>
-              ))}
-            </ul>}
-            {settle.moves.map((x) => {
-              const line = `${name(x.from)} ${owes(x.from)} ${name(x.to)} ${debt(x.eur)}`
+          <ul className="bal-list">
+            {settle.people.map((p) => {
+              const square = Math.abs(p.balance) < 0.005
+              const label = square ? `${name(p.id)} · settled` : `${name(p.id)} · ${p.balance > 0 ? 'owed' : owes(p.id)} ${debt(Math.abs(p.balance))}`
+              const width = `${Math.round((Math.abs(p.balance) / settle.most) * 100)}%`
               return (
-                <div key={`${x.from}-${x.to}`} className="settle-move">
-                  <p className="settle-line num">{line}</p>
-                  {canEdit && <button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => setRepayment(x)}>record repayment</button>}
-                </div>
+                <li key={p.id} className="bal-row" aria-label={label}>
+                  <Face id={p.id} />
+                  <span className="bal-who">
+                    <span className="bal-name">{name(p.id)}</span>
+                    <span className="muted num">{`paid ${whole(p.paid)} · share ${whole(p.share)}`}</span>
+                  </span>
+                  {/* left of the middle: owes; right of it: is owed */}
+                  <span className="bal-track" aria-hidden="true" style={{ '--c': faceColor(p.id) } as CSSProperties}>
+                    <span className="bal-half down">{!square && p.balance < 0 && <span className="bal-bar down" style={{ width }} />}</span>
+                    <span className="bal-half up">{!square && p.balance > 0 && <span className="bal-bar up" style={{ width }} />}</span>
+                  </span>
+                  <span className="bal-amount num">{square ? debt(0) : `${p.balance > 0 ? '+' : '−'}${debt(Math.abs(p.balance))}`}</span>
+                </li>
               )
             })}
-          </>}
+          </ul>
+          {settle.moves.length === 0 ? <p className="settle-line"><Pill status="settled" /></p> : settle.moves.map((x) => {
+            const line = `${name(x.from)} ${owes(x.from)} ${name(x.to)} ${debt(x.eur)}`
+            return (
+              <div key={`${x.from}-${x.to}`} className="settle-move">
+                <span className="settle-faces" aria-hidden="true"><Face id={x.from} /><span className="settle-arrow">→</span><Face id={x.to} /></span>
+                <p className="settle-line num">{line}</p>
+                {canEdit && <button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => setRepayment(x)}>record repayment</button>}
+              </div>
+            )
+          })}
         </section>
       )}
 
@@ -141,12 +183,8 @@ export function MoneyTab({ trip }: { trip: Trip }) {
       {scoped && kids.length > 0 && costs.length > 0 && (
         <section className="block" aria-label="by trip">
           <h3 className="head">by trip</h3>
-          <ul className="list">
-            {[trip, ...kids].map((x) => {
-              const mine = x.id === trip.id ? costs.filter((c) => c.trip_id === trip.id) : costs.filter((c) => descendants(x.id, trips).includes(c.trip_id))
-              const s = totals(mine, cur, rates)
-              return <li key={x.id}><span><span className="dot" style={{ background: `var(--g${(x.color ?? 0) % 6})` }} />{x.name}</span><span className="num">{show(s.paid + s.planned)}</span></li>
-            })}
+          <ul className="list breakdown">
+            {byTrip.map((x) => <Share key={x.id} label={x.name} paid={x.paid} planned={x.planned} most={Math.max(...byTrip.map((y) => y.paid + y.planned))} dot={`var(--g${(x.color ?? 0) % 6})`} />)}
           </ul>
         </section>
       )}
@@ -154,13 +192,8 @@ export function MoneyTab({ trip }: { trip: Trip }) {
       {Object.keys(t.byCategory).length > 0 && (
         <section className="block" aria-label="by category">
           <h3 className="head">by category</h3>
-          <ul className="list">
-            {CATEGORIES.filter(([k]) => t.byCategory[k]).map(([k, l]) => (
-              <li key={k}><span>{l}</span><span className="num">{show(t.byCategory[k].paid + t.byCategory[k].planned)}</span></li>
-            ))}
-            {Object.keys(t.byCategory).filter((k) => !LABEL[k]).map((k) => (
-              <li key={k}><span>{k}</span><span className="num">{show(t.byCategory[k].paid + t.byCategory[k].planned)}</span></li>
-            ))}
+          <ul className="list breakdown">
+            {cats.map((c) => <Share key={c.k} label={c.label} paid={c.paid} planned={c.planned} most={cats[0].sum} />)}
           </ul>
         </section>
       )}

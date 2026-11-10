@@ -44,3 +44,27 @@ export function transfers(bal: Record<string, number>): { from: string; to: stri
   }
   return out
 }
+
+export type Standing = { id: string; paid: number; share: number; balance: number }
+const cents = (v: number) => Math.round(v * 100) / 100
+
+// what each person put in, what their share of the spending was, and where that leaves them (in eur).
+// members first, in their order, then anyone else named on a cost
+export function standings(costs: Cost[], members: string[], rates: Rates | null): Standing[] {
+  const paid: Record<string, number> = {}
+  const share: Record<string, number> = {}
+  const add = (into: Record<string, number>, who: string, v: number) => { into[who] = (into[who] ?? 0) + v }
+  const spending = costs.filter((c) => !isPayback(c))
+  for (const c of spending) {
+    if (c.status !== 'paid' || !c.paid_by) continue
+    const eur = toEur(c.amount, c.currency, rates, c.eur_rate)
+    if (eur == null || !Number.isFinite(eur)) continue
+    add(paid, c.paid_by, eur)
+  }
+  // a share is what balances() takes off each person, so the two always agree
+  const owed = balances(spending, members, rates)
+  for (const who of Object.keys(owed)) share[who] = (paid[who] ?? 0) - owed[who]
+  const bal = balances(costs, members, rates)
+  const ids = [...new Set([...members, ...Object.keys(bal)])]
+  return ids.map((id) => ({ id, paid: cents(paid[id] ?? 0), share: cents(share[id] ?? 0), balance: cents(bal[id] ?? 0) + 0 }))
+}

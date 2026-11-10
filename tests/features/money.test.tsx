@@ -272,20 +272,19 @@ describe('settling up', () => {
     db.costs = [cost({ trip_id: 'lap', amount: 90, status: 'paid', paid_by: 'u2', split_among: ['u1', 'u2', 'u3'] })]
     show(t)
     const box = within(screen.getByRole('region', { name: 'settle up' }))
-    expect(box.getByText('kai · owed €60.00')).toBeInTheDocument()
-    expect(box.getByText('you · owe €30.00')).toBeInTheDocument()
-    expect(box.getByText('jo · owes €30.00')).toBeInTheDocument()
+    expect(box.getByRole('listitem', { name: 'kai · owed €60.00' })).toBeInTheDocument()
+    expect(box.getByRole('listitem', { name: 'you · owe €30.00' })).toBeInTheDocument()
+    expect(box.getByRole('listitem', { name: 'jo · owes €30.00' })).toBeInTheDocument()
     db.members = null
   })
 
-  it('who pays whom, with a paid back button; two people need no extra lines', async () => {
+  it('who pays whom, with a paid back button', async () => {
     const t = trip({ id: 'lap', currency: 'EUR' })
     db.trips = [t]
     db.save.mockReset().mockResolvedValue({})
     db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even', split_among: ['u1', 'u2'] })]
     show(t)
     const box = within(screen.getByRole('region', { name: 'settle up' }))
-    expect(box.queryByText('kai · owed €20.00')).toBeNull()
     await userEvent.click(box.getByRole('button', { name: 'paid back: you owe kai €20.00' }))
     expect(db.save).not.toHaveBeenCalled()
     await userEvent.click(screen.getByRole('button', { name: 'confirm repayment' }))
@@ -332,4 +331,42 @@ it('settlement identifies the parent scope and keeps exact cents', () => {
   show(child)
   expect(screen.getByText('you owe kai €24.75')).toBeInTheDocument()
   expect(screen.getByText('Europe summer · with side trips')).toBeInTheDocument()
+})
+
+describe('money at a glance', () => {
+  it('each person has a balance bar: what they paid, their share, and how far up or down they are', () => {
+    const t = trip({ id: 'lap', currency: 'EUR' })
+    db.trips = [t]
+    db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split: 'even', split_among: ['u1', 'u2'] })]
+    show(t)
+    const box = within(screen.getByRole('region', { name: 'settle up' }))
+    const kai = box.getByRole('listitem', { name: 'kai · owed €20.00' })
+    expect(within(kai).getByText('paid €40 · share €20')).toBeInTheDocument()
+    expect(within(kai).getByText('+€20.00')).toBeInTheDocument()
+    expect(kai.querySelector('.bal-bar.up')).toHaveStyle({ width: '100%' })
+    const me = box.getByRole('listitem', { name: 'you · owe €20.00' })
+    expect(within(me).getByText('−€20.00')).toBeInTheDocument()
+    expect(me.querySelector('.bal-bar.down')).toHaveStyle({ width: '100%' })
+  })
+
+  it('someone who is square has no bar and says so', () => {
+    db.members = [...TWO, { email: 'j@x.com', user_id: 'u3', name: 'jo', color: 2 }]
+    const t = trip({ id: 'lap', currency: 'EUR' })
+    db.trips = [t]
+    db.costs = [cost({ trip_id: 'lap', amount: 40, status: 'paid', paid_by: 'u2', split_among: ['u1', 'u2'] })]
+    show(t)
+    const jo = within(screen.getByRole('region', { name: 'settle up' })).getByRole('listitem', { name: 'jo · settled' })
+    expect(jo.querySelector('.bal-bar')).toBeNull()
+    db.members = null
+  })
+
+  it('categories are bars, the biggest first and full width', () => {
+    const t = trip({ id: 'lap', currency: 'EUR' })
+    db.trips = [t]
+    db.costs = [cost({ trip_id: 'lap', amount: 50, category: 'food' }), cost({ trip_id: 'lap', amount: 200, category: 'stay' })]
+    show(t)
+    const rows = within(screen.getByRole('region', { name: 'by category' })).getAllByRole('listitem')
+    expect(rows.map((r) => r.querySelector('.share-bar')?.getAttribute('style'))).toEqual(['width: 100%;', 'width: 25%;'])
+    expect(rows[0]).toHaveTextContent('€200')
+  })
 })

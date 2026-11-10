@@ -78,3 +78,32 @@
 .settle-move .btn { flex: none; }
 .cost-row.payback { color: var(--ink-2); }
 .cost-row.payback .cost-name { flex: 1; min-width: 0; }
+
+/* money at a glance: each person's balance as a bar either side of the middle, then who pays whom */
+.bal-list { list-style: none; margin: 8px 0 4px; padding: 0; display: grid; }
+.bal-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(70px, 1.2fr) auto; align-items: center; gap: 10px; min-height: 52px; border-top: 1px solid var(--line); }
+.bal-row:first-child { border-top: 0; }
+.bal-row .avatar, .settle-faces .avatar { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--card); font-size: 13px; font-weight: 700; }
+.bal-who { display: grid; min-width: 0; }
+.bal-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bal-who .muted { font-size: 12.5px; }
+.bal-track { position: relative; display: grid; grid-template-columns: 1fr 1fr; height: 14px; }
+.bal-track::after { content: ""; position: absolute; left: 50%; top: -5px; bottom: -5px; width: 1px; background: var(--ink-3); }
+.bal-half { display: flex; min-width: 0; }
+.bal-half.down { justify-content: flex-end; }
+.bal-bar { height: 100%; min-width: 3px; background: var(--c); }
+.bal-bar.up { border-radius: 0 999px 999px 0; }
+.bal-bar.down { border-radius: 999px 0 0 999px; opacity: .45; }
+.bal-amount { min-width: 68px; text-align: right; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.settle-move { border-top: 1px solid var(--line); padding-top: 6px; flex-wrap: wrap; }
+.settle-move .settle-line { flex: 1; min-width: 120px; }
+.settle-faces { display: inline-flex; align-items: center; gap: 4px; }
+.settle-arrow { color: var(--ink-2); }
+
+/* a breakdown: name and amount over a bar measured against the biggest row */
+.list.breakdown > li.share-row { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; align-items: stretch; gap: 6px; padding: 10px 16px 12px; }
+.share-top { display: flex; justify-content: space-between; gap: 12px; }
+.share-track { display: block; height: 8px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+.share-bar { display: flex; height: 100%; min-width: 3px; border-radius: 999px; overflow: hidden; }
+.share-bar .paid { background: var(--ok); }
+.share-bar .planned { background: repeating-linear-gradient(135deg, var(--soft) 0 5px, color-mix(in srgb, var(--ink-2) 40%, var(--soft)) 5px 8px); }
