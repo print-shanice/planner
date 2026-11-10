@@ -27,7 +27,7 @@ a little travel planner for two. i made it to plan my europe exchange with a fri
 
 home, with the next trip and everything coming up:
 
-![the home page with the next trip and upcoming trips as tiles](screenshots/home.png)
+![the home page with the next trip, the month calendar and upcoming trips](screenshots/home.png)
 
 ideas for later, and keeping track of what we've spent:
 
