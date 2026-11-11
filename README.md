@@ -39,6 +39,19 @@ screenshots use a made-up trip, taken from the current app.
 
 react, vite and typescript, hosted for free on github pages. supabase for sign-in, the database (with row level security so only members can read anything), live updates and ticket storage. google maps for the trip map, place search and walking routes, maplibre for the home globe, photon and the osrm foot router when google isn't set up, and frankfurter for ecb exchange rates.
 
+## checking it still works
+
+the look is meant to change; what it does is not. two sets of tests guard that:
+
+```sh
+npm test -- --run   # unit tests: the logic, every screen in a browser-like sandbox
+npm run e2e         # end-to-end: the real app, driven on a phone and a laptop, on made-up data
+npm run e2e:ui      # the same, watching it happen
+npm run preview:fake  # just look around the app on the made-up data, no account needed (http://localhost:5310)
+```
+
+both run on every push before anything deploys. if one fails after a change, the change broke something people rely on: the test's name says what.
+
 ## want to try it?
 
 if you want to try it, let me know.
