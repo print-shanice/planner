@@ -4,6 +4,7 @@ import { currencyList } from '../../lib/rates'
 import { useAuth } from '../../lib/auth'
 import type { CSSProperties, ReactNode } from 'react'
 import { Switch } from '../../components/Switch'
+import { Help, Tooltip } from '../../components/Tooltip'
 
 export type SplitMode = 'even' | 'some' | 'amounts'
 export type CostDraft = {
@@ -85,10 +86,15 @@ export function PaymentChoice({ value: d, onChange, members }: PaymentProps) {
   const pay = (paid: boolean) => onChange(paid
     ? { ...d, paid, paid_by: d.paid_by || (people.some((m) => m.user_id === me) ? me! : people[0]?.user_id ?? '') }
     : { ...d, paid })
-  return <Switch label="paid already" checked={d.paid} onChange={pay} />
+  return <Switch label="paid already" checked={d.paid} onChange={pay} help="include this cost in paid spending and shared balances" />
 }
 
 const MODES: [SplitMode, string][] = [['even', 'everyone'], ['some', 'some people'], ['amounts', 'amounts']]
+const SPLIT_HELP: Record<SplitMode, string> = {
+  even: 'split equally between all current travellers',
+  some: 'split equally between the people you select',
+  amounts: 'enter each person’s share of the total',
+}
 const who = (m: Member) => (m.name || m.email).toLowerCase()
 
 // payment: the paid switch, shown between the amount and who paid
@@ -124,33 +130,34 @@ export function CostFields({ value: d, onChange, members, rates, payment, autoFo
           </label>
         </div>
       )}
+      {d.other && <div className="help-row"><p className="muted note-line">example: enter 1.50 if €1 buys 1.50 units.</p><Help label="about the exchange rate">enter how many units of this currency equal one euro</Help></div>}
       {payment}
       <div className="row">
         {d.paid && (
           // who paid: tap a face
-          <div className="faces" role="group" aria-label="paid by">
+          <div className="stack-xs"><span className="label">paid by {people.find(m => m.user_id === d.paid_by) ? who(people.find(m => m.user_id === d.paid_by)!) : '…'}</span><div className="faces" role="group" aria-label="paid by">
             {people.map((m) => (
-              <button key={m.user_id!} type="button" className="face" aria-label={(m.name || m.email).toLowerCase()} aria-pressed={d.paid_by === m.user_id}
+              <Tooltip key={m.user_id!} text={`paid by ${who(m)}`}><button type="button" className="face" aria-label={(m.name || m.email).toLowerCase()} aria-pressed={d.paid_by === m.user_id}
                 onClick={() => set({ paid_by: m.user_id! })} style={{ '--c': `var(--g${(m.color ?? 0) % 6})` } as CSSProperties}>
                 <span className="avatar">{(m.name || m.email).slice(0, 1)}</span>
-              </button>
+              </button></Tooltip>
             ))}
-          </div>
+          </div></div>
         )}
       </div>
       <div className="split-for" role="group" aria-label="split">
-        <span className="label">split</span>
+        <span className="label help-label">split<Help label="about splitting costs">{SPLIT_HELP[d.mode]}</Help></span>
         <div className="segmented">
-          {MODES.map(([m, l]) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}>{l}</button>)}
+          {MODES.map(([m, l]) => <Tooltip key={m} text={SPLIT_HELP[m]}><button type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}>{l}</button></Tooltip>)}
         </div>
         {d.mode === 'some' && (
           <div className="faces">
             {people.map((m) => (
-              <button key={m.user_id!} type="button" className="face" aria-label={`for ${who(m)}`} aria-pressed={d.among.includes(m.user_id!)}
+              <Tooltip key={m.user_id!} text={`for ${who(m)}`}><button type="button" className="face" aria-label={`for ${who(m)}`} aria-pressed={d.among.includes(m.user_id!)}
                 onClick={() => set({ among: d.among.includes(m.user_id!) ? d.among.filter((x) => x !== m.user_id) : [...d.among, m.user_id!] })}
                 style={{ '--c': `var(--g${(m.color ?? 0) % 6})` } as CSSProperties}>
                 <span className="avatar">{who(m).slice(0, 1)}</span>
-              </button>
+              </button></Tooltip>
             ))}
           </div>
         )}

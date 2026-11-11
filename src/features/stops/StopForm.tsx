@@ -163,7 +163,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
     ? <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>
     : null
   // booked or not: a switch; off means it still needs booking
-  const bookedSwitch = <Switch label="booked" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} />
+  const bookedSwitch = <Switch label="booked" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} help="your reservation is confirmed; payment is tracked separately" />
   const money = <CostFields value={cost} onChange={setCost} members={members} rates={rates}
     payment={<PaymentChoice value={cost} onChange={setCost} members={members} />} />
 
@@ -190,7 +190,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {when([['day', 'day', 'time']])}
         {q('tickets')}
         <Switch label="needs booking" checked={d.status !== 'idea'} onChange={(v) => set({ status: v ? (booked ? 'booked' : 'to_book') : 'idea' })} />
-        {d.status !== 'idea' && <Switch label="booked" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} />}
+        {d.status !== 'idea' && bookedSwitch}
         {ref}
         <div className="folds">
           <Fold label="booking, cost & notes" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim() || !!d.end_time} reveal={costReveal}>
