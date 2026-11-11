@@ -463,3 +463,7 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .choice:not([data-depth="0"]) .dot { width: 8px; height: 8px; }
 .choice-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .choice-list { animation: none; } }
+
+/* a flight's number with its "look up" beside it */
+.flight-find { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; margin-top: 12px; }
+.flight-find .btn { min-height: 44px; }

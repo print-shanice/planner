@@ -16,6 +16,9 @@ import { checkCost, COST_PROBLEMS, costDraft, CostFields, costValues, PaymentCho
 import { stopTitle } from '../plan/StopRow'
 import { expenseCategory } from '../../lib/categories'
 import { CategoryPick } from './CategoryPick'
+import { Button } from '../../components/Button'
+import { useCanEdit } from '../../lib/offline'
+import { flightError, flightNumber, toDraft, useFlightLookup, type Flight } from '../../lib/flight'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: (added?: { id: string; day: string | null }) => void }
 
@@ -25,6 +28,8 @@ type Draft = {
   title: string; place: Place | null; day: string; time: string; end_date: string; end_time: string
   mode: Mode; origin: Place | null; destination: Place | null; status: StopStatus; ref: string; url: string; notes: string
   category: string
+  // a looked-up flight; dropped on save once the number no longer matches it
+  flight: Flight | null
 }
 
 function seed(s: Stop): Draft {
@@ -32,6 +37,7 @@ function seed(s: Stop): Draft {
     title: s.title ?? '', place: s.place, day: s.day ?? '', time: s.time ?? '', end_date: s.end_date ?? '', end_time: s.end_time ?? '',
     mode: s.mode ?? 'train', origin: s.origin, destination: s.destination, status: s.status ?? 'idea',
     ref: s.ref ?? '', url: s.url ?? '', notes: s.notes ?? '', category: s.category ?? '',
+    flight: s.flight ?? null,
   }
 }
 
@@ -49,7 +55,10 @@ function toRow(d: Draft, kind: Stop['kind']): Partial<Stop> {
   }
   if (kind === 'place') return { ...base, place: bare(d.place), category: d.category || null, end_time: d.end_time || null }
   if (kind === 'stay') return { ...base, place: bare(d.place), end_date: d.end_date || null, end_time: d.end_time || null }
-  if (kind === 'journey') return { ...base, mode: d.mode, origin: bare(d.origin), destination: bare(d.destination), end_date: d.end_date || null, end_time: d.end_time || null }
+  if (kind === 'journey') {
+    const flight = d.mode === 'flight' && d.flight && flightNumber(d.title) === flightNumber(d.flight.number) ? d.flight : null
+    return { ...base, mode: d.mode, origin: bare(d.origin), destination: bare(d.destination), end_date: d.end_date || null, end_time: d.end_time || null, flight }
+  }
   return { ...base, end_time: d.end_time || null }
 }
 
@@ -97,6 +106,18 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const setCost = (c: CostDraft) => update((v) => ({ ...v, cost: c }))
   const near = hasPoint(d.place) ? { lat: d.place.lat!, lng: d.place.lng! } : hasPoint(trip?.base) ? { lat: trip!.base!.lat!, lng: trip!.base!.lng! } : null
   const kind = stop.kind
+  const canEdit = useCanEdit()
+  const lookup = useFlightLookup()
+  const [lookNote, setLookNote] = useState<string | null>(null)
+  const typedNumber = flightNumber(d.title)
+  const date = d.day
+  async function lookUp() {
+    if (!typedNumber || !date) return
+    setLookNote(null)
+    const f = await lookup.look(typedNumber, date)
+    if (typeof f === 'string') setLookNote(flightError(f, typedNumber, date))
+    else set({ ...toDraft(f), flight: f })
+  }
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -204,6 +225,14 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         <div className="segmented modes" role="group" aria-label="mode">
           {MODES.map((m) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m} size={20} /><span>{m}</span></button>)}
         </div>
+        {d.mode === 'flight' && (<>
+          <div className="flight-find">
+            <label className="field"><span className="label">flight number</span>
+              <input value={d.title} autoCapitalize="characters" autoComplete="off" onChange={(e) => { setLookNote(null); set({ title: e.target.value }) }} /></label>
+            <Button busy={lookup.busy && 'looking up'} disabled={!canEdit || !typedNumber || !date} onClick={() => void lookUp()}>look up</Button>
+          </div>
+          {lookNote && <p className="warn-line" role="status">{lookNote}</p>}
+        </>)}
         {q('route')}
         <div className="route">
           <PlaceField id={`from-${id}`} label="from" value={d.origin} near={near} onChange={(p) => set({ origin: p })} />
@@ -213,7 +242,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {when([['depart', 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
         {q('booking')}
         {bookedSwitch}
-        {booked && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
+        {booked && d.mode !== 'flight' && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
         {ref}
         <div className="folds">
           <Fold label="booking, cost & notes" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim()} reveal={costReveal}>{money}{link}{notes}</Fold>

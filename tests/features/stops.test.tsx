@@ -9,7 +9,7 @@ const db = vi.hoisted(() => ({
   trips: [] as any[], stops: [] as any[], costs: [] as any[], files: [] as any[],
   members: [{ email: 'shanice@x.com', user_id: 'u1', name: 'shanice', color: 0 }, { email: 'k@x.com', user_id: 'u2', name: 'kai', color: 1 }],
   calls: [] as string[],
-  save: vi.fn(), remove: vi.fn(), storageRemove: vi.fn(),
+  save: vi.fn(), remove: vi.fn(), storageRemove: vi.fn(), invoke: vi.fn(),
   canEdit: true,
 }))
 vi.mock('../../src/lib/queries', async () => {
@@ -32,7 +32,7 @@ const tickets = vi.hoisted(() => ({ open: vi.fn(), keep: vi.fn(() => Promise.res
 vi.mock('../../src/lib/ticketCache', () => ({ openTicket: tickets.open, keepTickets: tickets.keep }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => db.canEdit }))
 vi.mock('../../src/lib/supabase', () => ({
-  supabase: { storage: { from: () => ({ remove: db.storageRemove, createSignedUrls: () => Promise.resolve({ data: [], error: null }), upload: vi.fn() }) } },
+  supabase: { functions: { invoke: (...a: unknown[]) => db.invoke(...a) }, storage: { from: () => ({ remove: db.storageRemove, createSignedUrls: () => Promise.resolve({ data: [], error: null }), upload: vi.fn() }) } },
 }))
 
 import { StopSheetProvider, useStopSheet } from '../../src/features/stops/StopSheet'
@@ -59,6 +59,7 @@ beforeEach(() => {
   db.trips = [trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' }), trip({ id: 'par', name: 'paris' })]
   db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: place({ name: 'Arktikum', address: 'Pohjoisranta 4' }), ref: 'AB12' })]
   db.costs = []; db.files = []; db.calls = []; db.canEdit = true
+  db.invoke.mockReset().mockResolvedValue({ data: { error: 'not_found' }, error: null })
   db.save.mockReset().mockImplementation((t: string, r: any) => { db.calls.push(`save:${t}`); return Promise.resolve(r) })
   db.remove.mockReset().mockImplementation((t: string) => { db.calls.push(`remove:${t}`); return Promise.resolve() })
   db.storageRemove.mockReset().mockImplementation(() => { db.calls.push('storage'); return Promise.resolve({ error: null }) })
@@ -759,5 +760,113 @@ describe('next stop', () => {
     db.trips = [...db.trips, trip({ id: 'kid', name: 'kid', parent_id: 'lap', start_date: '2027-02-08', end_date: '2027-02-08' })]
     db.stops = [{ ...two()[0], trip_id: 'kid' }, { ...two()[1], trip_id: 'kid' }]
     expect(within(await card('a')).getByRole('link', { name: 'next · b' })).toBeInTheDocument()
+  })
+})
+
+describe('a flight looks itself up by its number', () => {
+  const end = (o: object) => ({ iata: 'AMS', airport: 'Amsterdam Airport Schiphol', city: 'Amsterdam', country: 'NL', lat: 52.31, lng: 4.76,
+    scheduled: '2027-02-08 07:20+01:00', revised: null, terminal: '2', gate: null, desk: null, belt: null, ...o })
+  const kl = {
+    number: 'KL 1001', airline: 'KLM', status: 'Expected', live: false, checked_at: '2026-11-11T15:00:00.000Z',
+    dep: end({}), arr: end({ iata: 'LHR', airport: 'London Heathrow', city: 'London', country: 'GB', lat: 51.47, lng: -0.45, scheduled: '2027-02-08 07:40+00:00', terminal: '4' }),
+  }
+  async function newFlight() {
+    show(<Opener kind="journey" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    const d = screen.getByRole('dialog')
+    await userEvent.click(within(d).getByRole('button', { name: 'flight' }))
+    return d
+  }
+
+  it('asks for the flight number whether booked or not; other journeys keep "carrier / number" once booked', async () => {
+    const d = await newFlight()
+    expect(within(d).getByLabelText('flight number')).toBeInTheDocument()
+    await userEvent.click(within(d).getByRole('switch', { name: 'booked' }))
+    expect(within(d).queryByLabelText('carrier / number')).toBeNull()
+    await userEvent.click(within(d).getByRole('button', { name: 'train' }))
+    expect(within(d).queryByLabelText('flight number')).toBeNull()
+    expect(within(d).getByLabelText('carrier / number')).toBeInTheDocument()
+  })
+
+  it('"look up" waits for a flight number', async () => {
+    const d = await newFlight()
+    const look = within(d).getByRole('button', { name: 'look up' })
+    expect(look).toBeDisabled()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'hello')
+    expect(look).toBeDisabled()
+    await userEvent.clear(within(d).getByLabelText('flight number'))
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    expect(look).toBeEnabled()
+  })
+
+  it('fills the airports, times and number in, and saves the flight with the journey', async () => {
+    let answer!: (v: unknown) => void
+    db.invoke.mockImplementation(() => new Promise((r) => { answer = r }))
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    expect(db.invoke).toHaveBeenCalledWith('flight', { body: { number: 'KL 1001', date: '2027-02-08' } })
+    expect(within(d).getByRole('button', { name: 'looking up…' })).toBeDisabled()
+    await act(async () => answer({ data: { flight: kl }, error: null }))
+    expect(within(d).getByText('Amsterdam Airport Schiphol')).toBeInTheDocument()
+    expect(within(d).getByText('London Heathrow')).toBeInTheDocument()
+    expect(within(d).getByLabelText('flight number')).toHaveValue('KL 1001')
+    expect(within(d).getByLabelText('depart time').closest('.pick')).toHaveTextContent('07:20')
+    expect(within(d).getByLabelText('arrive time').closest('.pick')).toHaveTextContent('07:40')
+    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+    const row = db.save.mock.calls.find(([t]) => t === 'stops')![1]
+    expect(row).toMatchObject({ mode: 'flight', title: 'KL 1001', day: '2027-02-08', time: '07:20', end_date: '2027-02-08', end_time: '07:40', origin: { name: 'Amsterdam Airport Schiphol', country: 'NL' } })
+    expect(row.flight.number).toBe('KL 1001')
+  })
+
+  it('"look up" waits for a depart day', async () => {
+    function Undated() {
+      const s = useStopSheet()!
+      return <button onClick={() => s.newStop('journey', 'lap')}>open undated</button>
+    }
+    show(<Undated />)
+    await userEvent.click(screen.getByRole('button', { name: 'open undated' }))
+    const d = screen.getByRole('dialog')
+    await userEvent.click(within(d).getByRole('button', { name: 'flight' }))
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    expect(within(d).getByRole('button', { name: 'look up' })).toBeDisabled()
+  })
+
+  it('says so when the flight is not found, and keeps what was typed', async () => {
+    const d = await newFlight()
+    fireEvent.change(within(d).getByLabelText('depart time'), { target: { value: '09:15' } })
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    expect(await within(d).findByText('no kl 1001 on 8 feb')).toBeInTheDocument()
+    expect(within(d).getByLabelText('depart time').closest('.pick')).toHaveTextContent('09:15')
+    expect(within(d).queryByRole('button', { name: 'clear from' })).toBeNull()
+  })
+
+  it('says when the lookups are used up', async () => {
+    db.invoke.mockResolvedValue({ data: { error: 'quota' }, error: null })
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    expect(await within(d).findByText('lookups used up this month')).toBeInTheDocument()
+  })
+
+  it('cannot look up offline', async () => {
+    db.canEdit = false
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    expect(within(d).getByRole('button', { name: 'look up' })).toBeDisabled()
+  })
+
+  it('drops the looked-up details when the number changes', async () => {
+    db.stops = [stop({ id: 'f1', trip_id: 'lap', kind: 'journey', mode: 'flight', title: 'KL 1001', day: '2027-02-08', origin: place({ name: 'Schiphol' }), destination: place({ name: 'Heathrow' }), flight: kl as any })]
+    show(<Opener id="f1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'edit' }))
+    const d = screen.getByRole('dialog')
+    await userEvent.clear(within(d).getByLabelText('flight number'))
+    await userEvent.type(within(d).getByLabelText('flight number'), 'KL 1002')
+    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+    const row = db.save.mock.calls.find(([t]) => t === 'stops')![1]
+    expect(row).toMatchObject({ id: 'f1', title: 'KL 1002', flight: null })
   })
 })
