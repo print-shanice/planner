@@ -23,6 +23,7 @@ import { PlacesSheet, type PlaceItem } from './PlacesSheet'
 import { useReadingDay } from '../trip/readingDay'
 import { useHighlight } from '../trip/highlight'
 import { Icon } from '../../components/Icon'
+import { Tooltip } from '../../components/Tooltip'
 
 type Card = { place: Place; stopId?: string; seq: number; looking?: boolean }
 
@@ -174,9 +175,9 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
         {(load.state === 'failed' || load.stale) && <LoadNotice onRetry={load.retry} />}
       </div>
       {!phone && !ideas && planDay && !card && (
-        <button type="button" className="chip-pill whole-trip" aria-pressed={whole} onClick={() => setChoice(!whole)}>
+        <Tooltip text={whole ? 'return to the selected day' : 'show the whole trip'}><button type="button" className="chip-pill whole-trip" aria-pressed={whole} onClick={() => setChoice(!whole)}>
           <Icon name="globe" size={16} /><span>whole trip</span>
-        </button>
+        </button></Tooltip>
       )}
       {phone && !card && <PlacesSheet items={items} title={listTitle} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={overview ? openTrip : pick} />}
       {card && (

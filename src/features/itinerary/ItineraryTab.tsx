@@ -15,6 +15,7 @@ import { walkWords } from '../../lib/google/routes'
 import { LoadState } from '../../components/States'
 import { EmptyState } from '../../components/EmptyState'
 import { Icon } from '../../components/Icon'
+import { Tooltip } from '../../components/Tooltip'
 import { tint } from '../../components/MonthCalendar'
 import { useStopSheet } from '../stops/StopSheet'
 import { useHighlight } from '../trip/highlight'
@@ -359,9 +360,9 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
           const s = e.stop!
           const isMove = canEdit && e.kind === 'stop' && !s.time && movable.length > 1
           const grip = isMove ? (
-            <button type="button" className="grip" aria-label={`move ${s.title || 'line'} (arrow keys)`} onPointerDown={(ev) => grab(ev, s)} onKeyDown={(ev) => key(ev, s)}>
+            <Tooltip text="drag to reorder · or use ↑ and ↓"><button type="button" className="grip" aria-label={`move ${s.title || 'line'} (arrow keys)`} onPointerDown={(ev) => grab(ev, s)} onKeyDown={(ev) => key(ev, s)}>
               <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true"><g fill="currentColor">{[3, 9, 15].flatMap((y) => [<circle key={`a${y}`} cx="3" cy={y} r="1.4" />, <circle key={`b${y}`} cx="9" cy={y} r="1.4" />])}</g></svg>
-            </button>
+            </button></Tooltip>
           ) : undefined
           const after = legs.filter((l) => l.from.id === s.id && l.fromKind === e.kind)
           return (
@@ -382,8 +383,8 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
 function WalkLine({ leg, answer }: { leg: Leg; answer: WalkAnswer }) {
   const words = walkWords(answer)
   return (
-    <a className={`walk${answer === undefined ? ' pulse' : ''}`} href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
+    <Tooltip text={`open walking directions to ${leg.b.name || 'the next place'} in Google Maps`}><a className={`walk${answer === undefined ? ' pulse' : ''}`} href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
       <Icon name="walk" size={14} /><span>{words ?? 'directions'}</span><span aria-hidden="true">→</span>
-    </a>
+    </a></Tooltip>
   )
 }

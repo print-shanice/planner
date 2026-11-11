@@ -12,6 +12,7 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
+import { Tooltip } from '../../components/Tooltip'
 
 export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode; onEdit: () => void }) {
   const trips = useTrips().data ?? []
@@ -47,17 +48,17 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
           <Icon name="back" />{up && <CountryFlag code={flagsOf(up)[0]} />}<span>{upName}</span>
         </Link>
         {/* the people sharing the trip are also the way into its settings */}
-        <button type="button" className="avatars trip-people" aria-label="edit trip" title={`shared with ${members.map(m => m.name || m.email).join(', ')}`} disabled={!canEdit} onClick={onEdit}>
+        <Tooltip text={`edit trip details · shared with ${members.map(m => m.name || m.email).join(', ')}`}><button type="button" className="avatars trip-people" aria-label="edit trip" disabled={!canEdit} onClick={onEdit}>
           {members.map((m) => <span key={m.email} className="avatar" style={{ background: `var(--g${(m.color ?? 0) % 6})` }}>{(m.name || m.email).slice(0, 1)}</span>)}
-        </button>
+        </button></Tooltip>
       </div>
       <div className="trip-title-row">
         {countries[0] && <span className="title-flag"><CountryFlag code={countries[0]} /></span>}
         <h1 className="head one-line">
           {family ? (
-            <button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
+            <Tooltip text="switch between this trip and its side trips"><button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
               <span>{trip.name}</span><Icon name="chevron" size={22} />
-            </button>
+            </button></Tooltip>
           ) : <span>{trip.name}</span>}
         </h1>
         {add}

@@ -1,5 +1,6 @@
 import { useEffect, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { clampSplit, readSplit, saveSplit, SPLIT_DEFAULT, SPLIT_MIN, MAP_MIN } from '../../lib/split'
+import { Tooltip } from '../../components/Tooltip'
 
 const STEP = 24
 
@@ -43,8 +44,8 @@ export function SplitHandle({ width, onChange }: { width: number | null; onChang
     if (e.key === 'End') { e.preventDefault(); onChange(window.innerWidth - MAP_MIN) }
   }
   return (
-    <div className={`split-handle${dragging ? ' dragging' : ''}`} role="separator" aria-orientation="vertical" aria-label="resize plan and map" tabIndex={0}
+    <Tooltip text="drag or use ← and → to resize · double-click to reset"><div className={`split-handle${dragging ? ' dragging' : ''}`} role="separator" aria-orientation="vertical" aria-label="resize plan and map" tabIndex={0}
       aria-valuenow={now} aria-valuemin={SPLIT_MIN} aria-valuemax={Math.max(SPLIT_MIN, window.innerWidth - MAP_MIN)}
-      onPointerDown={down} onKeyDown={key} onDoubleClick={() => onChange(null)} />
+      onPointerDown={down} onKeyDown={key} onDoubleClick={() => onChange(null)} /></Tooltip>
   )
 }
