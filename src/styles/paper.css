@@ -81,10 +81,10 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .doc-search .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; }
 .doc-search .text-link { padding: 0 8px; }
 
-.doc-day { padding: 24px 0 10px; border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--bar-h, 0px) + 2px); }
+.doc-day { padding: 18px 0 10px; border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--bar-h, 0px) + 2px); }
 .doc-day.folded-out { padding: 0; border: 0; }
 .doc-day-head { display: grid; gap: 4px; margin-bottom: 8px; }
-.doc-date { font-family: var(--f-head); font-weight: 400; font-size: 22px; line-height: 1.25; letter-spacing: -0.01em; }
+.doc-date { font-family: var(--f-head); font-weight: 400; font-size: 20px; line-height: 1.25; letter-spacing: -0.01em; }
 .doc-day-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .today-tag { padding: 1px 6px; border-radius: 4px; background: var(--mark); color: var(--mark-ink); }
 .side-tag { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; text-decoration: none; }
