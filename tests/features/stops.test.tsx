@@ -1,4 +1,4 @@
-import { render, screen, within, act, fireEvent } from '@testing-library/react'
+import { render, screen, within, act, fireEvent, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -868,5 +868,87 @@ describe('a flight looks itself up by its number', () => {
     await userEvent.click(within(d).getByRole('button', { name: 'save' }))
     const row = db.save.mock.calls.find(([t]) => t === 'stops')![1]
     expect(row).toMatchObject({ id: 'f1', title: 'KL 1002', flight: null })
+  })
+})
+
+describe("a flight's card", () => {
+  const end = (o: object) => ({ iata: 'AMS', airport: 'Amsterdam Airport Schiphol', city: 'Amsterdam', country: 'NL', lat: 52.31, lng: 4.76,
+    scheduled: '2027-02-08 07:20+01:00', revised: null, terminal: null, gate: null, desk: null, belt: null, ...o })
+  const flight = (o: object = {}) => ({
+    number: 'KL 1001', airline: 'KLM', status: 'Expected', live: true, checked_at: '2027-02-08T05:05:00.000Z',
+    dep: end({ terminal: '2', gate: 'E21', desk: '9-16' }),
+    arr: end({ iata: 'LHR', airport: 'London Heathrow', scheduled: '2027-02-08 07:40+00:00', terminal: '4', belt: '8' }),
+    ...o,
+  })
+  const at = (now: string) => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(now)) }
+  afterEach(() => { vi.useRealTimers() })
+  async function openFlight(f: object | null, mode = 'flight') {
+    db.stops = [stop({ id: 'f1', trip_id: 'lap', kind: 'journey', mode: mode as any, title: 'KL 1001', day: '2027-02-08', time: '07:20',
+      origin: place({ name: 'Schiphol' }), destination: place({ name: 'Heathrow' }), flight: f as any })]
+    show(<Opener id="f1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    return screen.getByRole('dialog')
+  }
+  const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+
+  it('shows each end: terminal, gate and check-in leaving, terminal and belt landing', async () => {
+    at('2026-11-11T12:00:00Z')
+    const d = await openFlight(flight())
+    expect(within(d).getByText('ams · terminal 2 · gate e21 · check-in 9-16')).toBeInTheDocument()
+    expect(within(d).getByText('lhr · terminal 4 · belt 8')).toBeInTheDocument()
+  })
+
+  it('warns in words when the flight is delayed', async () => {
+    at('2026-11-11T12:00:00Z')
+    const d = await openFlight(flight({ status: 'Delayed', dep: end({ revised: '2027-02-08 16:45+01:00' }) }))
+    expect(within(d).getByText('delayed · leaves 16:45')).toHaveClass('warn-line')
+  })
+
+  it('offers "check again" only around the flight, saying when it was last checked', async () => {
+    at('2026-11-11T12:00:00Z')
+    let d = await openFlight(flight())
+    expect(within(d).queryByRole('button', { name: 'check again' })).toBeNull()
+    expect(within(d).queryByText(/^checked /)).toBeNull()
+    cleanup()
+    at('2027-02-08T05:30:00Z')
+    d = await openFlight(flight())
+    expect(within(d).getByRole('button', { name: 'check again' })).toBeEnabled()
+    expect(within(d).getByText(`checked ${hhmm('2027-02-08T05:05:00.000Z')}`)).toBeInTheDocument()
+  })
+
+  it('says the gate is not out yet when it is not', async () => {
+    at('2027-02-08T05:30:00Z')
+    const d = await openFlight(flight({ dep: end({ terminal: '2' }) }))
+    expect(within(d).getByText('gate not out yet')).toBeInTheDocument()
+  })
+
+  it('checks again through the function, waiting visibly, and says when lookups are used up', async () => {
+    at('2027-02-08T05:30:00Z')
+    let answer!: (v: unknown) => void
+    db.invoke.mockImplementation(() => new Promise((r) => { answer = r }))
+    const d = await openFlight(flight())
+    await userEvent.click(within(d).getByRole('button', { name: 'check again' }))
+    expect(db.invoke).toHaveBeenCalledWith('flight', { body: { stop: 'f1' } })
+    expect(within(d).getByRole('button', { name: 'checking…' })).toBeDisabled()
+    await act(async () => answer({ data: { error: 'quota' }, error: null }))
+    expect(within(d).getByText('lookups used up this month')).toBeInTheDocument()
+  })
+
+  it('cannot check again offline, but still shows what was saved', async () => {
+    at('2027-02-08T05:30:00Z')
+    db.canEdit = false
+    const d = await openFlight(flight())
+    expect(within(d).getByRole('button', { name: 'check again' })).toBeDisabled()
+    expect(within(d).getByText('ams · terminal 2 · gate e21 · check-in 9-16')).toBeInTheDocument()
+  })
+
+  it('links to the flight on flightradar24, even before it was looked up', async () => {
+    const d = await openFlight(null)
+    expect(within(d).getByRole('link', { name: 'flight status →' })).toHaveAttribute('href', 'https://www.flightradar24.com/data/flights/kl1001')
+  })
+
+  it('shows none of this for a train', async () => {
+    const d = await openFlight(null, 'train')
+    expect(within(d).queryByRole('link', { name: 'flight status →' })).toBeNull()
   })
 })

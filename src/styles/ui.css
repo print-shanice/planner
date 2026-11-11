@@ -467,3 +467,5 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 /* a flight's number with its "look up" beside it */
 .flight-find { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; margin-top: 12px; }
 .flight-find .btn { min-height: 44px; }
+.flight-check { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.flight-check .btn { min-height: 44px; }

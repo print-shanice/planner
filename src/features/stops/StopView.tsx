@@ -18,6 +18,7 @@ import { FilesSection, filesOf } from './FilesSection'
 import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
 import { stopSub, stopTitle } from '../plan/StopRow'
+import { FlightFacts } from './FlightFacts'
 import { directionsUrl } from '../../lib/gmaps'
 import { ancestors, descendants } from '../../lib/countries'
 import { useStopSheet } from './StopSheet'
@@ -222,6 +223,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
 
       <div className="facts">
         {facts.filter(Boolean).map((f) => <p key={f} className="fact"><Icon name="calendar" size={18} /><span>{f}</span></p>)}
+        <FlightFacts stop={stop} />
         {leg && (
           <a className="fact fact-link" href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
             <Icon name="walk" size={18} /><span>{`next · ${nextName(leg).toLowerCase()}`}</span>
