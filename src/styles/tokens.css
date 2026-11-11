@@ -23,19 +23,20 @@
   /* a search match, and nothing else */
   --found: #D5F0CF;
 
-  --g0: #3346C7;
-  --g1: #0F7C8C;
-  --g2: #7444C1;
-  --g3: #A23C8F;
-  --g4: #8A5A3C;
-  --g5: #233067;
-  /* the same six, soft, for ribbons and highlights */
-  --g0s: #E8EBFA;
-  --g1s: #E0F1F3;
-  --g2s: #EFE9F9;
-  --g3s: #F6E6F2;
-  --g4s: #F3ECE6;
-  --g5s: #E6E8F0;
+  /* trips: twelve soft colours (src/lib/colors.ts names them), all at one lightness, so any two sit well together.
+     they fill shapes only; words on them stay in ink */
+  --g0: #9FB6CB;
+  --g1: #95BDB4;
+  --g2: #B0A8D4;
+  --g3: #C9A5C8;
+  --g4: #E2CF8A;
+  --g5: #9BA6DA;
+  --g6: #A9B79B;
+  --g7: #D6A9AB;
+  --g8: #A8D0DA;
+  --g9: #A8CBA2;
+  --g10: #E2B59C;
+  --g11: #CCCF94;
 
   --map-water: #D6E1E5;
   --map-land: #F2F2EF;

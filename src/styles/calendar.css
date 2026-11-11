@@ -29,17 +29,17 @@
 /* a trip's days: a flat tint of its colour; the first day of each stretch carries a bar on its left edge */
 .cal-day[data-ribbon]::before {
   content: ''; position: absolute; inset: 0;
-  background: color-mix(in srgb, var(--c) 12%, var(--card));
+  background: color-mix(in srgb, var(--c) 32%, var(--card));
 }
-.cal-day[data-ribbon]:is([data-ribbon="start"], [data-ribbon="one"], [data-edge*="l"])::before { box-shadow: inset 3px 0 0 var(--c); }
-.cal-day[data-ribbon] .cal-n { color: var(--c); font-weight: 500; }
+.cal-day[data-ribbon]:is([data-ribbon="start"], [data-ribbon="one"], [data-edge*="l"])::before { box-shadow: inset 4px 0 0 var(--c); }
+.cal-day[data-ribbon] .cal-n { color: var(--ink); font-weight: 500; }
 .cal-day[data-ribbon][aria-current="date"] .cal-n { box-shadow: inset 0 0 0 1.5px var(--ink); }
 
 .cal-bar {
   min-width: 0; height: 18px; padding: 0 6px; margin: 0 2px;
   display: block; overflow: hidden;
   font-size: 11px; font-weight: 500; line-height: 18px; letter-spacing: .01em; white-space: nowrap; text-overflow: ellipsis;
-  background: var(--c); color: var(--card); text-decoration: none; border-radius: 0;
+  background: var(--c); color: var(--ink); text-decoration: none; border-radius: 0;
 }
 .cal-bar:not([data-starts]) { margin-left: 0; }
 .cal-bar:not([data-ends]) { margin-right: 0; }
@@ -76,20 +76,21 @@ button.cal-day:hover .cal-n { background: color-mix(in srgb, var(--ink) 6%, tran
 
 /* inside a trip: a side trip's days are tinted squares, labelled once per visible month with its code and name */
 .cal-day[data-side]::before {
-  content: ''; position: absolute; inset: 0; background: color-mix(in srgb, var(--c) 14%, var(--card));
+  content: ''; position: absolute; inset: 0; background: color-mix(in srgb, var(--c) 32%, var(--card));
 }
-.cal-day[data-side][data-side-edge*="l"]::before { box-shadow: inset 3px 0 0 var(--c); }
-.cal-day[data-side] .cal-n { color: var(--c); font-weight: 500; }
-.cal .cal-day[data-side][aria-pressed="true"] .cal-n { background: var(--c); color: var(--card); }
+.cal-day[data-side][data-side-edge*="l"]::before { box-shadow: inset 4px 0 0 var(--c); }
+.cal-day[data-side] .cal-n { color: var(--ink); font-weight: 500; }
+.cal .cal-day[data-side][aria-pressed="true"] .cal-n { background: var(--ink); color: var(--card); }
 .cal-label {
   min-width: 0; padding: 0 4px; display: flex; align-items: center; gap: 4px;
   font-size: 11.5px; font-weight: 500; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: var(--c); text-decoration: none;
+  color: var(--ink); text-decoration: none;
 }
+.cal-label::before { content: ''; flex: none; width: 8px; height: 8px; background: var(--c); }
 .cal-label:hover { text-decoration: underline; }
 .cal-label:focus-visible { outline: 1.5px solid var(--ink); outline-offset: 1px; }
-.cal-label .flag { height: 14px; min-width: 0; padding: 0 2px; font-size: 8.5px; color: var(--c); }
+.cal-label .flag { height: 14px; min-width: 0; padding: 0 2px; font-size: 8.5px; color: var(--ink-2); }
 
 /* a trip's code, in the top corner of the first day of each stretch of it */
 .cal-flag { position: absolute; top: 3px; left: 6px; z-index: 2; display: inline-flex; line-height: 1; pointer-events: none; }
-.cal-flag .flag { height: 13px; min-width: 0; padding: 0 2px; font-size: 8px; background: var(--card); color: var(--c, var(--ink)); }
+.cal-flag .flag { height: 13px; min-width: 0; padding: 0 2px; font-size: 8px; background: var(--card); color: var(--ink-2); }

@@ -427,30 +427,32 @@ it('a total\'s tooltip floats above the page, so showing it can never move the p
 })
 
 const items = () => screen.getAllByTestId('trip-item')
+// home opens on the list; the calendar is a switch away (remembered on the device)
+const asMonth = () => localStorage.setItem('home-show', 'month')
 const views = () => within(screen.getByRole('navigation', { name: 'home' })).getAllByRole('link')
 
 describe('trips, the view home opens on', () => {
-  it('leads with the next trip, then lists what is coming with side trips under their parent', () => {
+  it('lists trips by the month they start, each trip\'s side trips in its band, and the sidebar counts down to the next', () => {
     db.trips = europe()
     show()
     expect(views().map((v) => v.textContent)).toEqual(['trips', 'inbox', 'travels'])
     expect(views()[0]).toHaveAttribute('aria-current', 'page')
-    const lead = screen.getByTestId('lead')
-    expect(lead).toHaveTextContent('next · in 84 days')
-    expect(lead).toHaveTextContent('europe exchange 2027')
-    expect(lead).toHaveTextContent('28 jan – 13 jul · 166 nights')
-    expect(within(lead).getByRole('link', { name: 'open the plan →' }).getAttribute('href')).toMatch(/^\/trip\/ex/)
     expect(screen.getByRole('heading', { level: 2, name: 'upcoming trips' })).toBeInTheDocument()
-    // one card per trip, its side trips inside it
+    expect([...document.querySelectorAll('.home-upcoming .month-h')].map((m) => m.textContent)).toEqual(['january 2027', 'june 2027'])
+    const stamp = screen.getByLabelText('where and when')
+    expect(stamp).toHaveTextContent(/next.*europe exchange 2027.*in 84 days · 28 jan/)
+    // one row per trip, its side trips together under it
     const families = screen.getAllByTestId('trip-family')
     expect(families).toHaveLength(2)
     expect(items().map((r) => r.textContent)).toEqual([
-      expect.stringMatching(/europe exchange 2027.*28 jan – 13 jul.*in 84 days.*2 side trips/),
+      expect.stringMatching(/europe exchange 2027.*28 jan – 13 jul.*166 nights · in 84 days/),
       expect.stringMatching(/summer.*1 – 10 jun.*in 208 days/),
     ])
+    expect(items()[0].getAttribute('href')).toMatch(/^\/trip\/ex/)
+    expect(within(families[0]).getByText('side trips of europe exchange 2027')).toBeInTheDocument()
     const sides = within(families[0]).getAllByTestId('side-item')
     expect(sides.map((r) => r.textContent)).toEqual([
-      expect.stringMatching(/lapland.*7 – 11 feb.*in 94 days/), expect.stringMatching(/paris.*5 – 8 mar.*in 120 days/),
+      expect.stringMatching(/lapland.*7 – 11 feb/), expect.stringMatching(/paris.*5 – 8 mar/),
     ])
     expect(sides[0]).toHaveAttribute('href', '/trip/lap')
     expect(within(families[1]).queryAllByTestId('side-item')).toHaveLength(0)
@@ -492,6 +494,7 @@ describe('trips, the view home opens on', () => {
       trip({ id: 'ex', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13', base: place({ country: 'NL' }) }),
       trip({ id: 'ams', parent_id: 'ex', name: 'amsterdam', start_date: '2027-01-30', end_date: '2027-01-31', base: null }),
     ]
+    asMonth()
     show()
     const cal = document.querySelector('.home-cal') as HTMLElement
     const flagOn = (d: string) => cal.querySelector(`[data-day="${d}"] .flag`)?.getAttribute('aria-label') ?? null
@@ -507,6 +510,7 @@ describe('trips, the view home opens on', () => {
       trip({ id: 'ex', name: 'europe exchange 2027', start_date: '2027-01-28', end_date: '2027-07-13', base: place({ country: 'NL' }), color: 0 }),
       trip({ id: 'lap', parent_id: 'ex', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', base: place({ country: 'FI' }), color: 1 }),
     ]
+    asMonth()
     show()
     await user.click(screen.getByRole('button', { name: 'next month' }))
     const cal = document.querySelector('.home-cal') as HTMLElement
@@ -516,16 +520,18 @@ describe('trips, the view home opens on', () => {
     expect(screen.queryByRole('list', { name: 'trips this month' })).toBeNull()
   })
 
-  it('has the month calendar under the banner, opening on the month the soonest trip starts', () => {
+  it('switches between the list and the month, opening on the month the soonest trip starts, and remembers which', async () => {
+    const user = userEvent.setup()
     db.trips = europe()
     show()
+    expect(screen.queryByTestId('calendar')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'month' }))
+    expect(screen.getByRole('button', { name: 'month' })).toHaveAttribute('aria-pressed', 'true')
+    expect(localStorage.getItem('home-show')).toBe('month')
     const cal = screen.getByTestId('calendar')
-    expect(screen.getByTestId('lead').compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // "upcoming" heads both the calendar and the trips
     const heading = screen.getByRole('heading', { level: 2, name: 'upcoming trips' })
-    expect(heading.compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(heading.closest('section')).toContainElement(cal)
-    expect(cal.compareDocumentPosition(items()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryAllByTestId('trip-item').filter((r) => r.closest('.home-upcoming'))).toHaveLength(0)
     expect(within(cal).getByText('january')).toBeInTheDocument()
     expect(within(cal).getByText('2027')).toBeInTheDocument()
     expect(cal.querySelectorAll('[data-day]')).toHaveLength(31)
@@ -537,6 +543,7 @@ describe('trips, the view home opens on', () => {
   it('the calendar moves by month, and a side trip takes over its days from its parent', async () => {
     const user = userEvent.setup()
     db.trips = europe()
+    asMonth()
     show()
     await user.click(screen.getByRole('button', { name: 'next month' }))
     const cal = screen.getByTestId('calendar')
@@ -554,6 +561,7 @@ describe('trips, the view home opens on', () => {
 
   it('a day in the calendar opens that day in the trip it belongs to (a side trip\'s own day in the side trip)', async () => {
     db.trips = europe()
+    asMonth()
     show()
     const cal = screen.getByTestId('calendar')
     expect(cal.querySelector('[data-day="2027-01-27"]')!.tagName).not.toBe('BUTTON')
@@ -563,6 +571,7 @@ describe('trips, the view home opens on', () => {
 
   it('a side trip\'s day opens the side trip', async () => {
     db.trips = europe()
+    asMonth()
     show()
     await userEvent.click(screen.getByRole('button', { name: 'next month' }))
     await userEvent.click(within(screen.getByTestId('calendar')).getByRole('button', { name: /^mon 8 feb/ }))
@@ -572,26 +581,27 @@ describe('trips, the view home opens on', () => {
   it('while a trip is on, the calendar opens on this month and rings today', () => {
     vi.setSystemTime(new Date('2027-02-09T10:00:00'))
     db.trips = [trip({ id: 'fin', name: 'finland', start_date: '2027-02-07', end_date: '2027-02-11' })]
+    asMonth()
     show()
     const cal = screen.getByTestId('calendar')
     expect(within(cal).getByText('february')).toBeInTheDocument()
     expect(cal.querySelector('[aria-current="date"]')).toHaveAttribute('data-day', '2027-02-09')
   })
 
-  it('a trip that is on now leads, saying which day it is', () => {
+  it('while you\'re away the sidebar says where you are now, and the trip\'s row says now', () => {
     vi.setSystemTime(new Date('2027-02-08T10:00:00'))
     db.trips = europe()
     show()
-    const lead = screen.getByTestId('lead')
-    expect(lead).toHaveTextContent('now · day 12 of 167')
-    expect(lead).toHaveTextContent('europe exchange 2027')
+    // the innermost trip on today: the side trip, not the summer around it
+    expect(screen.getByLabelText('where and when')).toHaveTextContent(/now in.*lapland/)
+    expect(screen.getByLabelText('where and when')).not.toHaveTextContent('next')
     expect(items()[0]).toHaveTextContent('now')
   })
 
   it('a trip without dates is listed last and never leads', () => {
     db.trips = [trip({ id: 'maybe', name: 'someday japan', start_date: null, end_date: null })]
     show()
-    expect(screen.queryByTestId('lead')).toBeNull()
+    expect(screen.getByLabelText('where and when')).not.toHaveTextContent('next')
     expect(items().map((r) => r.textContent)).toEqual([expect.stringContaining('someday japan')])
   })
 
@@ -600,7 +610,7 @@ describe('trips, the view home opens on', () => {
     expect(screen.getByText('no trips yet')).toBeVisible()
     expect(screen.queryByTestId('calendar')).toBeNull()
     expect(screen.getByRole('button', { name: 'add' })).toBeInTheDocument()
-    expect(screen.queryByTestId('lead')).toBeNull()
+    expect(screen.getByLabelText('where and when')).not.toHaveTextContent('next')
     expect(screen.queryByRole('heading', { name: 'past trips' })).toBeNull()
   })
 
@@ -634,7 +644,7 @@ describe('the switch', () => {
     await userEvent.click(views()[1])
     expect(views()[1]).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: /^a/ })).toBeInTheDocument()
-    expect(screen.queryByTestId('lead')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'upcoming trips' })).toBeNull()
     await userEvent.click(views()[2])
     expect(screen.getByTestId('totals')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'globe' })).toBeInTheDocument()

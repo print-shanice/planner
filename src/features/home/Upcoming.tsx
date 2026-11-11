@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { fmtRange } from '../../lib/dates'
+import { colourVar } from '../../lib/colors'
 
-const tint = (t: Trip) => `var(--g${(((t.color ?? 0) % 6) + 6) % 6})`
+const tint = (t: Trip) => colourVar(t.color)
 
 export function TripRow({ trip, testId }: { trip: Trip; testId?: string }) {
   return (

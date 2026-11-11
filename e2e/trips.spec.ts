@@ -37,7 +37,7 @@ test.describe('trips', () => {
     await page.getByRole('button', { name: 'edit trip' }).click()
     const form = page.getByRole('dialog')
     await form.getByRole('textbox', { name: 'name' }).fill('lapland & the lights')
-    await form.getByRole('radio', { name: 'colour 3' }).click()
+    await form.getByRole('radio', { name: 'orchid' }).click()
     await form.getByRole('button', { name: 'save' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'lapland & the lights' })).toBeVisible()
   })

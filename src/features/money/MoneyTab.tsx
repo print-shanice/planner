@@ -20,6 +20,7 @@ import { SaveFailed } from '../../components/SaveFailed'
 import { Pending } from '../../components/Pending'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { useSubmit } from '../../components/FormFooter'
+import { colourVar } from '../../lib/colors'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
@@ -86,7 +87,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
     const converted = convert(eur, 'EUR', cur, rates)
     return formatMoney(converted ?? eur, converted == null ? 'EUR' : cur, { whole: true })
   }
-  const faceColor = (id: string) => `var(--g${(members.find((m) => m.user_id === id)?.color ?? 0) % 6})`
+  const faceColor = (id: string) => colourVar(members.find((m) => m.user_id === id)?.color)
   const Face = ({ id }: { id: string }) => <span className="avatar" aria-hidden="true" style={{ background: faceColor(id) }}>{(members.find((m) => m.user_id === id)?.name || '?').slice(0, 1)}</span>
   // a breakdown row: its name and amount over a bar, paid in green and planned hatched, against the biggest row
   const byTrip = [trip, ...kids].map((x) => {
@@ -184,7 +185,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         <section className="block" aria-label="by trip">
           <h3 className="head">by trip</h3>
           <ul className="list breakdown">
-            {byTrip.map((x) => <Share key={x.id} label={x.name} paid={x.paid} planned={x.planned} most={Math.max(...byTrip.map((y) => y.paid + y.planned))} dot={`var(--g${(x.color ?? 0) % 6})`} />)}
+            {byTrip.map((x) => <Share key={x.id} label={x.name} paid={x.paid} planned={x.planned} most={Math.max(...byTrip.map((y) => y.paid + y.planned))} dot={colourVar(x.color)} />)}
           </ul>
         </section>
       )}

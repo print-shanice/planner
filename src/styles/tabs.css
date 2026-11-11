@@ -82,7 +82,7 @@
 .bal-list { list-style: none; margin: 8px 0 4px; padding: 0; display: grid; }
 .bal-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(70px, 1.2fr) auto; align-items: center; gap: 10px; min-height: 52px; border-top: 1px solid var(--line); }
 .bal-row:first-child { border-top: 0; }
-.bal-row .avatar, .settle-faces .avatar { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--card); font-size: 13px; font-weight: 600; }
+.bal-row .avatar, .settle-faces .avatar { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--ink); font-size: 13px; font-weight: 600; }
 .bal-who { display: grid; min-width: 0; }
 .bal-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bal-who .muted { font-size: 12.5px; }

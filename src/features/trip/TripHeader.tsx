@@ -14,6 +14,7 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
+import { colourVar } from '../../lib/colors'
 
 // where the trip is, right now and when you go: "par 11:02 · same time as you · usually 9° / 3°".
 // shown while the trip is still ahead or under way
@@ -87,7 +88,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
         </Link>
         {/* the people sharing the trip are also the way into its settings */}
         <button type="button" className="avatars trip-people" aria-label="edit trip" title={`shared with ${members.map(m => m.name || m.email).join(', ')}`} disabled={!canEdit} onClick={onEdit}>
-          {members.map((m) => <span key={m.email} className="avatar" style={{ background: `var(--g${(m.color ?? 0) % 6})` }}>{(m.name || m.email).slice(0, 1)}</span>)}
+          {members.map((m) => <span key={m.email} className="avatar" style={{ background: colourVar(m.color) }}>{(m.name || m.email).slice(0, 1)}</span>)}
         </button>
       </div>
       {route.length > 0 && (

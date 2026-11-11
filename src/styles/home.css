@@ -38,9 +38,8 @@
 @keyframes view-from-left { from { opacity: 0; transform: translateX(-32px); } }
 .trip-families > li, .home-inbox .doc-list > li { animation: rise-in .42s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 32ms + 60ms); }
 @keyframes rise-in { from { opacity: 0; transform: translateY(10px); } }
-.lead { animation: rise-in .45s cubic-bezier(.2, .8, .2, 1) both; }
 @media (prefers-reduced-motion: reduce) {
-  .home-body, .trip-families > li, .home-inbox .doc-list > li, .lead { animation: none; }
+  .home-body, .trip-families > li, .home-inbox .doc-list > li { animation: none; }
   .home-views-ink { transition: none; }
 }
 .home-trips, .home-inbox-view, .home-plans { display: grid; gap: 24px; min-width: 0; }
@@ -50,39 +49,54 @@
 .home-plans .cal { border-bottom: 0; }
 .home-inbox-view .resume-plan { margin-inline: 0; }
 
-/* the trip you're on, or the next one: framed in a hairline of ink, its name set big in the serif */
-.lead {
-  display: grid; gap: 14px; padding: 18px 20px 16px;
-  border: 1px solid var(--ink); color: var(--ink);
+/* the schedule: a month heading, then each trip that starts in it as a row: its colour, its name, its dates.
+   its side trips sit together right under it in a band tinted in its colour */
+.month-group { display: grid; }
+.month-h {
+  padding: 18px 0 6px; border-bottom: 1px solid var(--ink);
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2);
 }
-.lead-text { display: grid; gap: 6px; min-width: 0; }
-.lead .lead-when { color: var(--ink-2); }
-.lead-name { font-size: 44px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; overflow-wrap: anywhere; }
-.lead-dates { font-family: var(--f-mono); font-size: 13px; color: var(--ink-2); }
-.lead .lead-go { justify-self: start; min-height: 32px; color: var(--ink); font-size: 14px; }
-
-/* trips: one card per trip, its side trips inside it on a line in the trip's colour */
-/* trips: an index, one ruled row per trip, its side trips listed under it */
-.trip-families { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--ink); }
+.home-upcoming > .month-group:first-of-type .month-h { padding-top: 4px; }
+.trip-families { list-style: none; margin: 0; padding: 0; display: grid; }
 .family { border-bottom: 1px solid var(--line); }
-.family-head { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 0; color: inherit; text-decoration: none; }
-.family-head:hover .trip-item-name, .side-item:hover .side-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-.family-head .dot, .side-item .dot { background: var(--c); }
-.trip-item-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
-.trip-item-name { font-family: var(--f-head); font-weight: 500; font-size: 22px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-item-text .muted { font-family: var(--f-mono); font-size: 12.5px; }
-.family-count { flex: none; }
-.family-sides { position: relative; list-style: none; margin: 0; padding: 0 0 10px; }
-.family-sides::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 34px; width: 1px; background: var(--ink); }
-.side-item { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 0 6px 32px; color: inherit; text-decoration: none; }
-.side-item::before { content: ''; position: absolute; left: 10px; top: 50%; width: 14px; height: 1px; background: var(--ink); }
-.side-item .dot { width: 8px; height: 8px; }
-.side-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.side-grand { font-size: 12px; }
+.family:has(.family-band) { border-bottom: 0; }
+.swatch-sq { flex: none; width: 12px; height: 12px; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); }
+/* phones: the name on its own line, its dates, country and countdown together under it */
+.family-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 14px 0; color: inherit; text-decoration: none; }
+.family-head .swatch-sq { margin-right: 4px; }
+.trip-item-name { flex: 1 1 calc(100% - 30px); min-width: 0; font-family: var(--f-head); font-weight: 400; font-size: 28px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fam-when { margin-left: 24px; }
+.fam-when, .fam-meta { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.fam-meta::before { content: '·'; margin-right: 8px; }
+.family-head:hover .trip-item-name, .side-item:hover .side-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+
+.family-band {
+  margin: 0 0 14px; padding: 2px 14px 4px 18px;
+  background: color-mix(in srgb, var(--c) 22%, var(--card)); box-shadow: inset 4px 0 0 var(--c);
+}
+.band-label { padding: 10px 0 2px; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.family-sides { list-style: none; margin: 0; padding: 0; }
+.family-sides > li + li { border-top: 1px solid color-mix(in srgb, var(--c) 45%, var(--card)); }
+.side-item { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 52px; padding: 10px 0; color: inherit; text-decoration: none; }
+.side-item .swatch-sq { width: 11px; height: 11px; margin-right: 2px; }
+.side-name { min-width: 0; font-family: var(--f-head); font-size: 21px; line-height: 1.3; }
+.side-item .trip-mark { order: 1; }
+.side-when { order: 2; flex-basis: 100%; padding-left: 21px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.side-book { order: 3; }
+.side-grand { order: 4; }
+.side-book { margin-left: 21px; }
+.side-grand { flex-basis: 100%; padding-left: 21px; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); }
+
+/* list or month: two words, the one showing in bold */
+.show-as { display: flex; gap: 14px; }
+.show-as button { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink-3); font-weight: 500; font-size: 15px; cursor: pointer; }
+.show-as button[aria-pressed="true"] { color: var(--ink); font-weight: 650; }
+.show-as button:hover { color: var(--ink); }
 
 /* the stamp: your clock (and, while you're away, the one where you are); the sidebar shows it, phones don't */
 .home-stamp { display: none; }
 .stamp-time { color: var(--ink); font-weight: 500; }
+.stamp-gap { height: 8px; }
 
 @media (min-width: 1024px) {
   /* a thin rail on the left (where you are, what's here), the index filling the rest */
@@ -109,18 +123,20 @@
     grid-column: 2; width: 100%; max-width: 1180px;
     padding: calc(env(safe-area-inset-top) + 28px) max(40px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 48px) 48px;
   }
-  .lead { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 28px 32px 24px; }
-  .lead-name { font-size: 64px; }
-  .lead .lead-go { justify-self: end; }
-  /* each trip as an index row, its side trips hanging off it on ruled connectors */
-  .family-head { padding: 16px 0 10px; }
-  .family-head .trip-item-name { font-size: 26px; }
-  .side-item .trip-item-text { flex: 1; display: flex; align-items: baseline; gap: 2px 16px; flex-wrap: wrap; }
-  .side-item .trip-item-text > .muted.num { margin-left: auto; }
-  .side-item .side-grand { flex-basis: 100%; }
-  /* the month on the left, what's coming beside it */
-  .home-plans { grid-template-columns: 340px minmax(0, 1fr); column-gap: 32px; align-items: start; }
-  .home-plans:not(:has(.home-cal)) { grid-template-columns: minmax(0, 1fr); }
+  /* a trip's row reads across: its dates in a column of their own, then its colour, name and country, its length on the right */
+  .family-head { display: grid; grid-template-columns: 150px 12px auto auto minmax(0, 1fr) auto; align-items: baseline; column-gap: 12px; padding: 16px 0; }
+  .family-head > * { grid-row: 1; }
+  .family-head .fam-when { grid-column: 1; margin: 0; }
+  .family-head .swatch-sq { grid-column: 2; align-self: center; margin: 0; }
+  .family-head .trip-item-name { grid-column: 3; }
+  .family-head .trip-mark { grid-column: 4; align-self: center; }
+  .family-head .fam-meta { grid-column: 6; }
+  .fam-meta::before { display: none; }
+  /* the band starts under the trip's name, and its rows read across too */
+  .family-band { margin-left: 162px; }
+  .side-when { flex-basis: auto; margin-left: auto; padding-left: 0; }
+  .side-book { margin-left: 0; order: 9; }
+  .home-cal { max-width: 640px; }
   /* travels: the globe stays put on the left while the scrapbook scrolls on the right */
   .travels { grid-template-columns: 380px minmax(0, 1fr); column-gap: 40px; align-items: start; }
   .travels-globe { position: sticky; top: 24px; }
@@ -175,7 +191,8 @@
 .totals dd { margin: 0; font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 
 .home-section { display: grid; gap: 12px; }
-.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.section-head { display: flex; align-items: center; gap: 16px; min-height: 44px; }
+.section-head h2 { flex: 1; min-width: 0; }
 .section-head h2 { font-size: 30px; font-weight: 400; line-height: 1.1; }
 
 .rows { display: grid; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -189,8 +206,10 @@
 .trip-row .muted { font-family: var(--f-mono); font-size: 12.5px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 
-.swatches { display: flex; gap: 10px; }
-.swatch { position: relative; width: 36px; height: 36px; border-radius: 50%; border: 0; box-shadow: inset 0 0 0 2px var(--card); outline: 2px solid transparent; outline-offset: 1px; }
+/* twelve colours: six to a row on a phone, all in one row where there's room */
+.swatches { display: grid; grid-template-columns: repeat(6, 36px); gap: 12px; }
+@media (min-width: 600px) { .swatches { grid-template-columns: repeat(12, 36px); gap: 10px; } }
+.swatch { position: relative; width: 36px; height: 36px; border-radius: 50%; border: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); outline: 2px solid transparent; outline-offset: 2px; }
 .swatch[aria-checked="true"] { outline-color: var(--ink); }
 .currency-field { flex: 0 0 110px !important; }
 .form-actions { padding-top: 4px; }
@@ -286,7 +305,7 @@
 /* passport: one stamp per country, landing with a thump one after another */
 .passport { display: flex; flex-wrap: wrap; gap: 2px 4px; }
 .stamp {
-  width: 108px; height: 108px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--c); cursor: pointer;
+  width: 108px; height: 108px; padding: 0; border: 0; border-radius: 50%; background: none; color: color-mix(in srgb, var(--c) 45%, var(--ink)); cursor: pointer;
   animation: stamp-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 90ms + 120ms);
 }
 .stamp-art { width: 100%; height: 100%; overflow: visible; opacity: .88; transform: rotate(var(--tilt)); transition: transform .25s cubic-bezier(.3, 1.4, .5, 1), opacity .2s; }
@@ -319,7 +338,7 @@
 .polaroid:nth-child(3n + 2) { --r: 2.5deg; }
 .polaroid:nth-child(3n) { --r: -1deg; }
 .polaroid:hover, .polaroid:focus-visible { transform: rotate(0deg) translateY(-6px); box-shadow: 0 14px 28px rgba(0, 0, 0, .16); position: relative; z-index: 1; }
-.polaroid-photo { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 6px; background: var(--c); color: var(--card); font-family: var(--f-head); font-size: 48px; font-weight: 400; }
+.polaroid-photo { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 6px; background: var(--c); color: var(--ink); font-family: var(--f-head); font-size: 48px; font-weight: 400; }
 .polaroid-name { font-weight: 600; font-size: 14px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .polaroid-city { font-size: 12px; }
 .polaroid-stars { font-size: 13px; letter-spacing: 1px; color: var(--ink); }

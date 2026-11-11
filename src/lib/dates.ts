@@ -1,4 +1,5 @@
 import type { Stop, Trip } from './types'
+import { colourVar } from './colors'
 
 const DAY = 86_400_000
 const toMs = (d: string) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 12)
@@ -102,7 +103,7 @@ export function countdown(t: Trip, today: string): { kind: 'upcoming' | 'ongoing
 
 // a trip's colour, for its numbers and pins
 export function dayColor(color: number | null | undefined): string {
-  return `var(--g${(((color ?? 0) % 6) + 6) % 6})`
+  return colourVar(color)
 }
 
 export function todayISO(): string {

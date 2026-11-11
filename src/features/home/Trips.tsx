@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { TripMark } from '../../components/TripMark'
-import { countdown, fmtRange, nights } from '../../lib/dates'
+import { countdown, fmtDay, fmtRange, nights } from '../../lib/dates'
 import { tint } from '../../components/MonthCalendar'
 import { clockIn, hereCode, placeCode, useNow, zoneOf } from '../../lib/localTime'
 
@@ -35,23 +35,7 @@ export function tripItems(tops: Trip[], trips: Trip[], today: string, keepEnded 
   return out
 }
 
-export function Lead({ trip, today, href }: { trip: Trip; today: string; href: string }) {
-  const cd = countdown(trip, today)
-  const n = nights(trip.start_date, trip.end_date)
-  const label = cd.kind === 'ongoing' ? `now · day ${cd.days} of ${(n ?? 0) + 1}` : `next · ${when(trip, today)}`
-  return (
-    <section className="lead" data-testid="lead" style={tint(trip.color)} aria-label={trip.name}>
-      <div className="lead-text">
-        <p className="mono-label lead-when">{label}</p>
-        <p className="head lead-name">{trip.name}</p>
-        <p className="lead-dates num">{[fmtRange(trip.start_date, trip.end_date), n != null ? `${n} ${n === 1 ? 'night' : 'nights'}` : ''].filter(Boolean).join(' · ')}</p>
-      </div>
-      <Link className="text-link lead-go" to={href}>open the plan →</Link>
-    </section>
-  )
-}
-
-// the sidebar's stamp, like a gallery's "ldn 02:20": your own clock, and while you're away, the clock where you are
+// the sidebar's stamp, like a gallery's "ldn 02:20": what's next (or where you are now), and the clock
 export function HomeStamp({ trips, today, flagsOf }: { trips: Trip[]; today: string; flagsOf: (t: Trip) => string[] }) {
   const now = useNow()
   const here = hereCode()
@@ -59,59 +43,70 @@ export function HomeStamp({ trips, today, flagsOf }: { trips: Trip[]; today: str
   // the innermost trip you're on today, so a side trip in paris shows paris, not the summer around it
   const on = trips.filter((t) => countdown(t, today).kind === 'ongoing').sort((a, b) => (b.start_date ?? '').localeCompare(a.start_date ?? ''))[0]
   const zone = on ? zoneOf(on.base?.country ?? flagsOf(on)[0], on.base?.lng) : null
+  const next = on ? null : leadTrip(trips, today)
   return (
-    <p className="home-stamp" aria-label="local time">
-      {on && zone && <><span>now in {on.name}</span><span className="stamp-time">{placeCode(on.base?.city || on.base?.name || on.name)} {clockIn(zone, now)}</span></>}
-      <span className={on && zone ? undefined : 'stamp-time'}>{here ? `${here} ` : ''}{mine}</span>
-    </p>
+    <div className="home-stamp" aria-label="where and when">
+      {on && <><span>now in</span><span className="stamp-time">{on.name}</span>{zone && <span>{placeCode(on.base?.city || on.base?.name || on.name)} {clockIn(zone, now)}</span>}</>}
+      {next && <><span>next</span><span className="stamp-time">{next.name}</span><span>{[when(next, today), next.start_date ? fmtDay(next.start_date, { day: 'numeric', month: 'short' }) : ''].filter(Boolean).join(' · ')}</span></>}
+      <span className="stamp-gap" aria-hidden="true" />
+      <span className="stamp-time" aria-label="local time">{here ? `${here} ` : ''}{mine}</span>
+    </div>
   )
 }
 
-// one card per trip with all its side trips inside it, so a side trip never reads as a trip of its own.
+// the schedule: each trip a row (its colour, its name, its dates), and its side trips together in a band
+// tinted in its colour right under it, so a side trip never reads as a trip of its own.
 // a side trip's own side trips are named on it
 const none = () => [] as string[]
+const nothing = () => 0
 
-export function TripFamilies({ tops, trips, flagsOf = none, today, keepEnded = false }: { tops: Trip[]; trips: Trip[]; flagsOf?: (t: Trip) => string[]; today: string; keepEnded?: boolean }) {
-  const kidsOf = (id: string) => trips.filter((c) => c.parent_id === id && (keepEnded || countdown(c, today).kind !== 'done')).sort(byStart)
+type FamilyProps = { flagsOf?: (t: Trip) => string[]; today: string; toBook?: (t: Trip) => number; hrefOf?: (t: Trip) => string }
+
+export function TripFamilies({ tops, trips, keepEnded = false, ...rest }: { tops: Trip[]; trips: Trip[]; keepEnded?: boolean } & FamilyProps) {
+  const kidsOf = (id: string) => trips.filter((c) => c.parent_id === id && (keepEnded || countdown(c, rest.today).kind !== 'done')).sort(byStart)
   return (
     <ul className="trip-families">
-      {tops.map((t, i) => <Family key={t.id} trip={t} sides={kidsOf(t.id)} kidsOf={kidsOf} today={today} i={i} flagsOf={flagsOf} />)}
+      {tops.map((t, i) => <Family key={t.id} trip={t} sides={kidsOf(t.id)} kidsOf={kidsOf} i={i} {...rest} />)}
     </ul>
   )
 }
 
-function Family({ trip: t, sides, kidsOf, today, i, flagsOf }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; today: string; i: number; flagsOf: (t: Trip) => string[] }) {
-  const line = [fmtRange(t.start_date, t.end_date), when(t, today)].filter(Boolean).join(' · ')
+const nightsWord = (t: Trip) => { const n = nights(t.start_date, t.end_date); return n ? `${n} ${n === 1 ? 'night' : 'nights'}` : '' }
+
+function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, toBook = nothing, hrefOf }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; i: number } & FamilyProps) {
+  const meta = [nightsWord(t), when(t, today)].filter(Boolean).join(' · ')
   return (
     <li className="family" data-testid="trip-family" style={{ ...tint(t.color), '--i': Math.min(i, 12) } as CSSProperties}>
-      <Link to={`/trip/${t.id}`} className="trip-item family-head" data-testid="trip-item" data-depth={0}>
-        {/* the trip's own country; its side trips show theirs */}
+      <Link to={hrefOf?.(t) ?? `/trip/${t.id}`} className="trip-item family-head" data-testid="trip-item" data-depth={0}>
+        <span className="swatch-sq" aria-hidden="true" />
+        <span className="trip-item-name">{t.name}</span>
+        <span className="fam-when num">{fmtRange(t.start_date, t.end_date) || 'no dates yet'}</span>
         <TripMark codes={flagsOf(t)} max={1} />
-        <span className="trip-item-text">
-          <span className="trip-item-name">{t.name}</span>
-          <span className="muted num">{line}</span>
-        </span>
-        {sides.length > 0 && <span className="mono-label family-count">{sides.length} side {sides.length === 1 ? 'trip' : 'trips'}</span>}
+        {meta && <span className="fam-meta num">{meta}</span>}
       </Link>
       {sides.length > 0 && (
-        <ul className="family-sides">
-          {sides.map((c) => {
-            const grand = kidsOf(c.id)
-            const extra = [fmtRange(c.start_date, c.end_date), when(c, today)].filter(Boolean).join(' · ')
-            return (
-              <li key={c.id}>
-                <Link to={`/trip/${c.id}`} className="side-item" data-testid="side-item" style={tint(c.color)}>
-                  <TripMark codes={flagsOf(c)} />
-                  <span className="trip-item-text">
+        <div className="family-band">
+          <p className="band-label">side trips of {t.name}</p>
+          <ul className="family-sides">
+            {sides.map((c) => {
+              const grand = kidsOf(c.id)
+              const open = toBook(c)
+              return (
+                <li key={c.id}>
+                  <Link to={`/trip/${c.id}`} className="side-item" data-testid="side-item" style={tint(c.color)}>
+                    <span className="swatch-sq" aria-hidden="true" />
                     <span className="side-name">{c.name}</span>
-                    {extra && <span className="muted num">{extra}</span>}
-                    {grand.length > 0 && <span className="muted side-grand">+ {grand.length > 2 ? `${grand.length} side trips` : grand.map((g) => g.name).join(', ')}</span>}
-                  </span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+                    {/* read out as "paris 19 – 23 feb", then its country; drawn with the country beside the name */}
+                    <span className="side-when num">{fmtRange(c.start_date, c.end_date) || 'no dates yet'}</span>
+                    <TripMark codes={flagsOf(c)} />
+                    {open > 0 && <span className="pill warn side-book">{open} to book</span>}
+                    {grand.length > 0 && <span className="side-grand">+ {grand.length > 2 ? `${grand.length} side trips` : grand.map((g) => g.name).join(', ')}</span>}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
     </li>
   )

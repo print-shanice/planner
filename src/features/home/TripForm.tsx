@@ -9,10 +9,10 @@ import { Pick } from '../../components/Pick'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { PlaceField } from '../stops/PlaceField'
+import { COLOUR_NAMES, PICKER_ORDER, colourIndex, colourVar } from '../../lib/colors'
 
 type Props = { trip?: Trip; parentId?: string | null; onDone: () => void; onDeleted?: () => void }
 
-const SWATCHES = [0, 1, 2, 3, 4, 5]
 
 export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   const trips = useTrips().data ?? []
@@ -28,7 +28,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   const [budget, setBudget] = useState(trip?.budget != null ? String(trip.budget) : '')
   const [currency, setCurrency] = useState(trip?.currency ?? (trips.find((t) => t.id === parentId)?.currency ?? 'EUR'))
   const [base, setBase] = useState<Place | null>(trip?.base ?? null)
-  const [color, setColor] = useState(trip?.color ?? (trips.filter((t) => t.parent_id === parentId).length % 6))
+  const [color, setColor] = useState(trip?.color ?? colourIndex(trips.filter((t) => t.parent_id === parentId).length))
   const [notes, setNotes] = useState(trip?.notes ?? '')
   const [parent, setParent] = useState<string | null>(trip ? trip.parent_id : parentId)
   const [problem, setProblem] = useState<string | null>(null)
@@ -82,9 +82,9 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
       <PlaceField id={`base-${id}`} label="home base" value={base} onChange={setBase} />
       <p className="form-q">colour</p>
       <div className="swatches" role="radiogroup" aria-label="colour">
-        {SWATCHES.map((i) => (
-          <button key={i} type="button" role="radio" aria-checked={color === i} aria-label={`colour ${i + 1}`}
-            className="swatch" style={{ background: `var(--g${i})` }} onClick={() => setColor(i)} />
+        {PICKER_ORDER.map((i) => (
+          <button key={i} type="button" role="radio" aria-checked={colourIndex(color) === i} aria-label={COLOUR_NAMES[i]}
+            className="swatch" style={{ background: colourVar(i) }} onClick={() => setColor(i)} />
         ))}
       </div>
       <div className="folds">

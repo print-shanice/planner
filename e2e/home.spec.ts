@@ -1,14 +1,15 @@
 import { test, expect, open, phone } from './fixtures'
 
 test.describe('home', () => {
-  test('opens on trips: the next trip leads, upcoming trips carry their side trips, past trips follow', async ({ page }) => {
+  test('opens on trips: a schedule by month, side trips in their trip\'s band, past trips after', async ({ page }) => {
     await open(page)
     await expect(page.getByRole('heading', { level: 1, name: 'planner' })).toBeVisible()
-    const lead = page.getByRole('region', { name: 'euro summer' })
-    await expect(lead).toContainText('next · in 79 days')
-    await expect(lead.getByRole('link', { name: 'open the plan →' })).toHaveAttribute('href', '#/trip/eu?day=2027-01-28')
     await expect(page.getByRole('heading', { level: 2, name: 'upcoming trips' })).toBeVisible()
-    await expect(page.getByRole('link', { name: /euro summer 28 jan – 13 jul/ })).toBeVisible()
+    await expect(page.getByText('january 2027', { exact: true })).toBeVisible()
+    // the next trip opens on the day you were reading
+    await expect(page.getByRole('link', { name: /euro summer 28 jan – 13 jul/ })).toHaveAttribute('href', '#/trip/eu?day=2027-01-28')
+    await expect(page.getByText('side trips of euro summer')).toBeVisible()
+    if (!phone(page)) await expect(page.getByLabel('where and when')).toContainText(/next.*euro summer.*in 79 days/i)
     await expect(page.getByRole('link', { name: /paris 19 – 23 feb/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /barcelona.*\+ montserrat/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /^someday rome/ })).toBeVisible()
@@ -18,8 +19,9 @@ test.describe('home', () => {
     await expect(page.getByRole('button', { name: 'add' })).toHaveCount(1)
   })
 
-  test('the month calendar opens a day in its trip', async ({ page }) => {
+  test('the month calendar is a switch away, and opens a day in its trip', async ({ page }) => {
     await open(page)
+    await page.getByRole('button', { name: 'month', exact: true }).click()
     await expect(page.getByRole('group', { name: 'january 2027' })).toBeVisible()
     await page.getByRole('button', { name: 'next month' }).click()
     await page.getByRole('button', { name: 'sat 20 feb' }).click()
@@ -96,7 +98,7 @@ test.describe('home', () => {
     if (!phone(page)) {
       const trips = await page.getByRole('heading', { level: 2, name: 'upcoming trips' }).boundingBox()
       expect(trips!.x).toBeGreaterThan(a!.x + a!.width)
-      await expect(page.getByLabel('local time')).toBeVisible()
+      await expect(page.getByLabel('where and when')).toBeVisible()
     }
   })
 })

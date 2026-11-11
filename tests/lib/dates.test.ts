@@ -73,7 +73,8 @@ it('countdown', () => {
 
 it('dayColor is the trip colour', () => {
   expect(dayColor(0)).toBe('var(--g0)')
-  expect(dayColor(7)).toBe('var(--g1)')
+  expect(dayColor(7)).toBe('var(--g7)')
+  expect(dayColor(13)).toBe('var(--g1)')
   expect(dayColor(null)).toBe('var(--g0)')
 })
 

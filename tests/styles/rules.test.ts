@@ -22,8 +22,15 @@ const contrast = (a: string, b: string) => {
 // every css rule as [selector, body]
 const rules = files('src/styles', '.css').flatMap((f) => read(f).split('}').map((r) => r.split('{').slice(-2) as [string, string]).filter((r) => r.length === 2))
 
-it('white numbers on every group colour pass 4.5:1', () => {
-  for (const g of ['--g0', '--g1', '--g2', '--g3', '--g4', '--g5']) expect(contrast(token(g), token('--card')), g).toBeGreaterThanOrEqual(4.5)
+const TRIP = Array.from({ length: 12 }, (_, i) => `--g${i}`)
+
+it('words in ink read on every trip colour', () => {
+  for (const g of TRIP) expect(contrast(token(g), token('--ink')), g).toBeGreaterThanOrEqual(4.5)
+})
+
+it('trip colours never colour words: they only fill shapes', () => {
+  const coloured = rules.filter(([, body]) => /(^|[\s;{])color:\s*var\(--(c|g\d+|pin)\b/.test(body)).map(([sel]) => sel.trim())
+  expect(coloured).toEqual([])
 })
 
 it('faint controls still pass 3:1 on a card', () => {
@@ -63,12 +70,13 @@ const hsl = (hex: string) => {
   return { h: (h * 60 + 360) % 360, l }
 }
 
-it('trip colours are six hues you can tell apart', () => {
-  const gs = ['--g0', '--g1', '--g2', '--g3', '--g4', '--g5'].map((g) => [g, hsl(token(g))] as const)
-  for (const [a, x] of gs) for (const [b, y] of gs) {
+it('the twelve trip colours sit at one softness, and any two can be told apart', () => {
+  const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+  for (const g of TRIP) expect(hsl(token(g)).l, g).toBeGreaterThan(0.6)
+  for (const a of TRIP) for (const b of TRIP) {
     if (a >= b) continue
-    const hue = Math.min(Math.abs(x.h - y.h), 360 - Math.abs(x.h - y.h))
-    expect(hue >= 30 || Math.abs(x.l - y.l) >= 0.2, `${a} vs ${b}`).toBe(true)
+    const [x, y] = [rgb(token(a)), rgb(token(b))]
+    expect(Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]), `${a} vs ${b}`).toBeGreaterThanOrEqual(20)
   }
 })
 

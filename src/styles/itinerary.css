@@ -24,7 +24,7 @@
 .itin-head button[aria-expanded="false"] .icon { transform: rotate(-90deg); }
 .itin-date { flex: none; font-family: var(--f-head); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; }
 .itin-areas { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.itin-side { flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 14px; color: var(--c); }
+.itin-side { flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 14px; color: var(--ink); }
 .itin-side .dot { width: 8px; height: 8px; background: var(--c); }
 .itin-day[style] .itin-head button { box-shadow: inset 3px 0 0 var(--c); padding-left: 10px; }
 

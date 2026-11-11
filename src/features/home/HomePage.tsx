@@ -1,8 +1,8 @@
 import { lazy, Suspense, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLinks, useReviews, useStops, useTrips } from '../../lib/queries'
-import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
-import { countdown, todayISO } from '../../lib/dates'
+import { countryName, countryStatus, descendants, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
+import { countdown, fmtDay, todayISO } from '../../lib/dates'
 import { resumePlan } from '../../lib/resume'
 import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
@@ -15,7 +15,7 @@ import { Loading } from '../../components/Loading'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
-import { HomeStamp, Lead, TripFamilies, leadTrip } from './Trips'
+import { HomeStamp, TripFamilies, leadTrip } from './Trips'
 import { useTripFlags } from '../../lib/tripGuess'
 import { Calendar } from './Calendar'
 import { Travels } from './Travels'
@@ -24,6 +24,19 @@ import { AccountButton } from './Account'
 import { Inbox } from './Inbox'
 import { CaptureForm } from '../capture/CaptureForm'
 import { peekPending } from '../../lib/capture'
+
+// trips grouped by the month they start, in order; undated ones last
+function byMonth(tops: Trip[]): [string, Trip[]][] {
+  const groups = new Map<string, Trip[]>()
+  for (const t of tops) {
+    const label = t.start_date ? fmtDay(t.start_date, { month: 'long', year: 'numeric' }) : 'no dates yet'
+    groups.set(label, [...(groups.get(label) ?? []), t])
+  }
+  return [...groups]
+}
+
+type ShowAs = 'list' | 'month'
+const readShowAs = (): ShowAs => { try { return localStorage.getItem('home-show') === 'month' ? 'month' : 'list' } catch { return 'list' } }
 
 // maplibre is large and needs webgl; load it after the page shows
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
@@ -52,6 +65,9 @@ export function HomePage() {
   const [adding, setAdding] = useState(false)
   const [country, setCountry] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
+  // the list, or the month calendar; remembered on this device
+  const [shownAs, setShownAs] = useState<ShowAs>(readShowAs)
+  const showAs = (v: ShowAs) => { setShownAs(v); try { localStorage.setItem('home-show', v) } catch { /* private mode */ } }
   const [linking, setLinking] = useState(false)
   const inbox = (useLinks().data ?? []).filter((l) => !l.trip_id)
   const waiting = peekPending()
@@ -86,6 +102,8 @@ export function HomePage() {
   // "open the plan" goes back to the day you were on, when it was this trip
   const leadHref = lead ? (resume?.tripId === lead.id && resume.day ? `/trip/${lead.id}?day=${resume.day}` : `/trip/${lead.id}`) : ''
   const waitingCount = inbox.length + (waiting ? 1 : 0)
+  // a side trip's bookings still to make, counted on its row
+  const toBook = (t: Trip) => { const ids = new Set(descendants(t.id, trips)); return stops.filter((s) => ids.has(s.trip_id) && s.status === 'to_book').length }
 
   const choices = country ? tripsInCountry(country, trips, stops) : []
 
@@ -116,23 +134,29 @@ export function HomePage() {
         {view === 'trips' && (
           <div className="home-trips">
             <LoadState load={load} blocks={1} />
-            {lead && <Lead trip={lead} today={today} href={leadHref} />}
-              {/* "upcoming trips" heads both: the month, then each trip's card (on a laptop side by side) */}
+            {/* the schedule: trips by the month they start, side trips in their trip's band; the month calendar is a switch away */}
             <section className="home-section home-upcoming">
               <div className="section-head">
                 <h2 className="head">upcoming trips</h2>
+                {upcoming.length > 0 && (
+                  <div className="show-as" role="group" aria-label="show trips as">
+                    <button type="button" aria-pressed={shownAs === 'list'} onClick={() => showAs('list')}>list</button>
+                    <button type="button" aria-pressed={shownAs === 'month'} onClick={() => showAs('month')}>month</button>
+                  </div>
+                )}
                 <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
                   <Icon name="plus" />
                 </button>
               </div>
               {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
               {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-              {upcoming.length > 0 && (
-                <div className="home-plans">
-                  <Calendar trips={trips} flagsOf={flagsOf} today={today} />
-                  <TripFamilies tops={upcoming} trips={trips} flagsOf={flagsOf} today={today} />
+              {upcoming.length > 0 && shownAs === 'month' && <Calendar trips={trips} flagsOf={flagsOf} today={today} />}
+              {upcoming.length > 0 && shownAs === 'list' && byMonth(upcoming).map(([label, group]) => (
+                <div key={label} className="month-group">
+                  <p className="month-h">{label}</p>
+                  <TripFamilies tops={group} trips={trips} flagsOf={flagsOf} today={today} toBook={toBook} hrefOf={(t) => (t.id === lead?.id ? leadHref : `/trip/${t.id}`)} />
                 </div>
-              )}
+              ))}
             </section>
             {/* only shows once a trip has ended */}
             {past.length > 0 && (

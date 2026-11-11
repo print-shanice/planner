@@ -4,6 +4,7 @@ import { currencyList } from '../../lib/rates'
 import { useAuth } from '../../lib/auth'
 import type { CSSProperties, ReactNode } from 'react'
 import { Switch } from '../../components/Switch'
+import { colourVar } from '../../lib/colors'
 
 export type SplitMode = 'even' | 'some' | 'amounts'
 export type CostDraft = {
@@ -131,7 +132,7 @@ export function CostFields({ value: d, onChange, members, rates, payment, autoFo
           <div className="faces" role="group" aria-label="paid by">
             {people.map((m) => (
               <button key={m.user_id!} type="button" className="face" aria-label={(m.name || m.email).toLowerCase()} aria-pressed={d.paid_by === m.user_id}
-                onClick={() => set({ paid_by: m.user_id! })} style={{ '--c': `var(--g${(m.color ?? 0) % 6})` } as CSSProperties}>
+                onClick={() => set({ paid_by: m.user_id! })} style={{ '--c': colourVar(m.color) } as CSSProperties}>
                 <span className="avatar">{(m.name || m.email).slice(0, 1)}</span>
               </button>
             ))}
@@ -148,7 +149,7 @@ export function CostFields({ value: d, onChange, members, rates, payment, autoFo
             {people.map((m) => (
               <button key={m.user_id!} type="button" className="face" aria-label={`for ${who(m)}`} aria-pressed={d.among.includes(m.user_id!)}
                 onClick={() => set({ among: d.among.includes(m.user_id!) ? d.among.filter((x) => x !== m.user_id) : [...d.among, m.user_id!] })}
-                style={{ '--c': `var(--g${(m.color ?? 0) % 6})` } as CSSProperties}>
+                style={{ '--c': colourVar(m.color) } as CSSProperties}>
                 <span className="avatar">{who(m).slice(0, 1)}</span>
               </button>
             ))}

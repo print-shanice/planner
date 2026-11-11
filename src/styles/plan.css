@@ -18,7 +18,7 @@
 .chip[aria-current="true"] { background: var(--ink); border-color: var(--ink); color: var(--card); }
 .chip[aria-current="true"] .muted { color: inherit; opacity: .75; }
 /* a folded side trip: one chip with its name */
-.chip-trip { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--c); }
+.chip-trip { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--ink); }
 .chip-trip .dot { width: 8px; height: 8px; background: var(--c); }
 
 /* the day list's month headings, once it spans months */
@@ -41,7 +41,7 @@
 .stop-row.dragging { z-index: 3; box-shadow: 0 0 0 1px var(--ink); }
 .num-badge {
   flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-  color: var(--card); font-size: 13px; font-weight: 600;
+  color: var(--ink); font-size: 13px; font-weight: 600;
 }
 .num-badge { margin-top: 1px; }
 .num-badge.quiet { background: none; }
@@ -87,14 +87,14 @@
 .fold {
   display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 12px; scroll-margin-top: 72px;
   border-radius: 0; text-decoration: none; color: var(--ink);
-  background: color-mix(in srgb, var(--c) 7%, var(--card)); border: 0; border-left: 3px solid var(--c);
+  background: color-mix(in srgb, var(--c) 22%, var(--card)); border: 0; border-left: 4px solid var(--c);
 }
 .fold:hover { background: color-mix(in srgb, var(--c) 14%, var(--card)); }
 .fold-bar { display: none; }
 .fold-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
-.fold-name { font-family: var(--f-head); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fold-name { font-family: var(--f-head); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fold-text .muted { font-size: 14px; }
-.fold > .icon { flex: none; color: var(--c); }
+.fold > .icon { flex: none; color: var(--ink-2); }
 
 .nodate-trip { display: flex; align-items: center; gap: 8px; padding: 0 4px 0 8px; }
 .nodate-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; text-decoration: none; }
