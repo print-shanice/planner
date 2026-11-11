@@ -98,7 +98,7 @@
   .home-mark { flex: none; }
   .home-views { order: 0; flex-basis: auto; flex-direction: column; gap: 0; border-bottom: 0; }
   .home-view { min-height: 34px; margin: 0; border: 0; }
-  .home-view[aria-current="page"]::before { content: '→' / ''; margin-right: 8px; }
+  .home-view[aria-current="page"] { font-weight: 650; }
   .home-views-ink { display: none; }
   .home-stamp {
     display: grid; gap: 3px; margin-top: auto;
