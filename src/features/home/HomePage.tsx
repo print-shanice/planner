@@ -1,7 +1,7 @@
 import { lazy, Suspense, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLinks, useReviews, useStops, useTrips } from '../../lib/queries'
-import { countryName, countryStatus, descendants, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
+import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
 import { countdown, fmtDay, todayISO } from '../../lib/dates'
 import { resumePlan } from '../../lib/resume'
 import { useCanEdit } from '../../lib/offline'
@@ -121,8 +121,6 @@ export function HomePage() {
     for (let d = from; d <= to; d = addDays(d, 1)) out.push(...holidaysOnDay(d))
     return out
   }
-  // a side trip's bookings still to make, counted on its row
-  const toBook = (t: Trip) => { const ids = new Set(descendants(t.id, trips)); return stops.filter((s) => ids.has(s.trip_id) && s.status === 'to_book').length }
 
   const choices = country ? tripsInCountry(country, trips, stops) : []
 
@@ -176,7 +174,7 @@ export function HomePage() {
               {upcoming.length > 0 && shownAs === 'list' && byMonth(upcoming).map(([label, group]) => (
                 <div key={label} className="month-group">
                   <p className="month-h">{label}</p>
-                  <TripFamilies tops={group} trips={trips} flagsOf={flagsOf} today={today} toBook={toBook} hrefOf={(t) => (t.id === lead?.id ? leadHref : `/trip/${t.id}`)} />
+                  <TripFamilies tops={group} trips={trips} flagsOf={flagsOf} today={today} hrefOf={(t) => (t.id === lead?.id ? leadHref : `/trip/${t.id}`)} />
                 </div>
               ))}
             </section>

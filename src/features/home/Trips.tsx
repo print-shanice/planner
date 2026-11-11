@@ -58,9 +58,8 @@ export function HomeStamp({ trips, today, flagsOf }: { trips: Trip[]; today: str
 // tinted in its colour right under it, so a side trip never reads as a trip of its own.
 // a side trip's own side trips are named on it
 const none = () => [] as string[]
-const nothing = () => 0
 
-type FamilyProps = { flagsOf?: (t: Trip) => string[]; today: string; toBook?: (t: Trip) => number; hrefOf?: (t: Trip) => string }
+type FamilyProps = { flagsOf?: (t: Trip) => string[]; today: string; hrefOf?: (t: Trip) => string }
 
 export function TripFamilies({ tops, trips, keepEnded = false, ...rest }: { tops: Trip[]; trips: Trip[]; keepEnded?: boolean } & FamilyProps) {
   const kidsOf = (id: string) => trips.filter((c) => c.parent_id === id && (keepEnded || countdown(c, rest.today).kind !== 'done')).sort(byStart)
@@ -73,7 +72,7 @@ export function TripFamilies({ tops, trips, keepEnded = false, ...rest }: { tops
 
 const nightsWord = (t: Trip) => { const n = nights(t.start_date, t.end_date); return n ? `${n} ${n === 1 ? 'night' : 'nights'}` : '' }
 
-function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, toBook = nothing, hrefOf }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; i: number } & FamilyProps) {
+function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, hrefOf }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; i: number } & FamilyProps) {
   const meta = [nightsWord(t), when(t, today)].filter(Boolean).join(' · ')
   return (
     <li className="family" data-testid="trip-family" style={{ ...tint(t.color), '--i': Math.min(i, 12) } as CSSProperties}>
@@ -90,7 +89,6 @@ function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, toBook = not
           <ul className="family-sides">
             {sides.map((c) => {
               const grand = kidsOf(c.id)
-              const open = toBook(c)
               return (
                 <li key={c.id}>
                   <Link to={`/trip/${c.id}`} className="side-item" data-testid="side-item" style={tint(c.color)}>
@@ -99,7 +97,6 @@ function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, toBook = not
                     {/* read out as "paris 19 – 23 feb", then its country; drawn with the country beside the name */}
                     <span className="side-when num">{fmtRange(c.start_date, c.end_date) || 'no dates yet'}</span>
                     <TripMark codes={flagsOf(c)} />
-                    {open > 0 && <span className="pill warn side-book">{open} to book</span>}
                     {grand.length > 0 && <span className="side-grand">+ {grand.length > 2 ? `${grand.length} side trips` : grand.map((g) => g.name).join(', ')}</span>}
                   </Link>
                 </li>
