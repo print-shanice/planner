@@ -788,38 +788,20 @@ describe('a flight looks itself up by its number', () => {
     expect(within(d).getByLabelText('carrier / number')).toBeInTheDocument()
   })
 
-  it('"look up" waits for a flight number', async () => {
+  it('"look up" says when the number is missing or is not a flight number, without asking anyone', async () => {
     const d = await newFlight()
     const look = within(d).getByRole('button', { name: 'look up' })
-    expect(look).toBeDisabled()
-    await userEvent.type(within(d).getByLabelText('flight number'), 'hello')
-    expect(look).toBeDisabled()
-    await userEvent.clear(within(d).getByLabelText('flight number'))
-    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
     expect(look).toBeEnabled()
+    await userEvent.click(look)
+    expect(within(d).getByText('add the flight number')).toBeInTheDocument()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'hello')
+    expect(within(d).queryByText('add the flight number')).toBeNull()
+    await userEvent.click(look)
+    expect(within(d).getByText("that isn't a flight number")).toBeInTheDocument()
+    expect(db.invoke).not.toHaveBeenCalled()
   })
 
-  it('fills the airports, times and number in, and saves the flight with the journey', async () => {
-    let answer!: (v: unknown) => void
-    db.invoke.mockImplementation(() => new Promise((r) => { answer = r }))
-    const d = await newFlight()
-    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
-    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
-    expect(db.invoke).toHaveBeenCalledWith('flight', { body: { number: 'KL 1001', date: '2027-02-08' } })
-    expect(within(d).getByRole('button', { name: 'looking up…' })).toBeDisabled()
-    await act(async () => answer({ data: { flight: kl }, error: null }))
-    expect(within(d).getByText('Amsterdam Airport Schiphol')).toBeInTheDocument()
-    expect(within(d).getByText('London Heathrow')).toBeInTheDocument()
-    expect(within(d).getByLabelText('flight number')).toHaveValue('KL 1001')
-    expect(within(d).getByLabelText('depart time').closest('.pick')).toHaveTextContent('07:20')
-    expect(within(d).getByLabelText('arrive time').closest('.pick')).toHaveTextContent('07:40')
-    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
-    const row = db.save.mock.calls.find(([t]) => t === 'stops')![1]
-    expect(row).toMatchObject({ mode: 'flight', title: 'KL 1001', day: '2027-02-08', time: '07:20', end_date: '2027-02-08', end_time: '07:40', origin: { name: 'Amsterdam Airport Schiphol', country: 'NL' } })
-    expect(row.flight.number).toBe('KL 1001')
-  })
-
-  it('"look up" waits for a depart day', async () => {
+  it('"look up" says to add the depart day when there is none', async () => {
     function Undated() {
       const s = useStopSheet()!
       return <button onClick={() => s.newStop('journey', 'lap')}>open undated</button>
@@ -829,7 +811,9 @@ describe('a flight looks itself up by its number', () => {
     const d = screen.getByRole('dialog')
     await userEvent.click(within(d).getByRole('button', { name: 'flight' }))
     await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
-    expect(within(d).getByRole('button', { name: 'look up' })).toBeDisabled()
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    expect(within(d).getByText('add the depart day')).toBeInTheDocument()
+    expect(db.invoke).not.toHaveBeenCalled()
   })
 
   it('says so when the flight is not found, and keeps what was typed', async () => {

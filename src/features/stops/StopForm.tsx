@@ -112,7 +112,10 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const typedNumber = flightNumber(d.title)
   const date = d.day
   async function lookUp() {
-    if (!typedNumber || !date) return
+    // pressing it says what's missing, rather than a greyed-out button that never explains
+    if (!d.title.trim()) return setLookNote('add the flight number')
+    if (!typedNumber) return setLookNote("that isn't a flight number")
+    if (!date) return setLookNote('add the depart day')
     setLookNote(null)
     const f = await lookup.look(typedNumber, date)
     if (typeof f === 'string') setLookNote(flightError(f, typedNumber, date))
@@ -229,7 +232,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
           <div className="flight-find">
             <label className="field"><span className="label">flight number</span>
               <input value={d.title} autoCapitalize="characters" autoComplete="off" onChange={(e) => { setLookNote(null); set({ title: e.target.value }) }} /></label>
-            <Button busy={lookup.busy && 'looking up'} disabled={!canEdit || !typedNumber || !date} onClick={() => void lookUp()}>look up</Button>
+            <Button busy={lookup.busy && 'looking up'} disabled={!canEdit} onClick={() => void lookUp()}>look up</Button>
           </div>
           {lookNote && <p className="warn-line" role="status">{lookNote}</p>}
         </>)}
