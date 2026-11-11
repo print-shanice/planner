@@ -303,6 +303,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .bit { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .bit-key { color: var(--ink-3); }
 .bit.paid { color: var(--ok); }
+.bit.warn { color: var(--warn); }
 .itin-info { display: grid; gap: 1px; width: 100%; padding: 0 0 4px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: 6px; }
 .itin-info:hover .itin-note, .itin-info:hover .itin-bits { color: var(--ink); }
 .line-link { width: 36px; height: 44px; color: var(--ink-2); }

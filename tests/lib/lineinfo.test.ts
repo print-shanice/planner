@@ -5,7 +5,7 @@ const none = { files: 0, costs: [], links: [] }
 
 describe('lineInfo: what a plan line holds beyond its name', () => {
   it('is empty for a bare place', () => {
-    expect(lineInfo(stop({ id: 'a' }), none)).toEqual({ note: null, ref: null, tickets: 0, cost: null, links: [] })
+    expect(lineInfo(stop({ id: 'a' }), none)).toEqual({ note: null, ref: null, tickets: 0, cost: null, links: [], flight: null })
   })
   it('gives the first written line of the notes, but not for a note (its text is already the line)', () => {
     expect(lineInfo(stop({ notes: '\n  ask for the window table \nsecond' }), none).note).toBe('ask for the window table')
@@ -30,5 +30,25 @@ describe('lineInfo: what a plan line holds beyond its name', () => {
       { id: 'bad', trip_id: 't', url: 'javascript:alert(1)', title: 'x', note: '' },
     ] })
     expect(info.links).toEqual([{ url: 'https://nomad.coffee', label: 'nomad.coffee' }, { url: 'https://instagram.com/reel/1', label: 'food finds' }])
+  })
+})
+
+describe("lineInfo: a flight's terminal and gate", () => {
+  const end = (o: object) => ({ iata: 'AMS', airport: 'Schiphol', city: 'Amsterdam', country: 'NL', lat: 1, lng: 1,
+    scheduled: '2027-02-08 07:20+01:00', revised: null, terminal: null, gate: null, desk: null, belt: null, ...o })
+  const flown = (dep: object, status = 'Expected') => stop({ kind: 'journey', mode: 'flight', title: 'KL 1001',
+    flight: { number: 'KL 1001', airline: 'KLM', status, live: true, checked_at: '', dep: end(dep), arr: end({ terminal: '4' }) } })
+
+  it('shows where to go when leaving', () => {
+    expect(lineInfo(flown({ terminal: '2', gate: 'E21' }), none).flight).toEqual({ text: 't2 · gate e21', warn: false })
+    expect(lineInfo(flown({ terminal: '2' }), none).flight).toEqual({ text: 't2', warn: false })
+  })
+  it('says a delay in words, in amber', () => {
+    expect(lineInfo(flown({ terminal: '2', revised: '2027-02-08 16:45+01:00' }, 'Delayed'), none).flight).toEqual({ text: 'delayed · leaves 16:45', warn: true })
+  })
+  it('is null when nothing is known, or for anything but a flight', () => {
+    expect(lineInfo(flown({}), none).flight).toBeNull()
+    expect(lineInfo(stop({ kind: 'journey', mode: 'train' }), none).flight).toBeNull()
+    expect(lineInfo(stop(), none).flight).toBeNull()
   })
 })

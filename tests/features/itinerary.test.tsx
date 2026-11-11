@@ -279,6 +279,17 @@ it('a line shows what it holds: its note, booking ref, cost and tickets, and the
   expect(db.open).toHaveBeenCalledWith('nomad', '2025-09-19')
 })
 
+it("a flight's line shows its terminal and gate", () => {
+  const end = (o: object) => ({ iata: 'BCN', airport: 'El Prat', city: 'Barcelona', country: 'ES', lat: 41.3, lng: 2.08,
+    scheduled: '2025-09-19 07:20+02:00', revised: null, terminal: '1', gate: 'B22', desk: null, belt: null, ...o })
+  db.stops = [stop({ id: 'fly', trip_id: 'tk', day: '2025-09-19', time: '07:20', kind: 'journey', mode: 'flight', title: 'VY 1001',
+    origin: place({ name: 'El Prat' }), destination: place({ name: 'Haneda' }),
+    flight: { number: 'VY 1001', airline: 'Vueling', status: 'Expected', live: true, checked_at: '', dep: end({}), arr: end({ terminal: '3', gate: null }) } })]
+  show(tokyo())
+  const line = within(document.querySelector('[data-line="fly"]') as HTMLElement)
+  expect(line.getByText('t1 · gate b22')).toBeInTheDocument()
+})
+
 it('a bare line has no details row', () => {
   show(tokyo())
   expect(within(document.querySelector('[data-line="neel"]') as HTMLElement).queryByRole('button', { name: /details of/ })).toBeNull()

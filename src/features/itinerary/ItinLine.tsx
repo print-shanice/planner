@@ -85,20 +85,21 @@ type Props = {
 
 // the quiet row under a name: everything its card holds, so nothing is hidden behind the name
 function InfoRow({ info, q }: { info: LineInfo; q: string }) {
-  const bits = !!info.ref || info.tickets > 0 || !!info.cost
+  const bits = !!info.ref || !!info.flight || info.tickets > 0 || !!info.cost
   if (!bits && !info.note) return null
   return (
     <>
       {info.note && <span className="itin-note"><Marked text={info.note} q={q} /></span>}
       {bits && <span className="itin-bits mono">
         {info.ref && <span className="bit"><span className="bit-key">ref</span><span className="keep-case"><Marked text={info.ref} q={q} /></span></span>}
+        {info.flight && <span className={`bit${info.flight.warn ? ' warn' : ''}`}><Icon name="plane" size={13} /><span>{info.flight.text}</span></span>}
         {info.tickets > 0 && <span className="bit"><Icon name="file" size={13} /><span>{`${info.tickets} ${info.tickets === 1 ? 'ticket' : 'tickets'}`}</span></span>}
         {info.cost && <span className={`bit${info.cost.paid ? ' paid' : ''}`}><Icon name="money" size={13} /><span>{info.cost.text}</span></span>}
       </span>}
     </>
   )
 }
-const hasInfo = (i: LineInfo) => !!(i.note || i.ref || i.tickets || i.cost)
+const hasInfo = (i: LineInfo) => !!(i.note || i.ref || i.flight || i.tickets || i.cost)
 
 // a line's links: one small icon each, right of the name
 function LineLinks({ info }: { info: LineInfo }) {
