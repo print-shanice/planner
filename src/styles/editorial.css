@@ -1,0 +1,148 @@
+/* Editorial planner layer: expressive structure around the existing interactions. */
+:root {
+  --ground: #f3efe7;
+  --paper-2: #ebe5da;
+  --card: #f8f5ef;
+  --ink: #2a2823;
+  --ink-2: #777168;
+  --ink-3: #9b9489;
+  --line: #cfc7bb;
+  --soft: #e8e1d6;
+  --accent: #9d4a38;
+  --ok: #456b58;
+  --ok-bg: #dce7dd;
+  --warn: #8d6418;
+  --warn-bg: #efe1bb;
+  --idle: #777168;
+  --radius: 0px;
+  --shadow: none;
+  --f-head: Georgia, 'Times New Roman', serif;
+  --f-body: 'Hanken Grotesk Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+body { background: var(--ground); color: var(--ink); }
+.app { text-transform: none; }
+.wordmark { color: var(--ink); font-family: var(--f-head); font-weight: 400; letter-spacing: -.08em; }
+.head, h1, h2, h3, .lead-name, .trip-title-row h1, .doc-date, .capture-title { font-family: var(--f-head); font-weight: 400; letter-spacing: -.055em; }
+.muted, .mono-label, .eyebrow, .label { color: var(--ink-2); }
+
+/* Shared controls: quiet paper objects with a single dark action. */
+.btn, .icon-btn, .pill, .cat-chip, .select-all, .today-chip, .text-select, .action { border-radius: 0; }
+.btn, .icon-btn { box-shadow: none; }
+.btn.primary, .icon-btn.filled, .plus-btn { background: var(--ink); color: var(--ground); }
+.btn.primary:hover, .icon-btn.filled:hover, .plus-btn:hover:not(:disabled) { filter: none; background: var(--accent); }
+.btn.ghost, .btn.secondary, .pill { border-color: var(--ink); background: transparent; }
+.btn.ghost:hover, .btn.secondary:hover, .pill:hover { background: var(--ink); color: var(--ground); }
+
+/* Home becomes a working index, not a product landing page. */
+.home { width: min(1180px, 100%); padding: 24px 28px 64px; gap: 30px; }
+.home-top { min-height: 54px; border-bottom: 1px solid var(--ink); padding-bottom: 11px; align-items: flex-start; gap: 28px; }
+.home-mark { font-size: 30px; }
+.home-mark img { filter: grayscale(1) brightness(.24); opacity: .92; }
+.home-views { gap: 22px; border-bottom: 0; }
+.home-view { min-height: 34px; font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+.home-view[aria-current='page'] { border-bottom-width: 1px; }
+.account-name { font-family: var(--f-head); font-size: 18px; font-weight: 400; }
+.lead { position: relative; border-radius: 0; padding: 21px 24px 18px 29px; background: var(--paper-2); border: 1px solid var(--line); border-left: 6px solid var(--c); color: var(--ink); }
+.lead-name { font-size: clamp(38px, 5vw, 64px); line-height: .88; }
+.lead-dates { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; }
+.lead .lead-go { color: var(--ink); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; border-bottom: 1px solid currentColor; }
+.section-head { border-bottom: 1px solid var(--ink); padding-bottom: 9px; }
+.section-head h2 { font-size: 32px; }
+.family { border-radius: 0; background: var(--card); border-color: var(--line); }
+.family-head { min-height: 70px; padding: 15px 18px; }
+.trip-item-name, .side-name { font-family: var(--f-head); font-size: 22px; font-weight: 400; letter-spacing: -.04em; }
+.trip-item-text .muted, .side-grand { font-family: var(--f-mono); font-size: 10px; letter-spacing: .03em; }
+.family-sides { border-top-color: var(--line); }
+.side-item { border-radius: 0; }
+.home-cal { border-radius: 0; background: transparent; border-color: var(--line); }
+.cal-head, .cal-grid { border-color: var(--line); }
+.cal-day { border-radius: 0; }
+.cal-day[data-today] .cal-n { background: var(--ink); color: var(--ground); border-radius: 0; }
+.rows, .list, .link-list, .travels-card { border-radius: 0; background: var(--card); border-color: var(--line); }
+.trip-row { min-height: 60px; }
+.trip-row-name { font-family: var(--f-head); font-size: 20px; font-weight: 400; }
+.family-head .trip-mark, .side-item .trip-mark { filter: saturate(.72); }
+
+/* Trip view: an editorial document on desktop, a focused reading surface on phone. */
+.trip-header { grid-template-columns: minmax(0, 1fr); padding: 18px 24px 8px; }
+.trip-phone .trip-main { width: min(760px, 100%); }
+.trip-title-row h1 { font-size: clamp(40px, 5vw, 72px); line-height: .85; }
+.trip-meta { font-family: var(--f-mono); font-size: 11px; letter-spacing: .04em; }
+.trip-bar { position: sticky; top: 0; background: var(--ground); }
+.section-tabs { margin-inline: 24px; gap: 24px; }
+.section-tabs button { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.tab-bar { background: color-mix(in srgb, var(--ground) 94%, transparent); border-bottom: 1px solid var(--line); }
+.doc { padding-inline: 24px; }
+.doc-tools { margin-inline: -24px; padding-inline: 16px; background: var(--ground); }
+.strip-day, .today-chip { border-radius: 0; }
+.strip-day[aria-current='true'] { background: var(--ink); }
+.doc-day { padding-top: 34px; }
+.doc-date { font-size: 32px; }
+.doc-day-meta { font-family: var(--f-mono); font-size: 10px; text-transform: uppercase; }
+.itin-line { border-radius: 0; border-top: 1px solid transparent; padding-block: 3px; }
+.itin-line:hover { background: var(--soft); border-top-color: var(--line); }
+.itin-title { font-family: var(--f-head); font-size: 21px; font-weight: 400; letter-spacing: -.025em; }
+.itin-sub, .itin-time { font-size: 12px; }
+.cat { border-radius: 0; }
+.trip-wide .trip-main { border-right-color: var(--line); }
+.split-handle:hover::after, .split-handle.dragging::after, .split-handle:focus-visible::after { background: var(--accent); }
+
+/* Sheets and feature tabs share the same quiet, square language. */
+.sheet { border-radius: 0; background: var(--ground); border-color: var(--ink); }
+.sheet-head { border-bottom: 1px solid var(--ink); }
+.sheet-title { font-family: var(--f-head); font-size: 32px; font-weight: 400; letter-spacing: -.05em; }
+.sheet-body, .sheet-foot { background: var(--ground); }
+.form-field input, .form-field textarea, .form-field select, .search-box, .ideas-search { border-radius: 0; background: var(--card); border-color: var(--line); }
+.form-field label, .form-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.pack-list > li, .cost-row, .doc-row, .link-card { border-radius: 0; background: var(--card); border-color: var(--line); }
+.pack-name, .cost-name { font-family: var(--f-head); font-size: 18px; font-weight: 400; }
+.tick { border-radius: 0; }
+.map-note { border-radius: 0; box-shadow: none; border: 1px solid var(--ink); }
+
+@media (min-width: 1024px) {
+  .home-plans { grid-template-columns: 340px minmax(0, 1fr); column-gap: 28px; }
+  .family-sides { gap: 8px; padding-inline: 12px; }
+  .side-item { border-radius: 0; background: var(--ground); }
+  .trip-wide .trip-main { min-width: 0; }
+}
+@media (max-width: 700px) {
+  .home { padding: 16px 16px 48px; gap: 22px; }
+  .home-top { gap: 12px; }
+  .home-mark { font-size: 25px; }
+  .home-views { gap: 16px; overflow-x: auto; }
+  .home-view { font-size: 10px; }
+  .lead { padding: 18px 16px 15px 20px; }
+  .lead-name { font-size: 43px; }
+  .section-head h2 { font-size: 28px; }
+  .trip-header { grid-template-columns: minmax(0, 1fr); padding-inline: 16px; }
+  .section-tabs { margin-inline: 16px; gap: 18px; overflow-x: auto; }
+  .doc { padding-inline: 16px; }
+  .doc-tools { margin-inline: -16px; }
+  .doc-date { font-size: 28px; }
+  .itin-title { font-size: 18px; }
+  .trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 92px); }
+}
+
+/* Home index refinements: trip families read as a living register. */
+.home-upcoming .section-head .icon-btn { width: 38px; height: 38px; border-radius: 0; }
+.home-past { opacity: .86; }
+.home-past .section-head { border-bottom-color: var(--line); }
+.home-inbox-view .doc-list, .home-inbox-view .link-list { border-top-color: var(--ink); }
+.home-inbox-view .resume-plan { margin-inline: 0; background: var(--paper-2); padding-inline: 16px; }
+.home-inbox-view .resume-name { font-family: var(--f-head); font-size: 24px; font-weight: 400; }
+.travels-card .totals-block { background: var(--paper-2); }
+
+/* Trip feature refinements: every tab is a different working sheet, not a new visual language. */
+.trip-section > .saved-switch { border-bottom: 1px solid var(--ink); padding-bottom: 10px; }
+.trip-section .section-head, .trip-section .money-head { border-bottom: 1px solid var(--ink); }
+.cost-row, .pack-list > li, .doc-row, .link-card { border-left: 0; border-right: 0; }
+.cost-row:first-child, .pack-list > li:first-child, .doc-row:first-child { border-top: 1px solid var(--line); }
+.money-total, .pack-count { font-family: var(--f-head); font-weight: 400; }
+.money-total strong, .pack-count p { font-family: var(--f-head); font-size: 32px; font-weight: 400; letter-spacing: -.05em; }
+.sheet-root .sheet-backdrop { background: color-mix(in srgb, var(--ink) 32%, transparent); }
+.sheet.page, .sheet.side { box-shadow: none; }
+.sheet-foot { border-top: 1px solid var(--ink); }
+.form-actions .btn { border-radius: 0; }
+.trip-map .map-float, .map-float { border-radius: 0; }
