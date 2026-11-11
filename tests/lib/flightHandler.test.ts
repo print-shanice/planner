@@ -1,4 +1,4 @@
-import { handle, type Db, type Deps } from '../../supabase/functions/flight/handler'
+import { apiKey, handle, type Db, type Deps } from '../../supabase/functions/flight/handler'
 import type { Flight } from '../../supabase/functions/flight/shape'
 
 const now = new Date('2027-02-15T05:00:00Z')
@@ -114,5 +114,20 @@ describe('the flight function', () => {
       expect(await (await handle(post({ stop: 's1' }), s.deps)).json()).toEqual({ error: 'not_flight' })
       expect(s.calls).toEqual([])
     }
+  })
+})
+
+describe('apiKey: the key the function talks to the database with', () => {
+  const env = (o: Record<string, string>) => (n: string) => o[n]
+  it("prefers the planner's own setting", () => {
+    expect(apiKey(env({ PLANNER_PUBLISHABLE_KEY: 'sb_publishable_mine', SUPABASE_PUBLISHABLE_KEYS: '{"default":"sb_publishable_x"}' }))).toBe('sb_publishable_mine')
+  })
+  it("else the publishable key supabase gives every function", () => {
+    expect(apiKey(env({ SUPABASE_PUBLISHABLE_KEYS: '{"default":"sb_publishable_x"}', SUPABASE_ANON_KEY: 'eyJ' }))).toBe('sb_publishable_x')
+    expect(apiKey(env({ SUPABASE_PUBLISHABLE_KEYS: 'sb_publishable_y' }))).toBe('sb_publishable_y')
+  })
+  it('else the old anon key', () => {
+    expect(apiKey(env({ SUPABASE_PUBLISHABLE_KEYS: 'not json', SUPABASE_ANON_KEY: 'eyJ' }))).toBe('eyJ')
+    expect(apiKey(env({ SUPABASE_ANON_KEY: 'eyJ' }))).toBe('eyJ')
   })
 })

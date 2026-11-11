@@ -95,3 +95,17 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   const found = await lookUp(deps, number, date)
   return json(req, 200, typeof found === 'string' ? { error: found } : { flight: found })
 }
+
+// the key the function reaches the database with: the planner's own setting, else the publishable key
+// supabase hands every function (a json object of named keys), else the old anon key
+export function apiKey(env: (name: string) => string | undefined): string {
+  const own = env('PLANNER_PUBLISHABLE_KEY')
+  if (own) return own
+  const given = env('SUPABASE_PUBLISHABLE_KEYS')?.trim()
+  if (given?.startsWith('sb_publishable_')) return given
+  try {
+    const first = Object.values(JSON.parse(given ?? '') as Record<string, unknown>).find((v) => typeof v === 'string' && v)
+    if (typeof first === 'string') return first
+  } catch { /* not json: fall through */ }
+  return env('SUPABASE_ANON_KEY') ?? ''
+}
