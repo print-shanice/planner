@@ -68,3 +68,44 @@ it('shows only one tooltip and dismisses it when the page scrolls', async () => 
   fireEvent.scroll(window)
   expect(screen.queryByRole('tooltip')).toBeNull()
 })
+
+it('can leave a reopened tooltip after dismissing while hovering its text', () => {
+  vi.useFakeTimers()
+  render(<Tooltip text="help"><button>action</button></Tooltip>)
+  const button = screen.getByRole('button')
+  fireEvent.pointerEnter(button)
+  act(() => vi.advanceTimersByTime(400))
+  fireEvent.pointerLeave(button)
+  fireEvent.pointerEnter(screen.getByRole('tooltip'))
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(screen.queryByRole('tooltip')).toBeNull()
+  fireEvent.pointerEnter(button)
+  act(() => vi.advanceTimersByTime(400))
+  expect(screen.getByRole('tooltip')).toBeInTheDocument()
+  fireEvent.pointerLeave(button)
+  act(() => vi.advanceTimersByTime(200))
+  expect(screen.queryByRole('tooltip')).toBeNull()
+})
+
+it('keyboard focus still reveals help after a drag that prevented pointer focus', () => {
+  render(<Tooltip text="drag or use arrow keys"><button onPointerDown={e => e.preventDefault()}>handle</button></Tooltip>)
+  const button = screen.getByRole('button')
+  fireEvent.pointerDown(button)
+  fireEvent.pointerUp(document.body)
+  fireEvent.focus(button)
+  expect(screen.getByRole('tooltip')).toHaveTextContent('drag or use arrow keys')
+})
+
+it('Escape closes help even when an editor prevents default, preserving its handler', () => {
+  vi.useFakeTimers()
+  const edited = vi.fn()
+  render(<Tooltip text="automatically ordered"><input aria-label="time" onKeyDown={e => {
+    if (e.key === 'Escape') { e.preventDefault(); edited(); e.currentTarget.blur() }
+  }} /></Tooltip>)
+  const input = screen.getByRole('textbox')
+  fireEvent.pointerEnter(input)
+  act(() => vi.advanceTimersByTime(400))
+  fireEvent.keyDown(input, { key: 'Escape' })
+  expect(edited).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('tooltip')).toBeNull()
+})

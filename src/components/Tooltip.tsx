@@ -19,7 +19,7 @@ export function Tooltip({ text, children, help = false }: Props) {
   const overTip = useRef(false)
   const overTrigger = useRef(false)
   const clear = () => clearTimeout(timer.current)
-  const close = () => { clear(); setAnchor(null) }
+  const close = () => { clear(); overTip.current = false; setAnchor(null) }
   const show = (el: HTMLElement) => {
     clear()
     trigger.current = el
@@ -29,14 +29,22 @@ export function Tooltip({ text, children, help = false }: Props) {
   const leave = () => {
     clear()
     timer.current = setTimeout(() => {
-      if (!focused.current && !overTrigger.current && !overTip.current) setAnchor(null)
+      if (!focused.current && !overTrigger.current && !overTip.current) close()
     }, 150)
   }
 
   useEffect(() => {
     const other = (e: Event) => { if ((e as CustomEvent).detail !== id) close() }
+    const released = () => { pointerFocus.current = false }
     window.addEventListener(OPEN, other)
-    return () => { clear(); window.removeEventListener(OPEN, other) }
+    window.addEventListener('pointerup', released)
+    window.addEventListener('pointercancel', released)
+    return () => {
+      clear()
+      window.removeEventListener(OPEN, other)
+      window.removeEventListener('pointerup', released)
+      window.removeEventListener('pointercancel', released)
+    }
   }, [id])
 
   useEffect(() => {
@@ -88,6 +96,12 @@ export function Tooltip({ text, children, help = false }: Props) {
       },
       onBlur: e => { focused.current = false; pointerFocus.current = false; leave(); p.onBlur?.(e) },
       onClick: e => { if (help) show(e.currentTarget); else close(); pointerFocus.current = false; p.onClick?.(e) },
+      onKeyDown: e => {
+        p.onKeyDown?.(e)
+        // Editors may prevent Escape's default. Dismiss help as well, while leaving
+        // the event handled so the sheet's layer doesn't close underneath it.
+        if (e.key === 'Escape' && anchor) { e.preventDefault(); close() }
+      },
     })}
     {anchor && createPortal(
       <div ref={tip} id={id} role="tooltip" className="context-tip" style={position}

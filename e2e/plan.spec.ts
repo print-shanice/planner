@@ -72,7 +72,7 @@ test.describe('the plan', () => {
     else await sat.getByRole('button', { name: 'open musée d’orsay' }).click()
     const card = page.getByRole('dialog', { name: 'musée d’orsay' })
     await expect(card.getByRole('link', { name: 'directions' })).toHaveAttribute('href', /google\.com\/maps/)
-    await expect(card.getByRole('button', { name: 'ticket' })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'ticket', exact: true })).toBeVisible()
     await expect(card).toContainText('sat 20 feb · 10:00')
     await expect(card.getByRole('link', { name: /^next · du pain et des idées/ })).toBeVisible()
     await card.getByLabel('day').selectOption('2027-02-21')
