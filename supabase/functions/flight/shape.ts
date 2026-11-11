@@ -44,7 +44,7 @@ function toEnd(v: unknown): FlightEnd | null {
   const at = obj(a.location)
   return {
     iata: text(a.iata) ?? '',
-    airport: text(a.shortName) ?? text(a.name) ?? '',
+    airport: text(a.name) ?? text(a.shortName) ?? '',
     city: text(a.municipalityName) ?? '',
     country: text(a.countryCode),
     lat: num(at.lat),

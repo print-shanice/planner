@@ -33,7 +33,7 @@ describe('toFlight: the trimmed flight a journey keeps', () => {
     expect(f.live).toBe(false)
     expect(f.checked_at).toBe('2026-11-11T15:00:00.000Z')
     expect(f.dep).toEqual({
-      iata: 'AMS', airport: 'Schiphol', city: 'Amsterdam', country: 'NL', lat: 52.31, lng: 4.76,
+      iata: 'AMS', airport: 'Amsterdam Airport Schiphol', city: 'Amsterdam', country: 'NL', lat: 52.31, lng: 4.76,
       scheduled: '2027-02-15 07:20+01:00', revised: null, terminal: null, gate: null, desk: null, belt: null,
     })
     expect(f.arr.iata).toBe('LHR')
