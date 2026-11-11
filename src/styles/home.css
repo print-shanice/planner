@@ -7,15 +7,15 @@
 }
 .home-top { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .home-mark { flex: 1; min-width: 0; line-height: 1; }
-.home-mark img { display: block; width: 180px; max-width: 100%; height: auto; }
-.account-name { font-size: 20px; font-weight: 700; }
+.home-mark { font-size: 40px; line-height: .9; }
+.account-name { font-size: 20px; font-weight: 500; }
 
 /* one view at a time: trips, inbox, travels. on a phone the switch sits under the wordmark; on a laptop beside it */
 .home-top { flex-wrap: wrap; }
 .home-views { order: 3; flex-basis: 100%; display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
 .home-view {
-  display: inline-flex; align-items: center; min-height: 44px; margin-bottom: -1px; border-bottom: 2px solid transparent;
-  color: var(--ink-3); font-size: 15px; font-weight: 700; text-decoration: none;
+  display: inline-flex; align-items: center; min-height: 44px; margin-bottom: -1px; border-bottom: 1px solid transparent;
+  color: var(--ink-3); font-size: 15px; font-weight: 500; text-decoration: none;
 }
 .home-view:hover { color: var(--ink); }
 .home-view[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
@@ -24,7 +24,7 @@
 /* once measured, one underline slides between the views instead of each one drawing its own */
 .home-views.inked .home-view[aria-current="page"] { border-bottom-color: transparent; }
 .home-views-ink {
-  position: absolute; left: 0; bottom: -1px; height: 2px; width: 0; border-radius: 2px; background: var(--ink); pointer-events: none;
+  position: absolute; left: 0; bottom: -1px; height: 1px; width: 0; background: var(--ink); pointer-events: none;
   transition: transform .34s cubic-bezier(.3, .8, .2, 1), width .34s cubic-bezier(.3, .8, .2, 1);
 }
 .home-views:not(.inked) .home-views-ink { display: none; }
@@ -46,57 +46,61 @@
 .home-trips, .home-inbox-view, .home-plans { display: grid; gap: 24px; min-width: 0; }
 /* on home only trip days can be tapped; the others still read as ordinary days, not greyed out */
 .home-cal .cal-day[data-out] .cal-n { color: inherit; font-weight: inherit; }
+/* the month and the trip list each open on their own rule; no second line between them */
+.home-plans .cal { border-bottom: 0; }
 .home-inbox-view .resume-plan { margin-inline: 0; }
 
-/* the trip you're on, or the next one: a banner in its own colour */
+/* the trip you're on, or the next one: a pale green block, its name set big in the serif */
 .lead {
-  display: grid; gap: 10px; padding: 18px 18px 14px; border-radius: var(--radius);
-  background: var(--c); color: var(--card);
+  display: grid; gap: 14px; padding: 20px 20px 16px;
+  background: var(--mark); color: var(--ink);
 }
-.lead-text { display: grid; gap: 4px; min-width: 0; }
-.lead .lead-when { color: inherit; opacity: .85; }
-.lead-name { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; overflow-wrap: anywhere; }
-.lead-dates { font-size: 14px; opacity: .9; }
-.lead .lead-go { justify-self: start; min-height: 32px; color: inherit; font-size: 14px; }
+.lead-text { display: grid; gap: 6px; min-width: 0; }
+.lead .lead-when { color: var(--mark-ink); }
+.lead-name { font-size: 44px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; overflow-wrap: anywhere; }
+.lead-dates { font-family: var(--f-mono); font-size: 13px; color: var(--ink-2); }
+.lead .lead-go { justify-self: start; min-height: 32px; color: var(--ink); font-size: 14px; }
 
 /* trips: one card per trip, its side trips inside it on a line in the trip's colour */
-.trip-families { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.family { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.family-head { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; color: inherit; text-decoration: none; transition: background .15s; }
-.family-head:hover, .side-item:hover { background: var(--soft); }
+/* trips: an index, one ruled row per trip, its side trips listed under it */
+.trip-families { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--ink); }
+.family { border-bottom: 1px solid var(--line); }
+.family-head { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 0; color: inherit; text-decoration: none; }
+.family-head:hover .trip-item-name, .side-item:hover .side-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .family-head .dot, .side-item .dot { background: var(--c); }
 .trip-item-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
-.trip-item-name { font-weight: 700; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-item-text .muted { font-size: 14px; }
+.trip-item-name { font-family: var(--f-head); font-weight: 500; font-size: 22px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-item-text .muted { font-family: var(--f-mono); font-size: 12.5px; }
 .family-count { flex: none; }
-.family-sides { position: relative; list-style: none; margin: 0; padding: 0 0 6px; border-top: 1px solid var(--line); }
-.family-sides::before { content: ''; position: absolute; left: 20px; top: 0; bottom: 24px; width: 2px; border-radius: 2px; background: var(--c); opacity: .5; }
-.side-item { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 16px 8px 40px; color: inherit; text-decoration: none; transition: background .15s; }
-.side-item::before { content: ''; position: absolute; left: 21px; top: 50%; width: 13px; height: 2px; background: color-mix(in srgb, var(--ink-3) 60%, transparent); }
+.family-sides { position: relative; list-style: none; margin: 0; padding: 0 0 10px; }
+.family-sides::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 30px; width: 1px; background: var(--line); }
+.side-item { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 0 6px 32px; color: inherit; text-decoration: none; }
+.side-item::before { content: ''; position: absolute; left: 10px; top: 50%; width: 14px; height: 1px; background: var(--line); }
 .side-item .dot { width: 8px; height: 8px; }
-.side-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-grand { font-size: 12px; }
 
 @media (min-width: 1024px) {
   .home { width: min(1120px, 100%); padding-inline: 32px; gap: 32px; }
   .home-top { flex-wrap: nowrap; gap: 28px; }
   .home-views { order: 0; flex-basis: auto; border-bottom: 0; }
-  .lead { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 24px 28px; }
-  .lead-name { font-size: 40px; }
+  .lead { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 28px 32px 24px; }
+  .lead-name { font-size: 64px; }
   .lead .lead-go { justify-self: end; }
   /* each trip's card: its side trips inside as small tiles, three to a row */
-  .family-head { padding: 16px 20px; }
-  .family-head .trip-item-name { font-family: var(--f-head); font-size: 21px; }
-  .family-sides { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 16px 16px; border-top: 0; }
+  /* each trip's side trips in columns under it, divided by hairlines */
+  .family-head { padding: 16px 0; }
+  .family-head .trip-item-name { font-size: 26px; }
+  .family-sides { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding: 0 0 18px 34px; }
   .family-sides::before { display: none; }
   .side-item {
-    height: 100%; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 0; padding: 12px 14px;
-    background: var(--ground); border: 1px solid var(--line); border-radius: 12px;
+    height: 100%; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 0; padding: 4px 16px 4px 14px;
+    border-left: 1px solid var(--line);
   }
   .side-item::before { display: none; }
-  .side-item .dot { width: 24px; height: 3px; border-radius: 2px; }
+  .side-item .dot { width: 8px; height: 8px; }
   .side-item .trip-item-text { width: 100%; }
-  .side-item .muted { font-size: 13px; }
+  .side-item .muted { font-family: var(--f-body); font-size: 13px; }
   /* the month on the left, what's coming beside it */
   .home-plans { grid-template-columns: 400px minmax(0, 1fr); column-gap: 32px; align-items: start; }
   .home-plans:not(:has(.home-cal)) { grid-template-columns: minmax(0, 1fr); }
@@ -119,7 +123,7 @@
 
 .globe-pin {
   width: 24px; height: 32px; padding: 0; border: 0; background: none; cursor: pointer;
-  filter: drop-shadow(0 2px 3px rgba(22, 24, 29, .3));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .3));
 }
 .globe-pin svg { display: block; }
 .globe-pin path { fill: var(--been); stroke: var(--card); stroke-width: 1.5; }
@@ -134,8 +138,7 @@
   position: absolute; z-index: 5; width: max-content; max-width: 220px;
   transform: translate(-50%, calc(-100% - 40px));
   display: grid; gap: 2px; padding: 10px 14px 11px;
-  background: var(--ink); color: var(--card); border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(22, 24, 29, .24);
+  background: var(--ink); color: var(--card); border-radius: 8px;
   pointer-events: none; animation: tip-in .16s ease-out;
 }
 .globe-tip::after {
@@ -143,7 +146,7 @@
   width: 10px; height: 10px; margin-left: -5px; border-radius: 2px;
   background: var(--ink); transform: rotate(45deg);
 }
-.globe-tip strong { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; line-height: 1.2; }
+.globe-tip strong { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; line-height: 1.2; }
 .globe-tip strong::before { content: ''; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--been); }
 .globe-tip[data-status="planned"] strong::before { background: transparent; box-shadow: inset 0 0 0 2px var(--been-soft); }
 .globe-tip span { font-size: 13px; line-height: 1.35; color: color-mix(in srgb, var(--card) 72%, transparent); }
@@ -151,22 +154,22 @@
 
 .totals { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; text-align: center; }
 .totals div { display: grid; gap: 2px; }
-.totals dt { font-size: 30px; font-weight: 700; line-height: 1.1; }
-.totals dd { margin: 0; font-size: 13px; }
+.totals dt { font-family: var(--f-head); font-size: 34px; font-weight: 400; line-height: 1.1; }
+.totals dd { margin: 0; font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 
 .home-section { display: grid; gap: 12px; }
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
-.section-head h2 { font-size: 22px; font-weight: 700; }
+.section-head h2 { font-size: 30px; font-weight: 400; line-height: 1.1; }
 
-.rows { display: grid; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.rows { display: grid; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .trip-row {
-  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 18px;
+  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 2px;
   text-decoration: none; border-top: 1px solid var(--line);
 }
 .trip-row:first-child { border-top: 0; }
-.trip-row:hover { background: var(--ground); }
-.trip-row-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-row .muted { font-size: 14px; }
+.trip-row:hover .trip-row-name { text-decoration: underline; text-underline-offset: 3px; }
+.trip-row-name { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-row .muted { font-family: var(--f-mono); font-size: 12.5px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 
 .swatches { display: flex; gap: 10px; }
@@ -176,14 +179,14 @@
 .form-actions { padding-top: 4px; }
 .swatch::after { content: ''; position: absolute; inset: -4px; }
 /* the hint maplibre shows when one finger tries to turn the globe */
-.globe .maplibregl-cooperative-gesture-screen { background: rgba(22, 24, 29, 0.4); color: var(--card); font: 600 15px/1.3 var(--f-body); border-radius: 50%; padding: 0 22%; text-align: center; }
+.globe .maplibregl-cooperative-gesture-screen { background: rgba(0, 0, 0, 0.4); color: var(--card); font: 600 15px/1.3 var(--f-body); border-radius: 50%; padding: 0 22%; text-align: center; }
 
 /* your travels, wrapped: the globe and its numbers in one card, like next up's calendar */
-.travels-card { display: grid; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.travels-card { display: grid; border-bottom: 1px solid var(--line); }
 .travels-card .globe-wrap { width: min(100% - 32px, 380px); margin: 18px auto 14px; }
 .travels-card .totals-block { display: grid; gap: 8px; padding: 14px 8px 16px; border-top: 1px solid var(--line); }
-.totals-title { text-align: center; font-size: 17px; font-weight: 700; }
-.travels-card .totals dt { font-size: 26px; }
+.totals-title { text-align: center; font-size: 20px; font-weight: 400; }
+.travels-card .totals dt { font-size: 34px; }
 /* each total shows the globe's tooltip, listing what it counts */
 .total { position: relative; display: grid; gap: 2px; border-radius: 12px; cursor: default; outline: none; }
 .total:focus-visible { box-shadow: 0 0 0 2px var(--ink); }
@@ -202,7 +205,7 @@
 .inbox-tools { display: flex; margin-bottom: -10px; }
 /* "select all" is a quiet pill above the ticks it works on, so it never reads like a row's "add to a trip" */
 .select-all {
-  display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px;
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--card); color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s, background .15s;
 }
 .select-all:hover { border-color: var(--ink-3); color: var(--ink); }
@@ -223,10 +226,10 @@
 .bulk-bar {
   position: sticky; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 5;
   display: flex; align-items: center; gap: 18px; padding: 6px 8px 6px 18px; margin-top: 4px;
-  background: var(--ink); color: var(--card); border-radius: 999px; box-shadow: 0 10px 28px rgba(22, 24, 29, .2);
+  background: var(--ink); color: var(--card); border-radius: 10px;
   animation: bulk-in .2s ease-out;
 }
-.bulk-count { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; white-space: nowrap; }
+.bulk-count { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; white-space: nowrap; }
 .bulk-bar .text-select, .bulk-bar .text-link { color: var(--card); min-height: 44px; padding: 0 10px; font-size: 15px; font-weight: 600; }
 .bulk-bar :disabled { opacity: .45; }
 @keyframes bulk-in { from { opacity: 0; transform: translateY(12px); } }
@@ -237,14 +240,14 @@
 .scrapbook { display: grid; gap: 36px; min-width: 0; }
 .scrap { display: grid; gap: 14px; min-width: 0; }
 .scrap-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.scrap-head h2 { font-size: 22px; font-weight: 700; }
+.scrap-head h2 { font-size: 30px; font-weight: 400; line-height: 1.1; }
 .world-line { display: flex; align-items: center; gap: 12px; font-size: 14px; }
-.world-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; }
-.world-bar i { display: block; height: 100%; border-radius: 3px; background: var(--ink); animation: grow-in 1.4s cubic-bezier(.2, .8, .2, 1) both; transform-origin: left; }
+.world-bar { flex: 1; height: 4px; border-radius: 0; background: var(--soft); overflow: hidden; }
+.world-bar i { display: block; height: 100%; background: var(--ink); animation: grow-in 1.4s cubic-bezier(.2, .8, .2, 1) both; transform-origin: left; }
 @keyframes grow-in { from { transform: scaleX(0); } }
 
 /* getting around: one hairline row per way of travelling, its glyph and count; open, it lists the routes (and the globe draws them) */
-.ways { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.ways { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
 .way { border-bottom: 1px solid var(--line); animation: rise-in .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
 .way-row {
   display: grid; grid-template-columns: 28px 1fr auto 20px; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 6px 0;
@@ -252,8 +255,8 @@
 }
 .way-ico { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); color: var(--ink); transition: background .2s, color .2s, border-color .2s; }
 .way.open .way-ico { background: var(--ink); color: var(--card); border-color: var(--ink); }
-.way-name { font-size: 16px; font-weight: 600; }
-.way-n { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
+.way-name { font-size: 16px; font-weight: 500; }
+.way-n { font-size: 28px; font-weight: 400; letter-spacing: -0.01em; }
 .way-chevron { display: grid; place-items: center; color: var(--ink-3); transition: transform .25s; }
 .way.open .way-chevron { transform: rotate(180deg); }
 .way-routes { list-style: none; margin: 0; padding: 2px 0 14px 40px; display: grid; gap: 8px; animation: rise-in .3s ease-out; }
@@ -261,7 +264,7 @@
 .way-arrow { color: var(--ink-3); }
 
 /* the glyph on the middle of a drawn route */
-.globe-glyph { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--card); color: var(--ink); border: 1px solid var(--ink); box-shadow: 0 1px 4px rgba(22, 24, 29, .18); pointer-events: none; }
+.globe-glyph { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--card); color: var(--ink); border: 1px solid var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .18); pointer-events: none; }
 
 /* passport: one stamp per country, landing with a thump one after another */
 .passport { display: flex; flex-wrap: wrap; gap: 2px 4px; }
@@ -273,15 +276,15 @@
 .stamp:hover .stamp-art, .stamp:focus-visible .stamp-art { transform: rotate(0deg) scale(1.07); opacity: 1; }
 .stamp:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .stamp-art text { text-transform: lowercase; }
-.stamp-code { font-family: var(--f-head); font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+.stamp-code { font-family: var(--f-head); font-size: 34px; font-weight: 500; letter-spacing: -0.01em; }
 .stamp-date, .stamp-ring, .stamp-name { font-family: var(--f-mono); letter-spacing: .12em; }
 .stamp-date { font-size: 8.5px; letter-spacing: .04em; }
 .stamp-ring { font-size: 9.5px; letter-spacing: .18em; }
 .stamp-name { font-size: 10px; }
-.stamp-big { font-family: var(--f-mono); font-size: 15px; font-weight: 700; letter-spacing: .06em; }
+.stamp-big { font-family: var(--f-mono); font-size: 15px; font-weight: 600; letter-spacing: .06em; }
 .stamp-small, .stamp-serial { font-family: var(--f-mono); font-size: 6.6px; letter-spacing: .08em; }
 .stamp-serial { font-size: 7.5px; }
-.stamp-cc { font-family: var(--f-head); font-size: 12px; font-weight: 800; }
+.stamp-cc { font-family: var(--f-head); font-size: 12px; font-weight: 500; }
 @keyframes stamp-in { 0% { opacity: 0; transform: scale(1.6); } 60% { opacity: 1; transform: scale(.94); } 100% { transform: scale(1); } }
 
 /* favourites: polaroids, fanned, swiped through; each opens its place */
@@ -292,15 +295,15 @@
 .polaroids::-webkit-scrollbar { display: none; }
 .polaroid {
   flex: none; display: grid; gap: 3px; width: 150px; margin-right: -6px; padding: 8px 8px 12px; scroll-snap-align: start;
-  background: var(--card); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(22, 24, 29, .1); color: inherit; text-decoration: none;
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0, 0, 0, .1); color: inherit; text-decoration: none;
   transform: rotate(var(--r, -2deg)); transition: transform .25s cubic-bezier(.3, 1.4, .5, 1), box-shadow .25s;
   animation: rise-in .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 70ms + 100ms);
 }
 .polaroid:nth-child(3n + 2) { --r: 2.5deg; }
 .polaroid:nth-child(3n) { --r: -1deg; }
-.polaroid:hover, .polaroid:focus-visible { transform: rotate(0deg) translateY(-6px); box-shadow: 0 14px 28px rgba(22, 24, 29, .16); position: relative; z-index: 1; }
-.polaroid-photo { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 6px; background: var(--c); color: var(--card); font-family: var(--f-head); font-size: 40px; font-weight: 800; }
-.polaroid-name { font-weight: 700; font-size: 14px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.polaroid:hover, .polaroid:focus-visible { transform: rotate(0deg) translateY(-6px); box-shadow: 0 14px 28px rgba(0, 0, 0, .16); position: relative; z-index: 1; }
+.polaroid-photo { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 6px; background: var(--c); color: var(--card); font-family: var(--f-head); font-size: 48px; font-weight: 400; }
+.polaroid-name { font-weight: 600; font-size: 14px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .polaroid-city { font-size: 12px; }
 .polaroid-stars { font-size: 13px; letter-spacing: 1px; color: var(--ink); }
 

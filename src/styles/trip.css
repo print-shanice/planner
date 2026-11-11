@@ -4,20 +4,20 @@
 /* The trip header stays consistent across calendar, itinerary, and sections. */
 .back-link {
   justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-left: -8px; padding: 0 12px 0 4px;
-  border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; color: var(--ink-2); max-width: 100%;
+  border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 15px; color: var(--ink-2); max-width: 100%;
 }
-.back-link:hover { color: var(--ink); background: var(--soft); }
+.back-link:hover { color: var(--ink); }
 .back-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .trip-title-row { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
-.trip-title-row h1 { flex: 1; min-width: 0; font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; }
+.trip-title-row h1 { flex: 1; min-width: 0; font-size: 44px; font-weight: 400; line-height: 1.05; letter-spacing: -0.02em; }
 .one-line, .one-line > span, .one-line .title-btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .one-line .title-btn { max-width: 100%; }
 .trip-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; }
 .trip-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-flags { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 4px; flex: none; line-height: 1; }
-.flag { flex: none; width: 1.05em; height: 1.05em; border-radius: 50%; vertical-align: -0.16em; box-shadow: 0 0 0 1px var(--line); }
-.title-flag { flex: none; display: inline-flex; font-size: 24px; }
+.flag { flex: none; width: 1em; height: 1em; border-radius: 50%; vertical-align: -0.14em; box-shadow: 0 0 0 1px var(--line); }
+.title-flag { flex: none; display: inline-flex; font-size: 26px; }
 .trip-flags-more { font-family: var(--f-body); font-size: 12px; font-weight: 600; color: var(--ink-2); }
 /* with side trips or a parent, the title opens the trip family */
 .title-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; letter-spacing: inherit; text-align: left; border-radius: 8px; }
@@ -29,22 +29,22 @@
 .tree-row { display: flex; align-items: center; gap: 2px; }
 .tree-link {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 10px;
-  border-radius: 12px; text-decoration: none;
+  border-radius: 6px; text-decoration: none;
 }
-.tree-link:hover { background: var(--ground); }
+.tree-link:hover { background: var(--paper-2); }
 .tree-link .dot { background: var(--c); }
 .tree-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tree-root > li > .tree-row .tree-name { font-family: var(--f-head); font-size: 18px; font-weight: 700; }
+.tree-root > li > .tree-row .tree-name { font-family: var(--f-head); font-size: 22px; font-weight: 400; }
 .tree-link .muted { flex: none; font-size: 14px; }
 .tree-link[aria-current="page"] { background: var(--soft); }
-.tree-link[aria-current="page"] .tree-name { font-weight: 800; }
+.tree-link[aria-current="page"] .tree-name { text-decoration: underline; text-underline-offset: 3px; }
 .tree-toggle .icon { transition: transform .15s; }
 .tree-toggle[aria-expanded="false"] .icon { transform: rotate(-90deg); }
 .avatars { display: flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: flex-end; padding: 0 2px; border: 0; background: none; border-radius: 999px; cursor: pointer; }
 .avatars:disabled { cursor: default; }
 .avatar {
   width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--soft); color: var(--card); font-size: 13px; font-weight: 700; border: 2px solid var(--ground);
+  background: var(--soft); color: var(--card); font-size: 13px; font-weight: 600; border: 2px solid var(--ground);
 }
 .avatar + .avatar { margin-left: -8px; }
 
@@ -61,7 +61,7 @@
 .saved-tools { display: flex; align-items: center; gap: 8px; }
 .saved-tools .search-box { flex: 1; min-width: 0; background: var(--soft); }
 .saved-tools .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
-.saved-tools .search-box:focus-within { box-shadow: 0 0 0 2px var(--ink); }
+.saved-tools .search-box:focus-within { box-shadow: 0 0 0 1.5px var(--ink); }
 .pick-bar { display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 0; }
 .pick-bar .muted { flex: 1; font-size: 14px; }
 .pick { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--ink); cursor: pointer; }
@@ -75,22 +75,22 @@
 }
 .tab-bar button {
   flex: 1; max-width: 96px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  border: 0; background: none; color: var(--ink-3); font-size: 11px; font-weight: 600; border-radius: 14px; cursor: pointer;
+  border: 0; background: none; color: var(--ink-3); font-size: 11px; font-weight: 500; border-radius: 8px; cursor: pointer;
 }
-.tab-bar button[aria-pressed="true"] { color: var(--ink); font-weight: 800; }
-.tab-bar button[aria-pressed="true"] .icon { stroke-width: 2.3; }
+.tab-bar button[aria-pressed="true"] { color: var(--ink); font-weight: 500; }
+.tab-bar button[aria-pressed="true"] .icon { stroke-width: 2.1; }
 /* laptops: one quiet row of text tabs under the title */
 .section-tabs { display: flex; gap: 22px; margin: 8px 16px 0; border-bottom: 1px solid var(--line); }
 .section-tabs button {
-  min-height: 44px; padding: 0; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none;
-  color: var(--ink-3); font-size: 15px; font-weight: 600; cursor: pointer;
+  min-height: 44px; padding: 0; margin-bottom: -1px; border: 0; border-bottom: 1px solid transparent; background: none;
+  color: var(--ink-3); font-size: 15px; font-weight: 500; cursor: pointer;
 }
 .section-tabs button:hover { color: var(--ink); }
-.section-tabs button[aria-pressed="true"] { color: var(--ink); font-weight: 800; border-bottom-color: var(--ink); }
+.section-tabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 .trip-inline-section { margin: 0 16px 24px; padding-top: 16px; }
 .trip-inline-section > .saved-switch { margin-bottom: 16px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0 12px; }
-.section-heading h2, .itinerary-heading h2 { font-size: 22px; font-weight: 700; }
+.section-heading h2, .itinerary-heading h2 { font-family: var(--f-head); font-size: 28px; font-weight: 400; letter-spacing: -0.01em; }
 .section-content { padding-bottom: 20px; }
 .itinerary-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 16px 0 12px; }
 .itinerary-actions { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -102,8 +102,8 @@
 
 .section-action {
   flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
-  width: 44px; padding: 0; border: 0; border-radius: 10px; background: var(--soft); color: var(--ink);
-  font-family: var(--f-body); font-size: 14px; font-weight: 600; cursor: pointer;
+  width: 44px; padding: 0; border: 0; border-radius: 8px; background: var(--soft); color: var(--ink);
+  font-family: var(--f-body); font-size: 14px; font-weight: 500; cursor: pointer;
   transition: background .15s;
 }
 .section-action:hover:not(:disabled) { background: var(--line); }
@@ -118,9 +118,9 @@
 
 /* switching sections never shifts anything: the active tab only changes colour and underline,
    and the column keeps room for its scrollbar */
-.section-tabs button, .section-tabs button[aria-pressed="true"], .saved-switch button, .saved-switch button[aria-pressed="true"] { font-weight: 700; }
+.section-tabs button, .section-tabs button[aria-pressed="true"], .saved-switch button, .saved-switch button[aria-pressed="true"] { font-weight: 500; }
 .trip-wide .trip-main { scrollbar-gutter: stable; }
-@media (max-width: 480px) { .trip-title-row h1 { font-size: 29px; } }
+@media (max-width: 480px) { .trip-title-row h1 { font-size: 38px; } }
 /* switching sections: the old one steps aside and the loading animation fills the space under the navigation */
 .section-wait { display: grid; place-items: center; min-height: calc(100dvh - 280px); padding: 24px 16px; }
 .section-wait img { width: min(220px, 55vw); height: auto; }

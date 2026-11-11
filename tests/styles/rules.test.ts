@@ -34,7 +34,7 @@ it('no literal hex colours in components', () => {
   for (const f of files('src', '.tsx')) expect(read(f), f).not.toMatch(/#[0-9a-fA-F]{6}\b/)
 })
 
-it('the brand red is only for the wordmark', () => {
+it('the brand colour is only for the wordmark', () => {
   const users = [...files('src', '.css'), ...files('src', '.tsx')].filter((f) => read(f).includes('var(--brand)'))
   expect(users).toEqual([join('src', 'styles', 'base.css')])
 })

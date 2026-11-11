@@ -22,9 +22,9 @@
 }
 .itin-head .icon { align-self: center; color: var(--ink-3); transition: transform .15s; }
 .itin-head button[aria-expanded="false"] .icon { transform: rotate(-90deg); }
-.itin-date { flex: none; font-family: var(--f-head); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+.itin-date { flex: none; font-family: var(--f-head); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; }
 .itin-areas { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.itin-side { flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--c); }
+.itin-side { flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 14px; color: var(--c); }
 .itin-side .dot { width: 8px; height: 8px; background: var(--c); }
 .itin-day[style] .itin-head button { box-shadow: inset 3px 0 0 var(--c); padding-left: 10px; }
 
@@ -40,13 +40,13 @@
   color: inherit; text-align: left; cursor: pointer;
 }
 .itin-main:disabled { cursor: default; }
-.itin-title { font-weight: 600; font-size: 15.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.itin-title { font-weight: 500; font-size: 15.5px; line-height: 1.3; overflow-wrap: anywhere; }
 .itin-sub { font-size: 13px; overflow-wrap: anywhere; }
 .itin-snippet { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .itin-line > .pill { margin-top: 8px; }
 .itin-line.quiet .itin-title { font-weight: 400; color: var(--ink-2); font-size: 14.5px; }
 .itin-line:hover { background: var(--soft); }
-.itin-line.current { box-shadow: 0 0 0 2px var(--ink); }
+.itin-line.current { box-shadow: 0 0 0 1px var(--ink); }
 .itin mark { background: var(--found); color: inherit; border-radius: 3px; padding: 0 1px; }
 @keyframes lit { from { background: var(--soft); box-shadow: 0 0 0 2px var(--ink); } to { background: transparent; box-shadow: 0 0 0 2px transparent; } }
 
@@ -89,12 +89,12 @@ button.itin-time { cursor: pointer; min-height: 40px; }
 }
 .doc-time { padding-top: 7px; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .doc-time.till { padding-top: 0; font-size: 12px; color: var(--ink-3); }
-.doc-name { min-height: 30px; font-weight: 600; font-size: 15.5px; line-height: 1.3; }
+.doc-name { min-height: 30px; font-weight: 500; font-size: 15.5px; line-height: 1.3; }
 .doc-time::placeholder, .doc-name::placeholder { color: var(--ink-3); }
 /* on a day with no times, "any" only shows on the line you're on */
 .itin-line.doc:not(:hover):not(:focus-within) .doc-time.quiet::placeholder { color: transparent; }
 .doc-time:hover, .doc-name:hover { background: var(--soft); }
-.doc-time:focus, .doc-name:focus { outline: none; background: var(--soft); box-shadow: inset 0 -2px 0 var(--ink); }
+.doc-time:focus, .doc-name:focus { outline: none; background: var(--soft); box-shadow: inset 0 -1px 0 var(--ink); }
 .itin-line.doc:hover { background: none; }
 
 /* a line's save says so: "saving…", then "saved" for a moment */

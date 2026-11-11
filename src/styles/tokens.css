@@ -1,23 +1,27 @@
 :root {
-  /* white, like totoro's own background, so the loading animation sits in the page with no box around it */
+  /* an index on white paper: near-black ink, hairline rules, and colour only where it means something
+     (a trip's own colour, a flag, a state that needs doing) */
   --ground: #FFFFFF;
-  --paper-2: #F3F4F6;
+  --paper-2: #F6F6F4;
   --card: #FFFFFF;
-  --ink: #16181D;
-  --ink-2: #5D626B;
-  --line: #E3E5E9;
-  --soft: #F1F2F5;
-  --ink-3: #8E9197;
+  --ink: #1C1C1C;
+  --ink-2: #6B6B6B;
+  --ink-3: #8F8F8F;
+  --line: #E6E6E6;
+  --soft: #F4F4F2;
+  /* the one highlight: a pale green wash, for the trip that's next and the day that's today */
+  --mark: #DDF2D9;
+  --mark-ink: #1F5C27;
 
-  --brand: #E60023;
+  --brand: var(--ink);
 
-  --ok: #1F6B45;
-  --ok-bg: #E2F1E8;
+  --ok: #1F6B2F;
+  --ok-bg: #E3F3E0;
   --warn: #8A5200;
-  --warn-bg: #FBEFD6;
-  --idle: #5D626B;
+  --warn-bg: #F8EEDA;
+  --idle: #6B6B6B;
   /* a search match, and nothing else */
-  --found: #FFE97A;
+  --found: #D5F0CF;
 
   --g0: #3346C7;
   --g1: #0F7C8C;
@@ -33,10 +37,10 @@
   --g4s: #F3ECE6;
   --g5s: #E6E8F0;
 
-  --map-water: #CFE0E7;
-  --map-land: #F1EFE8;
-  --globe-water: #B9D3E3;
-  --globe-land: #D3DFC6;
+  --map-water: #D6E1E5;
+  --map-land: #F2F2EF;
+  --globe-water: #C9D9E2;
+  --globe-land: #DCE3D3;
   --been: #C8283A;
   --been-soft: #F3CDD2;
   /* the same two reds, softened once you zoom in close enough to read names on them */
@@ -44,11 +48,13 @@
   --been-soft-near: #F8E3E6;
   --globe-halo: rgba(255, 255, 255, 0.6);
 
-  --f-head: "Bricolage Grotesque Variable", "Hanken Grotesk Variable", system-ui, sans-serif;
-  --f-body: "Hanken Grotesk Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
-  /* times, dates and small labels: the system's own mono, nothing to download */
-  --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* titles in a book serif, everything you read or press in a plain sans, dates and labels in mono */
+  --f-head: "EB Garamond Variable", Garamond, "Times New Roman", serif;
+  --f-body: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  --radius: 20px;
+  --radius: 10px;
   --shadow: 0 1px 0 var(--line);
+  /* floating things over the map keep a faint lift so they read against it; nothing else casts a shadow */
+  --float: 0 0 0 1px rgba(0, 0, 0, .06), 0 2px 8px rgba(0, 0, 0, .08);
 }

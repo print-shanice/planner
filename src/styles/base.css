@@ -14,7 +14,7 @@ button { text-transform: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }
 h1, h2, h3, p { margin: 0; }
-:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+:focus-visible { outline: 1.5px solid var(--ink); outline-offset: 2px; }
 /* inside boxes that clip, the ring is drawn inside so it isn't cut off */
 :where(.list, .rows, .link-card, .map-chips) :focus-visible { outline-offset: -2px; }
 
@@ -24,12 +24,12 @@ select { text-transform: inherit; }
 
 .wordmark {
   font-family: var(--f-head);
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-weight: 400;
+  letter-spacing: -0.02em;
   color: var(--brand);
 }
 .num { font-variant-numeric: tabular-nums; }
-.head { font-family: var(--f-head); letter-spacing: -0.02em; }
+.head { font-family: var(--f-head); font-weight: 500; letter-spacing: -0.01em; }
 .muted { color: var(--ink-2); }
 
 @media (prefers-reduced-motion: reduce) {
