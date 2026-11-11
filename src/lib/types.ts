@@ -1,3 +1,5 @@
+import type { Flight } from '../../supabase/functions/flight/shape'
+
 export type Place = {
   name: string
   address?: string
@@ -55,6 +57,8 @@ export type Stop = {
   ref: string
   notes: string
   category: string | null
+  // a flight's looked-up details, null for anything else
+  flight: Flight | null
   created_by?: string | null
 }
 

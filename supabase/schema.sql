@@ -61,6 +61,9 @@ create table if not exists public.stops (
   updated_at timestamptz not null default now()
 );
 
+-- a flight's looked-up details: airports, times, terminal, gate (written by the flight function)
+alter table public.stops add column if not exists flight jsonb;
+
 create table if not exists public.costs (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips(id) on delete cascade,

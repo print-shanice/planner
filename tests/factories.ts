@@ -18,7 +18,7 @@ export function stop(o: Partial<Stop> = {}): Stop {
   return {
     id: id('s'), trip_id: 't0', kind: 'place', title: 'stop', day: '2027-02-07', position: 0, time: null,
     end_date: null, end_time: null, place: null, mode: null, origin: null, destination: null,
-    status: 'idea', saved: false, url: '', ref: '', notes: '', category: null, ...o,
+    status: 'idea', saved: false, url: '', ref: '', notes: '', category: null, flight: null, ...o,
   }
 }
 

@@ -19,7 +19,7 @@ export function blankStop(kind: StopKind, tripId: string, defaults: Partial<Stop
   return {
     id: newId(), trip_id: tripId, kind, title: '', day: null, position: 0, time: null, end_date: null, end_time: null,
     place: null, mode: kind === 'journey' ? 'train' : null, origin: null, destination: null, status: 'idea', saved: false,
-    url: '', ref: '', notes: '', category: null, ...defaults,
+    url: '', ref: '', notes: '', category: null, flight: null, ...defaults,
   }
 }
 
