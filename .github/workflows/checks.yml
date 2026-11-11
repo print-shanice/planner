@@ -10,6 +10,10 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    container:
+      # Keep in sync with @playwright/test in package-lock.json and deploy.yml.
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,7 +22,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test -- --run
-      - run: npx playwright install --with-deps chromium
       - run: npm run e2e
       - uses: actions/upload-artifact@v4
         if: failure()
