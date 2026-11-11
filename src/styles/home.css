@@ -50,13 +50,13 @@
 .home-plans .cal { border-bottom: 0; }
 .home-inbox-view .resume-plan { margin-inline: 0; }
 
-/* the trip you're on, or the next one: a pale green block, its name set big in the serif */
+/* the trip you're on, or the next one: framed in a hairline of ink, its name set big in the serif */
 .lead {
-  display: grid; gap: 14px; padding: 20px 20px 16px;
-  background: var(--mark); color: var(--ink);
+  display: grid; gap: 14px; padding: 18px 20px 16px;
+  border: 1px solid var(--ink); color: var(--ink);
 }
 .lead-text { display: grid; gap: 6px; min-width: 0; }
-.lead .lead-when { color: var(--mark-ink); }
+.lead .lead-when { color: var(--ink-2); }
 .lead-name { font-size: 44px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; overflow-wrap: anywhere; }
 .lead-dates { font-family: var(--f-mono); font-size: 13px; color: var(--ink-2); }
 .lead .lead-go { justify-self: start; min-height: 32px; color: var(--ink); font-size: 14px; }
@@ -73,39 +73,51 @@
 .trip-item-text .muted { font-family: var(--f-mono); font-size: 12.5px; }
 .family-count { flex: none; }
 .family-sides { position: relative; list-style: none; margin: 0; padding: 0 0 10px; }
-.family-sides::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 30px; width: 1px; background: var(--line); }
+.family-sides::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 34px; width: 1px; background: var(--ink); }
 .side-item { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 0 6px 32px; color: inherit; text-decoration: none; }
-.side-item::before { content: ''; position: absolute; left: 10px; top: 50%; width: 14px; height: 1px; background: var(--line); }
+.side-item::before { content: ''; position: absolute; left: 10px; top: 50%; width: 14px; height: 1px; background: var(--ink); }
 .side-item .dot { width: 8px; height: 8px; }
 .side-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-grand { font-size: 12px; }
 
+/* the stamp: your clock (and, while you're away, the one where you are); the sidebar shows it, phones don't */
+.home-stamp { display: none; }
+.stamp-time { color: var(--ink); font-weight: 500; }
+
 @media (min-width: 1024px) {
-  .home { width: min(1120px, 100%); padding-inline: 32px; gap: 32px; }
-  .home-top { flex-wrap: nowrap; gap: 28px; }
-  .home-views { order: 0; flex-basis: auto; border-bottom: 0; }
+  /* a thin rail on the left (where you are, what's here), the index filling the rest */
+  /* the rail is exactly the screen's height, so the page's own padding moves into the main column (else home would scroll by it) */
+  .home { width: min(1240px, 100%); grid-template-columns: 188px minmax(0, 1fr); column-gap: 48px; align-items: start; padding-block: 0; padding-inline: 32px; }
+  .home-top {
+    grid-column: 1; grid-row: 1 / span 9; position: sticky; top: 0; height: 100dvh;
+    flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 22px; padding: calc(env(safe-area-inset-top) + 28px) 24px 24px 0;
+    border-right: 1px solid var(--line);
+  }
+  .home-mark { flex: none; }
+  .home-views { order: 0; flex-basis: auto; flex-direction: column; gap: 0; border-bottom: 0; }
+  .home-view { min-height: 34px; margin: 0; border: 0; }
+  .home-view[aria-current="page"]::before { content: '→' / ''; margin-right: 8px; }
+  .home-views-ink { display: none; }
+  .home-stamp {
+    display: grid; gap: 3px; margin-top: auto;
+    font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2);
+  }
+  .home-top > .icon-btn { order: 9; margin-left: -10px; }
+  .home-body { grid-column: 2; padding-top: calc(env(safe-area-inset-top) + 28px); padding-bottom: calc(env(safe-area-inset-bottom) + 48px); }
   .lead { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 28px 32px 24px; }
   .lead-name { font-size: 64px; }
   .lead .lead-go { justify-self: end; }
-  /* each trip's card: its side trips inside as small tiles, three to a row */
-  /* each trip's side trips in columns under it, divided by hairlines */
-  .family-head { padding: 16px 0; }
+  /* each trip as an index row, its side trips hanging off it on ruled connectors */
+  .family-head { padding: 16px 0 10px; }
   .family-head .trip-item-name { font-size: 26px; }
-  .family-sides { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding: 0 0 18px 34px; }
-  .family-sides::before { display: none; }
-  .side-item {
-    height: 100%; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 0; padding: 4px 16px 4px 14px;
-    border-left: 1px solid var(--line);
-  }
-  .side-item::before { display: none; }
-  .side-item .dot { width: 8px; height: 8px; }
-  .side-item .trip-item-text { width: 100%; }
-  .side-item .muted { font-family: var(--f-body); font-size: 13px; }
+  .side-item .trip-item-text { flex: 1; display: flex; align-items: baseline; gap: 2px 16px; flex-wrap: wrap; }
+  .side-item .trip-item-text > .muted.num { margin-left: auto; }
+  .side-item .side-grand { flex-basis: 100%; }
   /* the month on the left, what's coming beside it */
-  .home-plans { grid-template-columns: 400px minmax(0, 1fr); column-gap: 32px; align-items: start; }
+  .home-plans { grid-template-columns: 340px minmax(0, 1fr); column-gap: 32px; align-items: start; }
   .home-plans:not(:has(.home-cal)) { grid-template-columns: minmax(0, 1fr); }
   /* travels: the globe stays put on the left while the scrapbook scrolls on the right */
-  .travels { grid-template-columns: 420px minmax(0, 1fr); column-gap: 44px; align-items: start; }
+  .travels { grid-template-columns: 380px minmax(0, 1fr); column-gap: 40px; align-items: start; }
   .travels-globe { position: sticky; top: 24px; }
   .polaroids { margin-inline: 0; padding-inline: 4px; }
 }
@@ -313,10 +325,6 @@
 }
 
 /* a trip's mark: the flags of where it goes (a trip with no country yet keeps its colour dot) */
-.trip-mark { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 18px; line-height: 1; }
-.side-item .trip-mark { font-size: 16px; }
-@media (min-width: 1024px) { .family-head .trip-mark { font-size: 22px; } }
+.trip-mark { flex: none; display: inline-flex; align-items: center; gap: 3px; line-height: 1; }
 .tree-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 24px; }
 .tree-mark .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
-.tree-mark .trip-mark { font-size: 16px; }
-.side-line .trip-mark { font-size: 16px; }

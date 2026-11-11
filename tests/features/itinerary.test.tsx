@@ -95,7 +95,8 @@ it('shows every day open, headed by its date with its areas, then its lines with
   }
   expect(lines.map(shown)).toEqual(['09:00', '17:00–18:30', 'any'])
   expect(lines[2]).toHaveTextContent('cafe · tokyo')
-  expect(lines[2].querySelector('.cat')).toHaveAttribute('title', 'cafe')
+  // numbered as on the map; what kind of place it is reads in words under the name
+  expect([...lines].map((l) => l.querySelector('.seq')?.textContent)).toEqual(['01', '02', '03'])
   expect(screen.getAllByRole('heading', { level: 2 }).map((x) => x.textContent)).toEqual(['thursday 18 september', 'friday 19 september', 'saturday 20 september'])
 })
 

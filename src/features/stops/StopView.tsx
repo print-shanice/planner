@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { Cost, Member, Stop } from '../../lib/types'
+import { Link, useNavigate } from 'react-router-dom'
+import type { Cost, Member, Stop, Trip } from '../../lib/types'
 import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { addDays, daysBetween, fmtDay, nights } from '../../lib/dates'
@@ -19,7 +19,8 @@ import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
 import { stopSub, stopTitle } from '../plan/StopRow'
 import { directionsUrl } from '../../lib/gmaps'
-import { ancestors } from '../../lib/countries'
+import { ancestors, descendants } from '../../lib/countries'
+import { useStopSheet } from './StopSheet'
 import { dayEntries } from '../../lib/agenda'
 import { dayLegs, nextFrom, type Leg } from '../../lib/legs'
 import { scheduleChange, unscheduleChange } from '../../lib/schedule'
@@ -57,6 +58,37 @@ function costLine(c: Cost, members: Member[]) {
 }
 
 type Props = { stop: Stop; day?: string | null; onEdit: () => void; onClose: () => void }
+
+const spotOf = (s: Stop) => [s.place, s.origin].find((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng)) ?? null
+function km(a: { lat?: number | null; lng?: number | null }, b: { lat?: number | null; lng?: number | null }): number {
+  const r = Math.PI / 180, dLat = (b.lat! - a.lat!) * r, dLng = (b.lng! - a.lng!) * r
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat! * r) * Math.cos(b.lat! * r) * Math.sin(dLng / 2) ** 2
+  return 12742 * Math.asin(Math.sqrt(h))
+}
+
+// what a place sits among, as links: the trips it's part of, the rest of its day, and saved places close by
+function Related({ stop, on, trips, stops, onClose }: { stop: Stop; on: string | null | undefined; trips: Trip[]; stops: Stop[]; onClose: () => void }) {
+  const sheet = useStopSheet()
+  const own = trips.find((t) => t.id === stop.trip_id)
+  const chain = [own, ...ancestors(stop.trip_id, trips).reverse()].filter((t): t is Trip => !!t)
+  const top = chain.at(-1)
+  const sameDay = on && top ? dayEntries(top, trips, stops, on).filter((e) => e.kind === 'stop' && e.stop && e.stop.id !== stop.id && e.stop.kind !== 'note').map((e) => e.stop!) : []
+  const here = spotOf(stop)
+  const family = new Set(top ? descendants(top.id, trips) : [stop.trip_id])
+  const near = here ? stops
+    .filter((s) => s.id !== stop.id && family.has(s.trip_id) && s.kind === 'place' && !sameDay.some((x) => x.id === s.id))
+    .flatMap((s) => { const p = spotOf(s); const d = p ? km(here, p) : Infinity; return d <= 2 ? [{ s, d }] : [] })
+    .sort((a, b) => a.d - b.d).slice(0, 3) : []
+  if (chain.length < 2 && !sameDay.length && !near.length) return null
+  const open = (s: Stop) => sheet?.openStop(s.id, s.day)
+  return (
+    <dl className="related">
+      {chain.length > 0 && <><dt className="mono-label">part of</dt><dd>{chain.map((t, i) => <span key={t.id}>{i > 0 && ' · '}<Link to={`/trip/${t.id}${on ? `?day=${on}` : ''}`} onClick={onClose}>{t.name}</Link></span>)}</dd></>}
+      {sameDay.length > 0 && <><dt className="mono-label">same day</dt><dd>{sameDay.slice(0, 4).map((s, i) => <span key={s.id}>{i > 0 && ' · '}<button type="button" className="rel-link" onClick={() => open(s)}>{stopTitle(s).toLowerCase()}</button></span>)}</dd></>}
+      {near.length > 0 && <><dt className="mono-label">nearby</dt><dd>{near.map(({ s, d }, i) => <span key={s.id}>{i > 0 && ' · '}<button type="button" className="rel-link" onClick={() => open(s)}>{stopTitle(s).toLowerCase()}</button> <span className="tag">{d < 1 ? `${Math.max(50, Math.round(d * 20) * 50)} m` : `${d.toFixed(1)} km`}</span>{!s.day && <span className="tag"> idea</span>}</span>)}</dd></>}
+    </dl>
+  )
+}
 
 export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const canEdit = useCanEdit()
@@ -205,6 +237,8 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         {safeUrl(stop.url) && <a href={safeUrl(stop.url)!} target="_blank" rel="noopener noreferrer" className="fact fact-link"><Icon name="link" size={18} /><span>{hostOf(stop.url)}</span></a>}
         {stop.notes && <p className="notes">{stop.notes}</p>}
       </div>
+
+      <Related stop={stop} on={on} trips={trips} stops={stops} onClose={onClose} />
 
       {(stop.kind === 'place' || stop.kind === 'stay') && (
         <section className="inspiration" aria-label="links">

@@ -4,7 +4,9 @@ import type { Stop, Trip } from '../../lib/types'
 import { innermostDay, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { chosenDay, dayEntries, validDay } from '../../lib/agenda'
 import { overviewItems, type ItinDay, type SideRow } from '../../lib/itinerary'
-import { fmtRange } from '../../lib/dates'
+import { addDays, fmtDay, fmtRange } from '../../lib/dates'
+import { PageTurn } from '../../components/PageTurn'
+import { stopTitle } from '../plan/StopRow'
 import { MonthCalendar, tint } from '../../components/MonthCalendar'
 import { Link } from 'react-router-dom'
 import { useTripFlags } from '../../lib/tripGuess'
@@ -45,6 +47,18 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay }: 
     date: selected, owner: trip,
     entries: dayEntries(trip, trips, stops, selected).filter((e) => !inSide(selected) || (e.stop?.trip_id === trip.id && e.kind !== 'staying')),
   } : null
+  // the trip's own days either side of the one shown (side trips have their own pages, so they're stepped over)
+  const ownDay = (d: string) => inRange(d) && !inSide(d)
+  const step = (from: string, by: 1 | -1) => {
+    for (let d = addDays(from, by), i = 0; i < 400 && d >= start && d <= end; d = addDays(d, by), i++) if (ownDay(d)) return d
+    return null
+  }
+  // each side named by its first plan, so you know what's there before you go
+  const turn = (d: string | null) => {
+    if (!d) return null
+    const first = dayEntries(trip, trips, stops, d).find((e) => e.kind === 'stop' && e.stop)?.stop
+    return { kicker: fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }), name: first ? stopTitle(first).toLowerCase() : undefined, onClick: () => pick(d) }
+  }
   const rows = useMemo(() => overviewItems(trip, trips, stops, today).filter((i): i is SideRow => i.kind === 'side' && i.date.slice(0, 7) <= month && i.end.slice(0, 7) >= month), [trip, trips, stops, today, month])
 
   return (
@@ -69,6 +83,7 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay }: 
         </ul>
       )}
       {day && renderDay(day)}
+      {selected && <PageTurn label="previous and next day" prev={turn(step(selected, -1))} next={turn(step(selected, 1))} />}
     </div>
   )
 }

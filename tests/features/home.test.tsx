@@ -476,7 +476,7 @@ describe('trips, the view home opens on', () => {
     db.stops = [stop({ trip_id: 'ib', day: '2027-04-15', place: place({ country: 'PT' }) })]
     show()
     const family = screen.getByTestId('trip-family')
-    const flags = (el: HTMLElement) => within(el).queryAllByRole('img').map((f) => f.getAttribute('alt'))
+    const flags = (el: HTMLElement) => within(el).queryAllByRole('img').map((f) => f.getAttribute('aria-label'))
     expect(flags(within(family).getByTestId('trip-item'))).toEqual(['Netherlands'])
     expect(within(family).getByTestId('trip-item').querySelector('.dot')).toBeNull()
     const [iberia, loop] = within(family).getAllByTestId('side-item')
@@ -494,7 +494,7 @@ describe('trips, the view home opens on', () => {
     ]
     show()
     const cal = document.querySelector('.home-cal') as HTMLElement
-    const flagOn = (d: string) => cal.querySelector(`[data-day="${d}"] img.flag`)?.getAttribute('alt') ?? null
+    const flagOn = (d: string) => cal.querySelector(`[data-day="${d}"] .flag`)?.getAttribute('aria-label') ?? null
     expect(flagOn('2027-01-28')).toBe('Netherlands')
     expect(flagOn('2027-01-29')).toBeNull()
     // a side trip with no country of its own shows none
@@ -510,7 +510,7 @@ describe('trips, the view home opens on', () => {
     show()
     await user.click(screen.getByRole('button', { name: 'next month' }))
     const cal = document.querySelector('.home-cal') as HTMLElement
-    const flagged = [...cal.querySelectorAll('[data-day]')].filter((d) => d.querySelector('img.flag')).map((d) => `${d.getAttribute('data-day')!.slice(8)} ${d.querySelector('img.flag')!.getAttribute('alt')}`)
+    const flagged = [...cal.querySelectorAll('[data-day]')].filter((d) => d.querySelector('.flag')).map((d) => `${d.getAttribute('data-day')!.slice(8)} ${d.querySelector('.flag')!.getAttribute('aria-label')}`)
     // mondays start a row; lapland takes over on sunday the 7th and the exchange carries on from friday the 12th
     expect(flagged).toEqual(['01 Netherlands', '07 Finland', '08 Finland', '12 Netherlands', '15 Netherlands', '22 Netherlands'])
     expect(screen.queryByRole('list', { name: 'trips this month' })).toBeNull()

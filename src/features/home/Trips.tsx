@@ -4,6 +4,7 @@ import type { Trip } from '../../lib/types'
 import { TripMark } from '../../components/TripMark'
 import { countdown, fmtRange, nights } from '../../lib/dates'
 import { tint } from '../../components/MonthCalendar'
+import { clockIn, hereCode, placeCode, useNow, zoneOf } from '../../lib/localTime'
 
 const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
 
@@ -47,6 +48,22 @@ export function Lead({ trip, today, href }: { trip: Trip; today: string; href: s
       </div>
       <Link className="text-link lead-go" to={href}>open the plan →</Link>
     </section>
+  )
+}
+
+// the sidebar's stamp, like a gallery's "ldn 02:20": your own clock, and while you're away, the clock where you are
+export function HomeStamp({ trips, today, flagsOf }: { trips: Trip[]; today: string; flagsOf: (t: Trip) => string[] }) {
+  const now = useNow()
+  const here = hereCode()
+  const mine = clockIn(Intl.DateTimeFormat().resolvedOptions().timeZone, now)
+  // the innermost trip you're on today, so a side trip in paris shows paris, not the summer around it
+  const on = trips.filter((t) => countdown(t, today).kind === 'ongoing').sort((a, b) => (b.start_date ?? '').localeCompare(a.start_date ?? ''))[0]
+  const zone = on ? zoneOf(on.base?.country ?? flagsOf(on)[0], on.base?.lng) : null
+  return (
+    <p className="home-stamp" aria-label="local time">
+      {on && zone && <><span>now in {on.name}</span><span className="stamp-time">{placeCode(on.base?.city || on.base?.name || on.name)} {clockIn(zone, now)}</span></>}
+      <span className={on && zone ? undefined : 'stamp-time'}>{here ? `${here} ` : ''}{mine}</span>
+    </p>
   )
 }
 

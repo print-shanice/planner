@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { ancestors, countryName, descendants } from '../../lib/countries'
 import { useTripFlags } from '../../lib/tripGuess'
-import { fmtRange, nights } from '../../lib/dates'
+import { fmtRange, nights, todayISO } from '../../lib/dates'
+import { clockIn, diffWords, offsetOf, placeCode, useNow, zoneOf } from '../../lib/localTime'
 import { useMembers, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { Icon } from '../../components/Icon'
@@ -12,6 +13,20 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
+
+// the clock where the trip is, while it's still ahead or under way: "par 11:02 · same time as you"
+function TripClock({ trip, country }: { trip: Trip; country?: string }) {
+  const now = useNow()
+  const zone = zoneOf(trip.base?.country ?? country, trip.base?.lng)
+  if (!zone || (trip.end_date && trip.end_date < todayISO())) return null
+  const code = placeCode(trip.base?.city || trip.base?.name || trip.name)
+  return (
+    <p className="trip-clock" aria-label={`local time in ${trip.base?.city || trip.name}`}>
+      <span className="trip-clock-time">{code} {clockIn(zone, now)}</span>
+      <span>{diffWords(offsetOf(zone, now), -now.getTimezoneOffset())}</span>
+    </p>
+  )
+}
 
 export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode; onEdit: () => void }) {
   const trips = useTrips().data ?? []
@@ -63,6 +78,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
         {add}
       </div>
       {(flags || when) && <p className="trip-meta muted num">{flags}{flags && when && <span aria-hidden="true">·</span>}{when && <span>{when}</span>}</p>}
+      <TripClock trip={trip} country={countries[0]} />
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
         <TripTree trips={trips} current={trip.id} flagsOf={flagsOf} onPick={() => setTree(false)} />
         <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => { setTree(false); setAdding(true) }}><Icon name="plus" />add side trip</button>

@@ -22,6 +22,11 @@ export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
   return <span className={`cat${quiet ? ' quiet' : ''}${stop.kind === 'stay' ? ' bed' : ''}`} title={c}><Icon name={stop.kind === 'journey' && stop.mode === 'flight' ? 'plane' : stop.kind === 'journey' ? stop.mode ?? 'train' : categoryIcon(c)} size={15} /></span>
 }
 
+// a numbered line: "01", the same number as its pin on the map, so the list and the map read together
+export function Seq({ n }: { n: number }) {
+  return <span className="seq num" aria-hidden="true">{String(n).padStart(2, '0')}</span>
+}
+
 const STAY: Record<string, string> = { checkin: 'check in', staying: 'staying at', checkout: 'check out' }
 
 // a booking ref keeps its own letters (the rest of the planner is lowercase): it's read out at a desk
@@ -73,6 +78,8 @@ type Props = {
   grip?: ReactNode
   // what the line holds beyond its name: note, ref, tickets, cost, links
   info?: LineInfo
+  // its number on the day (and on the map)
+  seq?: number
 }
 
 // the quiet row under a name: everything its card holds, so nothing is hidden behind the name
@@ -111,7 +118,7 @@ export function ItinLine(props: Props) {
   return <StaticLine {...props} onEdit={editable ? () => setLive(true) : undefined} />
 }
 
-function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip, info = NO_INFO }: Props & { onEdit?: () => void }) {
+function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip, info = NO_INFO, seq }: Props & { onEdit?: () => void }) {
   const s = entry.stop!
   const stay = entry.kind !== 'stop'
   const title = stay ? `${STAY[entry.kind]} · ${s.title}` : stopTitle(s)
@@ -134,7 +141,7 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip
         <span className="itin-time num" aria-label={when.till ? `${when.from} to ${when.till}` : undefined}>
           <span>{when.from}</span>{when.till && <span className="till">–{when.till}</span>}
         </span>
-        <Chip stop={s} quiet={stay} />
+        {seq ? <Seq n={seq} /> : <Chip stop={s} quiet={stay} />}
         <button type="button" className="itin-main" onClick={() => (onEdit ? onEdit() : onOpen?.(s, day))} disabled={!onEdit && !onOpen}
           onFocus={() => onLight?.(s.id)} onBlur={() => onLight?.(null)}>{words}</button>
         <span className="itin-end">
@@ -157,7 +164,7 @@ function focusNext(from: HTMLElement | null) {
   all[all.indexOf(from as HTMLInputElement) + 1]?.focus()
 }
 
-function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, info = NO_INFO }: Props & { autoFocus?: boolean }) {
+function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, info = NO_INFO, seq }: Props & { autoFocus?: boolean }) {
   const s = entry.stop!
   const save = useSave('stops')
   const removeLater = useUndoRemove('stops')
@@ -240,7 +247,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
           {(v.end || timeOpen) && <input type="text" className="doc-time till" aria-label={`end time of ${title}`} placeholder="end" value={v.end}
             inputMode="decimal" autoComplete="off" onChange={(e) => typeTime('end', e.target.value)} onBlur={() => tidy('end')} onKeyDown={key} />}
         </span>
-        <Chip stop={s} />
+        {seq ? <Seq n={seq} /> : <Chip stop={s} />}
         <span className="itin-main">
           <input ref={nameRef} type="text" className="doc-name" data-doc-name="" aria-label={`change ${title}`} value={v.title} autoComplete="off"
             enterKeyHint="next" autoFocus={autoFocus} onChange={(e) => put({ ...now.current, title: e.target.value })} onKeyDown={key} />

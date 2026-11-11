@@ -15,7 +15,7 @@ import { Loading } from '../../components/Loading'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
-import { Lead, TripFamilies, leadTrip } from './Trips'
+import { HomeStamp, Lead, TripFamilies, leadTrip } from './Trips'
 import { useTripFlags } from '../../lib/tripGuess'
 import { Calendar } from './Calendar'
 import { Travels } from './Travels'
@@ -109,6 +109,7 @@ export function HomePage() {
           <span className="home-views-ink" aria-hidden="true" style={ink ? { width: ink.w, transform: `translateX(${ink.x}px)` } : undefined} />
         </nav>
         <AccountButton />
+        <HomeStamp trips={trips} today={today} flagsOf={flagsOf} />
       </header>
 
       <div key={view} className={`home-body ${shown.from}`.trim()}>

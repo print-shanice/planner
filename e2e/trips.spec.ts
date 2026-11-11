@@ -1,4 +1,4 @@
-import { test, expect, open } from './fixtures'
+import { test, expect, open, phone } from './fixtures'
 
 test.describe('trips', () => {
   test('home\'s + makes a new trip, which opens on its first day', async ({ page }) => {
@@ -68,5 +68,29 @@ test.describe('trips', () => {
     await form.getByRole('textbox', { name: 'check-out', exact: true }).fill('2027-02-22')
     await form.getByRole('button', { name: 'save' }).click()
     await expect(page.getByText('dates clash')).toBeVisible()
+  })
+})
+
+test.describe('moving between things', () => {
+  test('a trip ends with the trips either side of it; a side trip has none, it lives under its trip', async ({ page }) => {
+    await open(page, '/trip/eu')
+    const turn = page.getByRole('navigation', { name: 'other trips' })
+    await expect(turn.getByRole('link', { name: /lisbon long weekend/ })).toBeVisible()
+    await expect(turn.getByRole('link', { name: /greek islands/ })).toBeVisible()
+    await turn.getByRole('link', { name: /greek islands/ }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'greek islands' })).toBeVisible()
+    await open(page, '/trip/par')
+    await expect(page.getByRole('heading', { level: 1, name: 'paris' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'other trips' })).toHaveCount(0)
+  })
+
+  test('a place\'s card links to the trips it is part of and the rest of its day', async ({ page }) => {
+    await open(page, '/trip/par?day=2027-02-20')
+    if (phone(page)) await page.getByText('musée d’orsay').first().click()
+    else await page.getByRole('button', { name: 'open musée d’orsay' }).click()
+    const card = page.getByRole('dialog')
+    await expect(card.getByRole('link', { name: 'euro summer' })).toBeVisible()
+    await card.getByRole('button', { name: 'du pain et des idées' }).click()
+    await expect(page.getByRole('dialog').getByRole('heading', { name: 'du pain et des idées' })).toBeVisible()
   })
 })

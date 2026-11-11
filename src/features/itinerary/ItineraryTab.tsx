@@ -23,6 +23,7 @@ import { useWalks, type WalkAnswer } from '../plan/useWalks'
 import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
 import { ParentCalendar } from './ParentCalendar'
+import { PageTurn } from '../../components/PageTurn'
 import { useWide } from '../../lib/useWide'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { descendants } from '../../lib/countries'
@@ -30,6 +31,14 @@ import { ClashRow } from '../trip/ClashRow'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { useCanEdit } from '../../lib/offline'
+
+// the trips either side of this one, in date order (side trips aren't stepped through: they live under their trip)
+function TripTurn({ trip, trips }: { trip: Trip; trips: Trip[] }) {
+  const tops = trips.filter((t) => !t.parent_id).sort((a, b) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name))
+  const at = tops.findIndex((t) => t.id === trip.id)
+  const turn = (t?: Trip) => t ? { kicker: t.start_date ? fmtDay(t.start_date, { day: 'numeric', month: 'short', year: t.start_date.slice(0, 4) === trip.start_date?.slice(0, 4) ? undefined : 'numeric' }) : 'no dates', name: t.name, to: `/trip/${t.id}` } : null
+  return <PageTurn label="other trips" prev={turn(tops[at - 1])} next={turn(tops[at + 1])} up={{ to: '/', name: 'all trips' }} />
+}
 
 // only a fixed or sticky bar covers a scrolled day
 function coveredTop() {
@@ -256,6 +265,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
         return <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
           hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} />
       })}
+      {!trip.parent_id && <TripTurn trip={trip} trips={trips} />}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>
@@ -355,8 +365,10 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
         </p>}
       </header>
       <div className="doc-lines">
-        {day.entries.map((e) => {
+        {day.entries.map((e, i) => {
           const s = e.stop!
+          // the same number as its pin on the map: places, journeys and notes count in order; stays don't
+          const seq = e.kind === 'stop' ? day.entries.slice(0, i + 1).filter((x) => x.kind === 'stop' && x.stop).length : undefined
           const isMove = canEdit && e.kind === 'stop' && !s.time && movable.length > 1
           const grip = isMove ? (
             <button type="button" className="grip" aria-label={`move ${s.title || 'line'} (arrow keys)`} onPointerDown={(ev) => grab(ev, s)} onKeyDown={(ev) => key(ev, s)}>
@@ -366,7 +378,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
           const after = legs.filter((l) => l.from.id === s.id && l.fromKind === e.kind)
           return (
             <div key={`${s.id}-${e.kind}`} className={drag?.id === s.id && e.kind === 'stop' ? 'dragging' : undefined} style={drag?.id === s.id && e.kind === 'stop' ? { transform: `translateY(${drag.dy}px)` } : undefined}>
-              <ItinLine editing={editing} entry={e} any={timed && e.kind === 'stop'} q={q} grip={grip} info={infoOf(s)}
+              <ItinLine editing={editing} entry={e} seq={seq} any={timed && e.kind === 'stop'} q={q} grip={grip} info={infoOf(s)}
                 current={current === s.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
               {after.map((l) => <WalkLine key={l.to.id} leg={l} answer={walk(l.a, l.b)} />)}
             </div>

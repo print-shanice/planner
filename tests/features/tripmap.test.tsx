@@ -55,15 +55,15 @@ it('says it needs a connection when offline', async () => {
   expect(screen.getByRole('status')).toHaveTextContent('the map needs a connection')
 })
 
-it('draws each stop with its category icon and number in its trip colour, and ideas as quiet pins', async () => {
+it('draws each stop as its number, the same as the plan, edged in its trip colour, and ideas as quiet pins', async () => {
   vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k')
   installGoogle()
   await show(mapFeatures(lap, [lap], stops, '2027-02-08'))
   await waitFor(() => expect(g.markers.length).toBeGreaterThan(0))
   const pins = [...document.querySelectorAll('.gpin-stop')] as HTMLElement[]
-  expect(pins.map((p) => p.querySelector('.gpin-n')?.textContent)).toEqual(['1', '2'])
+  expect(pins.map((p) => p.querySelector('.gpin-n')?.textContent)).toEqual(['01', '02'])
+  expect(pins.map((p) => p.getAttribute('aria-label')?.split(' ')[0])).toEqual(['1', '2'])
   expect(pins[0].style.getPropertyValue('--pin')).toBeTruthy()
-  expect(pins[0].querySelector('path')?.getAttribute('d')).not.toBe(pins[1].querySelector('path')?.getAttribute('d'))
   expect(document.querySelectorAll('.gpin-idea')).toHaveLength(1)
 })
 

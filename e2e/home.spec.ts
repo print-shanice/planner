@@ -87,12 +87,16 @@ test.describe('home', () => {
     await expect(page.getByRole('button', { name: 'send link' })).toBeVisible()
   })
 
-  test('phones switch views under the wordmark, laptops beside it', async ({ page }) => {
+  test('phones switch views under the wordmark; laptops list them down a sidebar beside the trips', async ({ page }) => {
     await open(page)
     const nav = page.getByRole('navigation', { name: 'home' })
     const wordmark = page.getByRole('heading', { level: 1, name: 'planner' })
     const a = await nav.boundingBox(), b = await wordmark.boundingBox()
-    if (phone(page)) expect(a!.y).toBeGreaterThan(b!.y + b!.height - 1)
-    else expect(Math.abs(a!.y - b!.y)).toBeLessThan(b!.height)
+    expect(a!.y).toBeGreaterThan(b!.y + b!.height - 1)
+    if (!phone(page)) {
+      const trips = await page.getByRole('heading', { level: 2, name: 'upcoming trips' }).boundingBox()
+      expect(trips!.x).toBeGreaterThan(a!.x + a!.width)
+      await expect(page.getByLabel('local time')).toBeVisible()
+    }
   })
 })

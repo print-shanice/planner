@@ -49,20 +49,20 @@ function svg(name: string, size = 16): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${iconPath(name)}"></path></svg>`
 }
 
-// a stop: its category in a disc of its trip's colour, its number beside it
+// a stop: its number in a tag edged in its trip's colour; ideas, beds and arrivals keep their marks
 export function pinElement(o: { icon: string; color?: string; number?: number | null; kind: 'stop' | 'idea' | 'bed' | 'end'; label: string }): HTMLElement {
   const el = document.createElement('button')
   el.type = 'button'
   el.className = `gpin gpin-${o.kind}`
   el.setAttribute('aria-label', o.label)
   if (o.color) el.style.setProperty('--pin', css(o.color))
-  if (o.kind !== 'end') el.innerHTML = svg(o.icon, o.kind === 'idea' ? 14 : 16)
+  // a numbered stop shows its number, "01", as the plan does; everything else its icon
   if (o.number != null) {
     const n = document.createElement('span')
     n.className = 'gpin-n'
-    n.textContent = String(o.number)
+    n.textContent = String(o.number).padStart(2, '0')
     el.append(n)
-  }
+  } else if (o.kind !== 'end') el.innerHTML = svg(o.icon, o.kind === 'idea' ? 14 : 16)
   return el
 }
 

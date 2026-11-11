@@ -16,8 +16,15 @@
 .trip-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; }
 .trip-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-flags { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 4px; flex: none; line-height: 1; }
-.flag { flex: none; width: 1em; height: 1em; border-radius: 50%; vertical-align: -0.14em; box-shadow: 0 0 0 1px var(--line); }
-.title-flag { flex: none; display: inline-flex; font-size: 26px; }
+/* a country: its code in a hairline tag, like a luggage label */
+.flag {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; height: 17px; min-width: 22px; padding: 0 3px;
+  border: 1px solid currentColor; font-family: var(--f-mono); font-size: 10px; font-weight: 500; letter-spacing: .04em; line-height: 1;
+  text-transform: uppercase; vertical-align: middle; color: var(--ink);
+}
+.title-flag { flex: none; display: inline-flex; }
+.title-flag .flag { height: 24px; min-width: 32px; font-size: 12.5px; }
+.trip-flags .flag, .back-link .flag { color: var(--ink-2); }
 .trip-flags-more { font-family: var(--f-body); font-size: 12px; font-weight: 600; color: var(--ink-2); }
 /* with side trips or a parent, the title opens the trip family */
 .title-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; letter-spacing: inherit; text-align: left; border-radius: 8px; }

@@ -219,8 +219,8 @@ it('the first flag sits beside the title, the others under it, and the title is 
   expect(title).toHaveTextContent(/^lapland$/)
   expect(within(title).queryAllByRole('img')).toHaveLength(0)
   const meta = screen.getByText(/7 – 11 feb/).closest('.trip-meta') as HTMLElement
-  expect(within(document.querySelector('.title-flag') as HTMLElement).getByRole('img')).toHaveAttribute('alt', 'Finland')
-  expect(within(meta).getAllByRole('img').map((f) => f.getAttribute('alt'))).toEqual(['Sweden'])
+  expect(within(document.querySelector('.title-flag') as HTMLElement).getByRole('img')).toHaveAttribute('aria-label', 'Finland')
+  expect(within(meta).getAllByRole('img').map((f) => f.getAttribute('aria-label'))).toEqual(['Sweden'])
 })
 
 it('the line under the title shows up to four more flags, then a count', () => {
