@@ -104,7 +104,7 @@ test.describe('home', () => {
 })
 
 test.describe('public holidays and the month at a glance', () => {
-  test('beside the month: what\'s on and what\'s to book as tabs, then the month\'s holidays, which never move', async ({ page }) => {
+  test('beside the month: what\'s on and what\'s to do as tabs, then the month\'s holidays, which never move', async ({ page }) => {
     test.skip(phone(page), 'the side panel sits beside the month on a laptop; on a phone it falls under it')
     await open(page)
     await page.getByRole('button', { name: 'month', exact: true }).click()
@@ -117,8 +117,8 @@ test.describe('public holidays and the month at a glance', () => {
     const hols = glance.getByRole('region', { name: 'public holidays in april' })
     await expect(hols).toContainText(/king's day/i)
     const before = await hols.boundingBox()
-    await glance.getByRole('tab', { name: /to book/ }).click()
-    await expect(glance.getByRole('tab', { name: /to book/ })).toHaveAttribute('aria-selected', 'true')
+    await glance.getByRole('tab', { name: /to do/ }).click()
+    await expect(glance.getByRole('tab', { name: /to do/ })).toHaveAttribute('aria-selected', 'true')
     expect((await hols.boundingBox())!.y).toBe(before!.y)
   })
 
@@ -129,4 +129,21 @@ test.describe('public holidays and the month at a glance', () => {
     await expect(line).toContainText(/public holiday in netherlands/i)
     await expect(page.getByRole('button', { name: /27 apr · king's day/ })).toBeVisible()
   })
+})
+
+test('a to-do typed on a day shows as [to do], is listed under "to do" for its month, and is ticked off from its card', async ({ page }) => {
+  await open(page, '/trip/par?day=2027-02-21')
+  await page.getByRole('textbox', { name: /add to sun 21 feb/ }).fill('buy winter wear [to do]')
+  await page.getByRole('textbox', { name: /add to sun 21 feb/ }).press('Enter')
+  const line = page.getByTestId('itin-line').filter({ hasText: /buy winter wear/ }).or(page.getByTestId('itin-line').filter({ has: page.locator('input[value="buy winter wear"]') }))
+  await expect(line.first()).toContainText('to do')
+  await open(page)
+  await page.getByRole('button', { name: 'month', exact: true }).click()
+  await page.getByRole('button', { name: 'next month' }).click()
+  await page.getByRole('tab', { name: /to do/ }).click()
+  await page.getByRole('link', { name: /buy winter wear/ }).click()
+  const card = page.getByRole('dialog')
+  await expect(card).toContainText('to do')
+  await card.getByRole('button', { name: 'mark done' }).click()
+  await expect(card).toContainText('done')
 })

@@ -223,3 +223,13 @@ it('a sheet with a field focuses the field, ready to type', () => {
   render(<Sheet open title="new note" onClose={() => {}}><button type="button">x</button><input aria-label="title" /></Sheet>)
   expect(screen.getByLabelText('title')).toHaveFocus()
 })
+
+it('a note needing action reads as a to-do, anything else as a booking', async () => {
+  const { Pill } = await import('../../src/components/Pill')
+  const { rerender } = render(<Pill status="to_book" kind="note" />)
+  expect(screen.getByText('to do')).toHaveClass('pill', 'warn')
+  rerender(<Pill status="booked" kind="note" />)
+  expect(screen.getByText('done')).toHaveClass('pill', 'ok')
+  rerender(<Pill status="to_book" kind="place" />)
+  expect(screen.getByText('to book')).toHaveClass('pill', 'warn')
+})

@@ -296,7 +296,7 @@ function SideTrip({ row, today }: { row: SideRow; today: string }) {
         <span className="side-row-body">
           <span className="mono-label">{fmtRange(row.date, row.end)} · {row.nights} {row.nights === 1 ? 'night' : 'nights'}</span>
           <span className="side-row-name">{row.trip.name}</span>
-          {(what || row.toBook > 0) && <span className="side-row-what muted">{what}{row.toBook > 0 && <>{what ? ' · ' : ''}<span className="warn-text">{row.toBook} to book</span></>}</span>}
+          {(what || row.toBook > 0) && <span className="side-row-what muted">{what}{row.toBook > 0 && <>{what ? ' · ' : ''}<span className="warn-text">{row.toBook} to do</span></>}</span>}
         </span>
         <span className="side-row-go" aria-hidden="true">→</span>
       </Link>

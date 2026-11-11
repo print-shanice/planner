@@ -403,7 +403,7 @@ describe('a long trip with side trips', () => {
     expect(screen.queryByText('louvre')).toBeNull()
     // the side trips of the month, each a line that opens it
     const list = within(screen.getByRole('list', { name: 'side trips this month' }))
-    expect(list.getByRole('link', { name: /paris.*19 – 23 feb.*1 place.*1 to book/ })).toHaveAttribute('href', '/trip/paris')
+    expect(list.getByRole('link', { name: /paris.*19 – 23 feb.*1 place.*1 to do/ })).toHaveAttribute('href', '/trip/paris')
     // no long list of every day
     expect(screen.queryByRole('navigation', { name: 'days' })).toBeNull()
   })

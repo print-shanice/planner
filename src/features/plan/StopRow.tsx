@@ -73,13 +73,13 @@ export function StopRow({ stop, variant, n, colorIndex, clash, onOpen, onGrab, d
       <>
         <button type="button" className="stay-strip" data-stop={stop.id} onClick={() => onOpen?.(stop)} disabled={!onOpen}>
           <Icon name="bed" size={16} /><span>{text}</span>
-          {variant === 'checkin' && <Pill status={stop.status} />}
+          {variant === 'checkin' && <Pill status={stop.status} kind={stop.kind} />}
         </button>
         {variant === 'checkin' && <SaveFailed table="stops" id={stop.id} />}
       </>
     )
   }
-  const pill = clash ? <Pill status="warn" label="dates clash" /> : <Pill status={stop.status} />
+  const pill = clash ? <Pill status="warn" label="dates clash" /> : <Pill status={stop.status} kind={stop.kind} />
   const journey = stop.kind === 'journey'
   return (
     <>

@@ -261,6 +261,8 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         <textarea className="note-text" aria-label="notes" placeholder="write it down" value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
         {q('when')}
         {when([['day', 'day', 'time']])}
+        <Switch label="to do" checked={d.status !== 'idea'} onChange={(v) => set({ status: v ? (booked ? 'booked' : 'to_book') : 'idea' })} />
+        {d.status !== 'idea' && <Switch label="done" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} />}
         <div className="folds"><Fold label="booking, cost & notes" open={!!d.url.trim() || !!d.end_time}>
           <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />{link}
         </Fold></div>

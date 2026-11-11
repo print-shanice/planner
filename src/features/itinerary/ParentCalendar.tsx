@@ -75,7 +75,7 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay, ho
                 {flagsOf(r.trip).length ? <TripMark codes={flagsOf(r.trip)} max={3} /> : <span className="side-row-bar" aria-hidden="true" />}
                 <span className="side-line-name">{r.trip.name}</span>
                 <span className="side-line-meta mono">{fmtRange(r.date, r.end)} · {r.nights}n{r.places ? ` · ${r.places} ${r.places === 1 ? 'place' : 'places'}` : ''}</span>
-                {r.toBook > 0 && <span className="warn-text side-line-book">{r.toBook} to book</span>}
+                {r.toBook > 0 && <span className="warn-text side-line-book">{r.toBook} to do</span>}
                 <span aria-hidden="true">→</span>
               </Link>
             </li>

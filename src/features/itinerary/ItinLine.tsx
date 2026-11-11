@@ -148,7 +148,7 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip
           onFocus={() => onLight?.(s.id)} onBlur={() => onLight?.(null)}>{words}</button>
         <span className="itin-end">
           {shows && <LineLinks info={info} />}
-          {shows && <Pill status={s.status} />}
+          {shows && <Pill status={s.status} kind={s.kind} />}
           {grip}
           {onEdit && onOpen && <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button>}
         </span>
@@ -259,7 +259,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
         </span>
         <span className="itin-end">
         <LineLinks info={info} />
-        <Pill status={s.status} />
+        <Pill status={s.status} kind={s.kind} />
         {grip}
         {dirty
           ? <button type="button" className="btn small line-go" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>

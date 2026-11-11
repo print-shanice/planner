@@ -6,8 +6,9 @@ import { addDays, fmtDay, fmtRange } from '../../lib/dates'
 import { tint } from '../../components/MonthCalendar'
 import { TripMark } from '../../components/TripMark'
 import { CountryFlag } from '../../components/CountryFlag'
+import { Pill } from '../../components/Pill'
 
-// beside the month on home: what's on in it and what's still to book in it (two tabs), then its public holidays.
+// beside the month on home: what's on in it and what's still to do in it (two tabs: bookings to make and to-dos), then its public holidays.
 // both tabs share one space sized to the taller, so switching never moves the holidays below
 type Props = {
   month: string
@@ -45,7 +46,7 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
           on in {name}<span className="tab-count">{on.length}</span>
         </button>
         <button type="button" role="tab" id="tab-todo" aria-controls="pane-todo" aria-selected={tab === 'todo'} onClick={() => setTab('todo')}>
-          to book<span className="tab-count">{todo.length}</span>
+          to do<span className="tab-count">{todo.length}</span>
         </button>
       </div>
       <div className="month-panes">
@@ -66,17 +67,17 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
           })}
         </div>
         <div role="tabpanel" id="pane-todo" aria-labelledby="tab-todo" className="month-pane" data-shown={tab === 'todo' || undefined} {...away(tab !== 'todo')}>
-          {todo.length === 0 && <p className="pane-empty">nothing left to book in {name}</p>}
+          {todo.length === 0 && <p className="pane-empty">nothing to do in {name}</p>}
           {todo.map((s) => (
             <Link key={s.id} to={`/trip/${s.trip_id}?day=${s.day}&open=${s.id}`} className="side-row" style={tint(tripOf(s)?.color)}>
               <span className="swatch-sq" aria-hidden="true" />
               <span className="side-row-name sans">{s.title || s.place?.name || 'untitled'}</span>
               <span className="side-row-when num">{fmtDay(s.day!, { day: 'numeric', month: 'short' })}</span>
-              <span className="pill warn">to book</span>
+              <Pill status="to_book" kind={s.kind} />
               {tripOf(s) && <span className="side-row-of">{tripOf(s)!.name}</span>}
             </Link>
           ))}
-          {later > 0 && <p className="pane-later">+ {later} more to book after {name}</p>}
+          {later > 0 && <p className="pane-later">+ {later} more to do after {name}</p>}
         </div>
       </div>
       {hols.length > 0 && (

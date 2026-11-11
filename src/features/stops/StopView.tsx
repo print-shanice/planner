@@ -183,7 +183,13 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
     <div className="stack stop-view">
       {(stop.status !== 'idea' || what) && (
         <div className="stop-kicker">
-          {stop.status !== 'idea' && <Pill status={stop.status} />}
+          {stop.status !== 'idea' && <Pill status={stop.status} kind={stop.kind} />}
+          {/* a to-do is ticked off right here, without opening the form */}
+          {stop.kind === 'note' && stop.status !== 'idea' && canEdit && (
+            <button type="button" className="text-link" onClick={() => run(() => save.mutateAsync({ id: stop.id, status: stop.status === 'booked' ? 'to_book' : 'booked' }))}>
+              {stop.status === 'booked' ? 'not done yet' : 'mark done'}
+            </button>
+          )}
           {what && <p className="muted">{what}</p>}
         </div>
       )}
