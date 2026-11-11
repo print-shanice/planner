@@ -352,3 +352,38 @@
 .trip-mark { flex: none; display: inline-flex; align-items: center; gap: 3px; line-height: 1; }
 .tree-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 24px; }
 .tree-mark .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+
+/* ---------- the month view: the calendar, and beside it what's on and what's left to book ---------- */
+.home-month { display: grid; gap: 28px; min-width: 0; }
+@media (min-width: 1024px) { .home-month { grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 40px; align-items: start; } }
+.home-month .home-cal { max-width: none; }
+.month-side { display: grid; gap: 18px; min-width: 0; align-content: start; }
+.month-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--ink); }
+.month-tabs button {
+  min-height: 44px; padding: 0; margin-bottom: -1px; border: 0; border-bottom: 1px solid transparent; background: none;
+  color: var(--ink-3); font-weight: 500; font-size: 15px; cursor: pointer;
+}
+.month-tabs button[aria-selected="true"] { color: var(--ink); font-weight: 650; border-bottom-color: var(--ink); }
+.tab-count { margin-left: 6px; font-family: var(--f-mono); font-size: 11px; font-weight: 400; color: var(--ink-2); }
+/* both tabs sit in the same cell, so the space is always the taller one's and nothing below moves when you switch */
+.month-panes { display: grid; }
+.month-pane { grid-area: 1 / 1; display: grid; align-content: start; min-width: 0; }
+.month-pane:not([data-shown]) { visibility: hidden; }
+.side-row {
+  display: grid; grid-template-columns: 11px minmax(0, 1fr) auto; align-items: baseline; gap: 2px 10px;
+  padding: 11px 0; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none;
+}
+.side-row .swatch-sq { width: 11px; height: 11px; align-self: center; }
+.side-row-name { font-family: var(--f-head); font-size: 20px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-row-name.sans { font-family: var(--f-body); font-size: 15px; font-weight: 500; }
+.side-row-when { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.side-row .trip-mark, .side-row .pill { grid-column: 2; justify-self: start; }
+.side-row-of { grid-column: 2 / -1; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); }
+.side-row:hover .side-row-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.pane-empty, .pane-later { padding: 12px 0; font-size: 14px; color: var(--ink-2); }
+.month-hols { display: grid; }
+.month-hols h3 { margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--ink); }
+.hol-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.hol-row > .num { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.hol-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+.hol-trip { font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); }

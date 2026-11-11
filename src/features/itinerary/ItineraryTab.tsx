@@ -25,6 +25,9 @@ import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
 import { ParentCalendar } from './ParentCalendar'
 import { PageTurn } from '../../components/PageTurn'
+import { CountryFlag } from '../../components/CountryFlag'
+import { countriesOn, holidaysOn, useHolidays, type Holiday } from '../../lib/holidays'
+import { countryName, tripCountries } from '../../lib/countries'
 import { useWide } from '../../lib/useWide'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { descendants } from '../../lib/countries'
@@ -77,6 +80,11 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   const root = useRef<HTMLDivElement>(null)
   const strip = useRef<HTMLElement>(null)
   const today = todayISO()
+  // public holidays in the countries the trip goes to, for the days it covers
+  // the countries come from where the trips are based and where their plans are, never a guess from a name
+  const flagsOf = (t: Trip) => tripCountries(t, trips, stops)
+  const holidayDays = useHolidays(flagsOf(trip), trip.start_date, trip.end_date ?? trip.start_date)
+  const holidaysFor = (date: string) => holidaysOn(holidayDays, date, countriesOn(trip, trips, stops, date, flagsOf))
 
   const it = useMemo(() => itineraryDays(trip, trips, stops, today), [trip, trips, stops, today])
   const [searching, setSearching] = useState(false)
@@ -177,7 +185,9 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
     }
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(check) }
     target.addEventListener('scroll', onScroll, { passive: true })
-    return () => { target.removeEventListener('scroll', onScroll); if (frame) cancelAnimationFrame(frame) }
+    // this listener is swapped on every render; a check already waiting for its frame still runs,
+    // so something arriving between a scroll and the next frame (holidays, a save) never loses that scroll
+    return () => target.removeEventListener('scroll', onScroll)
   })
 
   // the strip only moves when the day you're on has gone out of sight
@@ -232,7 +242,8 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
                 <span key={d.date} className="strip-item">
                   {month}
                   <button type="button" className={`strip-day${side ? ' side' : ''}`} style={side ? tint(side.color) : undefined}
-                    aria-label={fmtDay(d.date, { weekday: 'long', day: 'numeric', month: 'long' })} aria-current={onDay === d.date ? 'true' : undefined} onClick={() => jumpDay(d.date)}>
+                    data-holiday={holidaysFor(d.date).length ? '' : undefined}
+                    aria-label={[fmtDay(d.date, { weekday: 'long', day: 'numeric', month: 'long' }), ...holidaysFor(d.date).map((h) => h.name.toLowerCase())].join(' · ')} aria-current={onDay === d.date ? 'true' : undefined} onClick={() => jumpDay(d.date)}>
                     <span className="strip-wd">{fmtDay(d.date, { weekday: 'narrow' })}</span><span className="strip-n">{+d.date.slice(8)}</span>
                   </button>
                 </span>
@@ -257,14 +268,14 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
         </Link>
       )}
       {!fold && !items.length && load.state === 'ready' && <EmptyState title="nothing planned yet" />}
-      {fold && <ParentCalendar trip={trip} trips={trips} stops={stops} today={today} onDay={setDay}
+      {fold && <ParentCalendar trip={trip} trips={trips} stops={stops} today={today} onDay={setDay} holiday={(d) => holidaysFor(d).map((h) => h.name.toLowerCase()).join(', ') || null}
         renderDay={(d) => <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q="" hidden={false}
-          current={null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} />} />}
+          current={null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} />} />}
       {items.map((item) => {
         if (item.kind === 'side') return <SideTrip key={`side-${item.trip.id}`} row={item} today={today} />
         const d = item.day
         return <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
-          hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} />
+          hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} />
       })}
       {!trip.parent_id && <TripTurn trip={trip} trips={trips} />}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
@@ -296,6 +307,7 @@ function SideTrip({ row, today }: { row: SideRow; today: string }) {
 type DayProps = {
   day: ItinDay; trip: Trip; today: string; editing: boolean; canEdit: boolean; q: string; hidden: boolean; current: string | null
   onOpen?: (s: Stop, day?: string | null) => void; onLight: (id: string | null) => void; infoOf: (s: Stop) => LineInfo
+  holidays?: Holiday[]
 }
 
 // a day is only asked for its walks once it's (nearly) on screen
@@ -313,7 +325,7 @@ function useOnScreen<T extends Element>(): [React.RefObject<T>, boolean] {
   return [ref, on]
 }
 
-function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, infoOf }: DayProps) {
+function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, infoOf, holidays = [] }: DayProps) {
   const save = useSave('stops')
   const [box, onScreen] = useOnScreen<HTMLElement>()
   const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
@@ -366,6 +378,17 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
         </p>}
       </header>
       <div className="doc-lines">
+        {holidays.map((h) => (
+          <div key={`${h.country}-${h.name}`} className="itin-line quiet holiday-line" data-testid="holiday">
+            <span className="itin-time" />
+            <span className="cat holiday-mark"><CountryFlag code={h.country} /></span>
+            <span className="itin-main">
+              <span className="itin-title">{h.name}</span>
+              <span className="itin-sub muted"><span className="keep-case">{h.local}</span> · public holiday in {countryName(h.country)}</span>
+            </span>
+            <span className="itin-end"><span className="pill warn">public holiday</span></span>
+          </div>
+        ))}
         {day.entries.map((e, i) => {
           const s = e.stop!
           // the same number as its pin on the map: places, journeys and notes count in order; stays don't

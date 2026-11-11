@@ -2,6 +2,7 @@
 import './fake-google'
 import './fake-rates'
 import './fake-weather'
+import './fake-holidays'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@fontsource-variable/eb-garamond/index.css'

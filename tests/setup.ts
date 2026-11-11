@@ -10,6 +10,8 @@ beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', ''); vi.stubEnv('VITE_GOOG
 const realFetch = globalThis.fetch?.bind(globalThis)
 globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  // nor the holidays service: no holidays unless a test serves some itself
+  if (url.includes('date.nager.at')) return Promise.resolve(new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }))
   if (url.includes('open-meteo.com')) return Promise.resolve(new Response(JSON.stringify({ daily: { temperature_2m_max: [12, 14], temperature_2m_min: [4, 6] } }), { status: 200, headers: { 'content-type': 'application/json' } }))
   return realFetch ? realFetch(input, init) : Promise.reject(new Error('no network in tests'))
 }) as typeof fetch

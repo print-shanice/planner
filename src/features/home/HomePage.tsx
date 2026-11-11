@@ -18,6 +18,10 @@ import { TripRow } from './Upcoming'
 import { HomeStamp, TripFamilies, leadTrip } from './Trips'
 import { useTripFlags } from '../../lib/tripGuess'
 import { Calendar } from './Calendar'
+import { MonthSide } from './MonthSide'
+import { countriesOn, holidaysOn, useHolidays } from '../../lib/holidays'
+import { ownerOn } from '../../lib/agenda'
+import { addDays } from '../../lib/dates'
 import { Travels } from './Travels'
 import { TripForm } from './TripForm'
 import { AccountButton } from './Account'
@@ -102,6 +106,21 @@ export function HomePage() {
   // "open the plan" goes back to the day you were on, when it was this trip
   const leadHref = lead ? (resume?.tripId === lead.id && resume.day ? `/trip/${lead.id}?day=${resume.day}` : `/trip/${lead.id}`) : ''
   const waitingCount = inbox.length + (waiting ? 1 : 0)
+  // public holidays where the coming trips go, for the month view: each day's, in the countries you'll be in that day
+  const coming = trips.filter((t) => countdown(t, today).kind !== 'done' && t.start_date)
+  const holidayDays = useHolidays(coming.flatMap((t) => [t.base?.country ?? '', ...flagsOf(t)]).filter(Boolean),
+    coming.map((t) => t.start_date!).sort()[0] ?? null, coming.map((t) => t.end_date ?? t.start_date!).sort().at(-1) ?? null)
+  const topOn = (d: string) => upcoming.find((t) => t.start_date && t.start_date <= d && (t.end_date ?? t.start_date) >= d)
+  const holidaysOnDay = (d: string) => {
+    const top = topOn(d)
+    return top ? holidaysOn(holidayDays, d, countriesOn(top, trips, stops, d, flagsOf)).map((h) => ({ ...h, trip: ownerOn(top, trips, d) })) : []
+  }
+  const holidayName = (d: string) => holidaysOnDay(d).map((h) => h.name.toLowerCase()).join(', ') || null
+  const holidaysBetween = (from: string, to: string) => {
+    const out = []
+    for (let d = from; d <= to; d = addDays(d, 1)) out.push(...holidaysOnDay(d))
+    return out
+  }
   // a side trip's bookings still to make, counted on its row
   const toBook = (t: Trip) => { const ids = new Set(descendants(t.id, trips)); return stops.filter((s) => ids.has(s.trip_id) && s.status === 'to_book').length }
 
@@ -150,7 +169,10 @@ export function HomePage() {
               </div>
               {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
               {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
-              {upcoming.length > 0 && shownAs === 'month' && <Calendar trips={trips} flagsOf={flagsOf} today={today} />}
+              {upcoming.length > 0 && shownAs === 'month' && (
+                <Calendar trips={trips} flagsOf={flagsOf} today={today} holiday={holidayName}
+                  aside={(m) => <MonthSide month={m} trips={trips} stops={stops} flagsOf={flagsOf} holidays={holidaysBetween} />} />
+              )}
               {upcoming.length > 0 && shownAs === 'list' && byMonth(upcoming).map(([label, group]) => (
                 <div key={label} className="month-group">
                   <p className="month-h">{label}</p>

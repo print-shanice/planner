@@ -12,11 +12,11 @@ import { Link } from 'react-router-dom'
 import { useTripFlags } from '../../lib/tripGuess'
 import { TripMark } from '../../components/TripMark'
 
-type Props = { trip: Trip; trips: Trip[]; stops: Stop[]; today: string; onDay: (d: string) => void; renderDay: (d: ItinDay) => ReactNode }
+type Props = { trip: Trip; trips: Trip[]; stops: Stop[]; today: string; onDay: (d: string) => void; renderDay: (d: ItinDay) => ReactNode; holiday?: (d: string) => string | null }
 
 // a long trip with side trips, as a calendar: side trips colour their days and open on a tap,
 // the trip's own days get a dot, and the day you pick shows underneath
-export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay }: Props) {
+export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay, holiday }: Props) {
   const [params, setParams] = useSearchParams()
   const flagsOf = useTripFlags(trips, stops)
   const kids = useMemo(() => trips.filter((t) => t.parent_id === trip.id && t.start_date), [trips, trip.id])
@@ -66,7 +66,7 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay }: 
       <MonthCalendar month={month} today={today} ribbon={owner} bars={[]} flag={(sp) => (sp.trip ? flagsOf(sp.trip)[0] ?? null : null)} selected={selected}
         onPrev={month > start.slice(0, 7) ? () => setMonth(shiftMonth(month, -1)) : undefined}
         onNext={month < end.slice(0, 7) ? () => setMonth(shiftMonth(month, 1)) : undefined}
-        onDay={pick} canPick={inRange} marked={(d) => own.has(d)} />
+        onDay={pick} canPick={inRange} marked={(d) => own.has(d)} holiday={holiday} />
       {rows.length > 0 && (
         <ul className="side-list" aria-label="side trips this month">
           {rows.map((r) => (

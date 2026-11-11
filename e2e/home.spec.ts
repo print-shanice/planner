@@ -102,3 +102,31 @@ test.describe('home', () => {
     }
   })
 })
+
+test.describe('public holidays and the month at a glance', () => {
+  test('beside the month: what\'s on and what\'s to book as tabs, then the month\'s holidays, which never move', async ({ page }) => {
+    test.skip(phone(page), 'the side panel sits beside the month on a laptop; on a phone it falls under it')
+    await open(page)
+    await page.getByRole('button', { name: 'month', exact: true }).click()
+    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'next month' }).click()
+    await expect(page.getByRole('group', { name: 'april 2027' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /tue 27 apr · king's day/ })).toBeVisible()
+    const glance = page.getByRole('complementary', { name: 'april at a glance' })
+    await expect(glance.getByRole('tab', { name: /on in april/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(glance.getByRole('link', { name: /^barcelona/ })).toBeVisible()
+    const hols = glance.getByRole('region', { name: 'public holidays in april' })
+    await expect(hols).toContainText(/king's day/i)
+    const before = await hols.boundingBox()
+    await glance.getByRole('tab', { name: /to book/ }).click()
+    await expect(glance.getByRole('tab', { name: /to book/ })).toHaveAttribute('aria-selected', 'true')
+    expect((await hols.boundingBox())!.y).toBe(before!.y)
+  })
+
+  test('a holiday opens its day in the plan, and the day strip marks it', async ({ page }) => {
+    await open(page, '/trip/eu?day=2027-04-27')
+    const line = page.getByTestId('holiday')
+    await expect(line).toContainText(/king's day/i)
+    await expect(line).toContainText(/public holiday in netherlands/i)
+    await expect(page.getByRole('button', { name: /27 apr · king's day/ })).toBeVisible()
+  })
+})

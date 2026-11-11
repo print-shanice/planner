@@ -39,6 +39,8 @@ type Props = {
   flag?: (s: Span) => string | null | undefined
   // the countries a trip goes to, for the flag on its label (else its base's)
   codes?: (t: Trip) => string[]
+  // a public holiday that day where you'll be: a short amber rule under the day, and its name read out
+  holiday?: (d: string) => string | null | undefined
 }
 
 function Week({ week, p }: { week: (string | null)[]; p: Props }) {
@@ -70,6 +72,8 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           'data-day': d, 'data-side': sideAt, 'data-side-edge': sideEdge || undefined, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
           'aria-current': d === p.today ? ('date' as const) : undefined,
           'data-planned': p.marked?.(d) || undefined,
+          'data-holiday': p.holiday?.(d) ? '' : undefined,
+          title: p.holiday?.(d) || undefined,
           style: { gridColumn: i + 1, ...(t ? tint(t.color) : st ? tint(st.color) : {}) },
         }
         const code = t && edge.includes('l') ? p.flag?.(t) : null
@@ -77,7 +81,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         const pickable = p.canPick?.(d) ?? true
         if (p.onDay && pickable) {
           return (
-            <button key={d} type="button" className="cal-day" {...attrs} aria-label={dayLabel(d)}
+            <button key={d} type="button" className="cal-day" {...attrs} aria-label={[dayLabel(d), p.holiday?.(d)].filter(Boolean).join(' · ')}
               aria-pressed={p.selected === d} onClick={() => st?.trip ? navigate(`/trip/${st.trip.id}?day=${d}`) : p.onDay!(d)}>
               {n}
             </button>

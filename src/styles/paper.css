@@ -355,3 +355,11 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .trip-route abbr { text-decoration: none; cursor: help; }
 .trip-route i { font-style: normal; margin: 0 8px; color: var(--ink-3); font-weight: 400; }
 .trip-route-more { margin-left: 8px; color: var(--ink-2); }
+
+/* ---------- public holidays: an amber mark on the day, and a line at the top of it ---------- */
+.strip-day { position: relative; }
+.strip-day[data-holiday]::after { content: ''; position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+.cal-day[data-holiday] .cal-n::after { content: ''; position: absolute; left: 50%; bottom: 6px; width: 12px; height: 2px; margin-left: -6px; background: var(--warn); }
+.holiday-line .holiday-mark { background: none; box-shadow: none; }
+.holiday-line .holiday-mark .flag { height: 22px; min-width: 26px; font-size: 10px; }
+.itin-line.quiet.holiday-line .itin-title { font-weight: 500; color: var(--ink); font-size: 15.5px; }
