@@ -211,25 +211,25 @@ it('sections never repeat their own name as a heading', () => {
   expect(screen.queryByRole('heading', { level: 2, name: 'money' })).toBeNull()
 })
 
-it('the first flag sits beside the title, the others under it, and the title is only the name', () => {
+it('the countries run as a route over the title, in the order you reach them, and the title is only the name', () => {
   db.trips = [trip({ id: 'parent', name: 'exchange', base: place({ country: 'NL' }) }), trip({ id: 'lap', name: 'lapland', parent_id: 'parent', base: null, start_date: '2027-02-07', end_date: '2027-02-11' })]
-  db.stops = [stop({ trip_id: 'lap', place: place({ country: 'FI' }) }), stop({ trip_id: 'lap', place: place({ country: 'fi' }) }), stop({ trip_id: 'lap', place: place({ country: 'SE' }) }), stop({ trip_id: 'lap', place: place({ country: 'FR' }), saved: true, day: null })]
+  db.stops = [stop({ trip_id: 'lap', day: '2027-02-10', place: place({ country: 'SE' }) }), stop({ trip_id: 'lap', day: '2027-02-07', place: place({ country: 'FI' }) }), stop({ trip_id: 'lap', day: '2027-02-08', place: place({ country: 'fi' }) }), stop({ trip_id: 'lap', place: place({ country: 'FR' }), saved: true, day: null })]
   show('/trip/lap')
   const title = screen.getByRole('heading', { level: 1 })
   expect(title).toHaveTextContent(/^lapland$/)
-  expect(within(title).queryAllByRole('img')).toHaveLength(0)
-  const meta = screen.getByText(/7 – 11 feb/).closest('.trip-meta') as HTMLElement
-  expect(within(document.querySelector('.title-flag') as HTMLElement).getByRole('img')).toHaveAttribute('aria-label', 'Finland')
-  expect(within(meta).getAllByRole('img').map((f) => f.getAttribute('aria-label'))).toEqual(['Sweden'])
+  const route = document.querySelector('.trip-route') as HTMLElement
+  expect(route).toHaveAttribute('aria-label', 'countries: Finland, Sweden')
+  expect([...route.querySelectorAll('abbr')].map((a) => a.textContent)).toEqual(['FI', 'SE'])
+  expect(within(document.querySelector('.trip-meta') as HTMLElement).queryAllByRole('img')).toHaveLength(0)
 })
 
-it('the line under the title shows up to four more flags, then a count', () => {
+it('a trip starts its route where it is based, and shows six countries, then a count', () => {
   db.trips = [trip({ id: 'europe', name: 'europe exchange', base: place({ country: 'NL' }) })]
-  db.stops = ['FI', 'SE', 'FR', 'ES', 'IT'].map(country => stop({ trip_id: 'europe', place: place({ country }) }))
+  db.stops = ['FI', 'SE', 'FR', 'ES', 'IT', 'DE'].map((country, i) => stop({ trip_id: 'europe', day: `2027-03-0${i + 1}`, place: place({ country }) }))
   show('/trip/europe')
-  const meta = document.querySelector('.trip-meta') as HTMLElement
-  expect(within(meta).getAllByRole('img')).toHaveLength(4)
-  expect(within(meta).getByText('+1')).toBeInTheDocument()
+  const route = document.querySelector('.trip-route') as HTMLElement
+  expect([...route.querySelectorAll('abbr')].map((a) => a.textContent)).toEqual(['NL', 'FI', 'SE', 'FR', 'ES', 'IT'])
+  expect(within(route).getByText('+1')).toBeInTheDocument()
 })
 
 it('a long name stays whole in the heading', () => {

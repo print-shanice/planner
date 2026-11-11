@@ -39,6 +39,24 @@ function TripNow({ trip, country, stops }: { trip: Trip; country?: string; stops
   )
 }
 
+const ROUTE_MAX = 6
+
+// a trip's countries in travelling order: its own base first, then each other country by the first day you're there
+export function routeOrder(codes: string[], trip: Trip, trips: Trip[], stops: Stop[]): string[] {
+  const ids = new Set(descendants(trip.id, trips))
+  const first = new Map<string, string>()
+  const seen = (code: string | null | undefined, day: string | null | undefined) => {
+    const c = code?.toUpperCase()
+    if (!c || !day) return
+    if (!first.has(c) || day < first.get(c)!) first.set(c, day)
+  }
+  for (const t of trips) if (ids.has(t.id) && t.id !== trip.id) seen(t.base?.country, t.start_date)
+  for (const s of stops) if (ids.has(s.trip_id)) { seen(s.place?.country, s.day); seen(s.destination?.country, s.end_date ?? s.day) }
+  const home = trip.base?.country?.toUpperCase()
+  const rest = codes.filter((c) => c !== home).sort((a, b) => (first.get(a) ?? '9999').localeCompare(first.get(b) ?? '9999'))
+  return home && codes.includes(home) ? [home, ...rest] : rest
+}
+
 export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode; onEdit: () => void }) {
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
@@ -52,14 +70,9 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
   const family = descendants(path[0]?.id ?? trip.id, trips).length > 1
   const flagsOf = useTripFlags(trips, stops)
   const countries = flagsOf(trip)
-  // the first country sits beside the title; a trip through several shows the others with its dates
-  const others = countries.slice(1)
-  const flags = others.length > 0 && (
-    <span className="trip-flags">
-      {others.slice(0, 4).map(code => <CountryFlag key={code} code={code} />)}
-      {others.length > 4 && <span className="trip-flags-more" aria-label={others.slice(4).map(countryName).join(', ')}>+{others.length - 4}</span>}
-    </span>
-  )
+  // the countries as a route over the title, like a departures board: where it's based first, then the rest
+  // in the order you reach them (by the first day planned there)
+  const route = routeOrder(countries, trip, trips, stops)
   const n = nights(trip.start_date, trip.end_date)
   const when = [fmtRange(trip.start_date, trip.end_date), n ? `${n} ${n === 1 ? 'night' : 'nights'}` : ''].filter(Boolean).join(' · ')
   const up = parent
@@ -77,8 +90,13 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
           {members.map((m) => <span key={m.email} className="avatar" style={{ background: `var(--g${(m.color ?? 0) % 6})` }}>{(m.name || m.email).slice(0, 1)}</span>)}
         </button>
       </div>
+      {route.length > 0 && (
+        <p className="trip-route" aria-label={`countries: ${route.map(countryName).join(', ')}`}>
+          {route.slice(0, ROUTE_MAX).map((c, i) => <span key={c}>{i > 0 && <i aria-hidden="true">→</i>}<abbr title={countryName(c)}>{c}</abbr></span>)}
+          {route.length > ROUTE_MAX && <span className="trip-route-more">+{route.length - ROUTE_MAX}</span>}
+        </p>
+      )}
       <div className="trip-title-row">
-        {countries[0] && <span className="title-flag"><CountryFlag code={countries[0]} /></span>}
         <h1 className="head one-line">
           {family ? (
             <button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
@@ -88,7 +106,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
         </h1>
         {add}
       </div>
-      {(flags || when) && <p className="trip-meta muted num">{flags}{flags && when && <span aria-hidden="true">·</span>}{when && <span>{when}</span>}</p>}
+      {when && <p className="trip-meta muted num"><span>{when}</span></p>}
       <TripNow trip={trip} country={countries[0]} stops={stops} />
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
         <TripTree trips={trips} current={trip.id} flagsOf={flagsOf} onPick={() => setTree(false)} />
