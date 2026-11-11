@@ -44,9 +44,25 @@ let session: Session = params.has('signedout') ? null : me
 const listeners: ((event: string, s: Session) => void)[] = []
 const announce = (event: string) => { for (const l of listeners) l(event, session) }
 
+// the flight function: 'XX 123' is a made-up flight, anything else isn't found
+const fakeFlight = (date: string) => {
+  const end = (iata: string, airport: string, city: string, country: string, lat: number, lng: number, time: string, o: object = {}) =>
+    ({ iata, airport, city, country, lat, lng, scheduled: `${date} ${time}`, revised: null, terminal: null, gate: null, desk: null, belt: null, ...o })
+  return {
+    number: 'XX 123', airline: 'made-up air', status: 'Expected', live: false, checked_at: new Date().toISOString(),
+    dep: end('AAA', 'first airport', 'first city', 'NL', 51.45, 5.37, '09:00+01:00', { terminal: '1' }),
+    arr: end('BBB', 'second airport', 'second city', 'ES', 41.3, 2.08, '11:10+01:00'),
+  }
+}
+const functions = {
+  invoke: (_name: string, { body }: { body: { number?: string; date?: string; stop?: string } }) =>
+    wait({ data: body.number?.replace(/\s+/g, '').toUpperCase() === 'XX123' ? { flight: fakeFlight(body.date ?? '2027-02-15') } : { error: 'not_found' }, error: null }),
+}
+
 const ch: any = { on: () => ch, subscribe: () => ch }
 export const supabase: any = {
   from: builder,
+  functions,
   rpc: () => wait({ data: null, error: null }),
   channel: () => ch,
   removeChannel: () => {},
