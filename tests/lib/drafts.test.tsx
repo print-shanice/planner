@@ -79,3 +79,13 @@ it('a form without a key (editing something saved) is never dirty', () => {
   act(() => h.result.current[1](() => ({ t: 'x' })))
   expect(h.result.current[3].dirty).toBe(false)
 })
+
+it('clearing can start from a given blank (a journey keeps its mode), which is not a draft', () => {
+  const key = draftKey('lis', 'journey')
+  const h = renderHook(() => useDraft(key, () => ({ mode: 'train', title: '' })))
+  act(() => h.result.current[1](() => ({ mode: 'flight', title: 'kl1001' })))
+  act(() => h.result.current[3].clear({ mode: 'flight', title: '' }))
+  expect(h.result.current[0]).toEqual({ mode: 'flight', title: '' })
+  expect(h.result.current[3].dirty).toBe(false)
+  expect(readDraft(key)).toBeUndefined()
+})

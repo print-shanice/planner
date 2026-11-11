@@ -816,7 +816,7 @@ describe('a flight looks itself up by its number', () => {
     expect(db.invoke).not.toHaveBeenCalled()
   })
 
-  it('a kept flight can be cleared back to a blank journey', async () => {
+  it('a kept flight can be cleared back to a blank flight', async () => {
     db.invoke.mockResolvedValue({ data: { flight: kl }, error: null })
     let d = await newFlight()
     await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
@@ -827,8 +827,8 @@ describe('a flight looks itself up by its number', () => {
     d = screen.getByRole('dialog')
     expect(within(d).getByLabelText('flight number')).toHaveValue('KL 1001')
     await userEvent.click(within(d).getByRole('button', { name: 'clear' }))
-    expect(within(d).queryByLabelText('flight number')).toBeNull()
-    expect(within(d).getByRole('button', { name: 'train' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(d).getByRole('button', { name: 'flight' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(d).getByLabelText('flight number')).toHaveValue('')
     expect(within(d).queryByText('London Heathrow')).toBeNull()
     expect(within(d).getByLabelText('depart').closest('.pick')).toHaveTextContent('mon 8 feb')
     expect(within(d).queryByRole('button', { name: 'clear' })).toBeNull()

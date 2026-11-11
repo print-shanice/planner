@@ -111,6 +111,11 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const [lookNote, setLookNote] = useState<string | null>(null)
   const typedNumber = flightNumber(d.title)
   const date = d.day
+  // "clear" empties what was typed, but a journey stays the kind it was picked as (flight stays flight)
+  function clearForm() {
+    const blank = { id: stop.id, d: initial, cost: costDraft(linked, trip?.currency ?? 'EUR', rates, people) }
+    draft.clear(kind === 'journey' ? { ...blank, d: { ...initial, mode: d.mode } } : blank)
+  }
   async function lookUp() {
     // pressing it says what's missing, rather than a greyed-out button that never explains
     if (!d.title.trim()) return setLookNote('add the flight number')
@@ -261,7 +266,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         </Fold></div>
       </>)}
       <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}
-        onClear={draft.dirty ? () => { draft.clear(); setProblem(null); setLookNote(null) } : undefined} />
+        onClear={draft.dirty ? () => { clearForm(); setProblem(null); setLookNote(null) } : undefined} />
     </form>
   )
 }
