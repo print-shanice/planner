@@ -16,6 +16,7 @@ import '../../src/styles/itinerary.css'
 import '../../src/styles/map.css'
 import '../../src/styles/tabs.css'
 import '../../src/styles/paper.css'
+import '../../src/styles/editorial.css'
 import { App } from '../../src/App'
 import { queryDefaults } from '../../src/lib/offline'
 
