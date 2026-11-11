@@ -31,6 +31,7 @@ import { CostForm } from '../money/CostForm'
 import { PlaceDetails } from './PlaceDetails'
 import { expenseCategory } from '../../lib/categories'
 import { SiteIcon } from '../saved/LinkCard'
+import { Help, Tooltip } from '../../components/Tooltip'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
 
@@ -160,7 +161,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         {maps
           ? <a className="stop-action" href={maps} target="_blank" rel="noopener noreferrer"><span className="ico"><Icon name="ext" /></span>directions</a>
           : <button type="button" className="stop-action" disabled><span className="ico"><Icon name="ext" /></span>directions</button>}
-        <button type="button" className="stop-action" disabled={!canEdit} onClick={() => picker.current?.open()}><span className="ico"><Icon name="upload" /></span>ticket</button>
+        <div className="help-row"><Tooltip text="attach a ticket or booking confirmation · PDF or image, up to 20 MB"><button type="button" className="stop-action" disabled={!canEdit} onClick={() => picker.current?.open()}><span className="ico"><Icon name="upload" /></span>ticket</button></Tooltip><Help label="about ticket uploads">attach a ticket or booking confirmation · PDF or image, up to 20 MB</Help></div>
       </div>
 
       {canEdit && (
@@ -176,6 +177,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
               {stop.day && <button type="button" className="text-link" onClick={() => moveDay('')}>no date</button>}
             </span>
           )}
+          <Help label="about dates and ideas">remove the date to keep this in Ideas for later; check-out and arrival dates are cleared too</Help>
           {stop.day && !stop.time && siblings.length > 1 && <>
             <button type="button" className="icon-btn" aria-label="earlier" disabled={at <= 0} onClick={() => shift(at - 1)}><Icon name="up" size={18} /></button>
             <button type="button" className="icon-btn" aria-label="later" disabled={at >= siblings.length - 1} onClick={() => shift(at + 1)}><Icon name="down" size={18} /></button>

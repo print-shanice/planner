@@ -530,13 +530,15 @@ describe('a stop reads like a place card', () => {
     return within(screen.getByRole('dialog', { name: 'arktikum' }))
   }
 
-  it('status, what and where, then four round actions', async () => {
+  it('status, what and where, then place actions with separate ticket help', async () => {
     const d = await open()
     expect(d.getByText('to book')).toHaveClass('pill', 'warn')
     expect(d.getByText('museum · rovaniemi')).toBeInTheDocument()
     const acts = within(d.getByRole('group', { name: 'actions' }))
-    expect(acts.getAllByRole('button').concat(acts.getAllByRole('link')).map((a) => a.textContent).sort()).toEqual(['directions', 'map', 'ticket'])
+    expect(acts.getAllByRole('button').concat(acts.getAllByRole('link')).filter(a => a.classList.contains('stop-action')).map((a) => a.textContent).sort()).toEqual(['directions', 'map', 'ticket'])
     expect([...d.getByRole('group', { name: 'actions' }).children].map((a) => a.textContent)).toEqual(['map', 'directions', 'ticket'])
+    await userEvent.click(acts.getByRole('button', { name: 'about ticket uploads' }))
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/PDF or image/)
   })
 
   it('"map" closes the card and shows the place on that day\'s map', async () => {
