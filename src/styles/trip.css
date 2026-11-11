@@ -10,7 +10,7 @@
 .back-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .trip-title-row { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
-.trip-title-row h1 { flex: 1; min-width: 0; font-size: 44px; font-weight: 400; line-height: 1.25; letter-spacing: -0.02em; }
+.trip-title-row h1 { flex: 1; min-width: 0; font-size: 32px; font-weight: 400; line-height: 1.2; letter-spacing: -0.015em; }
 .one-line, .one-line > span, .one-line .title-btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .one-line .title-btn { max-width: 100%; }
 .trip-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; }
@@ -127,7 +127,7 @@
    and the column keeps room for its scrollbar */
 .section-tabs button, .section-tabs button[aria-pressed="true"], .saved-switch button, .saved-switch button[aria-pressed="true"] { font-weight: 500; }
 .trip-wide .trip-main { scrollbar-gutter: stable; }
-@media (max-width: 480px) { .trip-title-row h1 { font-size: 38px; } }
+@media (max-width: 480px) { .trip-title-row h1 { font-size: 30px; } }
 /* switching sections: the old one steps aside and the loading animation fills the space under the navigation */
 .section-wait { display: grid; place-items: center; min-height: calc(100dvh - 280px); padding: 24px 16px; }
 .section-wait img { width: min(220px, 55vw); height: auto; }
