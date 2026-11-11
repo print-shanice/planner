@@ -7,6 +7,7 @@ import { Icon } from '../../components/Icon'
 import { tint } from '../../components/MonthCalendar'
 import { stopTitle } from '../plan/StopRow'
 import { Stamp } from './Stamp'
+import { Help, Tooltip } from '../../components/Tooltip'
 
 export type GlobeAsk = { routes: GlobeRoute[]; focus: { code: string; n: number } | null; ready: boolean }
 
@@ -43,7 +44,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
           <section className="scrap" aria-labelledby="scrap-around">
             <div className="scrap-head">
               <h2 id="scrap-around" className="head">getting around</h2>
-              {t.km > 0 && <span className="mono-label">{Math.round(t.km).toLocaleString('en-GB')} km</span>}
+              {t.km > 0 && <span className="mono-label help-label">{Math.round(t.km).toLocaleString('en-GB')} km<Help label="about journey distance">estimated from distances between journey endpoints, rather than actual routes travelled</Help></span>}
             </div>
             {t.km > 0 && (
               <div className="world-line">
@@ -70,10 +71,10 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
               {s.map((st, i) => {
                 const date = fmtDay(st.first, { day: 'numeric', month: 'short', year: 'numeric' })
                 return (
-                  <button key={st.code} type="button" className="stamp" style={{ ...tint(st.color), '--i': i } as CSSProperties}
+                  <Tooltip key={st.code} text={`show ${st.name} on the globe`}><button type="button" className="stamp" style={{ ...tint(st.color), '--i': i } as CSSProperties}
                     aria-label={`${st.name} · first stamped ${date}`} onClick={() => turnTo(st.code)}>
                     <Stamp code={st.code} name={st.name} date={date} iso={st.first} port={st.port} mode={st.mode} />
-                  </button>
+                  </button></Tooltip>
                 )
               })}
             </div>

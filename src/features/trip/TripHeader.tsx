@@ -15,6 +15,7 @@ import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
 import { colourVar } from '../../lib/colors'
+import { Tooltip } from '../../components/Tooltip'
 
 // where the trip is, right now and when you go: "par 11:02 · same time as you · usually 9° / 3°".
 // shown while the trip is still ahead or under way
@@ -87,9 +88,9 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
           <Icon name="back" />{up && <CountryFlag code={flagsOf(up)[0]} />}<span>{upName}</span>
         </Link>
         {/* the people sharing the trip are also the way into its settings */}
-        <button type="button" className="avatars trip-people" aria-label="edit trip" title={`shared with ${members.map(m => m.name || m.email).join(', ')}`} disabled={!canEdit} onClick={onEdit}>
+        <Tooltip text={`edit trip details · shared with ${members.map(m => m.name || m.email).join(', ')}`}><button type="button" className="avatars trip-people" aria-label="edit trip" disabled={!canEdit} onClick={onEdit}>
           {members.map((m) => <span key={m.email} className="avatar" style={{ background: colourVar(m.color) }}>{(m.name || m.email).slice(0, 1)}</span>)}
-        </button>
+        </button></Tooltip>
       </div>
       {route.length > 0 && (
         <p className="trip-route" aria-label={`countries: ${route.map(countryName).join(', ')}`}>
@@ -100,9 +101,9 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
       <div className="trip-title-row">
         <h1 className="head one-line">
           {family ? (
-            <button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
+            <Tooltip text="switch between this trip and its side trips"><button type="button" className="title-btn" aria-haspopup="dialog" onClick={() => setTree(true)}>
               <span>{trip.name}</span><Icon name="chevron" size={22} />
-            </button>
+            </button></Tooltip>
           ) : <span>{trip.name}</span>}
         </h1>
         {add}

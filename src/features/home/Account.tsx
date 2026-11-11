@@ -8,6 +8,7 @@ import { Icon } from '../../components/Icon'
 import { Button, IconButton } from '../../components/Button'
 import { Copy } from '../../components/Copy'
 import { hasSaveKey, newSaveKey } from '../../lib/saveKey'
+import { Help } from '../../components/Tooltip'
 
 export function AccountButton() {
   const [open, setOpen] = useState(false)
@@ -84,6 +85,7 @@ function SaveKey({ online }: { online: boolean }) {
 
   return (
     <div className="stack-xs save-key">
+      <span className="label help-label">save key<Help label="about save keys">connect your phone’s share-sheet shortcut so it can save links to Planner</Help></span>
       {key && (
         <>
           <div className="fact-copy row"><span className="copy-text keep-case mono">{key}</span><Copy text={key} label="copy save key" /></div>

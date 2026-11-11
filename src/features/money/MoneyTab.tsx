@@ -21,6 +21,7 @@ import { Pending } from '../../components/Pending'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { useSubmit } from '../../components/FormFooter'
 import { colourVar } from '../../lib/colors'
+import { Help, Tooltip } from '../../components/Tooltip'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
@@ -119,12 +120,12 @@ export function MoneyTab({ trip }: { trip: Trip }) {
       )}
       <div className="money-head">
         <div className="stack-xs">
-          <p className="money-total num head" data-testid="money-total">{show(total)}</p>
-          <p className="muted num">{budget != null ? [`of ${show(budget)}`, left != null ? `${show(left)} left` : ''].filter(Boolean).join(' · ') : 'in total'}</p>
+          <div className="help-row"><p className="money-total num head" data-testid="money-total">{show(total)}</p><Help label="about the total">paid costs plus planned estimates; repayments are excluded</Help></div>
+          <p className="muted num">{budget != null ? [`of ${show(budget)}`, left != null ? `${show(left)} left` : ''].filter(Boolean).join(' · ') : 'in total'}{left != null && <Help label="about the remaining budget">budget remaining after paid and planned costs</Help>}</p>
         </div>
-        <select aria-label="show in" className="input cur-select" value={cur} onChange={(e) => setCur(e.target.value)}>
+        <div className="help-row"><select aria-label="show in" className="input cur-select" value={cur} onChange={(e) => setCur(e.target.value)}>
           {currencyList(rates).map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        </select><Help label="about display currency">show totals in this currency; individual costs keep their original currency</Help></div>
       </div>
       {total > 0 && (
         <div className="budget-bar" aria-hidden="true">
@@ -142,7 +143,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
 
       {settle && (
         <section className="settle-box" aria-label="settle up">
-          <p className="label">settle up</p>
+          <p className="label help-label">settle up<Help label="about settling up">{`balances cover ${top.name} and all its side trips, regardless of the spending filter above`}</Help></p>
           <p className="settle-scope muted">{top.name} · with side trips</p>
           <ul className="bal-list">
             {settle.people.map((p) => {
@@ -172,7 +173,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
               <div key={`${x.from}-${x.to}`} className="settle-move">
                 <span className="settle-faces" aria-hidden="true"><Face id={x.from} /><span className="settle-arrow">→</span><Face id={x.to} /></span>
                 <p className="settle-line num">{line}</p>
-                {canEdit && <button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => setRepayment(x)}>record repayment</button>}
+                {canEdit && <Tooltip text="record money you’ve already paid back; this does not send a payment"><button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => setRepayment(x)}>record repayment</button></Tooltip>}
               </div>
             )
           })}
@@ -243,6 +244,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         {repayment && <div className="stack">
           <p>{name(repayment.from)} paid {name(repayment.to)} {debt(repayment.eur)}</p>
           <p className="muted">{top.name} · with side trips</p>
+          <p className="muted">record money you’ve already paid back; this does not send a payment</p>
           {failure && <p className="warn-line" role="alert">{failure}</p>}
           <button type="button" className="btn primary" disabled={saving || !canEdit} onClick={() => void run(async () => {
             const current = settle?.moves.find(x => x.from === repayment.from && x.to === repayment.to)

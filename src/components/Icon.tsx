@@ -1,4 +1,5 @@
 const P: Record<string, string> = {
+  info: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v6M12 7h.01',
   plus: 'M12 5v14M5 12h14',
   back: 'M15 5l-7 7 7 7',
   next: 'M9 5l7 7-7 7',

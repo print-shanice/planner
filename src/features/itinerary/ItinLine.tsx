@@ -15,6 +15,7 @@ import { readLine, type LineValues } from './LineEditor'
 import { categoryIcon, categoryOf } from '../../lib/categories'
 import type { ReactNode } from 'react'
 import { NO_INFO, type LineInfo } from '../../lib/lineInfo'
+import { Tooltip } from '../../components/Tooltip'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
@@ -242,8 +243,8 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
       <div ref={box} className={`itin-line doc${current ? ' current' : ''}`} data-line={s.id} data-testid="itin-line"
         onMouseEnter={() => onLight?.(s.id)} onMouseLeave={() => onLight?.(null)} onFocus={() => onLight?.(s.id)} onBlur={leave}>
         <span className="itin-time num" onFocus={() => setTimeOpen(true)}>
-          <input type="text" className={`doc-time${when.from === 'any' ? '' : ' quiet'}`} aria-label={`start time of ${title}`} placeholder="any" value={v.time}
-            inputMode="decimal" autoComplete="off" onChange={(e) => typeTime('time', e.target.value)} onBlur={() => tidy('time')} onKeyDown={key} />
+          <Tooltip text="activities with a time are ordered automatically"><input type="text" className={`doc-time${when.from === 'any' ? '' : ' quiet'}`} aria-label={`start time of ${title}`} placeholder="any" value={v.time}
+            inputMode="decimal" autoComplete="off" onChange={(e) => typeTime('time', e.target.value)} onBlur={() => tidy('time')} onKeyDown={key} /></Tooltip>
           {(v.end || timeOpen) && <input type="text" className="doc-time till" aria-label={`end time of ${title}`} placeholder="end" value={v.end}
             inputMode="decimal" autoComplete="off" onChange={(e) => typeTime('end', e.target.value)} onBlur={() => tidy('end')} onKeyDown={key} />}
         </span>

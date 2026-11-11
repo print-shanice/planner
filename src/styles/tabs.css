@@ -8,7 +8,9 @@
 .footnote { font-size: 13px; text-align: center; }
 
 /* money */
-.money-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.money-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+/* the total and its budget line give way before the page does, however narrow the phone */
+.money-head > .stack-xs { flex: 1 1 auto; min-width: 0; }
 .money-total { font-size: 56px; font-weight: 400; line-height: 1; letter-spacing: -0.02em; }
 .cur-select { width: auto; min-height: 44px; padding: 6px 10px; border-radius: 8px; font-weight: 500; }
 .budget-bar { display: flex; height: 6px; background: var(--soft); overflow: hidden; }

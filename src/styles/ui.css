@@ -433,6 +433,24 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
   text-transform: lowercase; font-family: var(--f-body); animation: choice-in .16s ease-out; transform-origin: top right;
 }
 .choice-list.up { transform-origin: bottom right; }
+
+/* Short contextual help floats above sheets, with the same ink and paper as the app. */
+.context-tip {
+  position: fixed; z-index: 100; width: max-content; max-width: min(280px, calc(100vw - 16px));
+  padding: 10px 12px; border-radius: 8px; background: var(--ink); color: var(--card);
+  font-family: var(--f-body); font-size: 13px; font-weight: 400; line-height: 1.5;
+  text-align: left; text-transform: none; overflow-wrap: anywhere;
+}
+.help-btn {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: var(--ink-2); cursor: help; vertical-align: middle;
+}
+.help-btn:hover { color: var(--ink); background: var(--soft); }
+.help-label { display: inline-flex; align-items: center; gap: 4px; }
+.help-row { display: flex; align-items: center; gap: 4px; }
+.help-row > .switch-row { flex: 1; }
+@media (pointer: coarse) { .help-btn { width: 44px; height: 44px; } }
 @keyframes choice-in { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
 .choice {
   display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 6px;

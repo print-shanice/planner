@@ -21,6 +21,7 @@ import { Chip } from '../itinerary/ItinLine'
 import { stopTitle } from '../plan/StopRow'
 import { LinkCard } from './LinkCard'
 import { JotLine } from './JotLine'
+import { Help, Tooltip } from '../../components/Tooltip'
 
 // put an idea on a day right from its row: the trip's days, or any date when the trip has none yet
 export function DayPick({ stop, home, label = 'add to day' }: { stop: Stop; home: Trip; label?: string }) {
@@ -31,10 +32,10 @@ export function DayPick({ stop, home, label = 'add to day' }: { stop: Stop; home
   const go = (d: string) => { if (d) save.mutate(scheduleChange(stop, d, stops)) }
   if (!canEdit) return null
   return days.length ? (
-    <select className="text-select" aria-label={`${label}: ${stopTitle(stop)}`} value="" onChange={(e) => go(e.target.value)}>
+    <Tooltip text="move this into the plan; its notes, tickets and links stay attached"><select className="text-select" aria-label={`${label}: ${stopTitle(stop)}`} value="" onChange={(e) => go(e.target.value)}>
       <option value="">{label}</option>
       {days.map((d) => <option key={d} value={d}>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</option>)}
-    </select>
+    </select></Tooltip>
   ) : (
     <label className="text-select date-pick"><span>{label}</span><input type="date" aria-label={`${label}: ${stopTitle(stop)}`} value="" onChange={(e) => go(e.target.value)} /></label>
   )
@@ -108,7 +109,7 @@ export function SavedTab({ trip }: { trip: Trip }) {
       )}
       {ideas.length > 0 && (
         <section aria-label="places">
-          <h3 className="mono-label">places &amp; notes · {ideas.length}</h3>
+          <h3 className="mono-label help-label">places &amp; notes · {ideas.length}<Help label="about adding ideas to the plan">choose “add to day” to move an idea into the plan; its notes, tickets and links stay attached</Help></h3>
           <ul className="doc-list" aria-label="ideas">{ideas.map((s) => <IdeaRow key={s.id} stop={s} trips={trips} links={links} />)}</ul>
         </section>
       )}
