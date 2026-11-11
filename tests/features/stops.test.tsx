@@ -816,6 +816,33 @@ describe('a flight looks itself up by its number', () => {
     expect(db.invoke).not.toHaveBeenCalled()
   })
 
+  it('a kept flight can be cleared back to a blank journey', async () => {
+    db.invoke.mockResolvedValue({ data: { flight: kl }, error: null })
+    let d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    await within(d).findByText('London Heathrow')
+    await userEvent.click(within(d).getByRole('button', { name: 'close' }))
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    d = screen.getByRole('dialog')
+    expect(within(d).getByLabelText('flight number')).toHaveValue('KL 1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'clear' }))
+    expect(within(d).queryByLabelText('flight number')).toBeNull()
+    expect(within(d).getByRole('button', { name: 'train' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(d).queryByText('London Heathrow')).toBeNull()
+    expect(within(d).getByLabelText('depart').closest('.pick')).toHaveTextContent('mon 8 feb')
+    expect(within(d).queryByRole('button', { name: 'clear' })).toBeNull()
+  })
+
+  it('editing a saved journey has no clear', async () => {
+    db.stops = [stop({ id: 'f1', trip_id: 'lap', kind: 'journey', mode: 'flight', title: 'KL 1001', day: '2027-02-08', origin: place({ name: 'Schiphol' }) })]
+    show(<Opener id="f1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'edit' }))
+    await userEvent.type(within(screen.getByRole('dialog')).getByLabelText('flight number'), '2')
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'clear' })).toBeNull()
+  })
+
   it('says so when the flight is not found, and keeps what was typed', async () => {
     const d = await newFlight()
     fireEvent.change(within(d).getByLabelText('depart time'), { target: { value: '09:15' } })

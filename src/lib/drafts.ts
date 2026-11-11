@@ -35,9 +35,16 @@ function sameShape(a: unknown, b: unknown): boolean {
   return ka.join() === kb.join() && ka.every((k) => sameShape(a[k], b[k]))
 }
 
+export type DraftControl = {
+  // a new item's form holds something (never for a form without a key)
+  dirty: boolean
+  // back to the blank form, and the kept draft forgotten until it's touched again
+  clear: () => void
+}
+
 // form state that's kept as a draft once touched (key null: plain state); settle() drops it for good,
 // because after a save attempt the item exists, or its failed copy waits with a retry
-export function useDraft<T>(key: string | null, blank: () => T): [T, (fn: (v: T) => T) => void, () => void] {
+export function useDraft<T>(key: string | null, blank: () => T): [T, (fn: (v: T) => T) => void, () => void, DraftControl] {
   const [first] = useState(() => {
     const empty = blank()
     const kept = key ? readDraft<T>(key) : undefined
@@ -56,5 +63,11 @@ export function useDraft<T>(key: string | null, blank: () => T): [T, (fn: (v: T)
     settled.current = true
     if (key) clearDraft(key)
   }, [key])
-  return [value, set, settle]
+  const clear = useCallback(() => {
+    keep.current = false
+    if (key) clearDraft(key)
+    setValue(first.empty)
+  }, [key, first.empty])
+  const dirty = !!key && JSON.stringify(value) !== JSON.stringify(first.empty)
+  return [value, set, settle, { dirty, clear }]
 }

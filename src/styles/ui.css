@@ -469,3 +469,4 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .flight-find .btn { min-height: 44px; }
 .flight-check { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .flight-check .btn { min-height: 44px; }
+.form-clear { min-height: 44px; }

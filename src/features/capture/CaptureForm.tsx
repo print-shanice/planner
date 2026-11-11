@@ -32,7 +32,7 @@ export function CaptureForm({ initial, tripId, stopId, link, onDone }: { initial
   const toast = useToast()
   const first = initial ? extractUrl(initial.url) ?? extractUrl(initial.text) ?? '' : ''
   // a shared-in link starts fresh; one typed in a trip is kept as a draft until it's saved
-  const [form, update, settle] = useDraft<Draft>(link || initial || stopId ? null : draftKey(tripId, 'link'), () => ({
+  const [form, update, settle, draft] = useDraft<Draft>(link || initial || stopId ? null : draftKey(tripId, 'link'), () => ({
     id: link?.id ?? newId(), url: link?.url ?? first, title: link?.title ?? initial?.title ?? '', note: link?.note ?? '',
     trip: link ? link.trip_id ?? '' : tripId ?? '', stop: link?.stop_id ?? stopId ?? '',
   }))
@@ -104,7 +104,8 @@ export function CaptureForm({ initial, tripId, stopId, link, onDone }: { initial
           </select>
         </label>
       )}
-      <FormFooter form={formId} problem={problem ?? failure ?? (!canEdit ? 'offline · not saved yet' : null)} saving={saving} failed={!!failure} />
+      <FormFooter form={formId} problem={problem ?? failure ?? (!canEdit ? 'offline · not saved yet' : null)} saving={saving} failed={!!failure}
+        onClear={draft.dirty ? () => { draft.clear(); setProblem(null) } : undefined} />
     </form>
   )
 }

@@ -23,7 +23,7 @@ export function CostForm({ trip, cost, day, stopId = null, defaults, onDone }: P
   const remove = useRemove('costs')
   const canEdit = useCanEdit()
   // a new cost is kept as a draft for this trip, with one id, so saving again after a failure sends the same row
-  const [form, update, settle] = useDraft<Draft>(cost ? null : draftKey(trip.id, stopId ? `cost:${stopId}` : 'cost'), () => ({
+  const [form, update, settle, draft] = useDraft<Draft>(cost ? null : draftKey(trip.id, stopId ? `cost:${stopId}` : 'cost'), () => ({
     id: cost?.id ?? newId(), title: cost?.title ?? defaults?.title ?? '', category: cost?.category ?? defaults?.category ?? 'food', date: cost?.date ?? day ?? '',
     money: costDraft(cost, trip.currency, rates, people),
   }))
@@ -66,7 +66,8 @@ export function CostForm({ trip, cost, day, stopId = null, defaults, onDone }: P
       <div className="when">
         <div className="when-row"><span className="when-label">date</span><Pick type="date" label="date" value={date} onChange={(v) => set({ date: v })} /></div>
       </div>
-      <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}>
+      <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}
+        onClear={draft.dirty ? () => { draft.clear(); setProblem(null) } : undefined}>
         {cost && <TwoTapDelete disabled={!canEdit} onConfirm={async () => { await remove.mutateAsync(cost.id); onDone() }} />}
       </FormFooter>
     </form>

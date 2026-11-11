@@ -122,6 +122,20 @@ it('the cost form uses the same paid switch and keeps a new draft', async () => 
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'sauna', amount: 80, status: 'paid', paid_by: 'u1' }))
 })
 
+it('a new cost with something typed can be cleared; editing a cost has no clear', async () => {
+  const t = trip({ id: 'lap' })
+  const first = render(<CostForm trip={t} onDone={vi.fn()} />)
+  expect(screen.queryByRole('button', { name: 'clear' })).toBeNull()
+  await userEvent.type(screen.getByLabelText('name'), 'sauna')
+  await userEvent.click(screen.getByRole('button', { name: 'clear' }))
+  expect(screen.getByLabelText('name')).toHaveValue('')
+  expect(localStorage.getItem('planner-drafts')).toBeNull()
+  first.unmount()
+  render(<CostForm trip={t} cost={cost({ id: 'c1', trip_id: 'lap', title: 'sauna' })} onDone={vi.fn()} />)
+  await userEvent.type(screen.getByLabelText('name'), ' x')
+  expect(screen.queryByRole('button', { name: 'clear' })).toBeNull()
+})
+
 it('editing a cost keeps no draft', async () => {
   render(<CostForm trip={trip({ id: 'lap' })} cost={cost({ id: 'c1', trip_id: 'lap', title: 'sauna' })} onDone={vi.fn()} />)
   await userEvent.type(screen.getByLabelText('name'), ' x')

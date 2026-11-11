@@ -19,9 +19,10 @@ export function useSubmit() {
   return { run, saving, failure }
 }
 
-type Props = { form: string; problem: string | null; saving: boolean; failed: boolean; children?: ReactNode }
+// onClear: a new item's form holds something; "clear" empties it and its kept draft
+type Props = { form: string; problem: string | null; saving: boolean; failed: boolean; children?: ReactNode; onClear?: () => void }
 
-export function FormFooter({ form, problem, saving, failed, children }: Props) {
+export function FormFooter({ form, problem, saving, failed, children, onClear }: Props) {
   const canEdit = useCanEdit()
   const line = canEdit ? problem : 'offline'
   return (
@@ -29,6 +30,7 @@ export function FormFooter({ form, problem, saving, failed, children }: Props) {
       <div className="form-foot">
         {line && <p className="warn-line" role="alert">{line}</p>}
         {children}
+        {onClear && <button type="button" className="text-link form-clear" onClick={onClear}>clear</button>}
         <span className="spacer" />
         <Button variant="primary" type="submit" form={form} disabled={!canEdit} busy={saving && 'saving'}>
           {failed ? 'retry' : 'save'}

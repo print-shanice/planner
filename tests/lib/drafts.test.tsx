@@ -56,3 +56,26 @@ it('a draft with a place filled in still counts as the same shape', () => {
   const h = renderHook(() => useDraft(key, () => ({ id: 's2', d: { title: '', place: null } })))
   expect(h.result.current[0].id).toBe('s1')
 })
+
+it('clearing empties the form and forgets the draft until it is touched again', () => {
+  const key = draftKey('lis', 'note')
+  const a = renderHook(() => useDraft(key, () => ({ title: '' })))
+  expect(a.result.current[3].dirty).toBe(false)
+  act(() => a.result.current[1]((v) => ({ ...v, title: 'tram 28' })))
+  expect(a.result.current[3].dirty).toBe(true)
+  act(() => a.result.current[3].clear())
+  expect(a.result.current[0]).toEqual({ title: '' })
+  expect(a.result.current[3].dirty).toBe(false)
+  expect(readDraft(key)).toBeUndefined()
+  a.unmount()
+  const b = renderHook(() => useDraft(key, () => ({ title: '' })))
+  expect(b.result.current[0]).toEqual({ title: '' })
+  act(() => b.result.current[1](() => ({ title: 'lx factory' })))
+  expect(readDraft(key)).toEqual({ title: 'lx factory' })
+})
+
+it('a form without a key (editing something saved) is never dirty', () => {
+  const h = renderHook(() => useDraft<{ t: string }>(null, () => ({ t: '' })))
+  act(() => h.result.current[1](() => ({ t: 'x' })))
+  expect(h.result.current[3].dirty).toBe(false)
+})

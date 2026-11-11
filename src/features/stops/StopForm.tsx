@@ -93,7 +93,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const [costId] = useState(() => linked?.id ?? newId())
   const [initial] = useState(() => seed(stop))
   // a new stop's form is kept as a draft per trip and kind, with its id, until it's saved
-  const [form, update, settle] = useDraft<{ id: string; d: Draft; cost: CostDraft }>(
+  const [form, update, settle, draft] = useDraft<{ id: string; d: Draft; cost: CostDraft }>(
     isNew ? draftKey(stop.trip_id, stop.kind) : null,
     () => ({ id: stop.id, d: initial, cost: costDraft(linked, trip?.currency ?? 'EUR', rates, people) }),
   )
@@ -260,7 +260,8 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
           <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />{link}
         </Fold></div>
       </>)}
-      <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure} />
+      <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}
+        onClear={draft.dirty ? () => { draft.clear(); setProblem(null); setLookNote(null) } : undefined} />
     </form>
   )
 }

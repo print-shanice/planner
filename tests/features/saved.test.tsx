@@ -137,6 +137,16 @@ describe('saving a link', () => {
   const form = (props: Partial<Parameters<typeof CaptureForm>[0]> = {}) =>
     render(<MemoryRouter><CaptureForm initial={null} tripId="lap" onDone={vi.fn()} {...props} /></MemoryRouter>)
 
+  it('a new link with something typed can be cleared, and its draft goes with it', async () => {
+    form()
+    expect(screen.queryByRole('button', { name: 'clear' })).toBeNull()
+    await userEvent.type(screen.getByLabelText('link'), 'https://example.com/x')
+    await userEvent.click(screen.getByRole('button', { name: 'clear' }))
+    expect(screen.getByLabelText('link')).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'clear' })).toBeNull()
+    expect(localStorage.getItem('planner-drafts')).toBeNull()
+  })
+
   it('needs only the link: a reel is named after where it came from, with no date anywhere', async () => {
     form()
     expect(screen.queryByLabelText(/day|date|time/)).toBeNull()
