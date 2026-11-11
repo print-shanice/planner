@@ -1,6 +1,7 @@
 // the real app, on made-up data: the same screens as the live planner, with supabase and google maps stood in for
 import './fake-google'
 import './fake-rates'
+import './fake-weather'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@fontsource-variable/eb-garamond/index.css'

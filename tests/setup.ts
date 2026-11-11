@@ -6,6 +6,14 @@ import { cleanup } from '@testing-library/react'
 // tests never use a real google key from .env.local: no requests, no cost, the same results on every machine
 beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', ''); vi.stubEnv('VITE_GOOGLE_MAP_ID', '') })
 
+// the weather service is never asked for real: every test sees the same mild days, and nothing leaves the machine
+const realFetch = globalThis.fetch?.bind(globalThis)
+globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  if (url.includes('open-meteo.com')) return Promise.resolve(new Response(JSON.stringify({ daily: { temperature_2m_max: [12, 14], temperature_2m_min: [4, 6] } }), { status: 200, headers: { 'content-type': 'application/json' } }))
+  return realFetch ? realFetch(input, init) : Promise.reject(new Error('no network in tests'))
+}) as typeof fetch
+
 afterEach(() => {
   cleanup()
   localStorage.clear()

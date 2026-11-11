@@ -30,6 +30,8 @@ select { text-transform: inherit; }
 }
 .num { font-variant-numeric: tabular-nums; }
 .head { font-family: var(--f-head); font-weight: 500; letter-spacing: -0.01em; }
+/* the serif's tails (g, p, y) hang well below its baseline; a line cut to one row must leave room for them */
+:is(.one-line, .tree-name, .fold-name, .side-line-name, .places-title, .side-name, .trip-item-name, .turn-name, .resume-name) { padding-bottom: .08em; }
 .muted { color: var(--ink-2); }
 
 @media (prefers-reduced-motion: reduce) {

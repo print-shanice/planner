@@ -10,7 +10,7 @@
 .back-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .trip-title-row { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
-.trip-title-row h1 { flex: 1; min-width: 0; font-size: 44px; font-weight: 400; line-height: 1.05; letter-spacing: -0.02em; }
+.trip-title-row h1 { flex: 1; min-width: 0; font-size: 44px; font-weight: 400; line-height: 1.25; letter-spacing: -0.02em; }
 .one-line, .one-line > span, .one-line .title-btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .one-line .title-btn { max-width: 100%; }
 .trip-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; }

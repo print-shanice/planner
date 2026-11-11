@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import type { Trip } from '../../lib/types'
+import type { Stop, Trip } from '../../lib/types'
 import { ancestors, countryName, descendants } from '../../lib/countries'
 import { useTripFlags } from '../../lib/tripGuess'
 import { fmtRange, nights, todayISO } from '../../lib/dates'
 import { clockIn, diffWords, offsetOf, placeCode, useNow, zoneOf } from '../../lib/localTime'
+import { tempWords, useTemps, weatherAsk } from '../../lib/weather'
 import { useMembers, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { Icon } from '../../components/Icon'
@@ -14,16 +15,26 @@ import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
 
-// the clock where the trip is, while it's still ahead or under way: "par 11:02 · same time as you"
-function TripClock({ trip, country }: { trip: Trip; country?: string }) {
+// where the trip is, right now and when you go: "par 11:02 · same time as you · usually 9° / 3°".
+// shown while the trip is still ahead or under way
+function TripNow({ trip, country, stops }: { trip: Trip; country?: string; stops: Stop[] }) {
   const now = useNow()
-  const zone = zoneOf(trip.base?.country ?? country, trip.base?.lng)
-  if (!zone || (trip.end_date && trip.end_date < todayISO())) return null
+  const today = todayISO()
+  const spot = [trip.base, ...stops.filter((s) => s.trip_id === trip.id).map((s) => s.place)]
+    .find((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
+  const at = spot ? { lat: spot.lat!, lng: spot.lng! } : null
+  const temps = useTemps(at, weatherAsk(trip.start_date, trip.end_date, today)).data
+  const zone = zoneOf(trip.base?.country ?? country, trip.base?.lng ?? spot?.lng)
+  if (trip.end_date && trip.end_date < today) return null
+  if (!zone && !temps) return null
   const code = placeCode(trip.base?.city || trip.base?.name || trip.name)
   return (
-    <p className="trip-clock" aria-label={`local time in ${trip.base?.city || trip.name}`}>
-      <span className="trip-clock-time">{code} {clockIn(zone, now)}</span>
-      <span>{diffWords(offsetOf(zone, now), -now.getTimezoneOffset())}</span>
+    <p className="trip-clock">
+      {zone && <>
+        <span className="trip-clock-time" aria-label={`local time ${clockIn(zone, now)}`}>{code} {clockIn(zone, now)}</span>
+        <span>{diffWords(offsetOf(zone, now), -now.getTimezoneOffset())}</span>
+      </>}
+      {temps && <span aria-label={`${temps.kind === 'usual' ? 'usually ' : ''}highs ${temps.hi}°${temps.unit}, lows ${temps.lo}°${temps.unit}`}>{tempWords(temps)}</span>}
     </p>
   )
 }
@@ -78,7 +89,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
         {add}
       </div>
       {(flags || when) && <p className="trip-meta muted num">{flags}{flags && when && <span aria-hidden="true">·</span>}{when && <span>{when}</span>}</p>}
-      <TripClock trip={trip} country={countries[0]} />
+      <TripNow trip={trip} country={countries[0]} stops={stops} />
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
         <TripTree trips={trips} current={trip.id} flagsOf={flagsOf} onPick={() => setTree(false)} />
         <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => { setTree(false); setAdding(true) }}><Icon name="plus" />add side trip</button>
