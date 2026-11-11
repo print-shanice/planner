@@ -33,7 +33,8 @@ export function ChoiceMenu({ label, ariaLabel, options, onPick, disabled, classN
       const t = e.target as Node
       if (!list.current?.contains(t) && !button.current?.contains(t)) close(false)
     }
-    const gone = () => close(false)
+    // the page moving under it closes it; its own list scrolling (a long run of trips) does not
+    const gone = (e: Event) => { if (e.target instanceof Node && list.current?.contains(e.target)) return; close(false) }
     document.addEventListener('pointerdown', away)
     window.addEventListener('resize', gone)
     window.addEventListener('scroll', gone, true)

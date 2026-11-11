@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChoiceMenu } from '../../src/components/ChoiceMenu'
 
@@ -69,4 +69,14 @@ it('floats above the page, so opening it never moves or gets cut off by a list',
 it('can be switched off', () => {
   show(vi.fn(), true)
   expect(screen.getByRole('button', { name: 'move cafe reel to a trip' })).toBeDisabled()
+})
+
+it('scrolling its own list of trips keeps it open; the page scrolling under it closes it', async () => {
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'move cafe reel to a trip' }))
+  const list = screen.getByRole('listbox')
+  fireEvent.scroll(list)
+  expect(screen.getByRole('listbox')).toBeInTheDocument()
+  fireEvent.scroll(window)
+  expect(screen.queryByRole('listbox')).toBeNull()
 })
