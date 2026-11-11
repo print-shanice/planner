@@ -1,12 +1,13 @@
 // deploy: npx supabase functions deploy flight --no-verify-jwt --project-ref <ref>
-// secret: npx supabase secrets set AERODATABOX_KEY=<rapidapi key> --project-ref <ref>
+// secrets: npx supabase secrets set AERODATABOX_KEY=<rapidapi key> PLANNER_PUBLISHABLE_KEY=<sb_publishable_…> --project-ref <ref>
 // (the session is checked here, by getUser and is_member, rather than by the gateway)
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { handle, type Db } from './handler.ts'
 import type { Flight } from './shape.ts'
 
 const url = Deno.env.get('SUPABASE_URL')!
-const anon = Deno.env.get('SUPABASE_ANON_KEY')!
+// the planner's publishable key when set (projects on the new api keys), else the anon key supabase provides
+const anon = Deno.env.get('PLANNER_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY')!
 const key = Deno.env.get('AERODATABOX_KEY') ?? ''
 
 function db(authorization: string): Db {
