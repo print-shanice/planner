@@ -40,6 +40,7 @@ vi.mock('../../src/features/home/Globe', () => ({
 
 import { HomePage } from '../../src/features/home/HomePage'
 import { TripForm } from '../../src/features/home/TripForm'
+import { ToastProvider } from '../../src/components/Toast'
 
 function Where() {
   const l = useLocation()
@@ -151,6 +152,32 @@ it('delete is blocked while side trips exist', () => {
   render(<MemoryRouter><TripForm trip={db.trips[2] as Trip} onDone={() => {}} /></MemoryRouter>)
   expect(screen.getByText('move or delete its side trips first')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'delete trip' })).toBeDisabled()
+})
+
+it('deleting a trip leaves it at once, with undo; the delete only goes once the toast does', async () => {
+  db.trips = europe()
+  db.remove.mockClear()
+  const gone = vi.fn()
+  const paris = db.trips.find((t) => (t as Trip).id === 'par') as Trip
+  render(<MemoryRouter><ToastProvider><TripForm trip={paris} onDone={() => {}} onDeleted={gone} /></ToastProvider></MemoryRouter>)
+  await userEvent.click(screen.getByRole('button', { name: 'delete trip' }))
+  await userEvent.click(screen.getByRole('button', { name: 'tap again to delete' }))
+  expect(gone).toHaveBeenCalledTimes(1)
+  expect(db.remove).not.toHaveBeenCalled()
+  expect(screen.getByRole('status')).toHaveTextContent('removed paris')
+  await userEvent.click(screen.getByRole('button', { name: 'undo' }))
+  expect(db.remove).not.toHaveBeenCalled()
+})
+
+it('a deleted trip is really deleted when its toast ends', async () => {
+  db.trips = europe()
+  db.remove.mockClear()
+  const paris = db.trips.find((t) => (t as Trip).id === 'par') as Trip
+  render(<MemoryRouter><ToastProvider><TripForm trip={paris} onDone={() => {}} onDeleted={() => {}} /></ToastProvider></MemoryRouter>)
+  await userEvent.click(screen.getByRole('button', { name: 'delete trip' }))
+  await userEvent.click(screen.getByRole('button', { name: 'tap again to delete' }))
+  fireEvent(window, new Event('pagehide'))
+  await waitFor(() => expect(db.remove).toHaveBeenCalledWith('par'))
 })
 
 it('part of excludes the trip itself and its side trips', () => {

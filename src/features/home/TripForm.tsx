@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type FormEvent } from 'react'
-import { useRates, useRemove, useSave, useTrips } from '../../lib/queries'
+import { useRates, useSave, useTrips } from '../../lib/queries'
+import { useUndoRemove } from '../../lib/undo'
 import { currencyList } from '../../lib/rates'
 import { descendants } from '../../lib/countries'
 import { newId } from '../../lib/id'
@@ -18,7 +19,8 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   const trips = useTrips().data ?? []
   const rates = useRates().data ?? null
   const save = useSave('trips')
-  const remove = useRemove('trips')
+  // a deleted trip goes at once with undo; the server delete (and everything in it) waits for the toast
+  const removeLater = useUndoRemove('trips')
 
   // a new trip keeps one id, so saving again after a failure sends the same row
   const [id] = useState(() => trip?.id ?? newId())
@@ -120,7 +122,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
       <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}>
         {trip && (
           <TwoTapDelete label="delete trip" disabled={hasChildren}
-            onConfirm={async () => { await remove.mutateAsync(trip.id); onDeleted ? onDeleted() : onDone() }} />
+            onConfirm={() => { (onDeleted ?? onDone)(); removeLater(trip.id, trip.name.toLowerCase()) }} />
         )}
       </FormFooter>
     </form>

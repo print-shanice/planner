@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, useTransition } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useStops, useTrips } from '../../lib/queries'
 import { chosenDay, ownerOn } from '../../lib/agenda'
 import { todayISO } from '../../lib/dates'
@@ -76,6 +76,7 @@ export function TripPage() {
 function TripScreen() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const tq = useTrips()
   const sq = useStops()
   const trips = tq.data ?? []
@@ -196,7 +197,7 @@ function TripScreen() {
       {!wide && <TripSummary bar tabs={PHONE_TABS} active={tab} onPick={pick} />}
       <AddSheet open={menu} title={menuTitle} onClose={() => setMenu(false)} onPick={k => { setMenu(false); setKind(k) }} />
       <AddForms kind={kind} trip={owner} day={onDay} onClose={() => setKind(null)} />
-      <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}><TripForm trip={trip} onDone={() => setEditing(false)} onDeleted={() => { window.location.hash = trip.parent_id ? `/trip/${trip.parent_id}` : '/' }} /></Sheet>
+      <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}><TripForm trip={trip} onDone={() => setEditing(false)} onDeleted={() => { setEditing(false); navigate(trip.parent_id ? `/trip/${trip.parent_id}` : '/') }} /></Sheet>
     </div>
     </DragProvider>
   )
