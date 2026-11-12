@@ -17,6 +17,7 @@ import type { ReactNode } from 'react'
 import { NO_INFO, type LineInfo } from '../../lib/lineInfo'
 import { Tooltip } from '../../components/Tooltip'
 import { useSettle } from './useSettle'
+import { Marker } from './Marker'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
@@ -146,7 +147,7 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip
         <span className="itin-time num" aria-label={when.till ? `${when.from} to ${when.till}` : undefined}>
           <span>{when.from}</span>{when.till && <span className="till">–{when.till}</span>}
         </span>
-        {seq ? <Seq n={seq} /> : <Chip stop={s} quiet={stay} />}
+        <Marker stop={s} kind={entry.kind} seq={seq} />
         <button type="button" className="itin-main" onClick={() => (onEdit ? onEdit() : onOpen?.(s, day))} disabled={!onEdit && !onOpen}
           onFocus={() => onLight?.(s.id)} onBlur={() => onLight?.(null)}>{words}</button>
         <span className="itin-end">
@@ -254,7 +255,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
           {(v.end || timeOpen) && <input type="text" className="doc-time till" aria-label={`end time of ${title}`} placeholder="end" value={v.end}
             inputMode="decimal" autoComplete="off" onChange={(e) => typeTime('end', e.target.value)} onBlur={() => tidy('end')} onKeyDown={key} />}
         </span>
-        {seq ? <Seq n={seq} /> : <Chip stop={s} />}
+        <Marker stop={s} kind={entry.kind} seq={seq} />
         <span className="itin-main">
           <input ref={nameRef} type="text" className="doc-name" data-doc-name="" aria-label={`change ${title}`} value={v.title} autoComplete="off"
             enterKeyHint="next" autoFocus={autoFocus} onChange={(e) => put({ ...now.current, title: e.target.value })} onKeyDown={key} />

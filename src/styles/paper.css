@@ -110,6 +110,19 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
   background: var(--c, var(--soft)); color: var(--ink); flex: none;
 }
 .cat.quiet { background: none; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
+/* the slot before a line's name: what the line is, and (when it isn't on the map) a way to say so */
+.marker { position: relative; align-self: start; display: grid; }
+.marker-btn { align-self: start; display: grid; place-items: center; position: relative; width: 44px; height: 44px; margin: -1px -9px -9px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--ink-2); cursor: pointer; }
+.marker-btn .cat { margin-top: 0; }
+.marker-btn:hover, .marker-btn:focus-visible { filter: brightness(.94); }
+.marker-btn.find { color: var(--ink-3); }
+.itin-line:hover .marker-btn.find, .marker-btn.find:focus-visible { color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
+.marker-plus { position: absolute; top: 9px; right: 9px; font: 600 12px/1 var(--f-mono); }
+.marker-menu { position: absolute; z-index: 20; top: 40px; left: -6px; display: grid; min-width: 220px; padding: 6px; border-radius: 10px; background: var(--card); box-shadow: var(--float); }
+.marker-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.marker-opt:hover, .marker-opt:focus-visible { background: var(--paper-2); }
+.marker-opt.on { font-weight: 600; }
+.marker-opt .muted { margin-left: auto; font-size: 12.5px; font-weight: 400; }
 .cat.bed { border-radius: 6px; }
 .cat.bed:not(.quiet) { background: var(--ink); }
 .grip { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -2px -6px; border: 0; background: none; color: var(--ink-3); cursor: grab; touch-action: none; border-radius: 8px; }

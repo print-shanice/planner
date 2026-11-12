@@ -86,7 +86,7 @@ it('shows every day open, headed by its date with its areas, then its lines with
   expect(head(/friday 19 september/)).toBeInTheDocument()
   expect(meta('2025-09-19')).toHaveTextContent('narita')
   expect(meta('2025-09-19')).toHaveTextContent('harajuku')
-  expect(screen.queryAllByRole('button', { expanded: false })).toHaveLength(0)
+  expect(screen.queryAllByRole('button', { expanded: false }).filter((b) => !b.classList.contains('marker-btn'))).toHaveLength(0)
   const lines = dayBox('2025-09-19').getAllByTestId('itin-line')
   // a live line's time is in its boxes; an empty start reads "any"
   const shown = (l: HTMLElement) => {
@@ -114,7 +114,7 @@ it('a number means a pin: lines with no spot on the map, and getting around, hav
 
 it('nothing folds: there are no day toggles to open', () => {
   show(tokyo())
-  expect(document.querySelectorAll('[aria-expanded]')).toHaveLength(0)
+  expect(document.querySelectorAll('[aria-expanded]:not(.marker-btn)')).toHaveLength(0)
   for (const d of ['2025-09-18', '2025-09-19', '2025-09-20']) expect(dayBox(d).getAllByTestId('itin-line').length).toBeGreaterThan(0)
 })
 
