@@ -115,3 +115,8 @@ it('a swiped inbox row is clipped at the edge, so the phone never pans the whole
   expect(rules.some(([sel, body]) => sel.trim().endsWith('.home-inbox .doc-list') && /overflow-x:\s*clip/.test(body))).toBe(true)
   expect(rules.find(([sel]) => sel.trim().endsWith('\n.inbox-row') || sel.trim() === '.inbox-row')?.[1]).toMatch(/touch-action:\s*pan-y/)
 })
+
+it("a line's icon sits in the middle of its 44px button, level with the time and the name", () => {
+  expect(ruleFor('.marker-btn .cat')).toMatch(/align-self:\s*center/)
+  expect(ruleFor('.marker-btn')).toMatch(/width:\s*44px;\s*height:\s*44px/)
+})

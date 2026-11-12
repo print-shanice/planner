@@ -222,7 +222,8 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = 
   }, [s.time, s.end_time, s.title]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const title = stopTitle(s)
-  const sub = stopSub(s)
+  // a typed train or ride has nothing to add under its name (its time is already in the time column)
+  const sub = s.kind === 'journey' ? '' : stopSub(s)
   const when = timeOf(entry, any)
   const was = saved.current
   const dirty = v.title !== was.title || v.time !== was.time || v.end !== was.end

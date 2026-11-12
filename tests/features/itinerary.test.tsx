@@ -108,8 +108,9 @@ it('a number means a pin: lines with no spot on the map, and getting around, hav
   show(tokyo())
   const lines = dayBox('2025-09-20').getAllByTestId('itin-line')
   expect(lines.map((l) => l.querySelector('.seq')?.textContent ?? '')).toEqual(['', '', '', '01', ''])
-  // a typed train line is plain text you type over, like a place or a note
+  // a typed train line is plain text you type over, like a place or a note; its time isn't said twice
   expect(screen.getByRole('textbox', { name: 'change tozai line to nakano' })).toBeInTheDocument()
+  expect(document.querySelector('[data-line="tozai"] .itin-sub')).toBeNull()
 })
 
 it('nothing folds: there are no day toggles to open', () => {
