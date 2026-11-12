@@ -109,6 +109,16 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
     const s = stops.find((x) => x.id === f.properties.id)
     return { id: f.properties.id, n: f.properties.number, color: f.properties.color, title: (s ? stopTitle(s) : '').toLowerCase(), sub: [s?.time, s?.place?.city].filter(Boolean).join(' · ') }
   })
+  // getting around has no number, but a day's list still names it, in the day's order
+  const journeyItems: PlaceItem[] = isDay ? [...new Set(data.ends.features.map((f) => f.properties.id))].flatMap((id) => {
+    const s = stops.find((x) => x.id === id)
+    const f = data.ends.features.find((x) => x.properties.id === id)!
+    return s ? [{ id, n: null, color: f.properties.color, title: stopTitle(s).toLowerCase(), sub: s.time ?? '' }] : []
+  }) : []
+  const dayOrderIds = isDay ? dayEntries(trip, trips, stops, filter).map((e) => e.stop?.id) : []
+  const lineItems = isDay
+    ? [...pinItems, ...journeyItems].sort((a, b) => dayOrderIds.indexOf(a.id) - dayOrderIds.indexOf(b.id))
+    : pinItems
   // a day's list starts where you sleep
   const bedStop = isDay ? mapBed(dayEntries(trip, trips, stops, filter)) : null
   const bedName = bedStop ? bedStop.title || bedStop.place?.name || '' : ''
@@ -124,8 +134,8 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
   const items: PlaceItem[] = overview
     ? overview.sides.map((s) => ({ id: s.id, n: null, color: s.color, title: s.name, sub: s.dates }))
     : bed
-    ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...pinItems]
-    : [...stayItems, ...pinItems]
+    ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...lineItems]
+    : [...stayItems, ...lineItems]
   const count = `${pinItems.length} ${pinItems.length === 1 ? 'place' : 'places'}`
   const listTitle = overview ? `${overview.sides.length} side ${overview.sides.length === 1 ? 'trip' : 'trips'}` : filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} ideas` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
   // a tall places sheet covers more than the usual margin, so the fit clears it

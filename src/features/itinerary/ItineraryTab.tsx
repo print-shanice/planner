@@ -9,6 +9,7 @@ import { daysBetween, fmtDay, fmtRange, todayISO } from '../../lib/dates'
 import { chosenDay, validDay } from '../../lib/agenda'
 import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, overviewItems, type ItinDay, type OverviewItem, type SideRow } from '../../lib/itinerary'
 import { dayLegs, type Leg } from '../../lib/legs'
+import { pinNumbers } from '../../lib/pins'
 import { positionsAfterMove } from '../../lib/order'
 import { directionsUrl } from '../../lib/gmaps'
 import { walkWords } from '../../lib/google/routes'
@@ -333,6 +334,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
   const side = day.owner.id !== trip.id ? day.owner : null
   const timed = day.entries.some((e) => e.kind === 'stop' && e.stop?.time)
   const legs = useMemo(() => dayLegs(day.entries), [day.entries])
+  const numbers = useMemo(() => pinNumbers(day.entries), [day.entries])
   const walk = useWalks(legs, onScreen)
   // only untimed lines move by hand; timed ones keep their time's place
   const movable = day.entries.filter((e) => e.kind === 'stop' && e.stop && !e.stop.time).map((e) => e.stop!)
@@ -391,8 +393,8 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
         ))}
         {day.entries.map((e, i) => {
           const s = e.stop!
-          // the same number as its pin on the map: places, journeys and notes count in order; stays don't
-          const seq = e.kind === 'stop' ? day.entries.slice(0, i + 1).filter((x) => x.kind === 'stop' && x.stop).length : undefined
+          // the same number as its pin on the map: only lines with a spot on the map have one
+          const seq = e.kind === 'stop' ? numbers.get(s.id) : undefined
           const isMove = canEdit && e.kind === 'stop' && !s.time && movable.length > 1
           const grip = isMove ? (
             <Tooltip text="drag to reorder · or use ↑ and ↓"><button type="button" className="grip" aria-label={`move ${s.title || 'line'} (arrow keys)`} onPointerDown={(ev) => grab(ev, s)} onKeyDown={(ev) => key(ev, s)}>

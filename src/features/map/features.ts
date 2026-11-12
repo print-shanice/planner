@@ -6,6 +6,7 @@ import { ancestors, descendants } from '../../lib/countries'
 import { mapBed } from '../../lib/legs'
 import { distanceKm } from '../../lib/guess'
 import { hasPoint } from '../../lib/walk'
+import { pinNumbers } from '../../lib/pins'
 import { categoryIcon, categoryOf } from '../../lib/categories'
 
 export type PinProps = { id: string; number: number; color: string; day: string; icon: string }
@@ -56,15 +57,15 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
   for (const date of dates) {
     const entries = dayEntries(trip, trips, stops, date)
     const color = dayColor(ownerOn(trip, trips, date).color)
-    let n = 0
+    const numbers = pinNumbers(entries)
     const path: [number, number][] = []
     for (const e of entries) {
       if (e.kind !== 'stop' || !e.stop) continue
-      n += 1
       const s = e.stop
+      // getting around has no number: its two ends are dots joined by its line
       if (s.kind === 'journey') {
         if (hasPoint(s.origin)) {
-          pins.push(pt(s.origin, { id: s.id, number: n, color, day: date, icon: s.mode === 'flight' ? 'plane' : s.mode ?? 'train' }))
+          ends.push(pt(s.origin, { id: s.id, color }))
           name(s.origin, s.origin.name)
         }
         if (hasPoint(s.destination)) {
@@ -74,7 +75,8 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
         if (hasPoint(s.origin) && hasPoint(s.destination)) lines.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [xy(s.origin), xy(s.destination)] }, properties: { kind: 'journey', color, mode: s.mode ?? 'train', day: date } })
         continue
       }
-      if (!hasPoint(s.place)) continue
+      const n = numbers.get(s.id)
+      if (!n || !hasPoint(s.place)) continue
       pins.push(pt(s.place, { id: s.id, number: n, color, day: date, icon: categoryIcon(categoryOf(s)) }))
       name(s.place, s.title || s.place.name)
       path.push(xy(s.place))

@@ -21,12 +21,12 @@ it('pins carry the plan numbers and day colours', () => {
   const { trips, stops } = setup()
   const { pins } = mapFeatures(lap, trips, stops, 'all')
   const byId = Object.fromEntries(pins.features.map((f) => [f.properties.id, f.properties]))
+  // a number means a pin: the note without a place and the flight take none
   expect(byId.a).toMatchObject({ number: 1, color: 'var(--g0)' })
-  expect(byId.b).toMatchObject({ number: 3, color: 'var(--g0)' })
+  expect(byId.b).toMatchObject({ number: 2, color: 'var(--g0)' })
   expect(byId.c).toMatchObject({ number: 1, color: 'var(--g0)' })
   expect(byId.n).toBeUndefined()
-  expect(byId.j).toMatchObject({ number: 4, color: 'var(--g0)' })
-  expect(pins.features.find((f) => f.properties.id === 'j')!.geometry.coordinates).toEqual([5.37, 51.45])
+  expect(byId.j).toBeUndefined()
   expect(pins.features.find((f) => f.properties.id === 'a')!.geometry.coordinates).toEqual([25.7, 66.5])
 })
 
@@ -70,7 +70,7 @@ it('side trips are on the parent map', () => {
   const { stops } = setup()
   const out = mapFeatures(eu, [eu, kid], stops, 'all')
   expect(out.pins.features.find((f) => f.properties.id === 'a')!.properties.color).toBe('var(--g0)')
-  expect(out.pins.features).toHaveLength(4)
+  expect(out.pins.features).toHaveLength(3)
 })
 
 it("a side trip's day takes the side trip's colour", () => {
@@ -81,11 +81,11 @@ it("a side trip's day takes the side trip's colour", () => {
   expect(out.pins.features[0].properties.color).toBe('var(--g1)')
 })
 
-it("a journey's destination is an end dot", () => {
+it("a journey's two ends are dots, never a numbered pin", () => {
   const { trips, stops } = setup()
   const { ends } = mapFeatures(lap, trips, stops, 'all')
-  expect(ends.features.map((f) => f.properties.id)).toEqual(['j'])
-  expect(ends.features[0].geometry.coordinates).toEqual([25.83, 66.56])
+  expect(ends.features.map((f) => f.properties.id)).toEqual(['j', 'j'])
+  expect(ends.features.map((f) => f.geometry.coordinates)).toEqual([[5.37, 51.45], [25.83, 66.56]])
 })
 
 it("tonight's bed is drawn for a day", () => {

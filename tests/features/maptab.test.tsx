@@ -304,7 +304,7 @@ it('the day\'s list starts with the bed and names journeys by both ends', () => 
     'staying at hostel',
     expect.stringMatching(/^1arktikum/),
     expect.stringMatching(/^2church/),
-    expect.stringMatching(/^3rovaniemi airport → helsinki airport/),
+    expect.stringMatching(/^rovaniemi airport → helsinki airport/),
   ])
 })
 

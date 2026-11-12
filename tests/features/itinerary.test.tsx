@@ -100,6 +100,16 @@ it('shows every day open, headed by its date with its areas, then its lines with
   expect(screen.getAllByRole('heading', { level: 2 }).map((x) => x.textContent)).toEqual(['thursday 18 september', 'friday 19 september', 'saturday 20 september'])
 })
 
+it('a number means a pin: lines with no spot on the map, and getting around, have none', () => {
+  db.stops = [...(db.stops as ReturnType<typeof stop>[]),
+    stop({ id: 'tozai', trip_id: 'tk', day: '2025-09-20', time: '11:40', kind: 'journey', mode: 'train', title: 'tozai line to nakano', position: 1 }),
+    stop({ id: 'kyle', trip_id: 'tk', day: '2025-09-20', time: '12:00', title: "kyle's good finds", place: place(), position: 2 }),
+  ]
+  show(tokyo())
+  const lines = dayBox('2025-09-20').getAllByTestId('itin-line')
+  expect(lines.map((l) => l.querySelector('.seq')?.textContent ?? '')).toEqual(['', '', '', '01', ''])
+})
+
 it('nothing folds: there are no day toggles to open', () => {
   show(tokyo())
   expect(document.querySelectorAll('[aria-expanded]')).toHaveLength(0)
