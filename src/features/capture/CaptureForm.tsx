@@ -10,7 +10,7 @@ import { useCanEdit } from '../../lib/offline'
 import { useToast } from '../../components/Toast'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { SiteIcon } from '../saved/LinkCard'
-import { stopTitle } from '../plan/StopRow'
+import { stopTitle } from '../plan/stopText'
 
 type Draft = { id: string; url: string; title: string; note: string; trip: string; stop: string }
 

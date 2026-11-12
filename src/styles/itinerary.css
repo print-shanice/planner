@@ -1,33 +1,5 @@
 /* the itinerary: the whole trip as one doc, every day folding */
-.bar-slot { padding: 0 16px; }
-.itin-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding-top: 4px; }
-.itin-search { display: flex; align-items: center; gap: 2px; }
-.itin-search .search-box { flex: 1; min-width: 0; background: var(--soft); }
-.itin-search .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
 .match-count { flex: none; padding-right: 8px; font-size: 14px; white-space: nowrap; }
-.itin-strip { position: static; margin: 0 -16px; padding: 2px 16px 0; background: none; scroll-padding-inline: 16px; }
-/* on a laptop the strip stays inside the plan's column */
-.trip-wide .itin-strip { margin: 0; padding: 2px 0 0; }
-.itin-strip .chip { position: relative; }
-.itin-strip .chip.hit::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
-.itin-strip .chip[aria-current="true"].hit::after { background: var(--card); }
-
-.itin { padding: 4px 16px 24px; }
-.itin-day { border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--bar-h, 0px) + 4px); }
-.itin-head { margin: 0; font: inherit; }
-.itin-head button {
-  width: 100%; display: flex; align-items: baseline; gap: 8px; min-height: 48px; padding: 12px 4px;
-  border: 0; background: none; color: inherit; text-align: left; cursor: pointer;
-}
-.itin-head .icon { align-self: center; color: var(--ink-3); transition: transform .15s; }
-.itin-head button[aria-expanded="false"] .icon { transform: rotate(-90deg); }
-.itin-date { flex: none; font-family: var(--f-head); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; }
-.itin-areas { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.itin-side { flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 14px; color: var(--ink); }
-.itin-side .dot { width: 8px; height: 8px; background: var(--c); }
-.itin-day[style] .itin-head button { box-shadow: inset 3px 0 0 var(--c); padding-left: 10px; }
-
-.itin-lines { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0 0 10px; }
 .itin-line {
   display: grid; grid-template-columns: 64px minmax(0, 1fr) auto auto; align-items: start; column-gap: 8px;
   padding: 2px 4px; border-radius: 10px; scroll-margin-top: calc(var(--bar-h, 0px) + 40px);
@@ -46,20 +18,14 @@
 .itin-line.quiet .itin-title { font-weight: 400; color: var(--ink-2); font-size: 14.5px; }
 .itin-line:hover { background: var(--soft); }
 .itin-line.current { box-shadow: 0 0 0 1px var(--ink); }
-.itin mark { background: var(--found); color: inherit; border-radius: 3px; padding: 0 1px; }
 @keyframes lit { from { background: var(--soft); box-shadow: 0 0 0 2px var(--ink); } to { background: transparent; box-shadow: 0 0 0 2px transparent; } }
-
-.trip-wide .bar-slot { padding: 0 16px; }
 
 button.itin-time { cursor: pointer; min-height: 40px; }
 .itin-time > span:first-child { color: var(--ink-2); font-size: 13.5px; }
 .itin-open { color: var(--ink-3); }
-.itin-line.editing { display: block; padding: 4px; background: var(--soft); }
-
 
 /* the empty line at the end of a day, and a line being changed */
 .add-line { padding: 0 4px; }
-.trip-panel .add-line { margin-top: 6px; }
 .line-edit { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; column-gap: 8px; align-items: center; }
 .line-go { min-height: 44px; }
 .line-times { display: grid; gap: 0; }
@@ -75,7 +41,6 @@ button.itin-time { cursor: pointer; min-height: 40px; }
   color: var(--ink); font: inherit; font-size: 16px;
 }
 .line-problem { grid-column: 2 / -1; margin: 4px 0 0; }
-.add-line-finding { padding: 2px 0 6px 76px; font-size: 13px; }
 .lit { animation: lit 1.6s ease-out; }
 @media (prefers-reduced-motion: reduce) { .lit { animation: none; } }
 

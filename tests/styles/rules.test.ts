@@ -55,9 +55,8 @@ it('green means booked or paid, nothing else', () => {
 // every rule written for a selector, together (a selector can be styled in more than one place)
 const ruleFor = (sel: string) => rules.filter(([s]) => s.trim() === sel).map(([, body]) => body).join(';')
 
-it('icon buttons and the grip are 44px targets', () => {
+it('icon buttons are 44px targets', () => {
   expect(ruleFor('.icon-btn')).toMatch(/width:\s*44px;\s*height:\s*44px/)
-  expect(ruleFor('.grip')).toMatch(/width:\s*44px;\s*height:\s*44px/)
 })
 
 it('search boxes show focus, since their input hides its own outline: one ring, on the box\'s own edge', () => {
@@ -105,12 +104,6 @@ it('the trip header never grows wider than the phone, however long the flags and
 it('scrolling never hides the trip\'s flags and dates', () => {
   const hiding = rules.filter(([sel, body]) => /\.trip-meta/.test(sel) && /display:\s*none/.test(body))
   expect(hiding).toEqual([])
-})
-
-it('a journey ticket can shrink to its column, so a long route never runs off a phone', () => {
-  const ticket = rules.find(([s]) => s.trim().endsWith('.journey-ticket'))?.[1] ?? ''
-  expect(ticket).toMatch(/min-width:\s*0/)
-  expect(ticket).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/)
 })
 
 it('a swiped inbox row is clipped at the edge, so the phone never pans the whole page', () => {

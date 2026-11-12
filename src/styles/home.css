@@ -42,11 +42,10 @@
   .home-body, .trip-families > li, .home-inbox .doc-list > li { animation: none; }
   .home-views-ink { transition: none; }
 }
-.home-trips, .home-inbox-view, .home-plans { display: grid; gap: 24px; min-width: 0; }
+.home-trips,
+.home-inbox-view { display: grid; gap: 24px; min-width: 0; }
 /* on home only trip days can be tapped; the others still read as ordinary days, not greyed out */
 .home-cal .cal-day[data-out] .cal-n { color: inherit; font-weight: inherit; }
-/* the month and the trip list each open on their own rule; no second line between them */
-.home-plans .cal { border-bottom: 0; }
 .home-inbox-view .resume-plan { margin-inline: 0; }
 
 /* the schedule: a month heading, then each trip that starts in it as a row: its colour, its name, its dates.
@@ -209,7 +208,6 @@
 .swatch { position: relative; width: 36px; height: 36px; border-radius: 50%; border: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); outline: 2px solid transparent; outline-offset: 2px; }
 .swatch[aria-checked="true"] { outline-color: var(--ink); }
 .currency-field { flex: 0 0 110px !important; }
-.form-actions { padding-top: 4px; }
 .swatch::after { content: ''; position: absolute; inset: -4px; }
 /* the hint maplibre shows when one finger tries to turn the globe */
 .globe .maplibregl-cooperative-gesture-screen { background: rgba(0, 0, 0, 0.4); color: var(--card); font: 600 15px/1.3 var(--f-body); border-radius: 50%; padding: 0 22%; text-align: center; }

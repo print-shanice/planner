@@ -16,17 +16,13 @@
 .one-line .title-btn { max-width: 100%; }
 .trip-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; }
 .trip-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-flags { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 4px; flex: none; line-height: 1; }
 /* a country: its code in a hairline tag, like a luggage label */
 .flag {
   flex: none; display: inline-flex; align-items: center; justify-content: center; height: 17px; min-width: 22px; padding: 0 3px;
   border: 1px solid currentColor; font-family: var(--f-mono); font-size: 10px; font-weight: 500; letter-spacing: .04em; line-height: 1;
   text-transform: uppercase; vertical-align: middle; color: var(--ink);
 }
-.title-flag { flex: none; display: inline-flex; }
-.title-flag .flag { height: 24px; min-width: 32px; font-size: 12.5px; }
-.trip-flags .flag, .back-link .flag { color: var(--ink-2); }
-.trip-flags-more { font-family: var(--f-body); font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.back-link .flag { color: var(--ink-2); }
 /* with side trips or a parent, the title opens the trip family */
 .title-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; letter-spacing: inherit; text-align: left; border-radius: 8px; }
 .title-btn .icon { flex: none; margin-top: 3px; color: var(--ink-3); transition: color .12s; }
@@ -56,8 +52,6 @@
 }
 .avatar + .avatar { margin-left: -8px; }
 
-.trip-panel { padding: 16px 16px 24px; }
-
 .trip-wide { display: grid; grid-template-columns: minmax(420px, 1fr) minmax(0, 1.15fr); height: 100dvh; }
 .trip-wide .trip-main { width: 100%; overflow: auto; }
 .trip-map { position: sticky; top: 0; height: 100dvh; border-left: 1px solid var(--line); }
@@ -65,13 +59,6 @@
 .trip-wait { width: min(720px, 100%); margin: 0 auto; padding: calc(env(safe-area-inset-top) + 64px) 16px 24px; }
 
 /* saved: ideas or links, each with its own search, and a select mode to delete several */
-.saved-switch button { flex: 1; }
-.saved-tools { display: flex; align-items: center; gap: 8px; }
-.saved-tools .search-box { flex: 1; min-width: 0; background: var(--soft); }
-.saved-tools .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
-.saved-tools .search-box:focus-within { box-shadow: 0 0 0 1.5px var(--ink); }
-.pick-bar { display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 0; }
-.pick-bar .muted { flex: 1; font-size: 14px; }
 .pick { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--ink); cursor: pointer; }
 .site-icon { flex: none; width: 20px; height: 20px; border-radius: 5px; object-fit: contain; }
 
@@ -95,41 +82,19 @@
 }
 .section-tabs button:hover { color: var(--ink); }
 .section-tabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
-.trip-inline-section { margin: 0 16px 24px; padding-top: 16px; }
-.trip-inline-section > .saved-switch { margin-bottom: 16px; }
-.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0 12px; }
-.section-heading h2, .itinerary-heading h2 { font-family: var(--f-head); font-size: 28px; font-weight: 400; letter-spacing: -0.01em; }
-.section-content { padding-bottom: 20px; }
-.itinerary-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 16px 0 12px; }
-.itinerary-actions { display: flex; gap: 4px; flex-wrap: wrap; }
-.itinerary-actions .btn { padding-inline: 10px; font-size: 14px; }
 .trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
-
-.section-content .empty { padding-block: 20px; }
-
-
-.section-action {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
-  width: 44px; padding: 0; border: 0; border-radius: 8px; background: var(--soft); color: var(--ink);
-  font-family: var(--f-body); font-size: 14px; font-weight: 500; cursor: pointer;
-  transition: background .15s;
-}
-.section-action:hover:not(:disabled) { background: var(--line); }
-.section-action:disabled { opacity: .45; cursor: default; }
-.section-content > .stack > .section-heading { padding-bottom: 0; }
 .trip-title-row .icon-btn.filled { flex: none; width: 44px; height: 44px; border-radius: 50%; }
 
 .trip-bar { /* the trip's name, + and navigation stay at the top while the page scrolls */ position: sticky; top: 0; z-index: 15; background: var(--ground); padding-bottom: 8px; transition: box-shadow .15s; }
 .trip-bar.stuck { box-shadow: 0 1px 0 var(--line); }
-.trip-bar > .saved-switch { margin: 4px 16px 0; }
 .trip-bar-sentinel { display: block; height: 0; }
 
 /* switching sections never shifts anything: the active tab only changes colour and underline,
    and the column keeps room for its scrollbar */
-.section-tabs button, .section-tabs button[aria-pressed="true"], .saved-switch button, .saved-switch button[aria-pressed="true"] { font-weight: 500; }
+.section-tabs button,
+.section-tabs button[aria-pressed="true"] { font-weight: 500; }
 .trip-wide .trip-main { scrollbar-gutter: stable; }
 @media (max-width: 480px) { .trip-title-row h1 { font-size: 30px; } }
 /* switching sections: the old one steps aside and the loading animation fills the space under the navigation */
 .section-wait { display: grid; place-items: center; min-height: calc(100dvh - 280px); padding: 24px 16px; }
 .section-wait img { width: min(220px, 55vw); height: auto; }
-.trip.switching .trip-inline-section, .trip.switching .trip-panel { display: none; }

@@ -1,8 +1,6 @@
 /* phones: the map fills the screen between the top and the tab bar */
 .trip-phone.tab-is-map { height: 100dvh; padding: 0; overflow: hidden; }
 .trip-phone.tab-is-map .trip-main { position: fixed; inset: 0; width: 100%; }
-.trip-phone.tab-is-map .trip-inline-section { position: absolute; inset: 0; margin: 0; padding: 0; }
-.trip-phone.tab-is-map .section-content { height: 100%; padding: 0; }
 .map-float {
   position: fixed; top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; z-index: 4;
   display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none;
@@ -22,7 +20,6 @@
   border-radius: 12px 12px 0 0; box-shadow: var(--float);
 }
 .places-handle { display: block; width: 100%; height: 26px; border: 0; background: none; cursor: pointer; }
-.places-handle .grab { display: block; width: 36px; height: 4px; margin: 10px auto 0; border-radius: 2px; background: var(--line); }
 .places-title { padding: 0 0 8px; font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
 .places-list { list-style: none; margin: 0; padding: 0; }
 .places-row {
@@ -43,8 +40,6 @@
 .map-search .place-search { padding: 0; }
 .map-search .search-box { background: transparent; }
 .map-search .results { max-height: 40dvh; overflow: auto; }
-.map-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 5px 0; margin: -5px 0; }
-.map-chips::-webkit-scrollbar { display: none; }
 .chip-pill {
   flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
   border-radius: 8px; border: 0; background: var(--card); font-size: 14px; font-weight: 500;
@@ -63,18 +58,13 @@
 .place-card h3 { font-family: var(--f-head); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; }
 .place-card .muted { font-size: 14px; }
 .place-card-actions { display: flex; align-items: center; gap: 8px; }
-.day-select { flex: 1; min-width: 0; min-height: 44px; }
 .place-card-actions .icon-btn[aria-pressed="true"] { background: var(--ink); color: var(--card); }
 .maplibregl-ctrl-group { border-radius: 8px !important; box-shadow: var(--float) !important; }
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
 .map-tab .maplibregl-canvas:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
-.map-float-end { display: flex; align-items: center; gap: 8px; }
 /* laptops: the map follows the plan's day; this zooms out to every place */
 .whole-trip { position: absolute; left: 12px; bottom: 12px; z-index: 2; color: var(--ink-2); }
 .whole-trip[aria-pressed="true"] .icon { color: inherit; }
-/* the map's own "loading map", over its blank canvas */
-.map-loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 0 14px; border-radius: 8px; background: var(--card); box-shadow: var(--float); }
-.leg.pulse { color: var(--ink-3); }
 
 /* the whole-trip overview: home and one pin per side trip */
 .side-pin {

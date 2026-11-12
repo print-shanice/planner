@@ -10,7 +10,7 @@ import { ItemMenu } from './ItemMenu'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Sheet } from '../../components/Sheet'
 import { CaptureForm } from '../capture/CaptureForm'
-import { stopTitle } from '../plan/StopRow'
+import { stopTitle } from '../plan/stopText'
 import { useStopSheet } from '../stops/StopSheet'
 
 // the website's own icon, from its domain (google's icon service knows instagram; others sent a grey arrow); the plain link icon if it can't load

@@ -62,7 +62,7 @@ export function DayMenu({ days, value, onPick }: { days: DayChoice[]; value: str
       const now = Date.now()
       typed.current = { text: (now - typed.current.at < 800 ? typed.current.text : '') + e.key.toLowerCase(), at: now }
       const t = typed.current.text.trim()
-      const hit = all.find((o) => (o.dataset.words ?? '').split(' ').some((w, k, ws) => ws.slice(k).join(' ').startsWith(t)))
+      const hit = all.find((o) => (o.dataset.words ?? '').split(' ').some((_, k, ws) => ws.slice(k).join(' ').startsWith(t)))
       hit?.focus()
     }
   }

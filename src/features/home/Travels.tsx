@@ -5,7 +5,7 @@ import { fmtDay } from '../../lib/dates'
 import { aroundTheWorld, favourites, stamps, tickets, type GlobeRoute, type Route } from '../../lib/travels'
 import { Icon } from '../../components/Icon'
 import { tint } from '../../components/MonthCalendar'
-import { stopTitle } from '../plan/StopRow'
+import { stopTitle } from '../plan/stopText'
 import { Stamp } from './Stamp'
 import { Help, Tooltip } from '../../components/Tooltip'
 

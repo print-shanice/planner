@@ -6,7 +6,7 @@ import { newId } from '../../lib/id'
 import { Sheet } from '../../components/Sheet'
 import { StopForm } from './StopForm'
 import { StopView } from './StopView'
-import { stopTitle } from '../plan/StopRow'
+import { stopTitle } from '../plan/stopText'
 import { flash } from '../itinerary/flash'
 
 type Api = { openStop: (id: string, day?: string | null) => void; editStop: (id: string) => void; newStop: (kind: StopKind, tripId: string, defaults?: Partial<Stop>) => void }
@@ -63,7 +63,7 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
           ? <StopForm key={`${state.n}-edit`} stop={stop} trip={trip} isNew={!!state.draft}
               // a save can land after its sheet was closed or another one opened; only touch this sheet
               onDone={(added) => { landed(added); setState((s) => (s?.n !== state.n ? s : state.draft ? null : { ...s, mode: 'view' })) }} />
-          : <StopView key={`${state.n}-view`} stop={stop} day={state.day ?? null} onClose={close} onEdit={() => setState({ ...state, n: ++seq.current, mode: 'edit' })} />)}
+          : <StopView key={`${state.n}-view`} stop={stop} onClose={close} onEdit={() => setState({ ...state, n: ++seq.current, mode: 'edit' })} />)}
       </Sheet>
     </Ctx.Provider>
   )

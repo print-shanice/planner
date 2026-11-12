@@ -27,8 +27,6 @@ vi.mock('../../src/lib/queries', async () => {
 vi.mock('../../src/lib/id', () => ({ newId: () => 'new-id' }))
 const photon = vi.hoisted(() => ({ search: vi.fn(() => Promise.resolve([] as unknown[])) }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchPlaces: photon.search }))
-const finder = vi.hoisted(() => ({ locate: vi.fn() }))
-vi.mock('../../src/lib/locate', () => ({ locate: finder.locate }))
 const tickets = vi.hoisted(() => ({ open: vi.fn(), keep: vi.fn(() => Promise.resolve()) }))
 vi.mock('../../src/lib/ticketCache', () => ({ openTicket: tickets.open, keepTickets: tickets.keep }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => db.canEdit }))

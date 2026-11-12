@@ -1,4 +1,4 @@
-import { test, expect, open, phone } from './fixtures'
+import { test, expect, open } from './fixtures'
 
 test.describe('signing in', () => {
   test('an email on the planner gets a code, and the code opens the planner', async ({ page }) => {

@@ -12,7 +12,7 @@ import { dayLegs, placeIn, type Leg } from '../../lib/legs'
 import { pinNumbers } from '../../lib/pins'
 import { useMove } from './useMove'
 import { useDrag } from './drag'
-import { stopTitle } from '../plan/StopRow'
+import { stopTitle } from '../plan/stopText'
 import { directionsUrl } from '../../lib/gmaps'
 import { walkWords } from '../../lib/google/routes'
 import { LoadState } from '../../components/States'
@@ -379,7 +379,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
             <span className="itin-end"><span className="pill warn">public holiday</span></span>
           </div>
         ))}
-        {day.entries.map((e, i) => {
+        {day.entries.map((e) => {
           const s = e.stop!
           // the same number as its pin on the map: only lines with a spot on the map have one
           const seq = e.kind === 'stop' ? numbers.get(s.id) : undefined

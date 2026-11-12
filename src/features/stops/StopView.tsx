@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Cost, Member, Mode, Stop, StopStatus } from '../../lib/types'
-import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
+import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { formatMoney } from '../../lib/money'
 import { gmapsUrl, directionsUrl } from '../../lib/gmaps'
@@ -13,7 +13,7 @@ import { Pending } from '../../components/Pending'
 import { FilesSection, filesOf } from './FilesSection'
 import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
-import { stopTitle } from '../plan/StopRow'
+import { stopTitle } from '../plan/stopText'
 import { FlightCheck } from './FlightFacts'
 import { statusWord } from '../../lib/flight'
 import { hostOf as host } from '../../lib/embed'
@@ -47,7 +47,7 @@ function costLine(c: Cost, members: Member[]) {
 // a car (grab, taxi, driving) has no mode of its own: null
 const MODES: [Mode | null, string][] = [['flight', 'flight'], ['train', 'train'], ['bus', 'bus'], ['ferry', 'ferry'], [null, 'car']]
 
-type Props = { stop: Stop; day?: string | null; onEdit: () => void; onClose: () => void }
+type Props = { stop: Stop; onEdit: () => void; onClose: () => void }
 
 // words written straight on the card, saved when you leave them (enter too, for one line)
 function TextField({ label, value, onSave, disabled, multi, mono }: { label: string; value: string; onSave: (v: string) => void; disabled?: boolean; multi?: boolean; mono?: boolean }) {
@@ -71,10 +71,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 // a stop's card is its form: its times big at the top, then its own fields as rows you change right there.
 // the day it's on, its trip and the rest of the day aren't repeated: the plan beside it shows them
-export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
+export function StopView({ stop, onEdit, onClose }: Props) {
   const canEdit = useCanEdit()
   const trips = useTrips().data ?? []
-  const stops = useStops().data ?? []
   const costs = useCosts().data ?? []
   const files = useFiles().data
   const members = useMembers().data ?? []

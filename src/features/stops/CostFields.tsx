@@ -1,4 +1,4 @@
-import type { Cost, Member, StopKind } from '../../lib/types'
+import type { Cost, Member } from '../../lib/types'
 import type { Rates } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
 import { useAuth } from '../../lib/auth'
@@ -75,7 +75,6 @@ export function costValues(d: CostDraft, people: string[]) {
 }
 
 
-export const CATEGORY_OF: Record<StopKind, string> = { place: 'activities', stay: 'stays', journey: 'transport', note: 'other' }
 
 type PaymentProps = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[] }
 

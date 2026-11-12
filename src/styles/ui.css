@@ -110,15 +110,6 @@
 }
 .asleep-banner .warn-line { font-weight: 600; }
 
-/* loading: grey cards that appear only if the wait is noticeable */
-.skeleton { display: grid; gap: 14px; animation: skeleton-in .2s .2s backwards; }
-.skeleton-card { display: grid; gap: 12px; padding: 18px 0; border-top: 1px solid var(--line); }
-.bone { display: block; height: 12px; border-radius: 2px; background: var(--soft); animation: breathe 1.4s ease-in-out infinite; }
-.bone.w45 { width: 45%; }
-.bone.w70 { width: 70%; }
-@keyframes skeleton-in { from { opacity: 0; } }
-@keyframes breathe { 50% { opacity: .5; } }
-
 /* needs action, in words */
 .notice {
   display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 8px 6px 16px;
@@ -193,17 +184,6 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(var(--plan-w, 600p
 
 /* choice: a few states, each in its colour, matching the plan's pills */
 .choice { display: flex; flex-wrap: wrap; gap: 8px; }
-.choice-chip {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--card);
-  font-size: 15px; font-weight: 500; color: var(--ink-2);
-}
-.choice-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: none; }
-.choice-chip.warn .dot { background: var(--warn); }
-.choice-chip.ok .dot { background: var(--ok); }
-.choice-chip[aria-pressed="true"] { border-color: var(--ink-2); background: var(--soft); color: var(--ink); }
-.choice-chip.warn[aria-pressed="true"] { border-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
-.choice-chip.ok[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); }
 
 /* when: dates and times in one grouped card, like a calendar */
 .when { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -256,7 +236,7 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .pending { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; color: var(--ink-2); font-size: 14px; font-weight: 600; }
 .pending-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: none; }
 @media (prefers-reduced-motion: reduce) {
-  .pulse, .bone { animation: none; }
+  .pulse { animation: none; }
 }
 
 /* forms are full pages: a phone's whole screen, a laptop's left column (the map stays beside).
@@ -488,6 +468,4 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .flight-choice-route { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
 .flight-choice > .muted { font-size: 13px; }
 .flight-choice-times { font-family: var(--f-mono); font-size: 12px; line-height: 1.6; color: var(--ink-2); }
-.flight-check { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.flight-check .btn { min-height: 44px; }
 .form-clear { min-height: 44px; }
