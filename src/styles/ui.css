@@ -53,8 +53,8 @@
 .field input:focus, .field select:focus, .field textarea:focus, .input:focus { outline: 1.5px solid var(--ink); outline-offset: -1px; border-color: transparent; }
 .row { display: flex; gap: 10px; align-items: center; }
 .row > .field { flex: 1; min-width: 0; }
-.stack { display: grid; gap: 16px; }
-.stack-sm { display: grid; gap: 6px; }
+.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.stack-sm { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .stack-xs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .center { text-align: center; justify-items: center; }
 .spacer { flex: 1; }
@@ -92,7 +92,7 @@
 }
 .sheet:focus { outline: none; }
 .sheet-head { display: flex; align-items: center; gap: 8px; padding: 14px 12px 6px 20px; }
-.sheet-head h2 { flex: 1; font-family: var(--f-head); font-size: 26px; font-weight: 400; letter-spacing: -0.01em; }
+.sheet-head h2 { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--f-head); font-size: 26px; font-weight: 400; letter-spacing: -0.01em; }
 .sheet-body { overflow: auto; padding: 8px 20px 20px; overscroll-behavior: contain; }
 .sheet-foot:empty { display: none; }
 .sheet-foot { display: flex; gap: 10px; align-items: center; padding: 12px 20px 16px; border-top: 1px solid var(--line); }

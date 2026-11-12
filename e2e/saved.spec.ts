@@ -36,6 +36,25 @@ test.describe('links', () => {
     await expect(links).toContainText('the pistachio croissant place')
   })
 
+  test('a link with a long note still fits the screen, its menu in reach', async ({ page }) => {
+    await open(page, '/trip/par?tab=links')
+    await page.getByRole('button', { name: 'add', exact: true }).click()
+    await page.getByRole('dialog', { name: 'add' }).getByRole('button', { name: 'link', exact: true }).click()
+    const form = page.getByRole('dialog')
+    await form.getByRole('textbox', { name: /link|url/ }).fill('https://www.reallylongdomainnameforthisexample-paris-food-guide.com/best-croissants')
+    await form.getByRole('textbox', { name: 'note' }).fill('the pistachio croissant place near the canal that everyone keeps talking about')
+    await form.getByRole('button', { name: 'save' }).click()
+    const links = page.getByRole('region', { name: 'links' })
+    await expect(links).toContainText('the pistachio croissant place')
+    // nothing scrolls sideways: not the page (phone) and not the plan column (laptop)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+    const edge = await links.evaluate((el) => el.getBoundingClientRect().right)
+    for (const more of await links.getByRole('button', { name: 'more' }).all()) {
+      const box = (await more.boundingBox())!
+      expect(box.x + box.width).toBeLessThanOrEqual(edge)
+    }
+  })
+
   test('a link shared to the planner lands in the save screen, then the trip', async ({ page }) => {
     await open(page, '/save?url=https%3A%2F%2Fyoutu.be%2Fshared1')
     const form = page.getByRole('main')

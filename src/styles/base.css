@@ -18,7 +18,7 @@ h1, h2, h3, p { margin: 0; }
 /* inside boxes that clip, the ring is drawn inside so it isn't cut off */
 :where(.list, .rows, .link-card, .map-chips) :focus-visible { outline-offset: -2px; }
 
-.app { text-transform: lowercase; min-height: 100dvh; }
+.app { text-transform: lowercase; min-height: 100dvh; overflow-wrap: break-word; }
 input, textarea, .keep-case { text-transform: none; }
 select { text-transform: inherit; }
 

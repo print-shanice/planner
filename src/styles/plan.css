@@ -131,7 +131,7 @@
 .place-chip { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 4px 6px 12px; border-radius: 8px; background: var(--soft); color: var(--ink-2); }
 .place-chip .result-text { flex: 1; min-width: 0; }
 .stop-view { gap: 18px; }
-.stop-kicker { display: grid; justify-items: start; gap: 6px; margin-top: -6px; }
+.stop-kicker { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 6px; overflow-wrap: anywhere; margin-top: -6px; }
 .stop-kicker .muted { font-size: 15px; }
 /* what google says about the place: a photo, then its rating, what it is and its hours */
 .place-details { display: grid; gap: 10px; }
@@ -151,22 +151,22 @@
 .stop-action:hover:not(:disabled) .ico { border-color: var(--ink-3); }
 .stop-action[aria-expanded="true"] .ico { background: var(--ink); border-color: var(--ink); color: var(--card); }
 .stop-action:disabled { opacity: .45; cursor: default; }
-.facts { display: grid; }
-.fact { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.facts { display: grid; grid-template-columns: minmax(0, 1fr); }
+.fact { display: flex; align-items: flex-start; gap: 12px; overflow-wrap: anywhere; min-height: 44px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 15px; }
 .fact > .icon { flex: none; margin-top: 1px; color: var(--ink-2); }
 .fact-copy { align-items: center; padding: 3px 0; }
 .fact-copy .copy-text { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .fact-copy > .icon-btn { margin-left: -4px; }
 .fact-link { align-items: center; color: var(--ink-2); text-decoration: none; font-weight: 500; }
 /* a booking's money: each cost a row you can tap to change, then "add a cost →" */
-.card-money { display: grid; gap: 2px; padding-top: 4px; border-top: 1px solid var(--line); }
+.card-money { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding-top: 4px; border-top: 1px solid var(--line); }
 .card-money .mono-label { padding-top: 10px; }
 .money-rows { display: grid; }
 .money-rows .fact:first-of-type { border-top: 0; }
 .fact-cost { width: 100%; background: none; border: 0; border-top: 1px solid var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .fact-cost:active { filter: brightness(.92); }
 .cost-words { min-width: 0; overflow-wrap: anywhere; }
-.notes { white-space: pre-wrap; color: var(--ink-2); }
+.notes { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
 .files { display: grid; gap: 4px; }
 .file-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 8px; background: var(--soft); }
 .file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; text-decoration: none; }

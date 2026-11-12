@@ -9,6 +9,7 @@
 .back-link:hover { color: var(--ink); }
 .back-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.trip-top > .back-link { min-width: 0; }
 .trip-title-row { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
 .trip-title-row h1 { flex: 1; min-width: 0; font-size: 32px; font-weight: 400; line-height: 1.2; letter-spacing: -0.015em; }
 .one-line, .one-line > span, .one-line .title-btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

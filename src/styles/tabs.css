@@ -35,7 +35,7 @@
 .site-icon, .link-text > .icon { flex: none; }
 .link-foot { display: flex; align-items: center; gap: 8px; padding: 10px 0 10px 2px; }
 .link-text { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-decoration: none; }
-.link-title { font-weight: 500; }
+.link-title { font-weight: 500; overflow-wrap: anywhere; }
 .link-text .muted { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .saved-place { justify-content: flex-start !important; }
 .saved-name { flex: 1; min-width: 0; }
