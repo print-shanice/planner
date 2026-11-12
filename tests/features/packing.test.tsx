@@ -28,7 +28,7 @@ it('packing: add, tick, count', async () => {
   expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
   expect(screen.queryByText('sunscreen')).toBeNull()
   await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'wool socks{Enter}')
-  expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'wool socks', owner: 'u-s', packed_by: [], position: 4 })
+  expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'wool socks', owner: null, packed_by: [], position: 4 })
   expect(screen.getByRole('textbox', { name: 'add to pack' })).toHaveValue('')
   await userEvent.click(screen.getByRole('checkbox', { name: 'passport' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'p2', packed_by: ['u-s'] })
@@ -222,10 +222,13 @@ it("on kiahna's list a shared tick is kiahna's, and anyone can tick someone's ow
   expect(db.save).toHaveBeenCalledWith({ id: 'c', packed_by: [] })
 })
 
-it("adding goes to the face picked, else to me", async () => {
+it("adding goes to the list on show: nobody picked is both of you, a face is that person", async () => {
   db.packing = []
   db.save.mockReset().mockResolvedValue({})
   render(<PackingTab trip={trip({ id: 'lap' })} />)
+  await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'adapter{Enter}')
+  expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'adapter', owner: null }))
+  await userEvent.click(screen.getByRole('button', { name: 'shanice' }))
   await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'yellow shirt{Enter}')
   expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'yellow shirt', owner: S }))
   await userEvent.click(screen.getByRole('button', { name: 'kiahna' }))

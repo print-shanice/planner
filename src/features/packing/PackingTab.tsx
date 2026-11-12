@@ -101,7 +101,7 @@ export function PackingTab({ trip }: { trip: Trip }) {
     setBusy(true); setProblem('')
     try {
       await save.mutateAsync(change ?? {
-        trip_id: trip.id, text: value, owner: view ?? me, packed_by: [], position: Math.max(-1, ...all.map(p => p.position)) + 1,
+        trip_id: trip.id, text: value, owner: view, packed_by: [], position: Math.max(-1, ...all.map(p => p.position)) + 1,
       })
       if (editing) setEditing(null)
       else setText('')
