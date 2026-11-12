@@ -29,7 +29,9 @@ function zonesNow(): DropZone[] {
   }))
 }
 
-type Api = { begin: (p: DragPayload, e: { clientX: number; clientY: number }) => void; target: DropTarget | null; carrying: DragPayload | null }
+// hold: pick up only after the pointer has stayed still this long (a line held, like a phone's home screen);
+// moving before then is a scroll, a text selection or a swipe, and nothing is picked up
+type Api = { begin: (p: DragPayload, e: { clientX: number; clientY: number }, opts?: { hold?: number }) => void; target: DropTarget | null; carrying: DragPayload | null }
 const Ctx = createContext<Api | null>(null)
 export const useDrag = () => useContext(Ctx)
 
@@ -63,13 +65,23 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
 
   const api = useMemo<Api>(() => ({
     carrying, target,
-    begin(p, e) {
+    begin(p, e, opts = {}) {
       stopAll.current()
       const x0 = e.clientX, y0 = e.clientY
       let started = false
       let over: DropTarget | null = null
       let y = y0
       let frame = 0
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const start = (x: number, yy: number) => {
+        started = true
+        document.body.classList.add('carrying')
+        window.getSelection?.()?.removeAllRanges()
+        if (typeof navigator !== 'undefined') navigator.vibrate?.(8)
+        setCarrying(p)
+        setAt({ x, y: yy })
+        if (typeof requestAnimationFrame === 'function') frame = requestAnimationFrame(roll)
+      }
       const roll = () => {
         const s = scrollerOf()
         const step = y < s.top + EDGE ? -14 : y > s.bottom - EDGE ? 14 : 0
@@ -77,13 +89,13 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
         frame = requestAnimationFrame(roll)
       }
       const onMove = (ev: PointerEvent) => {
-        // a click stays a click: carrying starts once the pointer has really moved
         if (!started) {
-          if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return
-          started = true
-          document.body.classList.add('carrying')
-          setCarrying(p)
-          if (typeof requestAnimationFrame === 'function') frame = requestAnimationFrame(roll)
+          const far = Math.hypot(ev.clientX - x0, ev.clientY - y0)
+          // held: moving first means something else (scrolling, selecting, swiping)
+          if (opts.hold) { if (far > 8) stopAll.current(); return }
+          // a click stays a click: carrying starts once the pointer has really moved
+          if (far < 5) return
+          start(ev.clientX, ev.clientY)
         }
         ev.preventDefault()
         y = ev.clientY
@@ -98,11 +110,16 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
       const onUp = finish(true)
       const onCancel = finish(false)
       const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') onCancel() }
+      // once a finger has picked something up, the page doesn't scroll under it (the plan scrolls itself at the edges)
+      const noScroll = (ev: TouchEvent) => { if (started) ev.preventDefault() }
+      if (opts.hold) timer = setTimeout(() => start(x0, y0), opts.hold)
       stopAll.current = () => {
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         window.removeEventListener('pointercancel', onCancel)
         window.removeEventListener('keydown', onKey)
+        window.removeEventListener('touchmove', noScroll)
+        clearTimeout(timer)
         if (frame) cancelAnimationFrame(frame)
         document.body.classList.remove('carrying')
         setCarrying(null); setTarget(null); setAt(null)
@@ -112,6 +129,7 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
       window.addEventListener('pointerup', onUp)
       window.addEventListener('pointercancel', onCancel)
       window.addEventListener('keydown', onKey)
+      window.addEventListener('touchmove', noScroll, { passive: false })
     },
   }), [carrying, target]) // eslint-disable-line react-hooks/exhaustive-deps
 

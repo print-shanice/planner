@@ -35,22 +35,37 @@ test.describe('the plan', () => {
     await expect(line.getByRole('textbox', { name: 'add to sun 21 feb' })).toHaveValue('')
   })
 
-  test('a line drags by its grip onto another day, landing where the rule shows', async ({ page }) => {
+  test('a line held still for a moment can be carried onto another day, landing where the rule shows', async ({ page }) => {
     await open(page, '/trip/par')
     const sat = page.getByRole('region', { name: 'saturday 20 february' })
     const sun = page.getByRole('region', { name: 'sunday 21 february' })
-    const grip = sat.getByRole('button', { name: /^move du pain et des idées/ })
+    const line = sat.locator('[data-drop-line]').filter({ has: page.locator('[data-line]') }).last()
     // both days in view
-    await grip.evaluate((el) => el.scrollIntoView({ block: 'center' }))
-    const from = (await grip.boundingBox())!
-    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await line.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+    const from = (await line.locator('.itin-time').boundingBox())!
+    await page.mouse.move(from.x + 10, from.y + 10)
     await page.mouse.down()
+    // moving at once is a scroll or a selection, not a carry
+    await page.waitForTimeout(450)
     const to = (await sun.locator('[data-drop-line]').first().boundingBox())!
     await page.mouse.move(to.x + 40, to.y + 4, { steps: 12 })
     await expect(page.locator('.drop-rule')).toHaveCount(1)
     await page.mouse.up()
     await expectLine(sun, 'du pain et des idées')
     await expectLine(sat, 'du pain et des idées', false)
+  })
+
+  test('a quick press on a line still opens or edits it, and carries nothing', async ({ page }) => {
+    await open(page, '/trip/par')
+    const sat = page.getByRole('region', { name: 'saturday 20 february' })
+    const line = sat.locator('[data-line]').last()
+    const box = (await line.boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 200, { steps: 6 })
+    await page.mouse.up()
+    await expect(page.locator('.drop-rule')).toHaveCount(0)
+    await expectLine(sat, 'du pain et des idées')
   })
 
   test('an end before its start is refused with words', async ({ page }) => {

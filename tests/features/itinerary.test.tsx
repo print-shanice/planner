@@ -268,7 +268,7 @@ it('between located lines, the walk is a link to google maps directions', () => 
   expect(walk.getAttribute('href')).toContain('google.com/maps/dir/')
 })
 
-it('every line moves by keyboard on its handle, timed or not; delete removes it', async () => {
+it('every line moves with alt and the arrow keys, timed or not, with no handle to press', async () => {
   db.stops = [
     stop({ id: 'a', trip_id: 'tk', day: '2025-09-19', time: '09:00', title: 'timed', position: 0 }),
     stop({ id: 'b', trip_id: 'tk', day: '2025-09-19', title: 'second', position: 1 }),
@@ -276,19 +276,31 @@ it('every line moves by keyboard on its handle, timed or not; delete removes it'
     stop({ id: 'd', trip_id: 'tk', day: '2025-09-20', time: '10:00', title: 'next day', position: 0 }),
   ]
   show(tokyo(), undefined, false)
-  screen.getByRole('button', { name: /move second/ }).focus()
+  expect(screen.queryByRole('button', { name: /^move / })).toBeNull()
+  screen.getByRole('button', { name: /^second/ }).focus()
   await userEvent.keyboard('{ArrowDown}')
+  expect(db.save).not.toHaveBeenCalled()
+  await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
   // under "noon" now, so it goes with it
   expect(db.save).toHaveBeenCalledWith({ id: 'c', position: 1 })
   expect(db.save).toHaveBeenCalledWith({ id: 'b', position: 2 })
   db.save.mockClear()
-  screen.getByRole('button', { name: /move noon/ }).focus()
-  await userEvent.keyboard('{ArrowDown}')
+  screen.getByRole('button', { name: /^noon/ }).focus()
+  await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
   // past the end of its day it goes into the next one, on top; 12:00 above 10:00 doesn't fit, so the time clears
   expect(db.save).toHaveBeenCalledWith({ id: 'c', day: '2025-09-20', time: null, position: 0 })
-  screen.getByRole('button', { name: /move timed/ }).focus()
-  await userEvent.keyboard('{Delete}')
-  expect(db.remove).toHaveBeenCalledWith('a', 'timed')
+})
+
+it('on a laptop, alt and the arrows move the line whose name you are typing in', async () => {
+  db.stops = [
+    stop({ id: 'p', trip_id: 'tk', day: '2025-09-19', title: 'first', position: 0 }),
+    stop({ id: 'q', trip_id: 'tk', day: '2025-09-19', title: 'second', position: 1 }),
+  ]
+  show(tokyo())
+  await userEvent.click(screen.getByRole('textbox', { name: 'change second' }))
+  await userEvent.keyboard('{Alt>}{ArrowUp}{/Alt}')
+  expect(db.save).toHaveBeenCalledWith({ id: 'q', position: 0 })
+  expect(db.save).toHaveBeenCalledWith({ id: 'p', position: 1 })
 })
 
 it('a line with tickets says so', () => {

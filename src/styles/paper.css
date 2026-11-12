@@ -390,3 +390,5 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .dragging { opacity: .35; }
 .drag-ghost { position: fixed; z-index: 1000; pointer-events: none; max-width: 260px; padding: 6px 10px; border-radius: 8px; background: var(--ink); color: var(--card); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--float); text-transform: lowercase; }
 body.carrying, body.carrying * { cursor: grabbing !important; user-select: none; }
+/* a phone line is held to carry it: no copy/look-up bubble, no text selection while holding */
+.trip-phone .itin-line { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

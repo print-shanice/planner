@@ -14,6 +14,8 @@ export function useSwipeAway(onAway: () => void, enabled = true) {
     onPointerDown: (e: PointerEvent) => { if (enabled) { start.current = e.clientX; moved.current = false } },
     onPointerMove: (e: PointerEvent) => {
       if (start.current == null) return
+      // a held line being carried somewhere isn't a swipe
+      if (document.body.classList.contains('carrying')) { reset(); return }
       const d = e.clientX - start.current
       if (Math.abs(d) > 8) moved.current = true
       setDx(d)

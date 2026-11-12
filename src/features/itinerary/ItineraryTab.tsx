@@ -12,7 +12,6 @@ import { dayLegs, type Leg } from '../../lib/legs'
 import { pinNumbers } from '../../lib/pins'
 import { useMove } from './useMove'
 import { useDrag } from './drag'
-import { useUndoRemove } from '../../lib/undo'
 import { stopTitle } from '../plan/StopRow'
 import { directionsUrl } from '../../lib/gmaps'
 import { walkWords } from '../../lib/google/routes'
@@ -25,7 +24,7 @@ import { useStopSheet } from '../stops/StopSheet'
 import { useHighlight } from '../trip/highlight'
 import { useReadingDay } from '../trip/readingDay'
 import { useWalks, type WalkAnswer } from '../plan/useWalks'
-import { ItinLine, careful } from './ItinLine'
+import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
 import { ParentCalendar } from './ParentCalendar'
 import { PageTurn } from '../../components/PageTurn'
@@ -60,6 +59,9 @@ function coveredTop() {
 function underBar(root: HTMLElement | null) {
   root?.style.setProperty('--bar-h', `${coveredTop()}px`)
 }
+
+// how long a line is held still before it's picked up
+const HOLD = 300
 
 const monthOf = (d: string) => fmtDay(d, { month: 'long' })
 
@@ -333,7 +335,6 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
   const [box, onScreen] = useOnScreen<HTMLElement>()
   const move = useMove(trip)
   const drag = useDrag()
-  const removeLater = useUndoRemove('stops')
   const areas = dayAreas(day.entries)
   const side = day.owner.id !== trip.id ? day.owner : null
   const timed = day.entries.some((e) => e.kind === 'stop' && e.stop?.time)
@@ -354,14 +355,14 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
     if (!other) return
     const first = document.querySelector<HTMLElement>(`[data-drop-day="${other}"] [data-drop-line]`)?.dataset.dropLine ?? null
     move(s, other, dir < 0 ? null : first)
-    const refocus = () => document.querySelector<HTMLElement>(`[data-line="${CSS.escape(s.id)}"] .grip`)?.focus()
+    const refocus = () => document.querySelector<HTMLElement>(`[data-line="${CSS.escape(s.id)}"] :is(.doc-name, .itin-main)`)?.focus()
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(refocus)
   }
-  function key(e: KeyboardEvent<HTMLButtonElement>, s: Stop) {
-    if (e.key === 'ArrowUp') { e.preventDefault(); nudge(s, -1) }
-    if (e.key === 'ArrowDown') { e.preventDefault(); nudge(s, 1) }
-    // delete takes it away with undo, unless it's booked or holds tickets or a cost (those ask, from ×)
-    if ((e.key === 'Delete' || e.key === 'Backspace') && !careful(s, infoOf(s))) { e.preventDefault(); removeLater(s.id, stopTitle(s).toLowerCase()) }
+  // ⌥↑ / ⌥↓ (alt) moves the line you're on, like moving a paragraph in a doc
+  function key(e: KeyboardEvent<HTMLElement>, s: Stop) {
+    if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return
+    e.preventDefault()
+    nudge(s, e.key === 'ArrowUp' ? -1 : 1)
   }
 
   if (hidden) return <section id={`itin-${day.date}`} data-date={day.date} className="doc-day folded-out" ref={box} />
@@ -394,18 +395,15 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
           const seq = e.kind === 'stop' ? numbers.get(s.id) : undefined
           const isMove = canEdit && e.kind === 'stop'
           const name = stopTitle(s).toLowerCase() || 'line'
-          const grip = isMove ? (
-            <Tooltip text="drag to move, to any day · or ↑ and ↓"><button type="button" className="grip" aria-label={`move ${name} (arrow keys; delete removes it)`}
-              onPointerDown={(ev) => { if (!drag) return; ev.preventDefault(); ev.stopPropagation(); drag.begin({ kind: 'line', stop: s, label: name }, ev) }} onKeyDown={(ev) => key(ev, s)}>
-              <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true"><g fill="currentColor">{[3, 9, 15].flatMap((y) => [<circle key={`a${y}`} cx="3" cy={y} r="1.4" />, <circle key={`b${y}`} cx="9" cy={y} r="1.4" />])}</g></svg>
-            </button></Tooltip>
-          ) : undefined
           const after = legs.filter((l) => l.from.id === s.id && l.fromKind === e.kind)
           return (
             <div key={`${s.id}-${e.kind}`} data-drop-line={e.kind === 'stop' ? s.id : undefined}
-              className={drag?.carrying?.kind === 'line' && drag.carrying.stop.id === s.id && e.kind === 'stop' ? 'dragging' : undefined}>
+              className={drag?.carrying?.kind === 'line' && drag.carrying.stop.id === s.id && e.kind === 'stop' ? 'dragging' : undefined}
+              // no handle: hold a line still for a moment, then carry it. a quick press still opens or edits it
+              onPointerDown={isMove && drag ? (ev) => { if (ev.button === 0 && !(ev.target as Element).closest('button, a')) drag.begin({ kind: 'line', stop: s, label: name }, ev, { hold: HOLD }) } : undefined}
+              onKeyDown={isMove ? (ev) => key(ev, s) : undefined}>
               {here && e.kind === 'stop' && here.before === s.id && <div className="drop-rule" aria-hidden="true" />}
-              <ItinLine editing={editing} entry={e} seq={seq} any={timed && e.kind === 'stop'} q={q} grip={grip} info={infoOf(s)}
+              <ItinLine editing={editing} entry={e} seq={seq} any={timed && e.kind === 'stop'} q={q} info={infoOf(s)}
                 current={current === s.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
               {after.map((l) => <WalkLine key={l.to.id} leg={l} answer={walk(l.a, l.b)} />)}
             </div>
