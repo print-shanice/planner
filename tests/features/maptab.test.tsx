@@ -15,12 +15,13 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse, searchPlaces: db.search }))
 vi.mock('../../src/features/map/TripMap', () => ({
-  TripMap: ({ onPick, onEmpty, onCenter, highlight, inset, fitKey, overview, onTrip }: { onTrip?: (id: string) => void; overview?: { sides: unknown[] } | null; fitKey?: string; onCenter?: (v: { lat: number; lng: number; zoom: number }) => void; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
+  TripMap: ({ onPick, onEmpty, onCenter, highlight, inset, fitKey, overview, onTrip, onGrab }: { onGrab?: (id: string, e: { clientX: number; clientY: number; button: number }) => void; onTrip?: (id: string) => void; overview?: { sides: unknown[] } | null; fitKey?: string; onCenter?: (v: { lat: number; lng: number; zoom: number }) => void; onPick: (id: string) => void; onEmpty: (p: { lng: number; lat: number }) => void; highlight?: string | null; inset?: { top: number; bottom: number } }) => (
     // every render's view and inset, in order: the real map fits on the first render of a new view
     db.fits.push([fitKey, inset?.bottom]), db.overviews.push(overview),
     <div data-highlight={highlight ?? ''} data-inset={inset ? `${inset.top},${inset.bottom}` : ''} data-fit={fitKey} data-overview={overview ? overview.sides.length : ''}>
       <button onClick={() => onEmpty({ lng: 25.7287, lat: 66.5079 })}>tap map</button>
       <button onClick={() => onPick('s1')}>tap pin</button>
+      <button disabled={!onGrab} onClick={() => onGrab?.('s1', { clientX: 10, clientY: 10, button: 0 })}>grab pin</button>
       <button onClick={() => onTrip?.('lap')}>tap side trip</button>
       <button onClick={() => onPick('cafe')}>tap idea</button>
       <button onClick={() => onCenter?.({ lat: 48.85, lng: 2.35, zoom: 12 })}>move map to paris</button>
@@ -29,6 +30,7 @@ vi.mock('../../src/features/map/TripMap', () => ({
 }))
 
 import { MapTab } from '../../src/features/map/MapTab'
+import { DragProvider } from '../../src/features/itinerary/drag'
 import { ReadingDayProvider, useReadingDay } from '../../src/features/trip/readingDay'
 
 const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
@@ -508,5 +510,37 @@ describe('find on the map', () => {
     await userEvent.click(within(screen.getByRole('region', { name: /^find / })).getByRole('button', { name: 'close' }))
     expect(screen.queryByRole('region', { name: /^find / })).toBeNull()
     expect(db.save).not.toHaveBeenCalled()
+  })
+})
+
+describe('carrying from the map into the plan (laptop)', () => {
+  const carried = async (path: string, phone = false) => {
+    render(<MemoryRouter initialEntries={[path]}><DragProvider trip={lap}><MapTab trip={lap} phone={phone} /></DragProvider></MemoryRouter>)
+  }
+
+  it('a numbered pin picks up its own line', async () => {
+    await carried('/?day=2027-02-08')
+    await userEvent.click(screen.getByRole('button', { name: 'grab pin' }))
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 200 })
+    expect(document.body).toHaveClass('carrying')
+    expect(document.querySelector('.drag-ghost')).toHaveTextContent('arktikum')
+    fireEvent.pointerUp(window, { clientX: 200, clientY: 200 })
+    expect(document.body).not.toHaveClass('carrying')
+  })
+
+  it('a search result can be carried straight into the plan', async () => {
+    db.search.mockResolvedValue([place({ name: 'Kahvila Kauppayhtiö', lat: 66.5, lng: 25.72, osm_id: 'n9' })])
+    await carried('/?day=2027-02-08')
+    await userEvent.type(screen.getByRole('searchbox', { name: 'search' }), 'kahvila{Enter}')
+    const hit = await screen.findByRole('button', { name: /Kahvila Kauppayhtiö/ })
+    fireEvent.pointerDown(hit, { clientX: 20, clientY: 20, button: 0 })
+    fireEvent.pointerMove(window, { clientX: 300, clientY: 300 })
+    expect(document.querySelector('.drag-ghost')).toHaveTextContent('kahvila kauppayhtiö')
+    fireEvent.pointerUp(window, { clientX: 300, clientY: 300 })
+  })
+
+  it('on a phone the map and plan are never side by side, so nothing is carried', async () => {
+    await carried('/?day=2027-02-08', true)
+    expect(screen.getByRole('button', { name: 'grab pin' })).toBeDisabled()
   })
 })

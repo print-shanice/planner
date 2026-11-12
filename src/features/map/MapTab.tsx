@@ -13,6 +13,9 @@ import { loadState } from '../../lib/load'
 import { LoadNotice } from '../../components/States'
 import { AddPlaceField } from '../plan/AddPlaceField'
 import { FindPanel } from './FindPanel'
+import { newPlaceStop } from './newStop'
+import { useDrag } from '../itinerary/drag'
+import type { Hit } from '../plan/usePlaceSearch'
 import { biasFor } from '../../lib/guess'
 import { useCanEdit } from '../../lib/offline'
 import { busyDays, EMPTY, mapFeatures, type Filter } from './features'
@@ -60,9 +63,20 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
   useRefreshPlaces(stops)
   const [params, setParams] = useSearchParams()
   const canEditMap = useCanEdit()
+  const drag = useDrag()
   // ?find=<line>: a line of the plan without a place, being looked up (from its pin+)
   const findId = params.get('find')
   const finding = findId && canEditMap ? stops.find((s) => s.id === findId && !hasPoint(s.place)) ?? null : null
+  // a laptop carries things from the map into the plan beside it: a pin (its line), an idea, a search result
+  const carry = !phone && canEditMap ? drag : null
+  const grabPin = carry ? (id: string, e: { clientX: number; clientY: number }) => {
+    const s = stops.find((x) => x.id === id)
+    if (s) carry.begin({ kind: 'line', stop: s, label: stopTitle(s).toLowerCase() }, e)
+  } : undefined
+  const grabHit = carry ? (h: Hit, e: { clientX: number; clientY: number }, resolve: () => Promise<Place>) => {
+    const stop = newPlaceStop(h.place ?? { name: h.name, lat: null, lng: null, category: h.category }, trip.id)
+    carry.begin({ kind: 'new', stop, label: h.name.toLowerCase(), resolve: h.place ? undefined : resolve }, e)
+  } : undefined
   function doneFinding() {
     setParams((p) => {
       const n = new URLSearchParams(p)
@@ -186,13 +200,13 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
 
   return (
     <div className="map-tab">
-      <TripMap data={data} highlight={lit.id} inset={phone ? inset : undefined} fitKey={`${trip.id}|${filter}`} overview={overview} onTrip={openTrip} fallback={trip.base} focus={card && !card.stopId ? card.place : null}
+      <TripMap data={data} highlight={lit.id} inset={phone ? inset : undefined} fitKey={`${trip.id}|${filter}`} overview={overview} onTrip={openTrip} fallback={trip.base} focus={card && !card.stopId ? card.place : null} onGrab={grabPin}
         onPick={pick} onEmpty={empty} onPoi={poi} onCenter={setView} walks={walks} selected={card?.stopId ?? null} />
       <div className="map-top">
         <div className="map-search">
           {finding
             ? <FindPanel key={finding.id} stop={finding} near={biasFor(trip, trips, stops, finding.day)} onDone={doneFinding} />
-            : <AddPlaceField alwaysOpen label="search" near={view ?? middleOf(data) ?? (hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null)} onPick={(p) => setCard({ place: p, seq: ++seq.current })} />}
+            : <AddPlaceField alwaysOpen label="search" near={view ?? middleOf(data) ?? (hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null)} onPick={(p) => setCard({ place: p, seq: ++seq.current })} onGrab={grabHit} />}
         </div>
         {phone ? <label className="map-scope"><span>show</span><select aria-label="map scope" value={filter} onChange={e => setFilter(e.target.value)}>
           <option value="all">whole trip</option>

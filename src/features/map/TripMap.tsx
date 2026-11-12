@@ -31,6 +31,8 @@ type Props = {
   walks?: WalkLine[]
   // the stop picked in the list or on the map: it lights up and comes into view
   selected?: string | null
+  // a laptop's pins (and ideas) can be picked up and carried into the plan beside the map
+  onGrab?: (id: string, e: PointerEvent) => void
 }
 
 type G = typeof google.maps
@@ -89,7 +91,7 @@ function sidePin(name: string, dates: string, color: string | null, home: boolea
   return el
 }
 
-type Want = { key: string; at: [number, number]; make: () => HTMLElement; z: number; pick?: () => void; id?: string }
+type Want = { key: string; at: [number, number]; make: () => HTMLElement; z: number; pick?: () => void; id?: string; grab?: boolean }
 
 function boundsOf(d: MapData, o?: Overview | null, walks?: WalkLine[]): [number, number][] {
   const pts: [number, number][] = []
@@ -176,7 +178,7 @@ export function TripMap(props: Props) {
     const want: Want[] = []
     for (const f of data.saved.features) {
       const p = f.properties
-      want.push({ key: `idea:${p.id}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 1, make: () => pinElement({ kind: 'idea', icon: p.icon, label: 'idea' }), pick: () => cb.current.onPick(p.id) })
+      want.push({ key: `idea:${p.id}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 1, make: () => pinElement({ kind: 'idea', icon: p.icon, label: 'idea' }), pick: () => cb.current.onPick(p.id), grab: true })
     }
     for (const f of data.ends.features) {
       const p = f.properties
@@ -190,7 +192,7 @@ export function TripMap(props: Props) {
     for (const f of data.pins.features) {
       const p = f.properties
       const name = names.get((f.geometry.coordinates as number[]).join(',')) ?? ''
-      want.push({ key: `pin:${p.id}:${p.number}:${p.color}:${p.icon}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 10 + p.number, make: () => pinElement({ kind: 'stop', icon: p.icon, color: p.color, number: p.number, label: `${p.number} ${name}`.trim() }), pick: () => cb.current.onPick(p.id) })
+      want.push({ key: `pin:${p.id}:${p.number}:${p.color}:${p.icon}`, id: p.id, at: f.geometry.coordinates as [number, number], z: 10 + p.number, make: () => pinElement({ kind: 'stop', icon: p.icon, color: p.color, number: p.number, label: `${p.number} ${name}`.trim() }), pick: () => cb.current.onPick(p.id), grab: true })
     }
     if (overview?.home) want.push({ key: `home:${overview.home.name}`, at: overview.home.at, z: 5, make: () => sidePin(overview.home!.name, '', null, true) })
     for (const s of overview?.sides ?? []) {
@@ -206,6 +208,8 @@ export function TripMap(props: Props) {
       if (w.id) el.dataset.stop = w.id
       // the marker's own button handles the tap, so it isn't also a tap on the map
       el.addEventListener('click', (e) => { e.stopPropagation(); w.pick?.() })
+      // pressing a pin doesn't pan the map: it may be carried into the plan (a click still opens it)
+      if (w.grab && w.id) el.addEventListener('pointerdown', (e) => { if (e.button !== 0 || !cb.current.onGrab) return; e.stopPropagation(); cb.current.onGrab(w.id!, e) })
       const m = new mk.AdvancedMarkerElement({ map, position: { lng: w.at[0], lat: w.at[1] }, content: el, zIndex: w.z })
       markers.current.set(w.key, { m, el, sig })
     }

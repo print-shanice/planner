@@ -12,6 +12,7 @@ import { Icon } from '../../components/Icon'
 import { useMove } from '../itinerary/useMove'
 import { useDrag } from '../itinerary/drag'
 import { DayMenu, type DayChoice } from './DayMenu'
+import { newPlaceStop } from './newStop'
 import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { fmtDay, tripDays } from '../../lib/dates'
@@ -62,11 +63,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   // the line it would be: the idea itself, or a new place
   const row = (): Stop => {
     if (stop) return { ...stop, time: at ?? stop.time }
-    const { category, ...bare } = place
-    return {
-      id: fresh.current, trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: null, position: 0, time: at, end_date: null, end_time: null,
-      place: bare, mode: null, origin: null, destination: null, status: 'idea', saved: false, url: '', ref: '', notes: '', category: asCategory(category), flight: null,
-    }
+    return newPlaceStop(place, trip.id, at, fresh.current)
   }
   const fresh = useRef(newId())
   function add() {

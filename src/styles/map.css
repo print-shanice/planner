@@ -120,3 +120,5 @@
 .find-panel .search-box { background: var(--paper-2); border-radius: 8px; }
 .find-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 8px 8px 6px; border-top: 1px solid var(--line); font-size: 13.5px; }
 .find-foot .text-link { min-height: 36px; }
+/* while something is carried off the map, its search and card step back so the plan can take the drop */
+body.carrying .map-top, body.carrying .map-bottom { opacity: .35; pointer-events: none; transition: opacity .15s; }

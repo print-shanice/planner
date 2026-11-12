@@ -73,4 +73,21 @@ test.describe('the map', () => {
     if (phone(page)) await expect(page).toHaveURL(/#\/trip\/par\?tab=map/)
     else await expect(page.getByRole('heading', { level: 1, name: 'paris' })).toBeVisible()
   })
+
+  test('on a laptop, a pin carries its line from the map into another day of the plan', async ({ page }) => {
+    test.skip(phone(page), 'a phone never shows the map and the plan together')
+    await open(page, '/trip/par?day=2027-02-20')
+    const map = page.getByRole('complementary', { name: 'map' })
+    const pin = map.getByRole('button', { name: /^2 du pain et des idées/ })
+    await expect(pin).toBeVisible()
+    const sun = page.getByRole('region', { name: 'sunday 21 february' })
+    const from = (await pin.boundingBox())!
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    const to = (await sun.locator('[data-drop-line]').first().boundingBox())!
+    await page.mouse.move(to.x + 60, to.y + 4, { steps: 15 })
+    await expect(page.locator('.drop-rule')).toHaveCount(1)
+    await page.mouse.up()
+    await expectLine(sun, 'du pain et des idées')
+  })
 })

@@ -40,8 +40,14 @@ test.describe('the plan', () => {
     const sat = page.getByRole('region', { name: 'saturday 20 february' })
     const sun = page.getByRole('region', { name: 'sunday 21 february' })
     const line = sat.locator('[data-drop-line]').filter({ has: page.locator('[data-line]') }).last()
-    // both days in view
-    await line.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+    // both days in view, once the page has stopped landing on its day (a busy machine can land late)
+    await expect.poll(async () => {
+      await line.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+      const a = await line.boundingBox()
+      await page.waitForTimeout(150)
+      const b = await line.boundingBox()
+      return a?.y === b?.y
+    }).toBe(true)
     const from = (await line.locator('.itin-time').boundingBox())!
     await page.mouse.move(from.x + 10, from.y + 10)
     await page.mouse.down()
@@ -49,7 +55,7 @@ test.describe('the plan', () => {
     await page.waitForTimeout(450)
     const to = (await sun.locator('[data-drop-line]').first().boundingBox())!
     await page.mouse.move(to.x + 40, to.y + 4, { steps: 12 })
-    await expect(page.locator('.drop-rule')).toHaveCount(1)
+    await expect(sun.locator('.drop-rule')).toHaveCount(1)
     await page.mouse.up()
     await expectLine(sun, 'du pain et des idées')
     await expectLine(sat, 'du pain et des idées', false)

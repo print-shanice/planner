@@ -89,9 +89,10 @@ export function SearchStatus({ busy, failed, results, onRetry }: { busy: boolean
 }
 
 // one row of results, the same in every search
-export function HitRow({ hit, onPick }: { hit: Hit; onPick: () => void }) {
+// onGrab: on a laptop's map, a result can also be carried into the plan beside it
+export function HitRow({ hit, onPick, onGrab }: { hit: Hit; onPick: () => void; onGrab?: (e: { clientX: number; clientY: number }) => void }) {
   return (
-    <button type="button" className="result" onClick={onPick}>
+    <button type="button" className="result" onClick={onPick} onPointerDown={onGrab ? (e) => { if (e.button === 0) onGrab(e) } : undefined}>
       <Icon name={categoryIcon((hit.category as Kindish) ?? 'place') || 'pin'} size={18} />
       <span className="result-text"><span>{hit.name}</span>{hit.sub && <span className="muted">{hit.sub}</span>}</span>
     </button>
