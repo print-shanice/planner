@@ -1,6 +1,7 @@
 import type { Place, Stop, Trip } from './types'
 import { tripDays, type DayEntry } from './dates'
 import { descendants } from './countries'
+import { dayOrder } from './dayOrder'
 
 export function validDay(day: string | null): day is string {
   if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false
@@ -21,11 +22,14 @@ export function agendaForDay(trip: Trip, trips: Trip[], stops: Stop[], day: stri
       entries.push({ kind: stop.end_date === day ? 'checkout' : 'staying', stop })
     }
   }
-  return entries.sort((a, b) => {
-    const inline = (k: DayEntry['kind']) => k === 'stop' || k === 'checkin'
-    const context = Number(inline(a.kind)) - Number(inline(b.kind))
-    return context || agendaOrder(a.stop!, b.stop!)
-  })
+  // the stays you're already in come first; then the day's own lines (check-ins too) in the order of a doc
+  const inline = (e: DayEntry) => e.kind === 'stop' || e.kind === 'checkin'
+  const context = entries.filter((e) => !inline(e)).sort((a, b) => agendaOrder(a.stop!, b.stop!))
+  // a check-in without a time isn't a line anyone placed (stays aren't moved by hand): it ends the day
+  const lateBed = (e: DayEntry) => e.kind === 'checkin' && !e.stop!.time
+  const lines = entries.filter((e) => inline(e) && !lateBed(e))
+  const at = new Map(lines.map((e) => [e.stop!.id, e]))
+  return [...context, ...dayOrder(lines.map((e) => e.stop!)).map((s) => at.get(s.id)!), ...entries.filter(lateBed)]
 }
 
 export function samePlace(a: Place | null, b: Place | null): boolean {

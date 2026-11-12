@@ -106,7 +106,7 @@ describe('search', () => {
     const stay = stop({ id: 'st', trip_id: 'tk', kind: 'stay', title: 'iyoshi house', day: '2026-09-18', end_date: '2026-09-21' })
     const it = itineraryDays(t, [t], [a, b, c, d, stay])
     expect(findMatches(it, 'IYOSHI').map((m) => `${m.date}:${m.id}`)).toEqual([
-      '2026-09-18:st', '2026-09-19:b', '2026-09-19:a', '2026-09-21:c', 'null:d',
+      '2026-09-18:st', '2026-09-19:a', '2026-09-19:b', '2026-09-21:c', 'null:d',
     ])
     expect(findMatches(it, '')).toEqual([])
   })
