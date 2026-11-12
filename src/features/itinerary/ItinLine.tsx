@@ -18,6 +18,8 @@ import { NO_INFO, type LineInfo } from '../../lib/lineInfo'
 import { Tooltip } from '../../components/Tooltip'
 import { useSettle } from './useSettle'
 import { Marker } from './Marker'
+import { useWide } from '../../lib/useWide'
+import { useSwipeAway } from '../../lib/swipe'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
@@ -110,6 +112,25 @@ function LineLinks({ info }: { info: LineInfo }) {
   ))}</>
 }
 
+// × at the end of a line: gone at once with undo. something booked, or holding tickets or a cost, asks once first
+function RemoveLine({ stop: s, info }: { stop: Stop; info: LineInfo }) {
+  const removeLater = useUndoRemove('stops')
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 3000)
+    return () => clearTimeout(t)
+  }, [armed])
+  const title = stopTitle(s).toLowerCase()
+  return (
+    <button type="button" className={`icon-btn line-remove${armed ? ' armed' : ''}`} aria-label={`remove ${title}`} title="remove"
+      onClick={() => { if (careful(s, info) && !armed) setArmed(true); else { setArmed(false); removeLater(s.id, title) } }}>
+      {armed ? 'remove?' : <Icon name="close" size={16} />}
+    </button>
+  )
+}
+const careful = (s: Stop, info: LineInfo) => s.status === 'booked' || info.tickets > 0 || !!info.cost
+
 // one line of the doc: the time on the left, what it is on the right. a place or a note is live text you type over
 export function ItinLine(props: Props) {
   const { entry, q } = props
@@ -126,6 +147,12 @@ export function ItinLine(props: Props) {
 
 function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip, info = NO_INFO, seq }: Props & { onEdit?: () => void }) {
   const s = entry.stop!
+  const canEdit = useCanEdit()
+  const wide = useWide()
+  const removeLater = useUndoRemove('stops')
+  const removable = canEdit && entry.kind === 'stop'
+  // on a phone a line swipes away (with undo); something booked or holding tickets or a cost goes from its card
+  const swipe = useSwipeAway(() => removeLater(s.id, stopTitle(s).toLowerCase()), removable && !wide && !careful(s, info))
   const stay = entry.kind !== 'stop'
   const title = stay ? `${STAY[entry.kind]} · ${s.title}` : stopTitle(s)
   const sub = stay ? '' : subOf(s)
@@ -143,7 +170,7 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip
   return (
     <>
       <div className={`itin-line${stay ? ' quiet' : ''}${current ? ' current' : ''}`} data-line={s.id} data-testid="itin-line"
-        onMouseEnter={() => onLight?.(s.id)} onMouseLeave={() => onLight?.(null)}>
+        onMouseEnter={() => onLight?.(s.id)} onMouseLeave={() => onLight?.(null)} {...(removable && !wide ? swipe : {})}>
         <span className="itin-time num" aria-label={when.till ? `${when.from} to ${when.till}` : undefined}>
           <span>{when.from}</span>{when.till && <span className="till">–{when.till}</span>}
         </span>
@@ -154,6 +181,7 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip
           {shows && <LineLinks info={info} />}
           {shows && <Pill status={s.status} kind={s.kind} />}
           {grip}
+          {removable && wide && <RemoveLine stop={s} info={info} />}
           {onEdit && onOpen && <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button>}
         </span>
       </div>
@@ -212,7 +240,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
     if (!line.title) {
       // an emptied line goes, with undo; one holding tickets only goes from its card
       if (files.some((f) => f.stop_id === s.id)) put(saved.current)
-      else { gone.current = true; removeLater(s.id) }
+      else { gone.current = true; removeLater(s.id, title.toLowerCase()) }
       return true
     }
     const was = saved.current
@@ -267,6 +295,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
         <LineLinks info={info} />
         <Pill status={s.status} kind={s.kind} />
         {grip}
+        <RemoveLine stop={s} info={info} />
         {dirty
           ? <button type="button" className="btn small line-go" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>
           : state === 'saving' ? <Pending label="saving" className="line-state" />

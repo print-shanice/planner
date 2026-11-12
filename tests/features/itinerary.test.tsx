@@ -236,7 +236,7 @@ it('emptying a line removes it, with undo; one with tickets just goes back', asy
   show(tokyo())
   await userEvent.clear(screen.getByRole('textbox', { name: 'change neel' }))
   await userEvent.keyboard('{Enter}')
-  expect(db.remove).toHaveBeenCalledWith('neel')
+  expect(db.remove).toHaveBeenCalledWith('neel', 'neel')
   db.files = [{ id: 'f', stop_id: 'enji', path: 'x' }]
   const enji = screen.getByRole('textbox', { name: 'change enji' })
   await userEvent.clear(enji)
@@ -249,7 +249,7 @@ it('journeys and stays stay tap-to-open', async () => {
   db.stops = [stop({ id: 'fl', trip_id: 'tk', kind: 'journey', day: '2025-09-18', time: '22:00', title: 'sq 638', origin: place({ name: 'changi' }), destination: place({ name: 'narita' }) })]
   show(tokyo())
   expect(screen.queryByRole('textbox', { name: /change changi/ })).toBeNull()
-  await userEvent.click(screen.getByRole('button', { name: /changi → narita/ }))
+  await userEvent.click(screen.getByRole('button', { name: /^sq 638 changi → narita|changi → narita.*sq 638/ }))
   expect(db.open).toHaveBeenCalledWith('fl', '2025-09-18')
 })
 
@@ -475,4 +475,42 @@ it('a day heading carries no "day n" count, and no empty line under it when ther
   expect(screen.getByTestId('itin-2025-09-18').querySelector('.doc-day-meta')).toBeNull()
   // 19 sept still names where the day is
   expect(meta('2025-09-19')).toHaveTextContent('shibuya')
+})
+
+describe('removing a line', () => {
+  it('on a laptop, × at the end of a line removes it at once, with undo', async () => {
+    show(tokyo())
+    await userEvent.click(screen.getByRole('button', { name: 'remove neel' }))
+    expect(db.remove).toHaveBeenCalledWith('neel', 'neel')
+  })
+
+  it('a booked line, or one holding tickets or a cost, asks once first', async () => {
+    db.stops = (db.stops as ReturnType<typeof stop>[]).map((s) => (s.id === 'neel' ? { ...s, status: 'booked' as const } : s))
+    db.files = [{ id: 'f', stop_id: 'enji', path: 'x' }]
+    show(tokyo())
+    const x = screen.getByRole('button', { name: 'remove neel' })
+    await userEvent.click(x)
+    expect(db.remove).not.toHaveBeenCalled()
+    expect(x).toHaveTextContent('remove?')
+    await userEvent.click(x)
+    expect(db.remove).toHaveBeenCalledWith('neel', 'neel')
+    await userEvent.click(screen.getByRole('button', { name: 'remove enji' }))
+    expect(db.remove).toHaveBeenCalledTimes(1)
+  })
+
+  it('on a phone, swiping a line left removes it, with undo; a booked one stays', () => {
+    db.stops = (db.stops as ReturnType<typeof stop>[]).map((s) => (s.id === 'enji' ? { ...s, status: 'booked' as const } : s))
+    show(tokyo(), '/trip/tk?tab=itinerary', false)
+    expect(screen.queryByRole('button', { name: 'remove neel' })).toBeNull()
+    const swipe = (id: string) => {
+      const line = document.querySelector(`[data-line="${id}"]`) as HTMLElement
+      fireEvent.pointerDown(line, { clientX: 300, pointerId: 1 })
+      fireEvent.pointerMove(line, { clientX: 150, pointerId: 1 })
+      fireEvent.pointerUp(line, { clientX: 150, pointerId: 1 })
+    }
+    swipe('neel')
+    expect(db.remove).toHaveBeenCalledWith('neel', 'neel')
+    swipe('enji')
+    expect(db.remove).toHaveBeenCalledTimes(1)
+  })
 })

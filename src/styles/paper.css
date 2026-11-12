@@ -377,3 +377,9 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .holiday-line .holiday-mark { background: none; box-shadow: none; }
 .holiday-line .holiday-mark .flag { height: 22px; min-width: 26px; font-size: 10px; }
 .itin-line.quiet.holiday-line .itin-title { font-weight: 500; color: var(--ink); font-size: 15.5px; }
+
+/* × at the end of a line: only there while you point at (or tab to) the line */
+.line-remove { opacity: 0; color: var(--ink-2); }
+.itin-line:hover .line-remove, .itin-line:focus-within .line-remove, .line-remove.armed { opacity: 1; }
+.line-remove.armed { width: auto; padding: 0 10px; font: 500 12px/1 var(--f-mono); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+@media (hover: none) { .line-remove { opacity: 1; } }
