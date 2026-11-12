@@ -6,7 +6,7 @@ import { useCanEdit } from '../../lib/offline'
 import { addDays, daysBetween, fmtDay, nights } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { positionsAfterMove } from '../../lib/order'
-import { gmapsUrl } from '../../lib/gmaps'
+import { gmapsUrl, directionsUrl } from '../../lib/gmaps'
 import { supabase } from '../../lib/supabase'
 import { safeUrl } from '../../lib/embed'
 import { Pill } from '../../components/Pill'
@@ -19,7 +19,6 @@ import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
 import { stopSub, stopTitle } from '../plan/StopRow'
 import { FlightFacts } from './FlightFacts'
-import { directionsUrl } from '../../lib/gmaps'
 import { ancestors, descendants } from '../../lib/countries'
 import { useStopSheet } from './StopSheet'
 import { dayEntries } from '../../lib/agenda'
@@ -116,7 +115,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const navigate = useNavigate()
   // every cost attached to this booking (a deposit and a balance can be two), oldest first
   const linked = costs.filter((c) => c.stop_id === stop.id).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-  const maps = gmapsUrl(stop)
+  const maps = stop.kind === 'journey' ? gmapsUrl(stop) : directionsUrl(stop.place)
   const address = stop.place ? [stop.place.name, stop.place.address].filter(Boolean).join(', ') : ''
 
   const siblings = stops
@@ -252,7 +251,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
         {facts.filter(Boolean).map((f) => <p key={f} className="fact"><Icon name="calendar" size={18} /><span>{f}</span></p>)}
         <FlightFacts stop={stop} />
         {leg && (
-          <a className="fact fact-link" href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
+          <a className="fact fact-link" href={directionsUrl(leg.b) ?? undefined} target="_blank" rel="noopener noreferrer">
             <Icon name="walk" size={18} /><span>{`next · ${nextName(leg).toLowerCase()}`}</span>
           </a>
         )}

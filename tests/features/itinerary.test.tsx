@@ -259,14 +259,17 @@ it('every day ends with a line to type into, on a phone too', async () => {
   expect(dayBox('2025-09-19').getByRole('group', { name: 'add to fri 19 sept' })).toBeInTheDocument()
 })
 
-it('between located lines, the walk is a link to google maps directions', () => {
+it('the itinerary directions start here and lead to the named next place', () => {
   db.stops = [
     stop({ id: 'a', trip_id: 'tk', day: '2025-09-19', time: '09:00', title: 'a', place: place({ lat: 35.66, lng: 139.70 }) }),
-    stop({ id: 'b', trip_id: 'tk', day: '2025-09-19', time: '10:00', title: 'b', place: place({ lat: 35.67, lng: 139.71 }) }),
+    stop({ id: 'b', trip_id: 'tk', day: '2025-09-19', time: '10:00', title: 'b', place: place({ name: 'Tokyo National Museum', address: 'Ueno Park, Tokyo', lat: 35.67, lng: 139.71 }) }),
   ]
   show(tokyo())
   const walk = dayBox('2025-09-19').getByRole('link', { name: /directions|walk/ })
-  expect(walk.getAttribute('href')).toContain('google.com/maps/dir/')
+  const url = new URL(walk.getAttribute('href')!)
+  expect(url.pathname).toBe('/maps/dir/')
+  expect(url.searchParams.has('origin')).toBe(false)
+  expect(url.searchParams.get('destination')).toBe('Tokyo National Museum, Ueno Park, Tokyo')
 })
 
 it('every line moves with alt and the arrow keys, timed or not, with no handle to press', async () => {

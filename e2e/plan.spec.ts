@@ -265,3 +265,20 @@ test.describe('a line reads level', () => {
     }
   })
 })
+
+
+test('an itinerary number focuses its map pin and opens its place card', async ({ page }) => {
+  await open(page, '/trip/par?day=2027-02-20')
+  const day = page.getByRole('region', { name: 'saturday 20 february' })
+  await day.getByRole('button', { name: 'show musée d’orsay on the map' }).click()
+  const card = page.getByRole('region', { name: 'musée d’orsay', exact: true })
+  await expect(card).toBeVisible()
+  const pin = page.locator('.gpin-stop.lit').filter({ hasText: '01' })
+  await expect(pin).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  if (!phone(page)) {
+    await card.getByRole('button', { name: 'close', exact: true }).click()
+    await day.getByRole('button', { name: 'show musée d’orsay on the map' }).click()
+    await expect(card).toBeVisible()
+  }
+})

@@ -105,16 +105,23 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
     ? (params.get('map') === 'saved' ? 'saved' : validDay(selected) ? selected : 'all')
     : ideas ? 'saved' : whole || !planDay ? 'all' : planDay
   const setFilter = (value: Filter) => setParams(p => { const n = new URLSearchParams(p); n.delete('map'); if (value === 'saved') n.set('map', 'saved'); else if (value === 'all') n.delete('day'); else n.set('day', value); return n })
-  // a link with ?pin= opens that place's card (from a stop's "map" button)
-  const [card, setCard] = useState<Card | null>(() => {
-    const s = stops.find((x) => x.id === params.get('pin'))
-    return s ? { place: s.place ?? s.destination ?? s.origin ?? { name: s.title, lat: null, lng: null }, stopId: s.id, seq: 0 } : null
-  })
+  const [card, setCard] = useState<Card | null>(null)
   const [listOpen, setListOpen] = useState(false)
   const lit = useHighlight()
   // where the map is looking, so a search finds places there (state, so the search box always has the latest)
   const [view, setView] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const seq = useRef(0)
+  // Consume each request so pressing the same itinerary number can focus it again.
+  const pin = params.get('pin')
+  useEffect(() => {
+    if (!pin) return
+    const s = stops.find((x) => x.id === pin)
+    if (!s) return
+    setChoice(false)
+    setCard({ place: s.place ?? s.destination ?? s.origin ?? { name: s.title, lat: null, lng: null }, stopId: s.id, seq: ++seq.current })
+    setParams((p) => { const n = new URLSearchParams(p); n.delete('pin'); return n }, { replace: true })
+  }, [pin, stops, setParams])
+
 
   const navigate = useNavigate()
   // the whole trip with side trips is an overview: home and one pin per side trip
@@ -201,7 +208,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
   return (
     <div className="map-tab">
       <TripMap data={data} highlight={lit.id} inset={phone ? inset : undefined} fitKey={`${trip.id}|${filter}`} overview={overview} onTrip={openTrip} fallback={trip.base} focus={card && !card.stopId ? card.place : null} onGrab={grabPin}
-        onPick={pick} onEmpty={empty} onPoi={poi} onCenter={setView} walks={walks} selected={card?.stopId ?? null} />
+        onPick={pick} onEmpty={empty} onPoi={poi} onCenter={setView} walks={walks} selected={card?.stopId ?? null} selectionKey={card?.seq} />
       <div className="map-top">
         <div className="map-search">
           {finding

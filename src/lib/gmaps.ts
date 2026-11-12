@@ -25,9 +25,10 @@ export function gmapsUrl(s: Stop): string | null {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}${id}`
 }
 
-// between two located places; the mode is left to google
-export function directionsUrl(from: Place, to: Place): string {
-  const pt = (p: Place) => encodeURIComponent(`${p.lat},${p.lng}`)
-  const ids = (from.gid ? `&origin_place_id=${encodeURIComponent(from.gid)}` : '') + (to.gid ? `&destination_place_id=${encodeURIComponent(to.gid)}` : '')
-  return `https://www.google.com/maps/dir/?api=1&origin=${pt(from)}&destination=${pt(to)}${ids}`
+// Omitting origin lets Google Maps use the device's current location.
+export function directionsUrl(to: Place | null | undefined): string | null {
+  const destination = query(to)
+  if (!destination) return null
+  const id = to?.gid ? `&destination_place_id=${encodeURIComponent(to.gid)}` : ''
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}${id}`
 }

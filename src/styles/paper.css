@@ -115,6 +115,8 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .itin-line > .cat, .itin-line > .seq, .itin-line > .marker-finding { justify-self: center; }
 .marker { position: relative; align-self: start; display: grid; }
 .marker-btn { align-self: start; display: grid; place-items: center; position: relative; width: 44px; height: 44px; margin: -2px -7px -12px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--ink-2); cursor: pointer; }
+.marker-btn.numbered .seq { margin-top: 0; place-self: center; }
+.marker-btn.numbered:hover .seq, .marker-btn.numbered:focus-visible .seq { background: var(--soft); }
 .marker-btn .cat { margin-top: 0; align-self: center; }
 .marker-btn:hover, .marker-btn:focus-visible { filter: brightness(.94); }
 .marker-btn.find { color: var(--ink-3); }

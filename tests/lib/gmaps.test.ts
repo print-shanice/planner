@@ -23,13 +23,29 @@ it('nothing to show gives no link', () => {
   expect(gmapsUrl(stop({ kind: 'note', place: null }))).toBeNull()
 })
 
-it('directions between two stops use their coordinates and leave the mode to google', () => {
-  expect(directionsUrl(place({ name: 'a', lat: 37.97, lng: 23.72 }), place({ name: 'b', lat: 37.98, lng: 23.74 })))
-    .toBe('https://www.google.com/maps/dir/?api=1&origin=37.97%2C23.72&destination=37.98%2C23.74')
+it('directions start at the current location and use the destination name and address', () => {
+  const url = new URL(directionsUrl(place({ name: 'Arktikum', address: 'Pohjoisranta 4, Rovaniemi', lat: 66.5, lng: 25.7 }))!)
+  expect(url.pathname).toBe('/maps/dir/')
+  expect(url.searchParams.get('destination')).toBe('Arktikum, Pohjoisranta 4, Rovaniemi')
+  expect(url.searchParams.has('origin')).toBe(false)
+  expect(url.searchParams.has('origin_place_id')).toBe(false)
+  expect(url.searchParams.has('travelmode')).toBe(false)
 })
 
-it('opens google\'s own place when the place came from google', () => {
-  const p = { name: 'kopi', lat: 51.4, lng: 5.4, gid: 'ChIJ1' }
-  expect(gmapsUrl({ kind: 'place', place: p } as never)).toContain('query_place_id=ChIJ1')
-  expect(directionsUrl({ name: 'a', lat: 1, lng: 2 }, p)).toContain('destination_place_id=ChIJ1')
+it('directions preserve the Google Place ID for the exact destination', () => {
+  const p = place({ name: 'kopi', gid: 'ChIJ1' })
+  expect(gmapsUrl(stop({ place: p }))).toContain('query_place_id=ChIJ1')
+  const url = new URL(directionsUrl(p)!)
+  expect(url.searchParams.get('destination')).toBe('kopi')
+  expect(url.searchParams.get('destination_place_id')).toBe('ChIJ1')
+})
+
+it('directions fall back to coordinates for an unnamed pin', () => {
+  const url = new URL(directionsUrl(place({ name: '', address: '', lat: 66.5, lng: 25.7 }))!)
+  expect(url.searchParams.get('destination')).toBe('66.5,25.7')
+})
+
+it('directions need a destination', () => {
+  expect(directionsUrl(null)).toBeNull()
+  expect(directionsUrl(place({ name: '', address: '', lat: null, lng: null }))).toBeNull()
 })

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useWide } from '../../lib/useWide'
+import { useReadingDay } from '../trip/readingDay'
 import type { Stop } from '../../lib/types'
 import type { DayEntry } from '../../lib/dates'
 import { useSave } from '../../lib/queries'
@@ -17,6 +20,9 @@ type Kind = keyof typeof KIND_WORDS
 // not found yet, or the icon of getting around or a note, which opens a menu to say it's something else
 export function Marker({ stop: s, kind, seq }: { stop: Stop; kind: DayEntry['kind']; seq?: number }) {
   const canEdit = useCanEdit()
+  const [, setParams] = useSearchParams()
+  const wide = useWide()
+  const reading = useReadingDay()
   const find = useStartFind()
   const save = useSave('stops')
   const [open, setOpen] = useState(false)
@@ -32,7 +38,19 @@ export function Marker({ stop: s, kind, seq }: { stop: Stop; kind: DayEntry['kin
     return () => document.removeEventListener('pointerdown', away)
   }, [open])
 
-  if (seq) return <Seq n={seq} />
+  if (seq) return (
+    <button type="button" className="marker-btn numbered" aria-label={`show ${title} on the map`} title="show on the map" onClick={() => {
+      if (s.day) reading.set(s.day)
+      setParams((p) => {
+        const n = new URLSearchParams(p)
+        n.set('pin', s.id)
+        n.delete('find'); n.delete('map')
+        if (s.day) n.set('day', s.day)
+        if (!wide) n.set('tab', 'map')
+        return n
+      })
+    }}><Seq n={seq} /></button>
+  )
   const line = kind === 'stop'
   const typedJourney = s.kind === 'journey' && !s.origin && !s.destination
   if (!canEdit || !line || s.kind === 'stay' || (s.kind === 'journey' && !typedJourney)) return <Chip stop={s} quiet={!line} />

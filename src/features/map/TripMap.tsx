@@ -31,6 +31,7 @@ type Props = {
   walks?: WalkLine[]
   // the stop picked in the list or on the map: it lights up and comes into view
   selected?: string | null
+  selectionKey?: number
   // a laptop's pins (and ideas) can be picked up and carried into the plan beside the map
   onGrab?: (id: string, e: PointerEvent) => void
 }
@@ -255,13 +256,15 @@ export function TripMap(props: Props) {
     for (const { el } of markers.current.values()) el.classList.toggle('lit', !!el.dataset.stop && (el.dataset.stop === highlight || el.dataset.stop === props.selected))
   }, [highlight, props.selected, map, data])
 
-  // a picked stop comes into view if it's off the edge
+  // Center the selected stop, including repeated clicks on its itinerary number.
   useEffect(() => {
     if (!map || !props.selected) return
     const hit = [...markers.current.values()].find((v) => v.el.dataset.stop === props.selected)
     const pos = hit?.m.position as google.maps.LatLngLiteral | undefined
-    if (pos && !map.getBounds()?.contains(pos)) map.panTo(pos)
-  }, [props.selected, map])
+    if (!pos) return
+    map.panTo(pos)
+    if ((map.getZoom() ?? 0) < 15) map.setZoom(15)
+  }, [props.selected, props.selectionKey, map, data])
 
   // a searched or tapped place: a ring, and the map goes to it
   useEffect(() => {

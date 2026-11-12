@@ -420,7 +420,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
 function WalkLine({ leg, answer }: { leg: Leg; answer: WalkAnswer }) {
   const words = walkWords(answer)
   return (
-    <Tooltip text={`open walking directions to ${leg.b.name || 'the next place'} in Google Maps`}><a className={`walk${answer === undefined ? ' pulse' : ''}`} href={directionsUrl(leg.a, leg.b)} target="_blank" rel="noopener noreferrer">
+    <Tooltip text={`open directions from your current location to ${leg.b.name || 'the next place'} in Google Maps`}><a className={`walk${answer === undefined ? ' pulse' : ''}`} href={directionsUrl(leg.b) ?? undefined} target="_blank" rel="noopener noreferrer">
       <Icon name="walk" size={14} /><span>{words ?? 'directions'}</span><span aria-hidden="true">→</span>
     </a></Tooltip>
   )

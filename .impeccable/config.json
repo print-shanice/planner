@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "roboto",
+        "files": [
+          "src/styles/paper.css"
+        ],
+        "createdAt": "2026-11-12T07:39:12.059Z",
+        "reason": "Existing .powered-by attribution styling explicitly specifies Roboto for Google attribution; preserve this domain-specific typography."
+      }
+    ]
+  }
+}

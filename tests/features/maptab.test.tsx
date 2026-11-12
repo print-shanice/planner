@@ -544,3 +544,20 @@ describe('carrying from the map into the plan (laptop)', () => {
     expect(screen.getByRole('button', { name: 'grab pin' })).toBeDisabled()
   })
 })
+
+
+it('a numbered itinerary marker selects a place in an already mounted map, and can select it again', async () => {
+  const { Marker } = await import('../../src/features/itinerary/Marker')
+  render(<MemoryRouter initialEntries={['/?day=2027-02-08']}>
+    <Marker stop={db.stops[0]} kind="stop" seq={1} />
+    <MapTab trip={lap} />
+  </MemoryRouter>)
+  const marker = screen.getByRole('button', { name: 'show arktikum on the map' })
+  await userEvent.click(marker)
+  let card = screen.getByRole('region', { name: 'arktikum' })
+  await userEvent.click(within(card).getByRole('button', { name: 'close' }))
+  expect(screen.queryByRole('region', { name: 'arktikum' })).toBeNull()
+  await userEvent.click(marker)
+  card = screen.getByRole('region', { name: 'arktikum' })
+  expect(card).toBeInTheDocument()
+})

@@ -10,7 +10,7 @@ function installGoogle() {
     listeners: Record<string, ((e: unknown) => void)[]> = {}
     constructor(public box: HTMLElement) { g.maps.push(this) }
     addListener(ev: string, fn: (e: unknown) => void) { (this.listeners[ev] ??= []).push(fn); return { remove() {} } }
-    fitBounds() {} setCenter() {} setZoom() {} panTo() {} getZoom() { return 12 } getCenter() { return { lat: () => 1, lng: () => 2 } } getBounds() { return null }
+    fitBounds() {} setCenter() {} setZoom = vi.fn(); panTo = vi.fn(); getZoom() { return 12 } getCenter() { return { lat: () => 1, lng: () => 2 } } getBounds() { return null }
   }
   class AdvancedMarkerElement {
     map: unknown; content: HTMLElement; position: unknown
@@ -77,4 +77,20 @@ it('makes one map per visit, however many times the map screen opens', async () 
   await act(async () => { render(<TripMap data={EMPTY} fitKey="j" fallback={null} focus={null} onPick={() => {}} onEmpty={() => {}} />) })
   await waitFor(() => expect(document.querySelector('.gmap')).not.toBeNull())
   expect(g.maps).toHaveLength(1)
+})
+
+
+it('centers and highlights a selected itinerary pin, including a repeated selection', async () => {
+  vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k')
+  installGoogle()
+  const { TripMap } = await import('../../src/features/map/TripMap')
+  const data = mapFeatures(lap, [lap], stops, '2027-02-08')
+  const props = { data, fitKey: 'k', fallback: null, focus: null, onPick: () => {}, onEmpty: () => {}, selected: 'm' }
+  const view = render(<TripMap {...props} selectionKey={1} />)
+  await waitFor(() => expect(g.maps[0]?.panTo).toHaveBeenCalledWith({ lat: 66.51, lng: 25.72 }))
+  expect(g.maps[0].setZoom).toHaveBeenCalledWith(15)
+  expect(document.querySelector('[data-stop="m"]')).toHaveClass('lit')
+  g.maps[0].panTo.mockClear()
+  view.rerender(<TripMap {...props} selectionKey={2} />)
+  expect(g.maps[0].panTo).toHaveBeenCalledWith({ lat: 66.51, lng: 25.72 })
 })

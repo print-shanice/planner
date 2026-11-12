@@ -19,10 +19,19 @@ function show(s: Stop, seq?: number, kind: 'stop' | 'checkin' = 'stop') {
 
 beforeEach(() => { db.online = true; db.wide = true; db.save.mockClear() })
 
-it('a place on the map shows its number and nothing to press', () => {
-  show(stop({ id: 'k', title: 'kyle', place: place() }), 3)
+it('a numbered marker focuses its place beside the plan on a laptop', async () => {
+  show(stop({ id: 'k', title: 'kyle', day: '2025-09-21', place: place() }), 3)
   expect(screen.getByText('03')).toBeInTheDocument()
-  expect(screen.queryByRole('button')).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'show kyle on the map' }))
+  expect(Object.fromEntries(loc())).toEqual({ tab: 'plan', day: '2025-09-21', pin: 'k' })
+})
+
+it('a numbered marker opens the map at its place on a phone', async () => {
+  db.wide = false
+  show(stop({ id: 'k', title: 'kyle', day: '2025-09-21', place: place() }), 3)
+  await userEvent.tab()
+  await userEvent.keyboard('{Enter}')
+  expect(Object.fromEntries(loc())).toEqual({ tab: 'map', day: '2025-09-21', pin: 'k' })
 })
 
 it('a place not found yet offers to find it on the map, beside the plan on a laptop', async () => {

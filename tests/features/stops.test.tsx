@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place, cost } from '../factories'
-import { directionsUrl } from '../../src/lib/gmaps'
 
 const db = vi.hoisted(() => ({
   trips: [] as any[], stops: [] as any[], costs: [] as any[], files: [] as any[],
@@ -170,7 +169,10 @@ it('the view offers the maps link and copy for the ref', async () => {
   show(<Opener id="s1" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog', { name: 'arktikum' })
-  expect(within(d).getByRole('link', { name: 'directions' })).toHaveAttribute('href', expect.stringContaining('google.com/maps/search'))
+  const url = new URL(within(d).getByRole('link', { name: 'directions' }).getAttribute('href')!)
+  expect(url.pathname).toBe('/maps/dir/')
+  expect(url.searchParams.has('origin')).toBe(false)
+  expect(url.searchParams.get('destination')).toBe('Arktikum, Pohjoisranta 4')
   expect(within(d).getByRole('button', { name: 'copy ref' })).toBeInTheDocument()
 })
 
@@ -750,7 +752,9 @@ describe('next stop', () => {
   it('a stop\'s card links to the next stop', async () => {
     db.stops = two()
     const d = await card('a')
-    expect(within(d).getByRole('link', { name: 'next · b' })).toHaveAttribute('href', directionsUrl(A as any, B as any))
+    const url = new URL(within(d).getByRole('link', { name: 'next · b' }).getAttribute('href')!)
+    expect(url.searchParams.has('origin')).toBe(false)
+    expect(url.searchParams.get('destination')).toBe('B')
   })
 
   it('the last stop\'s next is tonight\'s bed', async () => {
