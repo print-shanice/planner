@@ -62,6 +62,24 @@
 .pack-go { flex: none; min-height: 44px; }
 .pack-edit { flex: 1; display: grid; gap: 8px; padding: 10px 0; }
 .pack-edit .row { display: flex; align-items: center; gap: 8px; }
+/* whose things: faces to pick at the top (none picked = everything, every face at full strength), small faces on each row */
+.pack-pick { gap: 20px; padding: 0 0 4px; }
+.pack-pick .face { flex-direction: column; gap: 4px; min-height: 44px; font-size: 12px; color: var(--ink-2); }
+.pack-pick:not(:has([aria-pressed="true"])) .face { opacity: 1; }
+.pack-pick .face[aria-pressed="true"] { color: var(--ink); }
+.pack-who { flex: none; display: flex; padding-right: 4px; }
+.pack-faces-row { display: inline-flex; }
+.pack-who .avatar { position: relative; width: 22px; height: 22px; font-size: 10px; border-width: 1.5px; }
+.pack-who .avatar + .avatar { margin-left: -7px; }
+.packed .pack-who { opacity: .5; }
+/* a shared thing someone has already packed: a small ✓ on their face */
+.pack-face-tick { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 13px; height: 13px; border-radius: 50%; background: var(--ink); color: var(--card); }
+.pack-whose { padding: 2px 0 4px; }
+.pack-whose .pack-faces-row .avatar { border: 2px solid var(--card); }
+.pack-whose .pack-faces-row .avatar + .avatar { margin-left: -12px; }
+/* both: one ring round the pair, not one per face */
+.pack-whose .face .pack-faces-row .avatar { box-shadow: none; }
+.pack-whose .face[aria-pressed="true"] .pack-faces-row { border-radius: 999px; box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--ink-3); }
 
 .list > li:has(.save-failed) { flex-wrap: wrap; }
 .list .save-failed { padding: 0 2px 10px; }

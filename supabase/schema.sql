@@ -117,6 +117,13 @@ create table if not exists public.packing (
   updated_at timestamptz not null default now()
 );
 
+-- whose a thing to pack is (no owner = both of you), and who has packed it: everyone ticks shared things for themselves
+alter table public.packing add column if not exists owner uuid;
+alter table public.packing add column if not exists packed_by uuid[] not null default '{}';
+-- older ticks were for everyone; they move into packed_by once, so running this again changes nothing
+update public.packing set packed_by = (select coalesce(array_agg(m.user_id order by m.email), '{}') from public.members m where m.user_id is not null), done = false
+  where done;
+
 create table if not exists public.files (
   id uuid primary key default gen_random_uuid(),
   stop_id uuid not null references public.stops(id) on delete cascade,

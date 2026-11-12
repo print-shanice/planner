@@ -68,4 +68,16 @@ test.describe('packing', () => {
     await pack.getByRole('button', { name: 'remove' }).click()
     await expect(pack).toContainText('2 of 4 packed')
   })
+
+  test("a face shows that person's things and the shared ones; a shared tick is theirs alone", async ({ page }) => {
+    await open(page, '/trip/eu?tab=packing')
+    const pack = page.getByRole('region', { name: 'packing' })
+    await pack.getByRole('button', { name: 'maya' }).click()
+    await expect(pack).toContainText('1 of 2 packed')
+    await expect(pack.getByRole('checkbox', { name: 'passport' })).toHaveCount(0)
+    await pack.getByRole('checkbox', { name: 'adapter (eu plug)' }).click()
+    await expect(pack).toContainText('0 of 2 packed')
+    await pack.getByRole('button', { name: 'shanice' }).click()
+    await expect(pack.getByRole('checkbox', { name: 'adapter (eu plug)' })).toBeChecked()
+  })
 })

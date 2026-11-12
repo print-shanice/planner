@@ -88,10 +88,11 @@ const links = [
   L({ trip_id: null, url: 'https://www.instagram.com/reel/Cinbox1/', title: 'instagram', note: 'rooftop bar?' }),
   L({ trip_id: null, url: 'https://youtu.be/xyz123', title: 'youtube' }),
 ]
-const P = (o: any) => ({ id: id('p'), done: false, position: n, ...o })
+const P = (o: any) => ({ id: id('p'), done: false, position: n, owner: null, packed_by: [], ...o })
+// whose: shanice's, maya's, or (no owner) both, each ticked by whoever packed it
 const packing = [
-  P({ trip_id: 'eu', text: 'passport', done: true }), P({ trip_id: 'eu', text: 'residence letter' }),
-  P({ trip_id: 'eu', text: 'adapter (eu plug)', done: true }), P({ trip_id: 'eu', text: 'rain jacket' }),
+  P({ trip_id: 'eu', text: 'passport', owner: 'u-shanice', packed_by: ['u-shanice'] }), P({ trip_id: 'eu', text: 'residence letter', owner: 'u-shanice' }),
+  P({ trip_id: 'eu', text: 'adapter (eu plug)', packed_by: ['u-shanice', 'u-friend'] }), P({ trip_id: 'eu', text: 'rain jacket', owner: 'u-friend' }),
   P({ trip_id: 'lap', text: 'thermal layers' }), P({ trip_id: 'lap', text: 'ski gloves' }),
 ]
 const members = [

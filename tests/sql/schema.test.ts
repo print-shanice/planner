@@ -102,3 +102,21 @@ it('a saved link can point at a place, and outlives it', async () => {
   const rows = (await d.q('select trip_id, stop_id from links')).rows
   expect(rows).toEqual([{ trip_id: null, stop_id: null }])
 })
+
+it('packing things have an owner (none = both) and who packed them; old ticks count for everyone', async () => {
+  await d.as('shanice@x.com')
+  await d.admin()
+  await d.q(`update members set user_id = '00000000-0000-0000-0000-00000000000a' where email = 'shanice@x.com'`)
+  await d.q(`update members set user_id = '00000000-0000-0000-0000-00000000000b' where email = 'k@x.com'`)
+  const t = (await d.q("insert into trips(name, currency) values ('eu', 'EUR') returning id")).rows[0].id
+  await d.q(`insert into packing(trip_id, text, done) values ('${t}', 'adapter', true), ('${t}', 'gloves', false)`)
+  await d.db.exec(readFileSync('supabase/schema.sql', 'utf8'))
+  const rows = (await d.q('select text, done, owner, packed_by from packing order by text')).rows
+  expect(rows.map((r) => [r.text, r.done, r.owner, [...r.packed_by].sort()])).toEqual([
+    ['adapter', false, null, ['00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b']],
+    ['gloves', false, null, []],
+  ])
+  // running it again changes nothing
+  await d.db.exec(readFileSync('supabase/schema.sql', 'utf8'))
+  expect((await d.q("select packed_by from packing where text = 'adapter'")).rows[0].packed_by).toHaveLength(2)
+})

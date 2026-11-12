@@ -2,13 +2,16 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { trip } from '../factories'
 
-const db = vi.hoisted(() => ({ packing: [] as any[], save: vi.fn(), remove: vi.fn(), packingQ: null as null | Record<string, unknown>, canEdit: true }))
+const db = vi.hoisted(() => ({ packing: [] as any[], save: vi.fn(), remove: vi.fn(), packingQ: null as null | Record<string, unknown>, canEdit: true, me: 'u-s' as string | null,
+  members: [{ email: 's@x.com', user_id: 'u-s', name: 'Shanice', color: 0 }, { email: 'k@x.com', user_id: 'u-k', name: 'Kiahna', color: 1 }] as any[] }))
 vi.mock('../../src/lib/queries', () => ({
   usePacking: () => db.packingQ ?? ({ data: db.packing }),
+  useMembers: () => ({ data: db.members }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, mutate: db.remove, isPending: false }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => true }))
+vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ userId: db.me }) }))
 
 import { PackingTab } from '../../src/features/packing/PackingTab'
 import { ToastProvider } from '../../src/components/Toast'
@@ -25,10 +28,10 @@ it('packing: add, tick, count', async () => {
   expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
   expect(screen.queryByText('sunscreen')).toBeNull()
   await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'wool socks{Enter}')
-  expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'wool socks', done: false, position: 4 })
+  expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'wool socks', owner: 'u-s', packed_by: [], position: 4 })
   expect(screen.getByRole('textbox', { name: 'add to pack' })).toHaveValue('')
   await userEvent.click(screen.getByRole('checkbox', { name: 'passport' }))
-  expect(db.save).toHaveBeenCalledWith({ id: 'p2', done: true })
+  expect(db.save).toHaveBeenCalledWith({ id: 'p2', packed_by: ['u-s'] })
 })
 
 it('the add row has a visible add button that adds, like enter', async () => {
@@ -96,7 +99,7 @@ it('edits a packing item without changing packed status', async () => {
   expect(db.save).toHaveBeenCalledWith({ id: 'p1', text: 'warm gloves' })
 })
 
-beforeEach(() => { db.canEdit = true })
+beforeEach(() => { db.canEdit = true; db.me = 'u-s' })
 
 it('a row is just the tick and the name; there is no select mode', () => {
   db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
@@ -154,4 +157,99 @@ it('offline nothing in packing can be changed', () => {
   expect(screen.getByRole('checkbox', { name: 'gloves' })).toBeDisabled()
   expect(screen.getByRole('button', { name: 'edit gloves' })).toBeDisabled()
   expect(screen.queryByRole('textbox', { name: 'add to pack' })).toBeNull()
+})
+
+// whose things: shanice's yellow shirt isn't on kiahna's list; shared things are on both
+const S = 'u-s', K = 'u-k'
+const mixed = () => [
+  { id: 'a', trip_id: 'lap', text: 'yellow shirt', done: false, position: 0, owner: S, packed_by: [] },
+  { id: 'b', trip_id: 'lap', text: 'hair dryer', done: false, position: 1, owner: K, packed_by: [] },
+  { id: 'c', trip_id: 'lap', text: 'sunscreen', done: false, position: 2, owner: null, packed_by: [K] },
+]
+const names = () => screen.getAllByRole('checkbox').map((c) => c.getAttribute('aria-label'))
+
+it('everything shows until a face is picked; a face shows their things and the shared ones', async () => {
+  db.packing = mixed()
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  const faces = screen.getByRole('group', { name: 'whose things' })
+  expect(within(faces).getAllByRole('button').map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false'])
+  expect(names()).toEqual(['yellow shirt', 'hair dryer', 'sunscreen'])
+  expect(screen.getByText('0 of 3 packed')).toBeInTheDocument()
+  await userEvent.click(within(faces).getByRole('button', { name: 'kiahna' }))
+  expect(within(faces).getByRole('button', { name: 'kiahna' })).toHaveAttribute('aria-pressed', 'true')
+  expect(names()).toEqual(['hair dryer', 'sunscreen'])
+  expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
+  await userEvent.click(within(faces).getByRole('button', { name: 'kiahna' }))
+  expect(names()).toEqual(['yellow shirt', 'hair dryer', 'sunscreen'])
+})
+
+it("a shared thing kiahna packed sinks on kiahna's list only", async () => {
+  db.packing = mixed()
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.getByRole('checkbox', { name: 'sunscreen' })).not.toBeChecked()
+  await userEvent.click(screen.getByRole('button', { name: 'kiahna' }))
+  expect(screen.getByRole('checkbox', { name: 'sunscreen' })).toBeChecked()
+  expect(names()).toEqual(['hair dryer', 'sunscreen'])
+  await userEvent.click(screen.getByRole('button', { name: 'shanice' }))
+  expect(screen.getByRole('checkbox', { name: 'sunscreen' })).not.toBeChecked()
+})
+
+it('each row says whose it is, and who has packed a shared thing', () => {
+  db.packing = mixed()
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  const rows = [...screen.getByRole('list', { name: 'packing' }).querySelectorAll('li')]
+  expect(rows[0]).toHaveTextContent('shanice')
+  expect(rows[1]).toHaveTextContent('kiahna')
+  expect(rows[2]).toHaveTextContent('both · kiahna packed')
+})
+
+it('with nobody picked, ticking a shared thing ticks it for me', async () => {
+  db.packing = mixed()
+  db.save.mockReset().mockResolvedValue({})
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  await userEvent.click(screen.getByRole('checkbox', { name: 'sunscreen' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'c', packed_by: [K, S] })
+})
+
+it("on kiahna's list a shared tick is kiahna's, and anyone can tick someone's own thing for them", async () => {
+  db.packing = mixed()
+  db.save.mockReset().mockResolvedValue({})
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  await userEvent.click(screen.getByRole('checkbox', { name: 'hair dryer' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'b', packed_by: [K] })
+  await userEvent.click(screen.getByRole('button', { name: 'kiahna' }))
+  await userEvent.click(screen.getByRole('checkbox', { name: 'sunscreen' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'c', packed_by: [] })
+})
+
+it("adding goes to the face picked, else to me", async () => {
+  db.packing = []
+  db.save.mockReset().mockResolvedValue({})
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'yellow shirt{Enter}')
+  expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'yellow shirt', owner: S }))
+  await userEvent.click(screen.getByRole('button', { name: 'kiahna' }))
+  await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'hair dryer{Enter}')
+  expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'hair dryer', owner: K }))
+})
+
+it('editing a thing can change whose it is', async () => {
+  db.packing = mixed()
+  db.save.mockReset().mockResolvedValue({})
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  await userEvent.click(screen.getByRole('button', { name: 'edit yellow shirt' }))
+  const whose = screen.getByRole('group', { name: 'whose' })
+  expect(within(whose).getAllByRole('button').map((b) => [b.getAttribute('aria-label'), b.getAttribute('aria-pressed')]))
+    .toEqual([['for shanice', 'true'], ['for kiahna', 'false'], ['for both', 'false']])
+  await userEvent.click(within(whose).getByRole('button', { name: 'for both' }))
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'a', owner: null })
+})
+
+it('with only one person signed up there are no faces to pick', () => {
+  db.members = [db.members[0]]
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.queryByRole('group', { name: 'whose things' })).toBeNull()
+  db.members = [{ email: 's@x.com', user_id: 'u-s', name: 'Shanice', color: 0 }, { email: 'k@x.com', user_id: 'u-k', name: 'Kiahna', color: 1 }]
 })

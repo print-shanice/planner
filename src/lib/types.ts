@@ -98,8 +98,12 @@ export type PackingItem = {
   id: string
   trip_id: string
   text: string
+  // older rows: a tick for everyone (schema.sql moves it into packed_by)
   done: boolean
   position: number
+  // a member's user id, or none for things you both pack (rows cached before owners existed have neither)
+  owner?: string | null
+  packed_by?: string[]
 }
 
 export type FileRow = {
