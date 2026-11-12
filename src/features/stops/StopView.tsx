@@ -116,6 +116,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   // every cost attached to this booking (a deposit and a balance can be two), oldest first
   const linked = costs.filter((c) => c.stop_id === stop.id).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
   const maps = stop.kind === 'journey' ? gmapsUrl(stop) : directionsUrl(stop.place)
+  const directionsLabel = stop.kind === 'journey' && stop.mode === 'flight' ? 'to departure airport' : 'directions'
   const address = stop.place ? [stop.place.name, stop.place.address].filter(Boolean).join(', ') : ''
 
   const siblings = stops
@@ -216,8 +217,8 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
       <div className="stop-actions" role="group" aria-label="actions">
         <button type="button" className="stop-action" disabled={!(spot || findable) || finding} onClick={spot ? showOnMap : findOnMap}><span className="ico"><Icon name="map" /></span>map</button>
         {maps
-          ? <a className="stop-action" href={maps} target="_blank" rel="noopener noreferrer"><span className="ico"><Icon name="ext" /></span>directions</a>
-          : <button type="button" className="stop-action" disabled><span className="ico"><Icon name="ext" /></span>directions</button>}
+          ? <a className="stop-action" href={maps} target="_blank" rel="noopener noreferrer"><span className="ico"><Icon name="ext" /></span>{directionsLabel}</a>
+          : <button type="button" className="stop-action" disabled><span className="ico"><Icon name="ext" /></span>{directionsLabel}</button>}
         <div className="help-row"><Tooltip text="attach a ticket or booking confirmation · PDF or image, up to 20 MB"><button type="button" className="stop-action" disabled={!canEdit} onClick={() => picker.current?.open()}><span className="ico"><Icon name="upload" /></span>ticket</button></Tooltip><Help label="about ticket uploads">attach a ticket or booking confirmation · PDF or image, up to 20 MB</Help></div>
       </div>
       {finding && <Pending label="finding the place" />}

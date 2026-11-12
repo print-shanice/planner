@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-11-12T07:39:12.059Z",
         "reason": "Existing .powered-by attribution styling explicitly specifies Roboto for Google attribution; preserve this domain-specific typography."
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "src/styles/paper.css"
+        ],
+        "createdAt": "2026-11-12T08:32:54.673Z",
+        "reason": "Agent review: commit 0a9c8e72 predates this change; the absolutely positioned split-handle pseudo-element intentionally grows from 1px to 3px on hover, drag, and keyboard focus without reflowing adjacent content."
       }
     ]
   }

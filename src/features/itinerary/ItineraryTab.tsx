@@ -8,7 +8,7 @@ import { loadState } from '../../lib/load'
 import { daysBetween, fmtDay, fmtRange, todayISO } from '../../lib/dates'
 import { chosenDay, validDay } from '../../lib/agenda'
 import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, overviewItems, type ItinDay, type OverviewItem, type SideRow } from '../../lib/itinerary'
-import { dayLegs, type Leg } from '../../lib/legs'
+import { dayLegs, placeIn, type Leg } from '../../lib/legs'
 import { pinNumbers } from '../../lib/pins'
 import { useMove } from './useMove'
 import { useDrag } from './drag'
@@ -385,7 +385,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
           const seq = e.kind === 'stop' ? numbers.get(s.id) : undefined
           const isMove = canEdit && e.kind === 'stop'
           const name = stopTitle(s).toLowerCase() || 'line'
-          const after = legs.filter((l) => l.from.id === s.id && l.fromKind === e.kind)
+          const incoming = legs.find((l) => l.to.id === s.id && !l.evening) ?? legs.find((l) => l.to.id === s.id)
           return (
             <div key={`${s.id}-${e.kind}`} data-drop-line={e.kind === 'stop' ? s.id : undefined}
               className={drag?.carrying?.kind === 'line' && drag.carrying.stop.id === s.id && e.kind === 'stop' ? 'dragging' : undefined}
@@ -395,7 +395,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
               {here && e.kind === 'stop' && here.before === s.id && <div className="drop-rule" aria-hidden="true" />}
               <ItinLine editing={editing} entry={e} seq={seq} any={timed && e.kind === 'stop'} q={q} info={infoOf(s)}
                 current={current === s.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
-              {after.map((l) => <WalkLine key={l.to.id} leg={l} answer={walk(l.a, l.b)} />)}
+              <DirectionsLine stop={s} leg={incoming} answer={incoming ? walk(incoming.a, incoming.b) : null} />
             </div>
           )
         })}
@@ -406,12 +406,19 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
   )
 }
 
-// the walk on to the next place: time and distance once known, always a way to google maps
-function WalkLine({ leg, answer }: { leg: Leg; answer: WalkAnswer }) {
+// Directions belong to this destination; a journey's destination here is where you board it.
+function DirectionsLine({ stop, leg, answer }: { stop: Stop; leg?: Leg; answer: WalkAnswer }) {
+  const at = placeIn(stop)
+  const href = directionsUrl(at)
+  if (!href) return null
+  const flight = stop.kind === 'journey' && stop.mode === 'flight'
+  const label = flight ? 'to departure airport' : 'directions'
   const words = walkWords(answer)
+  const estimate = words && leg ? `${words} from ${leg.a.name || 'the previous stop'}` : null
   return (
-    <Tooltip text={`open directions from your current location to ${leg.b.name || 'the next place'} in Google Maps`}><a className={`walk${answer === undefined ? ' pulse' : ''}`} href={directionsUrl(leg.b) ?? undefined} target="_blank" rel="noopener noreferrer">
-      <Icon name="walk" size={14} /><span>{words ?? 'directions'}</span><span aria-hidden="true">→</span>
+    <Tooltip text={`open directions from your current location to ${at?.name || 'this place'} in Google Maps`}><a className="walk" href={href}
+      aria-label={`${flight ? 'directions to departure airport' : 'directions to'} ${at?.name || 'this place'}${estimate ? ` · ${estimate}` : ''}`} target="_blank" rel="noopener noreferrer">
+      <Icon name="ext" size={14} /><span>{label}{estimate && ` · ${estimate}`}</span><span aria-hidden="true">→</span>
     </a></Tooltip>
   )
 }

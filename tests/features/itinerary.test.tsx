@@ -259,17 +259,36 @@ it('every day ends with a line to type into, on a phone too', async () => {
   expect(dayBox('2025-09-19').getByRole('group', { name: 'add to fri 19 sept' })).toBeInTheDocument()
 })
 
-it('the itinerary directions start here and lead to the named next place', () => {
+it('each itinerary destination has directions to itself, including the last place', () => {
   db.stops = [
     stop({ id: 'a', trip_id: 'tk', day: '2025-09-19', time: '09:00', title: 'a', place: place({ lat: 35.66, lng: 139.70 }) }),
     stop({ id: 'b', trip_id: 'tk', day: '2025-09-19', time: '10:00', title: 'b', place: place({ name: 'Tokyo National Museum', address: 'Ueno Park, Tokyo', lat: 35.67, lng: 139.71 }) }),
   ]
   show(tokyo())
-  const walk = dayBox('2025-09-19').getByRole('link', { name: /directions|walk/ })
+  const first = document.querySelector('[data-line="a"]')!.parentElement!
+  expect(within(first).getByRole('link', { name: /directions to/ })).toBeInTheDocument()
+  const last = document.querySelector('[data-line="b"]')!.parentElement!
+  const walk = within(last).getByRole('link', { name: /directions to Tokyo National Museum/i })
   const url = new URL(walk.getAttribute('href')!)
   expect(url.pathname).toBe('/maps/dir/')
   expect(url.searchParams.has('origin')).toBe(false)
   expect(url.searchParams.get('destination')).toBe('Tokyo National Museum, Ueno Park, Tokyo')
+})
+
+it('a flight links to its departure airport and the final accommodation links to itself', () => {
+  db.stops = [
+    stop({ id: 'flight', trip_id: 'tk', kind: 'journey', mode: 'flight', title: 'SQ 878', day: '2025-09-19',
+      origin: place({ name: 'Changi Airport', lat: 1.36, lng: 103.99 }), destination: place({ name: 'Taoyuan Airport', lat: 25.08, lng: 121.23 }) }),
+    stop({ id: 'hotel', trip_id: 'tk', kind: 'stay', title: 'new lion city', day: '2025-09-19', end_date: '2025-09-20',
+      place: place({ name: 'New Lion City', lat: 25.05, lng: 121.52 }) }),
+  ]
+  show(tokyo())
+  const flight = document.querySelector('[data-line="flight"]')!.parentElement!
+  const airport = within(flight).getByRole('link', { name: /directions to departure airport Changi Airport/i })
+  expect(new URL(airport.getAttribute('href')!).searchParams.get('destination')).toBe('Changi Airport')
+  const hotel = document.querySelector('[data-line="hotel"]')!.parentElement!
+  const link = within(hotel).getByRole('link', { name: /directions to New Lion City/i })
+  expect(new URL(link.getAttribute('href')!).searchParams.get('destination')).toBe('New Lion City')
 })
 
 it('every line moves with alt and the arrow keys, timed or not, with no handle to press', async () => {

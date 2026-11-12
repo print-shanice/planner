@@ -15,6 +15,15 @@ it('public transport directions for a train', () => {
   expect(gmapsUrl(stop({ kind: 'journey', mode: 'train', origin: place({ name: 'Eindhoven' }), destination: place({ name: 'Paris' }) }))).toContain('travelmode=transit')
 })
 
+it('a flight gives directions to its departure airport, without routing along the flight', () => {
+  const url = new URL(gmapsUrl(stop({ kind: 'journey', mode: 'flight',
+    origin: place({ name: 'Changi Airport' }), destination: place({ name: 'Taoyuan Airport' }) }))!)
+  expect(url.searchParams.get('destination')).toBe('Changi Airport')
+  expect(url.searchParams.has('origin')).toBe(false)
+  expect(url.searchParams.has('travelmode')).toBe(false)
+  expect(gmapsUrl(stop({ kind: 'journey', mode: 'flight', origin: null, destination: place({ name: 'Taoyuan Airport' }) }))).toBeNull()
+})
+
 it('a nameless point uses its coordinates', () => {
   expect(gmapsUrl(stop({ place: place({ name: '', address: '', lat: 66.5, lng: 25.7 }) }))).toBe('https://www.google.com/maps/search/?api=1&query=66.5%2C25.7')
 })

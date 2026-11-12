@@ -1,6 +1,25 @@
 import { test, expect, open, phone, expectLine, longDay } from './fixtures'
 
 test.describe('the plan', () => {
+  test('directions belong to each destination, including the final accommodation', async ({ page }) => {
+    await open(page, '/trip/bcn?day=2027-04-15')
+    const day = page.getByRole('region', { name: 'thursday 15 april' })
+    const flight = day.getByTestId('itin-line').filter({ hasText: 'eindhoven airport → el prat' })
+    const airport = flight.locator('..').getByRole('link', { name: /directions to departure airport eindhoven airport/i })
+    await expect(airport).toBeVisible()
+    const airportUrl = new URL((await airport.getAttribute('href'))!)
+    expect(airportUrl.searchParams.get('destination')).toBe('eindhoven airport')
+    expect(airportUrl.searchParams.has('origin')).toBe(false)
+    expect(airportUrl.searchParams.has('travelmode')).toBe(false)
+    const stay = day.getByTestId('itin-line').filter({ hasText: 'check in · flat in gràcia' })
+    const hotel = stay.locator('..').getByRole('link', { name: /directions to gràcia flat/i })
+    await hotel.scrollIntoViewIfNeeded()
+    await expect(hotel).toBeVisible()
+    expect(new URL((await hotel.getAttribute('href'))!).searchParams.get('destination')).toBe('gràcia flat')
+    const overflow = await page.locator('.trip-main').evaluate((el) => el.scrollWidth - el.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+  })
+
   test('a trip reads as one document: a day strip, days with their lines, walks between places', async ({ page }) => {
     await open(page, '/trip/par')
     await expect(page.getByRole('heading', { level: 1, name: 'paris' })).toBeVisible()
@@ -218,6 +237,15 @@ test.describe('the plan', () => {
 })
 
 test.describe('a line reads level', () => {
+  test('status labels share one right edge across journeys, stays and places', async ({ page }) => {
+    await open(page, '/trip/bcn?day=2027-04-15')
+    const pills = page.locator('.itin-line .itin-end .pill')
+    await expect(pills.first()).toBeVisible()
+    expect(await pills.count()).toBeGreaterThanOrEqual(3)
+    const rightEdges = await pills.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().right))
+    expect(Math.max(...rightEdges) - Math.min(...rightEdges)).toBeLessThanOrEqual(1.5)
+  })
+
   // the middle of a line's first row: its time, its icon or number, its name, its status and its ›, all on one level
   test('time, icon, number, name and status share one middle; the typing line starts where names do', async ({ page }) => {
     await open(page, '/trip/jp')

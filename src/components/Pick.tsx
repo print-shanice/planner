@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { fmtDay, todayISO } from '../lib/dates'
 import { monthWeeks, shiftMonth } from '../lib/calendar'
+import { readTime } from '../lib/time'
 import { Sheet } from './Sheet'
 import { Icon } from './Icon'
 import { dayLabel } from './MonthCalendar'
@@ -19,8 +20,8 @@ const sixWeeks = (month: string) => {
   return [...cells, ...Array<null>(Math.max(0, 42 - cells.length)).fill(null)]
 }
 
-// a date or a time. a date opens the app's own calendar (a labelled input stays underneath for screen readers
-// and forms); a time keeps the phone's own wheel, which is already good
+// dates open the app's calendar; times accept the same typed formats as the plan.
+// Native time inputs can silently return an empty value until AM/PM is filled in.
 export function Pick({ type, label, value, onChange, min, around, span }: Props) {
   const [open, setOpen] = useState(false)
   const opensOn = () => (value || min || around || todayISO()).slice(0, 7)
@@ -29,8 +30,9 @@ export function Pick({ type, label, value, onChange, min, around, span }: Props)
     return (
       <label className="pick time" data-empty={value ? undefined : ''}>
         <span className="pick-text" aria-hidden>{value || 'time'}</span>
-        <input type="time" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
-          onClick={(e) => { try { e.currentTarget.showPicker() } catch { /* not every browser can */ } }} />
+        <input type="text" inputMode="decimal" autoComplete="off" aria-label={label} placeholder="HH:MM" value={value}
+          aria-invalid={readTime(value) === undefined || undefined} onChange={(e) => onChange(e.target.value)}
+          onBlur={(e) => { const time = readTime(e.currentTarget.value); if (time !== undefined) onChange(time ?? '') }} />
       </label>
     )
   }

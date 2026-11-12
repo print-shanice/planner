@@ -10,6 +10,7 @@ function query(p: Place | null | undefined): string | null {
 
 export function gmapsUrl(s: Stop): string | null {
   if (s.kind === 'journey') {
+    if (s.mode === 'flight') return directionsUrl(s.origin)
     const a = query(s.origin), b = query(s.destination)
     if (a && b) {
       const mode = s.mode === 'train' || s.mode === 'bus' || s.mode === 'ferry' ? 'transit' : 'walking'

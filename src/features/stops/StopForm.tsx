@@ -20,6 +20,7 @@ import { CategoryPick } from './CategoryPick'
 import { Button } from '../../components/Button'
 import { useCanEdit } from '../../lib/offline'
 import { flightError, flightNumber, toDraft, useFlightLookup, type Flight } from '../../lib/flight'
+import { readTime } from '../../lib/time'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: (added?: { id: string; day: string | null }) => void }
 
@@ -51,17 +52,18 @@ function bare(p: Place | null): Place | null {
 }
 
 function toRow(d: Draft, kind: Stop['kind']): Partial<Stop> {
+  const end_time = readTime(d.end_time) ?? null
   const base: Partial<Stop> = {
-    title: d.title.trim(), day: d.day || null, time: d.time || null, status: d.status,
+    title: d.title.trim(), day: d.day || null, time: readTime(d.time) ?? null, status: d.status,
     ref: d.ref.trim(), url: d.url.trim(), notes: d.notes,
   }
-  if (kind === 'place') return { ...base, place: bare(d.place), category: d.category || null, end_time: d.end_time || null }
-  if (kind === 'stay') return { ...base, place: bare(d.place), end_date: d.end_date || null, end_time: d.end_time || null }
+  if (kind === 'place') return { ...base, place: bare(d.place), category: d.category || null, end_time }
+  if (kind === 'stay') return { ...base, place: bare(d.place), end_date: d.end_date || null, end_time }
   if (kind === 'journey') {
     const flight = d.mode === 'flight' && d.flight && flightNumber(d.title) === flightNumber(d.flight.number) ? d.flight : null
-    return { ...base, mode: d.mode, origin: bare(d.origin), destination: bare(d.destination), end_date: d.end_date || null, end_time: d.end_time || null, flight }
+    return { ...base, mode: d.mode, origin: bare(d.origin), destination: bare(d.destination), end_date: d.end_date || null, end_time, flight }
   }
-  return { ...base, end_time: d.end_time || null }
+  return { ...base, end_time }
 }
 
 // picking a found place keeps your words, unless they were only a bit of its name ("pelg")
@@ -75,8 +77,11 @@ export function keptName(typed: string, found: string): string {
 function problemOf(d: Draft, kind: Stop['kind']): string | null {
   if (kind === 'journey') { if (!d.origin && !d.destination) return 'add where it starts or ends' }
   else if (!d.title.trim()) return 'add a name'
+  const time = readTime(d.time), end = readTime(d.end_time)
+  if (time === undefined) return `add a valid ${kind === 'journey' ? 'depart time' : kind === 'stay' ? 'check-in time' : 'start time'}, like 14:30`
+  if (end === undefined) return `add a valid ${kind === 'journey' ? 'arrive time' : kind === 'stay' ? 'check-out time' : 'end time'}, like 14:30`
   if (kind === 'stay' && d.day && d.end_date && d.end_date < d.day) return 'check-out is before check-in'
-  if ((kind === 'place' || kind === 'note') && d.end_time && (!d.time || d.end_time <= d.time)) return 'end time must be after start time'
+  if ((kind === 'place' || kind === 'note') && end && (!time || end <= time)) return 'end time must be after start time'
   return null
 }
 

@@ -823,6 +823,34 @@ describe('a flight looks itself up by its number', () => {
     return d
   }
 
+  it('saves manually entered flight times in 24-hour form', async () => {
+    db.invoke.mockResolvedValue({ data: { flight: kl }, error: null })
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    await within(d).findByText('London Heathrow')
+    fireEvent.change(within(d).getByLabelText('depart time'), { target: { value: '930' } })
+    fireEvent.change(within(d).getByLabelText('arrive time'), { target: { value: '1:15 pm' } })
+    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith('stops', expect.objectContaining({ time: '09:30', end_time: '13:15' }))
+  })
+
+  it.each([
+    ['depart time', '25:00'],
+    ['arrive time', '12:99'],
+  ])('keeps an invalid %s visible and refuses to save it', async (label, typed) => {
+    db.invoke.mockResolvedValue({ data: { flight: kl }, error: null })
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    await within(d).findByText('London Heathrow')
+    fireEvent.change(within(d).getByLabelText(label), { target: { value: typed } })
+    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+    expect(within(d).getByRole('alert')).toHaveTextContent(`add a valid ${label}, like 14:30`)
+    expect(within(d).getByLabelText(label)).toHaveValue(typed)
+    expect(db.save).not.toHaveBeenCalled()
+  })
+
   it('asks for the flight number whether booked or not; other journeys keep "carrier / number" once booked', async () => {
     const d = await newFlight()
     expect(within(d).getByLabelText('flight number')).toBeInTheDocument()

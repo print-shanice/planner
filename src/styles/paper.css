@@ -101,7 +101,8 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .itin-title { font-size: 16px; line-height: 20px; font-weight: 500; letter-spacing: -0.005em; }
 .itin-sub { font-size: 13px; color: var(--ink-2); }
 .itin-end { display: flex; align-items: center; gap: 2px; min-height: 44px; margin-top: -2px; }
-.itin-end .pill { margin-right: 2px; }
+/* Keep statuses at the same right edge, after each row's optional controls. */
+.itin-end .pill { order: 1; margin-right: 2px; }
 .itin-files { display: inline-grid; place-items: center; width: 24px; height: 24px; color: var(--ink-2); }
 .itin-line:hover { background: var(--paper-2); }
 .itin-line.quiet .itin-title { font-size: 14px; }
@@ -135,9 +136,9 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .dragging { position: relative; z-index: 3; background: var(--ground); box-shadow: 0 0 0 1px var(--ink); border-radius: 6px; }
 .walk {
   display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: 0 0 2px 90px; padding: 0 4px;
-  font-size: 11px; color: var(--ink-3); text-decoration: none; letter-spacing: .02em;
+  max-width: calc(100% - 94px); font-size: 11px; color: var(--ink-3); text-decoration: none; letter-spacing: .02em;
 }
-.walk span:first-of-type { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.walk span:first-of-type { min-width: 0; overflow-wrap: anywhere; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
 .walk:hover { color: var(--ink); }
 .walk.pulse span:first-of-type { animation: pulse 1.2s ease-in-out infinite; }
 .add-line { padding: 4px 0 0; }
