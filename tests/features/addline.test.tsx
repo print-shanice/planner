@@ -141,3 +141,28 @@ it('reads its fields in order: start, then end once there is a start, then name'
   const row = screen.getByRole('group', { name: 'add to fri 19 sept' })
   expect(within(row).getAllByLabelText(/time|add to/).map((el) => el.getAttribute('aria-label'))).toEqual(['start time', 'end time', 'add to fri 19 sept'])
 })
+
+it('a line about getting around is saved as a journey with its mode, and no place is looked for', async () => {
+  show(tk())
+  await userEvent.type(name(), 'bus 9 to shijo omiya{Enter}')
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ kind: 'journey', mode: 'bus', title: 'bus 9 to shijo omiya', place: null }))
+  await new Promise((r) => setTimeout(r, 0))
+  expect(db.spots).not.toHaveBeenCalled()
+})
+
+it('a walk is saved as a note, and a shop with "line" in its name is still a place', async () => {
+  show(tk())
+  await userEvent.type(name(), 'walk to dinner{Enter}')
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ kind: 'note', title: 'walk to dinner' }))
+  await userEvent.type(name(), 'line friends store{Enter}')
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ kind: 'place', title: 'line friends store' }))
+})
+
+it('a line typed with a time also writes down the day\'s order, so it stays put if its time is cleared later', async () => {
+  db.stops = [stop({ id: 'early', trip_id: 'tk', day: '2025-09-19', time: '09:00', position: 0 }), stop({ id: 'late', trip_id: 'tk', day: '2025-09-19', time: '18:00', position: 1 })]
+  show(tk())
+  await userEvent.type(screen.getByLabelText('start time'), '13:00')
+  await userEvent.type(name(), 'lunch{Enter}')
+  expect(db.save).toHaveBeenCalledWith({ id: 'late', position: 2 })
+  expect(db.save).toHaveBeenCalledWith({ id: expect.any(String), position: 1 })
+})

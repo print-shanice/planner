@@ -115,7 +115,9 @@ export function ItinLine(props: Props) {
   const canEdit = useCanEdit()
   const [live, setLive] = useState(false)
   const s = entry.stop!
-  const editable = canEdit && props.editing === true && entry.kind === 'stop' && (s.kind === 'place' || s.kind === 'note')
+  // a typed train or bus (no ends yet) is a line of text too; a journey with its stations opens its card
+  const typed = s.kind === 'journey' && !s.origin && !s.destination
+  const editable = canEdit && props.editing === true && entry.kind === 'stop' && (s.kind === 'place' || s.kind === 'note' || typed)
   // while searching, lines show their matches; tapping one makes it live again
   if (editable && (!q || live)) return <DocLine {...props} autoFocus={live} />
   return <StaticLine {...props} onEdit={editable ? () => setLive(true) : undefined} />
