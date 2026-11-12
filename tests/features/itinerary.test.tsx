@@ -267,6 +267,15 @@ it('journeys and stays stay tap-to-open', async () => {
   expect(db.open).toHaveBeenCalledWith('fl', '2025-09-18')
 })
 
+it('a journey shows when it lands in the time column, like any end time, not under its name', async () => {
+  db.stops = [stop({ id: 'fl', trip_id: 'tk', kind: 'journey', mode: 'flight', day: '2025-09-18', time: '12:25', end_time: '17:10', title: 'tr 872', origin: place({ name: 'changi' }), destination: place({ name: 'taoyuan' }) })]
+  show(tokyo())
+  const line = within(document.querySelector('[data-line="fl"]') as HTMLElement)
+  expect(line.getByLabelText('12:25 to 17:10')).toHaveTextContent('12:25–17:10')
+  expect(line.queryByText(/lands/)).toBeNull()
+  expect(line.getByText('tr 872')).toBeInTheDocument()
+})
+
 it('every day ends with a line to type into, on a phone too', async () => {
   show(tokyo(), undefined, false)
   expect(dayBox('2025-09-19').getByRole('group', { name: 'add to fri 19 sept' })).toBeInTheDocument()

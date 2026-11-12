@@ -32,7 +32,7 @@ test('choose a dated departure, save it, and reopen its local times', async ({ p
   await expect(form).toBeHidden()
   const line = page.getByRole('region', { name: 'friday 19 february' }).locator('[data-line]').filter({ hasText: 'XX 456' })
   await expect(line).toContainText('18:30')
-  await expect(line).toContainText('lands 00:10')
+  await expect(line).toContainText('–00:10')
   await line.locator('.itin-main').click()
   await page.getByRole('dialog').getByRole('button', { name: 'edit', exact: true }).click()
   await expect(page.getByLabel('depart', { exact: true })).toHaveValue('2027-02-19')

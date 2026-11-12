@@ -23,7 +23,7 @@ test('manually typed flight times survive saving and reopening', async ({ page }
 
   const line = page.locator('[data-line]').filter({ hasText: 'KL 1001' })
   await expect(line).toContainText('10:30')
-  await expect(line).toContainText('lands 12:45')
+  await expect(line).toContainText('–12:45')
   await line.locator('.itin-main').click()
   const card = page.getByRole('dialog')
   await expect(card).toContainText('fri 19 feb')
@@ -42,5 +42,5 @@ test('manually typed flight times survive saving and reopening', async ({ page }
   await expect(page.getByRole('dialog').getByLabel('lands', { exact: true })).toHaveValue('23:45')
   await page.getByRole('dialog').getByRole('button', { name: 'close', exact: true }).click()
   await expect(line).toContainText('18:00')
-  await expect(line).toContainText('lands 23:45')
+  await expect(line).toContainText('–23:45')
 })

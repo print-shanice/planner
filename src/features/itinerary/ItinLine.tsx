@@ -50,14 +50,14 @@ function timeOf(e: DayEntry, any: boolean): { from: string; till?: string } {
   if (e.kind === 'staying') return { from: '' }
   if (e.kind === 'checkout') return { from: s.end_time ?? '' }
   if (!s.time) return { from: any ? 'any' : '' }
-  return s.end_time && s.kind !== 'journey' && s.kind !== 'stay' ? { from: s.time, till: s.end_time } : { from: s.time }
+  // a journey's arrival is its end time, shown like any other (shanice, 13 nov), not as "lands" under its name
+  return s.end_time && s.kind !== 'stay' ? { from: s.time, till: s.end_time } : { from: s.time }
 }
 
 function subOf(s: Stop): string {
   if (s.kind !== 'journey') return stopSub(s)
-  const gets = s.end_time ? `${s.mode === 'flight' ? 'lands' : 'arrives'} ${s.end_time}` : ''
   const routed = !!s.origin?.name && !!s.destination?.name
-  return [routed ? s.title : '', s.ref, gets].filter(Boolean).join(' · ')
+  return [routed ? s.title : '', s.ref].filter(Boolean).join(' · ')
 }
 
 // the line of the notes a search found, when nothing else on the line shows why it matched
