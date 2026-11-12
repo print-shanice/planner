@@ -12,6 +12,9 @@ import { useRefreshPlaces } from '../../lib/google/refresh'
 import { loadState } from '../../lib/load'
 import { LoadNotice } from '../../components/States'
 import { AddPlaceField } from '../plan/AddPlaceField'
+import { FindPanel } from './FindPanel'
+import { biasFor } from '../../lib/guess'
+import { useCanEdit } from '../../lib/offline'
 import { busyDays, EMPTY, mapFeatures, type Filter } from './features'
 import { hasSideTrips, overviewFeatures } from './overview'
 import { TripMap } from './TripMap'
@@ -56,6 +59,19 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
   const load = loadState(tq, sq)
   useRefreshPlaces(stops)
   const [params, setParams] = useSearchParams()
+  const canEditMap = useCanEdit()
+  // ?find=<line>: a line of the plan without a place, being looked up (from its pin+)
+  const findId = params.get('find')
+  const finding = findId && canEditMap ? stops.find((s) => s.id === findId && !hasPoint(s.place)) ?? null : null
+  function doneFinding() {
+    setParams((p) => {
+      const n = new URLSearchParams(p)
+      n.delete('find')
+      // a phone came here from the plan: it goes back there, on the same day
+      if (phone) n.delete('tab')
+      return n
+    }, { replace: true })
+  }
   // reading the itinerary, the map follows the day being read
   const reading = useReadingDay().day
   const selected = reading ?? params.get('day')
@@ -174,7 +190,9 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
         onPick={pick} onEmpty={empty} onPoi={poi} onCenter={setView} walks={walks} selected={card?.stopId ?? null} />
       <div className="map-top">
         <div className="map-search">
-          <AddPlaceField alwaysOpen label="search" near={view ?? middleOf(data) ?? (hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null)} onPick={(p) => setCard({ place: p, seq: ++seq.current })} />
+          {finding
+            ? <FindPanel key={finding.id} stop={finding} near={biasFor(trip, trips, stops, finding.day)} onDone={doneFinding} />
+            : <AddPlaceField alwaysOpen label="search" near={view ?? middleOf(data) ?? (hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null)} onPick={(p) => setCard({ place: p, seq: ++seq.current })} />}
         </div>
         {phone ? <label className="map-scope"><span>show</span><select aria-label="map scope" value={filter} onChange={e => setFilter(e.target.value)}>
           <option value="all">whole trip</option>

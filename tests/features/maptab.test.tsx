@@ -461,3 +461,52 @@ describe('whole trip with side trips', () => {
     expect(rows).toEqual([expect.stringMatching(/^staying at hostelsun 7 feb/), expect.stringMatching(/^1arktikum/), expect.stringMatching(/^2church/)])
   })
 })
+
+describe('find on the map', () => {
+  const unplaced = () => stop({ id: 't1', trip_id: 'lap', title: 'trefac style koenji', day: '2027-02-08', position: 9, place: null })
+  function Where() { const l = useLocation(); return <output data-testid="where">{l.search}</output> }
+  const where = () => new URLSearchParams(screen.getByTestId('where').textContent ?? '')
+  const showFind = (path: string, phone = false) => render(<MemoryRouter initialEntries={[path]}><MapTab trip={lap} phone={phone} /><Where /></MemoryRouter>)
+
+  it('looks the line up near its day, and the place picked becomes its spot', async () => {
+    db.stops = [...db.stops, unplaced()]
+    db.search.mockResolvedValue([
+      place({ name: 'Trefac Style Koenji', lat: 66.51, lng: 25.72, category: 'shopping', osm_id: 'n1' }),
+      place({ name: 'Trefac Fashion', lat: 66.52, lng: 25.73, osm_id: 'n2' }),
+    ])
+    showFind('/?day=2027-02-08&find=t1')
+    const panel = screen.getByRole('region', { name: 'find trefac style koenji on the map' })
+    expect(within(panel).getByRole('searchbox', { name: 'find trefac style koenji' })).toHaveValue('trefac style koenji')
+    await userEvent.click(await within(panel).findByRole('button', { name: /Trefac Style Koenji/ }))
+    expect(db.save).toHaveBeenCalledWith({ id: 't1', place: expect.objectContaining({ name: 'Trefac Style Koenji', lat: 66.51 }), category: 'shopping' })
+    expect(db.save.mock.calls.at(-1)![0].place).not.toHaveProperty('category')
+    expect(where().get('find')).toBeNull()
+  })
+
+  it('not a place: it becomes getting around or a note, and the panel closes', async () => {
+    db.stops = [...db.stops, { ...unplaced(), title: 'bus 9 to shijo omiya' }]
+    db.search.mockResolvedValue([])
+    showFind('/?day=2027-02-08&find=t1')
+    const panel = screen.getByRole('region', { name: 'find bus 9 to shijo omiya on the map' })
+    await userEvent.click(within(panel).getByRole('button', { name: 'getting around' }))
+    expect(db.save).toHaveBeenCalledWith({ id: 't1', kind: 'journey', mode: 'bus', place: null })
+    expect(where().get('find')).toBeNull()
+  })
+
+  it('on a phone, picking a place goes back to the plan at that day', async () => {
+    db.stops = [...db.stops, unplaced()]
+    db.search.mockResolvedValue([place({ name: 'Trefac Style Koenji', lat: 66.51, lng: 25.72, osm_id: 'n1' })])
+    showFind('/?tab=map&day=2027-02-08&find=t1', true)
+    await userEvent.click(await screen.findByRole('button', { name: /Trefac Style Koenji/ }))
+    expect(Object.fromEntries(where())).toEqual({ day: '2027-02-08' })
+  })
+
+  it('close leaves the line as it was', async () => {
+    db.stops = [...db.stops, unplaced()]
+    db.search.mockResolvedValue([])
+    showFind('/?day=2027-02-08&find=t1')
+    await userEvent.click(within(screen.getByRole('region', { name: /^find / })).getByRole('button', { name: 'close' }))
+    expect(screen.queryByRole('region', { name: /^find / })).toBeNull()
+    expect(db.save).not.toHaveBeenCalled()
+  })
+})

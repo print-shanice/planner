@@ -112,3 +112,11 @@
 .place-card-drag { display: flex; align-items: center; gap: 8px; min-height: 40px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 13px; cursor: grab; user-select: none; touch-action: none; }
 .place-card-drag:hover { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .day-list { animation: none; } }
+
+/* finding a line's place: the line's words looked up, in the search's own box */
+.find-panel { display: grid; gap: 4px; padding: 6px 6px 4px; }
+.find-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; padding: 4px 4px 2px 8px; }
+.find-title { margin: 0; font-size: 16px; font-weight: 500; }
+.find-panel .search-box { background: var(--paper-2); border-radius: 8px; }
+.find-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 8px 8px 6px; border-top: 1px solid var(--line); font-size: 13.5px; }
+.find-foot .text-link { min-height: 36px; }

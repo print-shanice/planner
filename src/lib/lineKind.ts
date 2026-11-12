@@ -1,4 +1,4 @@
-import type { Mode } from './types'
+import type { Mode, Stop } from './types'
 
 // what a typed line most likely is, from its words alone. a guess, and it can be wrong ("line friends store"
 // is a shop), so the icon beside every line changes it in one click
@@ -16,4 +16,13 @@ export function guessKind(text: string): { kind: 'place' | 'journey' | 'note'; m
   if (/\bferry\b/i.test(t)) return { kind: 'journey', mode: 'ferry' }
   if (BY_ROAD.test(t)) return { kind: 'journey', mode: null }
   return { kind: 'journey', mode: 'train' }
+}
+
+// the fields that make a line something else. getting around takes its mode from its words
+// (a grab is a car: no mode); words that say nothing make it a train
+export function kindChange(s: Pick<Stop, 'id' | 'title'>, k: 'place' | 'journey' | 'note'): Partial<Stop> & { id: string } {
+  if (k === 'place') return { id: s.id, kind: 'place', mode: null }
+  if (k === 'note') return { id: s.id, kind: 'note', place: null, mode: null }
+  const g = guessKind(s.title)
+  return { id: s.id, kind: 'journey', mode: g.kind === 'journey' ? g.mode : 'train', place: null }
 }

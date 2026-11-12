@@ -3,7 +3,7 @@ import type { Stop } from '../../lib/types'
 import type { DayEntry } from '../../lib/dates'
 import { useSave } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
-import { guessKind } from '../../lib/lineKind'
+import { kindChange } from '../../lib/lineKind'
 import { hasPoint } from '../../lib/walk'
 import { Icon } from '../../components/Icon'
 import { useStartFind } from '../trip/find'
@@ -46,13 +46,8 @@ export function Marker({ stop: s, kind, seq }: { stop: Stop; kind: DayEntry['kin
   function become(k: Kind) {
     setOpen(false)
     if (k === s.kind) return
-    if (k === 'place') { save.mutate({ id: s.id, kind: 'place', mode: null }); find(s) }
-    else if (k === 'journey') {
-      // its words pick the mode (a grab is a car: no mode); words that say nothing make it a train
-      const g = guessKind(s.title)
-      save.mutate({ id: s.id, kind: 'journey', mode: g.kind === 'journey' ? g.mode : 'train', place: null })
-    }
-    else save.mutate({ id: s.id, kind: 'note', place: null, mode: null })
+    save.mutate(kindChange(s, k))
+    if (k === 'place') find(s)
   }
 
   return (

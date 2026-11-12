@@ -68,6 +68,22 @@ test.describe('the plan', () => {
     await expectLine(sat, 'du pain et des idées')
   })
 
+  test('a line typed without a place finds it on the map from its pin+, and gets its number', async ({ page }) => {
+    await open(page, '/trip/par')
+    const line = page.getByRole('group', { name: 'add to sun 21 feb' })
+    await line.getByRole('textbox', { name: 'add to sun 21 feb' }).fill('flore')
+    await line.getByRole('button', { name: 'add line' }).click()
+    const sun = page.getByRole('region', { name: 'sunday 21 february' })
+    await sun.getByRole('button', { name: 'find flore on the map' }).click()
+    const panel = page.getByRole('region', { name: 'find flore on the map' })
+    await expect(panel.getByRole('searchbox', { name: 'find flore' })).toHaveValue('flore')
+    await panel.getByRole('button', { name: /Café de Flore/ }).click()
+    await expect(panel).toBeHidden()
+    if (phone(page)) await expect(page).not.toHaveURL(/tab=map/)
+    await expect(page.getByRole('region', { name: 'sunday 21 february' }).getByRole('button', { name: 'find flore on the map' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'sunday 21 february' }).locator('[data-line] .seq')).toHaveCount(3)
+  })
+
   test('an end before its start is refused with words', async ({ page }) => {
     await open(page, '/trip/par')
     const line = page.getByRole('group', { name: 'add to mon 22 feb' })
