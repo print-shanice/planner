@@ -193,7 +193,20 @@ it('a time typed over saves when you leave the line', async () => {
   await userEvent.click(screen.getByRole('textbox', { name: 'change neel' }))
   expect(start).toHaveValue('10:00')
   expect(db.save).toHaveBeenCalledWith({ id: 'narita', time: '10:00' })
-  expect(db.save).toHaveBeenCalledTimes(1)
+  expect(db.save.mock.calls.filter(([r]) => 'time' in (r as object))).toHaveLength(1)
+})
+
+it('a changed time also stores the order the day now reads in, so the line stays put if the time is cleared later', async () => {
+  db.stops = (db.stops as ReturnType<typeof stop>[]).map((s, i) => ({ ...s, position: i }))
+  show(tokyo())
+  const start = screen.getByRole('textbox', { name: 'start time of narita airport t2' })
+  await userEvent.clear(start)
+  await userEvent.type(start, '18')
+  await userEvent.click(screen.getByRole('textbox', { name: 'change neel' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'narita', time: '18:00' })
+  // 19 sep now reads: 17:00 hair, then 18:00 narita with iyoshi cola (untimed) still under it
+  expect(db.save).toHaveBeenCalledWith({ id: 'hair', position: 0 })
+  expect(db.save).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'iyoshi' }))
 })
 
 it('leaving a line untouched saves nothing; escape puts it back', async () => {

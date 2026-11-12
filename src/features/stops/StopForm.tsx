@@ -1,4 +1,5 @@
 import { dayLabel } from '../../components/MonthCalendar'
+import { useSettle } from '../itinerary/useSettle'
 import { useId, useState, type FormEvent } from 'react'
 import type { Mode, Place, Stop, StopStatus, Trip } from '../../lib/types'
 import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '../../lib/queries'
@@ -84,6 +85,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const people = members.map((m) => m.user_id).filter((x): x is string => !!x)
   const rates = useRates().data ?? null
   const save = useSave('stops')
+  const settleDay = useSettle()
   const saveCost = useSave('costs')
   const removeCost = useRemove('costs')
   const costs = useCosts().data
@@ -152,7 +154,10 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         for (const [k, v] of Object.entries(row)) if (JSON.stringify(v) !== JSON.stringify(was[k])) changed[k] = v
         if (moved) changed.position = position
         if (Object.keys(changed).length) await save.mutateAsync({ id, ...changed })
+        // a new time or day can move it: the day's order is written down so it stays put later
+        if ('time' in changed || 'day' in changed) settleDay({ ...stop, ...row, id, position } as Stop)
       }
+      if (isNew && row.time) settleDay({ ...stop, ...row, id, position } as Stop)
       const values = costValues(cost, people)
       if (values) {
         await saveCost.mutateAsync({

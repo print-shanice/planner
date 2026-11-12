@@ -16,6 +16,7 @@ import { categoryIcon, categoryOf } from '../../lib/categories'
 import type { ReactNode } from 'react'
 import { NO_INFO, type LineInfo } from '../../lib/lineInfo'
 import { Tooltip } from '../../components/Tooltip'
+import { useSettle } from './useSettle'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
@@ -170,6 +171,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
   const s = entry.stop!
   const save = useSave('stops')
   const removeLater = useUndoRemove('stops')
+  const settle = useSettle()
   const files = useFiles().data ?? []
   const [v, setV] = useState(() => valuesOf(s))
   const [problem, setProblem] = useState<string | null>(null)
@@ -218,6 +220,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
     saved.current = line
     put(line)
     if (Object.keys(changed).length) {
+      if ('time' in changed) settle({ ...s, ...changed } as Stop)
       clearTimeout(quiet.current)
       setState('saving')
       save.mutateAsync({ id: s.id, ...changed })

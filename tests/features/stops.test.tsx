@@ -83,6 +83,19 @@ it('typed values survive a realtime refresh while the sheet is open', async () =
   expect(within(screen.getByRole('dialog')).getByLabelText('name')).toHaveValue('café koti')
 })
 
+it('a time changed in the form stores the order the day now reads in', async () => {
+  db.stops = [
+    stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', time: '10:00', position: 0, place: place({ name: 'Arktikum' }) }),
+    stop({ id: 's2', trip_id: 'lap', title: 'lunch', day: '2027-02-08', time: '12:00', position: 1 }),
+  ]
+  const d = await openEdit()
+  fireEvent.change(within(d).getByLabelText('day time'), { target: { value: '13:00' } })
+  await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', time: '13:00' })
+  expect(db.save).toHaveBeenCalledWith('stops', { id: 's2', position: 0 })
+  expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', position: 1 })
+})
+
 it('stay with check-out before check-in is refused with the copy', async () => {
   show(<Opener kind="stay" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
