@@ -1,5 +1,5 @@
 import { apiKey, handle, type Db, type Deps } from '../../supabase/functions/flight/handler'
-import type { Flight } from '../../supabase/functions/flight/shape'
+import { toFlight, type Flight } from '../../supabase/functions/flight/shape'
 
 const now = new Date('2027-02-15T05:00:00Z')
 
@@ -11,13 +11,19 @@ const answer = [{
 
 type StopRow = Awaited<ReturnType<Db['stop']>>
 
-function setup(o: { who?: 'none' | 'stranger' | 'member'; stop?: StopRow; status?: number; body?: unknown; throws?: boolean } = {}) {
+function setup(o: { who?: 'none' | 'stranger' | 'member'; stop?: StopRow; status?: number; body?: unknown; throws?: boolean; changed?: boolean } = {}) {
   const calls: string[] = []
   const saved: [string, Flight][] = []
+  const expected: StopRow[] = []
   const db: Db = {
     who: async () => o.who ?? 'member',
     stop: async () => o.stop ?? null,
-    saveFlight: async (id, f) => { saved.push([id, f]) },
+    saveFlight: async (id, f, snapshot) => {
+      expected.push(snapshot)
+      if (o.changed) return false
+      saved.push([id, f])
+      return true
+    },
   }
   const deps: Deps = {
     key: 'k',
@@ -31,7 +37,7 @@ function setup(o: { who?: 'none' | 'stranger' | 'member'; stop?: StopRow; status
       return new Response(status === 200 ? JSON.stringify(o.body ?? answer) : null, { status })
     }) as unknown as typeof fetch,
   }
-  return { deps, calls, saved }
+  return { deps, calls, saved, expected }
 }
 
 const post = (body: unknown, origin = 'https://print-shanice.github.io', auth = 'Bearer t') =>
@@ -72,6 +78,55 @@ describe('the flight function', () => {
     expect(s.saved).toEqual([])
   })
 
+  const later = { ...answer[0], departure: { ...answer[0].departure, scheduledTime: { local: '2027-02-15 18:20+01:00' } } }
+
+  it('returns choices when the same number has several departures on the requested date', async () => {
+    const s = setup({ body: [answer[0], later] })
+    const body = await (await handle(post({ number: 'KL1001', date: '2027-02-15' }), s.deps)).json()
+    expect(body.flight).toBeUndefined()
+    expect(body.flights.map((f: Flight) => f.dep.scheduled)).toEqual(['2027-02-15 07:20+01:00', '2027-02-15 18:20+01:00'])
+    expect(s.saved).toEqual([])
+  })
+
+  it('never substitutes a different departure date', async () => {
+    const s = setup()
+    expect(await (await handle(post({ number: 'KL1001', date: '2027-02-16' }), s.deps)).json()).toEqual({ error: 'not_found' })
+  })
+
+  it('refreshes the selected departure rather than the first match', async () => {
+    const chosen = {
+      number: 'KL 1001', checked_at: '2027-02-14T00:00:00Z',
+      dep: { iata: 'AMS', scheduled: '2027-02-15 18:20+01:00' }, arr: { iata: 'LHR', scheduled: '2027-02-15 07:40+00:00' },
+    }
+    const s = setup({ stop: flightStop(chosen as Flight), body: [answer[0], later] })
+    const body = await (await handle(post({ stop: 's1' }), s.deps)).json()
+    expect(body.flight.dep.scheduled).toBe('2027-02-15 18:20+01:00')
+    expect(s.saved[0][1].dep.scheduled).toBe('2027-02-15 18:20+01:00')
+  })
+
+  it('does not overwrite a saved flight when its departure cannot be distinguished', async () => {
+    const s = setup({ stop: flightStop(), body: [answer[0], later] })
+    expect(await (await handle(post({ stop: 's1' }), s.deps)).json()).toEqual({ error: 'ambiguous' })
+    expect(s.saved).toEqual([])
+  })
+
+  it('requires the saved row to still match the snapshot used for the provider lookup', async () => {
+    const stop = flightStop()
+    const s = setup({ stop, changed: true })
+    expect(await (await handle(post({ stop: 's1' }), s.deps)).json()).toEqual({ error: 'changed' })
+    expect(s.expected).toEqual([stop])
+    expect(s.saved).toEqual([])
+  })
+
+  it('does not reuse fresh metadata for a different flight number or departure date', async () => {
+    for (const changed of [{ title: 'KL 1002' }, { day: '2027-02-16' }]) {
+      const flight = { number: 'KL 1001', checked_at: now.toISOString(), dep: { iata: 'AMS', scheduled: '2027-02-15 07:20+01:00' }, arr: { iata: 'LHR' } }
+      const s = setup({ stop: { ...flightStop(flight as Flight), ...changed }, body: [] })
+      expect(await (await handle(post({ stop: 's1' }), s.deps)).json()).toEqual({ error: 'not_found' })
+      expect(s.calls[0]).toContain(`/flights/number/${changed.title ? 'KL1002/2027-02-15' : 'KL1001/2027-02-16'}`)
+    }
+  })
+
   it('refuses a bad date or number before calling the api', async () => {
     const s = setup()
     expect((await handle(post({ number: 'kl1001', date: 'tomorrow' }), s.deps)).status).toBe(400)
@@ -87,7 +142,7 @@ describe('the flight function', () => {
     expect(await (await handle(post({ number: 'kl1001', date: '2027-02-15' }), setup({ throws: true }).deps)).json()).toEqual({ error: 'unavailable' })
   })
 
-  const flightStop = (flight: Partial<Flight> | null = null): StopRow =>
+  const flightStop = (flight: Partial<Flight> | null = null): NonNullable<StopRow> =>
     ({ id: 's1', kind: 'journey', mode: 'flight', title: 'KL 1001', day: '2027-02-15', flight: flight as Flight | null })
 
   it('checks a saved flight again and saves what it finds', async () => {
@@ -98,7 +153,7 @@ describe('the flight function', () => {
   })
 
   it('gives back the saved flight without calling the api when it was checked under 5 minutes ago', async () => {
-    const recent = { number: 'KL 1001', checked_at: new Date(now.getTime() - 4 * 60_000).toISOString() }
+    const recent = { ...toFlight(answer, '2027-02-15', now)!, checked_at: new Date(now.getTime() - 4 * 60_000).toISOString() }
     const s = setup({ stop: flightStop(recent) })
     expect(await (await handle(post({ stop: 's1' }), s.deps)).json()).toEqual({ flight: recent })
     expect(s.calls).toEqual([])

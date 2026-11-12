@@ -1,4 +1,4 @@
-import { toFlight } from '../../supabase/functions/flight/shape'
+import { toFlight, toFlights } from '../../supabase/functions/flight/shape'
 
 const now = new Date('2026-11-11T15:00:00Z')
 
@@ -65,7 +65,7 @@ describe('toFlight: the trimmed flight a journey keeps', () => {
     const late = raw({ departure: end({ scheduledTime: { local: '2027-02-14 23:50+01:00' } }) })
     const right = raw({ departure: end({ gate: 'D4' }) })
     expect(toFlight([late, right], '2027-02-15', now)!.dep.gate).toBe('D4')
-    expect(toFlight([late], '2027-02-15', now)!.dep.scheduled).toBe('2027-02-14 23:50+01:00')
+    expect(toFlight([late], '2027-02-15', now)).toBeNull()
   })
 
   it('keeps local times across time zones as given', () => {
@@ -81,5 +81,21 @@ describe('toFlight: the trimmed flight a journey keeps', () => {
   it('is null when nothing came back', () => {
     expect(toFlight([], '2027-02-15', now)).toBeNull()
     expect(toFlight([{ number: 'KL 1001' }], '2027-02-15', now)).toBeNull()
+  })
+})
+
+describe('toFlights: distinct departures on the requested local date', () => {
+  it('returns all distinct departures in local time order, without duplicate provider records', () => {
+    const early = raw()
+    const late = raw({ departure: end({ scheduledTime: { local: '2027-02-15 18:20+01:00' } }) })
+    const previous = raw({ departure: end({ scheduledTime: { local: '2027-02-14 07:20+01:00' } }) })
+    expect(toFlights([late, early, early, previous], '2027-02-15', now).map((f) => f.dep.scheduled))
+      .toEqual(['2027-02-15 07:20+01:00', '2027-02-15 18:20+01:00'])
+    expect(toFlight([early, late], '2027-02-15', now)).toBeNull()
+  })
+
+  it('keeps different routes with the same number and departure time', () => {
+    const other = raw({ arrival: end({ airport: { iata: 'EDI', name: 'Edinburgh Airport' } }) })
+    expect(toFlights([raw(), other], '2027-02-15', now).map((f) => f.arr.iata).sort()).toEqual(['EDI', 'LHR'])
   })
 })

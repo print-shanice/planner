@@ -3,7 +3,6 @@
 // (the session is checked here, by getUser and is_member, rather than by the gateway)
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { apiKey, handle, type Db } from './handler.ts'
-import type { Flight } from './shape.ts'
 
 const url = Deno.env.get('SUPABASE_URL')!
 const anon = apiKey((name) => Deno.env.get(name))
@@ -26,9 +25,13 @@ function db(authorization: string): Db {
       const { data } = await client.from('stops').select('id, kind, mode, title, day, flight').eq('id', id).maybeSingle()
       return data
     },
-    saveFlight: async (id: string, flight: Flight) => {
-      const { error } = await client.from('stops').update({ flight }).eq('id', id)
+    saveFlight: async (id, flight, expected) => {
+      const query = client.from('stops').update({ flight }).eq('id', id)
+        .eq('kind', expected.kind).eq('mode', expected.mode).eq('title', expected.title).eq('day', expected.day)
+      const guarded = expected.flight ? query.eq('flight', JSON.stringify(expected.flight)) : query.is('flight', null)
+      const { data, error } = await guarded.select('id').maybeSingle()
       if (error) throw error
+      return !!data
     },
   }
 }

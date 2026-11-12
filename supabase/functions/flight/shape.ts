@@ -60,13 +60,13 @@ function toEnd(v: unknown): FlightEnd | null {
 
 const isLive = (v: unknown) => Array.isArray(obj(v).quality) && (obj(v).quality as unknown[]).includes('Live')
 
-// the flight leaving on `date` (yyyy-mm-dd, local), else the first one found
-export function toFlight(raw: unknown[], date: string, now: Date): Flight | null {
+// Keep every distinct departure on the requested airport-local date.
+export function toFlights(raw: unknown[], date: string, now: Date): Flight[] {
   const all = raw.flatMap((r) => {
     const f = obj(r)
     const dep = toEnd(f.departure)
     const arr = toEnd(f.arrival)
-    if (!dep || !arr) return []
+    if (!dep || !arr || dep.scheduled.slice(0, 10) !== date) return []
     return [{
       number: text(f.number) ?? '',
       airline: text(obj(f.airline).name) ?? '',
@@ -76,5 +76,16 @@ export function toFlight(raw: unknown[], date: string, now: Date): Flight | null
       dep, arr,
     }]
   })
-  return all.find((f) => f.dep.scheduled.slice(0, 10) === date) ?? all[0] ?? null
+  const distinct = new Map<string, Flight>()
+  for (const f of all) {
+    const key = JSON.stringify([f.dep.iata || f.dep.airport, f.arr.iata || f.arr.airport, f.dep.scheduled, f.arr.scheduled])
+    if (!distinct.has(key)) distinct.set(key, f)
+  }
+  return [...distinct.values()].sort((a, b) => a.dep.scheduled.localeCompare(b.dep.scheduled) || a.arr.iata.localeCompare(b.arr.iata))
+}
+
+// A caller asking for one flight must never silently pick between several departures.
+export function toFlight(raw: unknown[], date: string, now: Date): Flight | null {
+  const flights = toFlights(raw, date, now)
+  return flights.length === 1 ? flights[0] : null
 }

@@ -132,6 +132,13 @@ describe('invokeFlight: asking the flight function', () => {
     invoke.mockResolvedValue({ data: { error: 'quota' }, error: null })
     expect(await invokeFlight({ stop: 's1' })).toBe('quota')
   })
+  it('returns all departures when the lookup requires a choice', async () => {
+    const flights = [flight(), flight({ dep: end({ scheduled: '2027-02-15 18:20+01:00' }) })]
+    invoke.mockResolvedValue({ data: { flights }, error: null })
+    expect(await invokeFlight({ number: 'KL 1001', date: '2027-02-15' })).toEqual(flights)
+    invoke.mockResolvedValue({ data: { error: 'ambiguous' }, error: null })
+    expect(await invokeFlight({ stop: 's1' })).toBe('ambiguous')
+  })
   it('calls anything else unavailable', async () => {
     invoke.mockResolvedValue({ data: null, error: new Error('FunctionsHttpError') })
     expect(await invokeFlight({ stop: 's1' })).toBe('unavailable')

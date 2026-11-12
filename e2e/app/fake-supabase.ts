@@ -44,7 +44,7 @@ let session: Session = params.has('signedout') ? null : me
 const listeners: ((event: string, s: Session) => void)[] = []
 const announce = (event: string) => { for (const l of listeners) l(event, session) }
 
-// the flight function: 'XX 123' is a made-up flight, anything else isn't found
+// Made-up lookups for local review: XX 123 has one match; XX 456 has several.
 const fakeFlight = (date: string) => {
   const end = (iata: string, airport: string, city: string, country: string, lat: number, lng: number, time: string, o: object = {}) =>
     ({ iata, airport, city, country, lat, lng, scheduled: `${date} ${time}`, revised: null, terminal: null, gate: null, desk: null, belt: null, ...o })
@@ -55,8 +55,22 @@ const fakeFlight = (date: string) => {
   }
 }
 const functions = {
-  invoke: (_name: string, { body }: { body: { number?: string; date?: string; stop?: string } }) =>
-    wait({ data: body.number?.replace(/\s+/g, '').toUpperCase() === 'XX123' ? { flight: fakeFlight(body.date ?? '2027-02-15') } : { error: 'not_found' }, error: null }),
+  invoke: (_name: string, { body }: { body: { number?: string; date?: string; stop?: string } }) => {
+    const number = body.number?.replace(/\s+/g, '').toUpperCase()
+    const date = body.date ?? '2027-02-15'
+    const first = fakeFlight(date)
+    if (number === 'XX123') return wait({ data: { flight: first }, error: null })
+    if (number === 'XX456') {
+      const flight = { ...first, number: 'XX 456' }
+      const next = new Date(`${date}T12:00:00Z`)
+      next.setUTCDate(next.getUTCDate() + 1)
+      return wait({ data: { flights: [flight,
+        { ...flight, dep: { ...flight.dep, scheduled: `${date} 18:30+01:00` }, arr: { ...flight.arr, scheduled: `${next.toISOString().slice(0, 10)} 00:10+01:00` } },
+        { ...flight, arr: { ...flight.arr, iata: 'CCC', airport: 'third airport', city: 'third city', country: 'IT', lat: 45.6, lng: 8.7, scheduled: `${date} 11:35+01:00` } },
+      ] }, error: null })
+    }
+    return wait({ data: { error: 'not_found' }, error: null })
+  },
 }
 
 const ch: any = { on: () => ch, subscribe: () => ch }

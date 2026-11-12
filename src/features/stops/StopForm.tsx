@@ -1,6 +1,6 @@
 import { dayLabel } from '../../components/MonthCalendar'
 import { useSettle } from '../itinerary/useSettle'
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import type { Mode, Place, Stop, StopStatus, Trip } from '../../lib/types'
 import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '../../lib/queries'
 import { newId } from '../../lib/id'
@@ -60,7 +60,7 @@ function toRow(d: Draft, kind: Stop['kind']): Partial<Stop> {
   if (kind === 'place') return { ...base, place: bare(d.place), category: d.category || null, end_time }
   if (kind === 'stay') return { ...base, place: bare(d.place), end_date: d.end_date || null, end_time }
   if (kind === 'journey') {
-    const flight = d.mode === 'flight' && d.flight && flightNumber(d.title) === flightNumber(d.flight.number) ? d.flight : null
+    const flight = d.mode === 'flight' && d.flight && flightNumber(d.title) === flightNumber(d.flight.number) && d.day === d.flight.dep.scheduled.slice(0, 10) ? d.flight : null
     return { ...base, mode: d.mode, origin: bare(d.origin), destination: bare(d.destination), end_date: d.end_date || null, end_time, flight }
   }
   return { ...base, end_time }
@@ -110,19 +110,37 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const [costReveal, setCostReveal] = useState(0)
   const { run, saving, failure } = useSubmit()
   const formId = useId()
-  const set = (p: Partial<Draft>) => update((v) => ({ ...v, d: { ...v.d, ...p } }))
+  const lookupRevision = useRef(0)
+  const [candidates, setCandidates] = useState<Flight[] | null>(null)
+  const [lookNote, setLookNote] = useState<string | null>(null)
+  const set = (p: Partial<Draft>) => {
+    const changed = (['title', 'day', 'mode'] as const).some((k) => k in p && p[k] !== d[k])
+    if (changed) {
+      lookupRevision.current++
+      setCandidates(null)
+      setLookNote(null)
+    }
+    update((v) => ({ ...v, d: { ...v.d, ...(changed && !('flight' in p) ? { flight: null } : {}), ...p } }))
+  }
   const setCost = (c: CostDraft) => update((v) => ({ ...v, cost: c }))
   const near = hasPoint(d.place) ? { lat: d.place.lat!, lng: d.place.lng! } : hasPoint(trip?.base) ? { lat: trip!.base!.lat!, lng: trip!.base!.lng! } : null
   const kind = stop.kind
   const canEdit = useCanEdit()
   const lookup = useFlightLookup()
-  const [lookNote, setLookNote] = useState<string | null>(null)
   const typedNumber = flightNumber(d.title)
   const date = d.day
   // "clear" empties what was typed, but a journey stays the kind it was picked as (flight stays flight)
   function clearForm() {
+    lookupRevision.current++
+    setCandidates(null)
     const blank = { id: stop.id, d: initial, cost: costDraft(linked, trip?.currency ?? 'EUR', rates, people) }
     draft.clear(kind === 'journey' ? { ...blank, d: { ...initial, mode: d.mode } } : blank)
+  }
+  function chooseFlight(f: Flight) {
+    setCandidates(null)
+    setLookNote(null)
+    setProblem(null)
+    set({ ...toDraft(f), flight: f })
   }
   async function lookUp() {
     // pressing it says what's missing, rather than a greyed-out button that never explains
@@ -130,16 +148,22 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
     if (!typedNumber) return setLookNote("that isn't a flight number")
     if (!date) return setLookNote('add the depart day')
     setLookNote(null)
+    setCandidates(null)
+    const revision = ++lookupRevision.current
     const f = await lookup.look(typedNumber, date)
+    if (revision !== lookupRevision.current) return
     if (typeof f === 'string') setLookNote(flightError(f, typedNumber, date))
-    else set({ ...toDraft(f), flight: f })
+    else if (Array.isArray(f)) {
+      if (f.length === 1) chooseFlight(f[0])
+      else setCandidates(f)
+    } else chooseFlight(f)
   }
 
   function submit(e: FormEvent) {
     e.preventDefault()
     const draft = { ...d }
     if (kind === 'place' && !draft.title.trim() && draft.place) draft.title = draft.place.name
-    const p = problemOf(draft, kind) ?? checkCost(cost)
+    const p = candidates?.length ? 'choose a departure first' : problemOf(draft, kind) ?? checkCost(cost)
     setProblem(p)
     if (p && COST_PROBLEMS.includes(p)) setCostReveal((n) => n + 1)
     if (p) return
@@ -179,13 +203,13 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   }
 
   const set2 = set
-  const when = (rows: [string, 'day' | 'end_date', 'time' | 'end_time' | null][]) => (
+  const when = (rows: [string, 'day' | 'end_date' | null, 'time' | 'end_time' | null][]) => (
     <div className="when">
       {rows.map(([label, dk, tk]) => (
-        <div key={label} className="when-row">
+        <div key={label} className={`when-row${dk ? '' : ' time-only'}`}>
           <span className="when-label">{label}</span>
-          <Pick type="date" label={label} value={d[dk]} onChange={(v) => set({ [dk]: v } as Partial<Draft>)} min={dk === 'end_date' ? d.day || undefined : undefined}
-            around={trip?.start_date} span={trip?.start_date && trip.end_date ? [trip.start_date, trip.end_date] : null} />
+          {dk && <Pick type="date" label={label} value={d[dk]} onChange={(v) => set({ [dk]: v } as Partial<Draft>)} min={dk === 'end_date' ? d.day || undefined : undefined}
+            around={trip?.start_date} span={trip?.start_date && trip.end_date ? [trip.start_date, trip.end_date] : null} />}
           {tk && <Pick type="time" label={`${label} time`} value={d[tk]} onChange={(v) => set({ [tk]: v } as Partial<Draft>)} />}
         </div>
       ))}
@@ -245,12 +269,27 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
           {MODES.map((m) => <button key={m ?? 'car'} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m ?? 'car'} size={20} /><span>{m ?? 'car'}</span></button>)}
         </div>
         {d.mode === 'flight' && (<>
-          <div className="flight-find">
+          <div className="flight-find" role="group" aria-label="flight lookup">
             <label className="field"><span className="label">flight number</span>
               <input value={d.title} autoCapitalize="characters" autoComplete="off" onChange={(e) => { setLookNote(null); set({ title: e.target.value }) }} /></label>
+            <div className="field flight-date"><span className="label">depart date</span>
+              <Pick type="date" label="depart" value={d.day} onChange={(day) => set({ day })} around={trip?.start_date}
+                span={trip?.start_date && trip.end_date ? [trip.start_date, trip.end_date] : null} />
+            </div>
             <Button busy={lookup.busy && 'looking up'} disabled={!canEdit} onClick={() => void lookUp()}>look up</Button>
           </div>
           {lookNote && <p className="warn-line" role="status">{lookNote}</p>}
+          {candidates && <div className="flight-choices" role="group" aria-label="choose a departure">
+            <p className="form-q">choose your flight</p>
+            <p className="muted" role="status">{candidates.length} departures found · times are local to each airport</p>
+            <ul>{candidates.map((f) => <li key={JSON.stringify([f.dep.iata || f.dep.airport, f.arr.iata || f.arr.airport, f.dep.scheduled, f.arr.scheduled])}>
+              <button type="button" className="flight-choice" onClick={() => chooseFlight(f)}>
+                <span className="flight-choice-route">{f.dep.iata || f.dep.airport} → {f.arr.iata || f.arr.airport}<Icon name="next" size={18} /></span>
+                <span className="muted">{f.dep.airport} → {f.arr.airport}</span>
+                <span className="flight-choice-times">depart {dayLabel(f.dep.scheduled.slice(0, 10))} · {f.dep.scheduled.slice(11, 16)}<br />arrive {dayLabel(f.arr.scheduled.slice(0, 10))} · {f.arr.scheduled.slice(11, 16)}</span>
+              </button>
+            </li>)}</ul>
+          </div>}
         </>)}
         {q('route')}
         <div className="route">
@@ -258,7 +297,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
           <PlaceField id={`to-${id}`} label="to" value={d.destination} near={near} onChange={(p) => set({ destination: p })} />
         </div>
         {q('when')}
-        {when([['depart', 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
+        {when([['depart', d.mode === 'flight' ? null : 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
         {q('booking')}
         {bookedSwitch}
         {booked && d.mode !== 'flight' && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}

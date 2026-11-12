@@ -1,7 +1,7 @@
 // looks a flight up on aerodatabox for a member of the planner.
 // { number, date } only answers (the form fills itself in); { stop } also saves it on that journey.
 // the key never leaves the server. no deno or npm imports, so the app's tests run it.
-import { toFlight, type Flight } from './shape.ts'
+import { toFlights, type Flight } from './shape.ts'
 
 export type StopRow = { id: string; kind: string; mode: string | null; title: string; day: string | null; flight: Flight | null }
 
@@ -10,7 +10,7 @@ export type Db = {
   who: () => Promise<'none' | 'stranger' | 'member'>
   // read through row-level security, so only the planner's own stops
   stop: (id: string) => Promise<StopRow | null>
-  saveFlight: (id: string, flight: Flight) => Promise<void>
+  saveFlight: (id: string, flight: Flight, expected: StopRow) => Promise<boolean>
 }
 
 export type Deps = {
@@ -20,7 +20,7 @@ export type Deps = {
   now: () => Date
 }
 
-export type FlightError = 'not_found' | 'quota' | 'unavailable' | 'not_flight'
+export type FlightError = 'not_found' | 'quota' | 'unavailable' | 'not_flight' | 'ambiguous' | 'changed'
 
 const ORIGINS = ['https://print-shanice.github.io', 'http://localhost:5180', 'http://localhost:4173']
 // a check this recent is given back as it is: double taps and both people pressing cost one lookup
@@ -39,7 +39,7 @@ function cors(req: Request): Record<string, string> {
 const json = (req: Request, status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors(req), 'content-type': 'application/json' } })
 
-async function lookUp(deps: Deps, number: string, date: string): Promise<Flight | FlightError> {
+async function lookUp(deps: Deps, number: string, date: string): Promise<Flight[] | FlightError> {
   const url = `https://aerodatabox.p.rapidapi.com/flights/number/${encodeURIComponent(number)}/${date}?dateLocalRole=Departure`
   let res: Response
   try {
@@ -55,7 +55,8 @@ async function lookUp(deps: Deps, number: string, date: string): Promise<Flight 
   if (!res.ok) return 'unavailable'
   try {
     const raw = await res.json()
-    return (Array.isArray(raw) ? toFlight(raw, date, deps.now()) : null) ?? 'not_found'
+    const flights = Array.isArray(raw) ? toFlights(raw, date, deps.now()) : []
+    return flights.length ? flights : 'not_found'
   } catch {
     return 'unavailable'
   }
@@ -80,20 +81,27 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
 
   if (typeof body.stop === 'string') {
     const s = await db.stop(body.stop)
-    const typed = (s?.flight?.number ?? s?.title ?? '').replace(/\s+/g, '').toUpperCase()
+    const typed = (s?.title ?? '').replace(/\s+/g, '').toUpperCase()
     if (!s || s.kind !== 'journey' || s.mode !== 'flight' || !s.day || !NUMBER.test(typed)) return json(req, 200, { error: 'not_flight' })
-    if (s.flight && deps.now().getTime() - Date.parse(s.flight.checked_at) < FRESH_MS) return json(req, 200, { flight: s.flight })
+    const sameLookup = s.flight?.number.replace(/\s+/g, '').toUpperCase() === typed && s.flight?.dep?.scheduled.slice(0, 10) === s.day
+    if (sameLookup && s.flight && deps.now().getTime() - Date.parse(s.flight.checked_at) < FRESH_MS) return json(req, 200, { flight: s.flight })
     const found = await lookUp(deps, typed, s.day)
     if (typeof found === 'string') return json(req, 200, { error: found })
-    await db.saveFlight(s.id, found)
-    return json(req, 200, { flight: found })
+    const selected = sameLookup ? s.flight : null
+    const matches = selected?.dep && selected?.arr ? found.filter((f) =>
+      (f.dep.iata || f.dep.airport) === (selected.dep.iata || selected.dep.airport) &&
+      (f.arr.iata || f.arr.airport) === (selected.arr.iata || selected.arr.airport) &&
+      f.dep.scheduled === selected.dep.scheduled) : found
+    if (matches.length !== 1) return json(req, 200, { error: 'ambiguous' })
+    if (!await db.saveFlight(s.id, matches[0], s)) return json(req, 200, { error: 'changed' })
+    return json(req, 200, { flight: matches[0] })
   }
 
   const number = typeof body.number === 'string' ? body.number.replace(/\s+/g, '').toUpperCase() : ''
   const date = typeof body.date === 'string' ? body.date : ''
   if (!NUMBER.test(number) || !DATE.test(date)) return json(req, 400, { error: 'bad_request' })
   const found = await lookUp(deps, number, date)
-  return json(req, 200, typeof found === 'string' ? { error: found } : { flight: found })
+  return json(req, 200, typeof found === 'string' ? { error: found } : found.length === 1 ? { flight: found[0] } : { flights: found })
 }
 
 // the key the function reaches the database with: the planner's own setting, else the publishable key

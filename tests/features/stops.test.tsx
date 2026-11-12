@@ -823,6 +823,76 @@ describe('a flight looks itself up by its number', () => {
     return d
   }
 
+  const evening = { ...kl, dep: end({ scheduled: '2027-02-08 18:20+01:00' }), arr: { ...kl.arr, scheduled: '2027-02-08 18:40+00:00' } }
+
+  it('groups the departure date with the flight number before look up', async () => {
+    const d = await newFlight()
+    const lookup = within(d).getByRole('group', { name: 'flight lookup' })
+    expect(within(lookup).getByLabelText('flight number')).toBeInTheDocument()
+    expect(within(lookup).getByLabelText('depart')).toHaveValue('2027-02-08')
+    expect(within(d).getAllByLabelText('depart')).toHaveLength(1)
+  })
+
+  it('lets the user choose a departure before filling airports and local times', async () => {
+    db.invoke.mockResolvedValue({ data: { flights: [kl, evening] }, error: null })
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    const choices = await within(d).findByRole('group', { name: 'choose a departure' })
+    expect(within(choices).getAllByRole('button')).toHaveLength(2)
+    expect(within(choices).getByRole('status')).toHaveTextContent('2 departures found')
+    expect(within(d).queryByRole('button', { name: 'clear from' })).toBeNull()
+    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+    expect(within(d).getByRole('alert')).toHaveTextContent('choose a departure first')
+    expect(db.save).not.toHaveBeenCalled()
+    await userEvent.click(within(choices).getByRole('button', { name: /18:20/ }))
+    expect(within(d).queryByRole('alert')).toBeNull()
+    expect(within(d).queryByRole('group', { name: 'choose a departure' })).toBeNull()
+    expect(within(d).getByLabelText('depart time')).toHaveValue('18:20')
+    expect(within(d).getByLabelText('arrive time')).toHaveValue('18:40')
+    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith('stops', expect.objectContaining({ time: '18:20', end_time: '18:40', flight: evening }))
+  })
+
+  it.each(['number', 'date', 'mode'])('discards pending choices when the %s changes', async (changed) => {
+    db.invoke.mockResolvedValue({ data: { flights: [kl, evening] }, error: null })
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    await within(d).findByRole('group', { name: 'choose a departure' })
+    if (changed === 'number') await userEvent.type(within(d).getByLabelText('flight number'), '2')
+    if (changed === 'date') fireEvent.change(within(d).getByLabelText('depart'), { target: { value: '2027-02-09' } })
+    if (changed === 'mode') {
+      await userEvent.click(within(d).getByRole('button', { name: 'train' }))
+      await userEvent.click(within(d).getByRole('button', { name: 'flight' }))
+    }
+    expect(within(d).queryByRole('group', { name: 'choose a departure' })).toBeNull()
+    expect(within(d).queryByRole('button', { name: 'clear from' })).toBeNull()
+  })
+
+  it('ignores a lookup response after the departure date changes', async () => {
+    let finish!: (value: unknown) => void
+    db.invoke.mockImplementation(() => new Promise((resolve) => { finish = resolve }))
+    const d = await newFlight()
+    await userEvent.type(within(d).getByLabelText('flight number'), 'kl1001')
+    await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
+    fireEvent.change(within(d).getByLabelText('depart'), { target: { value: '2027-02-09' } })
+    await act(async () => { finish({ data: { flight: kl }, error: null }) })
+    expect(within(d).getByLabelText('depart')).toHaveValue('2027-02-09')
+    expect(within(d).queryByRole('button', { name: 'clear from' })).toBeNull()
+  })
+
+  it('drops saved lookup details when the departure date changes', async () => {
+    db.stops = [stop({ id: 'f1', trip_id: 'lap', kind: 'journey', mode: 'flight', title: 'KL 1001', day: '2027-02-08', origin: place({ name: 'Schiphol' }), flight: kl as any })]
+    show(<Opener id="f1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'edit' }))
+    const d = screen.getByRole('dialog')
+    fireEvent.change(within(d).getByLabelText('depart'), { target: { value: '2027-02-09' } })
+    await userEvent.click(within(d).getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith('stops', expect.objectContaining({ id: 'f1', day: '2027-02-09', flight: null }))
+  })
+
   it('saves manually entered flight times in 24-hour form', async () => {
     db.invoke.mockResolvedValue({ data: { flight: kl }, error: null })
     const d = await newFlight()

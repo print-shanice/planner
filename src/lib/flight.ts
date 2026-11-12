@@ -7,8 +7,8 @@ import type { Place } from './types'
 import type { Flight, FlightEnd } from '../../supabase/functions/flight/shape'
 
 export type { Flight, FlightEnd }
-export type FlightError = 'not_found' | 'quota' | 'unavailable' | 'not_flight' | 'offline'
-const KNOWN: FlightError[] = ['not_found', 'quota', 'unavailable', 'not_flight']
+export type FlightError = 'not_found' | 'quota' | 'unavailable' | 'not_flight' | 'offline' | 'ambiguous' | 'changed'
+const KNOWN: FlightError[] = ['not_found', 'quota', 'unavailable', 'not_flight', 'ambiguous', 'changed']
 
 // 'kl1001', ' Kl 1001 ', 'klm 1001' → 'KL 1001' / 'KLM 1001'; anything else null
 export function flightNumber(typed: string): string | null {
@@ -70,15 +70,18 @@ export function flightError(e: FlightError, number: string, date: string): strin
     case 'quota': return 'lookups used up this month'
     case 'offline': return 'offline'
     case 'not_flight': return 'add the flight number and day first'
+    case 'ambiguous': return "couldn't confirm this departure; edit the flight and look it up again"
+    case 'changed': return 'the flight changed while checking; close and reopen it to try again'
     default: return "couldn't look it up, try again"
   }
 }
 
-export async function invokeFlight(body: { number: string; date: string } | { stop: string }): Promise<Flight | FlightError> {
+export async function invokeFlight(body: { number: string; date: string } | { stop: string }): Promise<Flight | Flight[] | FlightError> {
   try {
     const { data, error } = await supabase.functions.invoke('flight', { body })
     if (error || !data) return 'unavailable'
     if (data.flight) return data.flight as Flight
+    if (Array.isArray(data.flights) && data.flights.length) return data.flights as Flight[]
     return KNOWN.includes(data.error) ? data.error : 'unavailable'
   } catch {
     return 'unavailable'
@@ -104,6 +107,7 @@ export function useFlightCheck(stopId: string) {
     try {
       const r = await invokeFlight({ stop: stopId })
       if (typeof r === 'string') return r
+      if (Array.isArray(r)) return 'ambiguous'
       await qc.invalidateQueries({ queryKey: keys.stops })
       return null
     } finally { setBusy(false) }
