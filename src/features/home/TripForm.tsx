@@ -11,7 +11,7 @@ import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { PlaceField } from '../stops/PlaceField'
 import { COLOUR_NAMES, PICKER_ORDER, colourIndex, colourVar } from '../../lib/colors'
 
-type Props = { trip?: Trip; parentId?: string | null; onDone: () => void; onDeleted?: () => void }
+type Props = { trip?: Trip; parentId?: string | null; onDone: (saved?: string) => void; onDeleted?: () => void }
 
 
 export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
@@ -66,7 +66,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
         notes,
         parent_id: parent,
       })
-      onDone()
+      onDone(id)
     })
   }
 
@@ -120,7 +120,7 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
       <FormFooter form={formId} problem={problem ?? failure} saving={saving} failed={!!failure}>
         {trip && (
           <TwoTapDelete label="delete trip" disabled={hasChildren}
-            onConfirm={async () => { await remove.mutateAsync(trip.id); (onDeleted ?? onDone)() }} />
+            onConfirm={async () => { await remove.mutateAsync(trip.id); onDeleted ? onDeleted() : onDone() }} />
         )}
       </FormFooter>
     </form>

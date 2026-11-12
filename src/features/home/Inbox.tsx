@@ -11,10 +11,14 @@ import { ChoiceMenu, type Choice } from '../../components/ChoiceMenu'
 import { Icon } from '../../components/Icon'
 import { SiteIcon } from '../saved/LinkCard'
 import { SaveFailed } from '../../components/SaveFailed'
+import { Sheet } from '../../components/Sheet'
 import { tripItems } from './Trips'
+import { TripForm } from './TripForm'
 
 const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
 const links = (n: number) => `${n} ${n === 1 ? 'link' : 'links'}`
+// the menu's first choice: make a trip for it there and then (no trip id can look like this)
+const NEW = 'new trip'
 
 // every trip for "to a trip": what's coming first (soonest on top), then past ones (newest first), side trips under their parent
 export function tripChoices(trips: Trip[], today = todayISO()): Choice[] {
@@ -52,7 +56,9 @@ export function Inbox({ links: all, trips }: { links: Link[]; trips: Trip[] }) {
   const save = useSave('links')
   const canEdit = useCanEdit()
   const removeLater = useUndoRemove('links')
-  const choices = tripChoices(trips)
+  const choices: Choice[] = [{ value: NEW, label: 'new trip', icon: 'plus' }, ...tripChoices(trips)]
+  // links waiting for the new trip form; they move once it saves, and stay put if it's closed
+  const [making, setMaking] = useState<string[] | null>(null)
   const sorted = [...all].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
   const [picked, setPicked] = useState<Set<string>>(new Set())
   // only links still here count (one may have been moved by the other person meanwhile)
@@ -72,19 +78,25 @@ export function Inbox({ links: all, trips }: { links: Link[]; trips: Trip[] }) {
       <ul className="doc-list">
         {sorted.map((l) => (
           <Row key={l.id} link={l} choices={choices} canEdit={canEdit} on={picked.has(l.id)} onToggle={() => toggle(l.id)}
-            onMove={(trip) => save.mutate({ id: l.id, trip_id: trip })} onRemove={() => removeLater(l.id)} />
+            onMove={(trip) => (trip === NEW ? setMaking([l.id]) : save.mutate({ id: l.id, trip_id: trip }))} onRemove={() => removeLater(l.id)} />
         ))}
       </ul>
       {n > 0 && (
         <div className="bulk-bar" role="region" aria-label="selected links">
           <span className="bulk-count">{n} selected</span>
           <ChoiceMenu label="add to a trip" ariaLabel={`move ${links(n)} to a trip`} options={choices} disabled={!canEdit}
-            onPick={(trip) => { chosen.forEach((id) => save.mutate({ id, trip_id: trip })); clear() }} />
+            onPick={(trip) => { if (trip === NEW) { setMaking(chosen); return } chosen.forEach((id) => save.mutate({ id, trip_id: trip })); clear() }} />
           <button type="button" className="text-link bulk-delete" aria-label={`delete ${links(n)}`} disabled={!canEdit}
             onClick={() => { removeLater(chosen); clear() }}>delete</button>
           <button type="button" className="icon-btn bulk-x" aria-label="clear selection" onClick={clear}><Icon name="close" size={18} /></button>
         </div>
       )}
+      <Sheet page open={!!making} title="new trip" onClose={() => setMaking(null)}>
+        {making && <TripForm onDone={(trip) => {
+          if (trip) { making.forEach((id) => save.mutate({ id, trip_id: trip })); setPicked((p) => new Set([...p].filter((id) => !making.includes(id)))) }
+          setMaking(null)
+        }} />}
+      </Sheet>
     </section>
   )
 }

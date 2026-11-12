@@ -462,6 +462,9 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .choice[data-depth="2"] { padding-left: 48px; }
 .choice .dot { background: var(--c); }
 .choice:not([data-depth="0"]) .dot { width: 8px; height: 8px; }
+.choice-make { margin-bottom: 7px; position: relative; color: var(--ink-2); }
+.choice-make::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: -4px; border-bottom: 1px solid var(--line); }
+.choice-make .icon { flex: none; }
 .choice-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .choice-list { animation: none; } }
 

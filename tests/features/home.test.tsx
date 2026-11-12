@@ -188,7 +188,7 @@ it('a link in the inbox goes to a trip from its own row', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'move cafe reel to a trip' }))
   const list = screen.getByRole('listbox', { name: 'move cafe reel to a trip' })
   expect(within(list).getAllByRole('option').map((o) => [o.textContent, o.getAttribute('data-depth')])).toEqual([
-    ['europe exchange 2027', '0'], ['lapland', '1'], ['paris', '1'], ['summer', '0'],
+    ['new trip', '0'], ['europe exchange 2027', '0'], ['lapland', '1'], ['paris', '1'], ['summer', '0'],
   ])
   await userEvent.click(within(list).getByRole('option', { name: 'paris' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'l1', trip_id: 'par' }))
@@ -199,7 +199,36 @@ it('"to a trip" lists what is coming first, then past trips newest first', async
   db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
   show('/?view=inbox')
   await userEvent.click(screen.getByRole('button', { name: 'move a to a trip' }))
-  expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['europe exchange 2027', 'lapland', 'paris', 'summer', 'crete', 'bali'])
+  expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['new trip', 'europe exchange 2027', 'lapland', 'paris', 'summer', 'crete', 'bali'])
+})
+
+it('"new trip" in an inbox link\'s menu makes a trip, then files the link in it', async () => {
+  db.trips = europe()
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
+  db.save.mockClear()
+  show('/?view=inbox')
+  await userEvent.click(screen.getByRole('button', { name: 'move a to a trip' }))
+  await userEvent.click(screen.getByRole('option', { name: 'new trip' }))
+  expect(db.save).not.toHaveBeenCalled()
+  await userEvent.type(screen.getByRole('textbox', { name: 'name' }), 'Lisbon')
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  await waitFor(() => expect(db.save).toHaveBeenCalledTimes(2))
+  const [made, moved] = db.save.mock.calls.map((c) => c[0] as Record<string, unknown>)
+  expect(made).toMatchObject({ name: 'Lisbon', parent_id: null })
+  expect(moved).toEqual({ id: 'l1', trip_id: made.id })
+  await waitFor(() => expect(screen.queryByRole('textbox', { name: 'name' })).toBeNull())
+})
+
+it('closing the new trip form leaves the link in the inbox', async () => {
+  db.trips = europe()
+  db.links = [{ id: 'l1', trip_id: null, url: 'https://example.com/a', title: 'a', note: '' }]
+  db.save.mockClear()
+  show('/?view=inbox')
+  await userEvent.click(screen.getByRole('button', { name: 'move a to a trip' }))
+  await userEvent.click(screen.getByRole('option', { name: 'new trip' }))
+  await userEvent.keyboard('{Escape}')
+  await waitFor(() => expect(screen.queryByRole('textbox', { name: 'name' })).toBeNull())
+  expect(db.save).not.toHaveBeenCalled()
 })
 
 it('an inbox link is named by your note, with the site\'s own icon', () => {
@@ -708,6 +737,23 @@ describe('the inbox, a few at a time', () => {
     expect(db.save.mock.calls.map((c) => c[0])).toEqual([{ id: 'l1', trip_id: 'par' }, { id: 'l2', trip_id: 'par' }])
     expect(pick('a')).not.toBeChecked()
     expect(screen.queryByRole('region', { name: 'selected links' })).toBeNull()
+  })
+
+  it('moves every picked link into a new trip once it is saved', async () => {
+    db.trips = europe()
+    db.links = three()
+    db.save.mockClear()
+    show('/?view=inbox')
+    await userEvent.click(pick('a'))
+    await userEvent.click(pick('c'))
+    await userEvent.click(screen.getByRole('button', { name: 'move 2 links to a trip' }))
+    await userEvent.click(screen.getByRole('option', { name: 'new trip' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'name' }), 'porto')
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    await waitFor(() => expect(db.save).toHaveBeenCalledTimes(3))
+    const [made, ...moved] = db.save.mock.calls.map((c) => c[0] as Record<string, unknown>)
+    expect(moved).toEqual([{ id: 'l1', trip_id: made.id }, { id: 'l3', trip_id: made.id }])
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'selected links' })).toBeNull())
   })
 
   it('"select all" picks every link (then reads "deselect all"), and delete removes them together', async () => {
