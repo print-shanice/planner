@@ -10,7 +10,7 @@ import { quietFind } from '../../lib/quietFind'
 import { setLocating } from '../../lib/locating'
 
 // how many names one visit asks about (each is a google search), and where the ones already asked are remembered
-const PER_VISIT = 12
+const PER_VISIT = 40
 const KEY = 'planner.located'
 
 function tried(): Record<string, string> {
