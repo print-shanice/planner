@@ -92,32 +92,34 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .doc-day.is-today .doc-date { text-decoration: underline; text-decoration-color: var(--mark-ink); text-decoration-thickness: 1px; text-underline-offset: 6px; }
 .doc-lines { display: grid; grid-template-columns: minmax(0, 1fr); }
 
-/* a line: time · kind · what · status */
+/* a line: time · kind · what · status. everything in its first row is centred on one level,
+   20px below the top: the time, the icon or number, the name's first line, the status and the › */
 .itin-line { grid-template-columns: 52px 30px minmax(0, 1fr) auto; column-gap: 8px; padding: 2px 0; border-radius: 8px; }
-.itin-time { padding-top: 11px; font-size: 12px; color: var(--ink-2); }
-.itin-time .till { font-size: 11px; }
-.itin-main { padding: 8px 0; min-height: 44px; }
-.itin-title { font-size: 16px; font-weight: 500; letter-spacing: -0.005em; }
+.itin-time { padding-top: 10px; font-size: 12px; line-height: 20px; color: var(--ink-2); }
+.itin-time .till { font-size: 11px; line-height: 16px; }
+.itin-main { padding: 10px 0 8px; min-height: 44px; }
+.itin-title { font-size: 16px; line-height: 20px; font-weight: 500; letter-spacing: -0.005em; }
 .itin-sub { font-size: 13px; color: var(--ink-2); }
-.itin-end { display: flex; align-items: center; gap: 2px; padding-top: 6px; }
+.itin-end { display: flex; align-items: center; gap: 2px; min-height: 44px; margin-top: -2px; }
 .itin-end .pill { margin-right: 2px; }
 .itin-files { display: inline-grid; place-items: center; width: 24px; height: 24px; color: var(--ink-2); }
 .itin-line:hover { background: var(--paper-2); }
 .itin-line.quiet .itin-title { font-size: 14px; }
-.itin-line.quiet .itin-main { min-height: 36px; padding: 6px 0; }
+.itin-line.quiet .itin-main { min-height: 40px; padding: 10px 0 6px; }
 .cat {
-  align-self: start; margin-top: 8px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  align-self: start; margin-top: 7px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
   background: var(--c, var(--soft)); color: var(--ink); flex: none;
 }
 .cat.quiet { background: none; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
 /* the slot before a line's name: what the line is, and (when it isn't on the map) a way to say so */
+.itin-line > .cat, .itin-line > .seq, .itin-line > .marker-finding { justify-self: center; }
 .marker { position: relative; align-self: start; display: grid; }
-.marker-btn { align-self: start; display: grid; place-items: center; position: relative; width: 44px; height: 44px; margin: -1px -9px -9px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--ink-2); cursor: pointer; }
+.marker-btn { align-self: start; display: grid; place-items: center; position: relative; width: 44px; height: 44px; margin: -2px -7px -12px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--ink-2); cursor: pointer; }
 .marker-btn .cat { margin-top: 0; align-self: center; }
 .marker-btn:hover, .marker-btn:focus-visible { filter: brightness(.94); }
 .marker-btn.find { color: var(--ink-3); }
 .itin-line:hover .marker-btn.find, .marker-btn.find:focus-visible { color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
-.marker-finding { align-self: start; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 8px; }
+.marker-finding { align-self: start; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 7px; }
 .marker-plus { position: absolute; top: 9px; right: 9px; font: 600 12px/1 var(--f-mono); }
 .marker-menu { position: absolute; z-index: 20; top: 40px; left: -6px; display: grid; min-width: 220px; padding: 6px; border-radius: 10px; background: var(--card); box-shadow: var(--float); }
 .marker-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
@@ -138,11 +140,17 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .walk.pulse span:first-of-type { animation: pulse 1.2s ease-in-out infinite; }
 .add-line { padding: 4px 0 0; }
 .add-line .line-edit { grid-template-columns: 52px minmax(0, 1fr) auto; }
-.add-line .line-name { border-bottom: 1px dashed var(--line); font-size: 15px; }
+.add-line .line-name { margin-left: 36px; border-bottom: 1px dashed var(--line); font-size: 15px; }
 .add-line .line-go { min-height: 36px; }
 .add-line-finding { padding-left: 60px; }
 .doc mark { background: var(--found); color: inherit; border-radius: 3px; padding: 0 1px; }
 .itin-line.doc .doc-name { font-size: 16px; }
+/* a live line keeps the same level: its time and name are 30px boxes from 5px down */
+.itin-line.doc .itin-time { padding-top: 0; }
+.itin-line.doc .itin-main { padding: 5px 0 4px; }
+.itin-line.doc .doc-name { height: 30px; }
+.itin-line.doc .doc-time { height: 30px; margin-top: 5px; padding-top: 0; padding-bottom: 0; line-height: 30px; font-size: 12px; }
+.itin-line.doc .doc-time.till { height: 22px; margin-top: 0; line-height: 22px; font-size: 11px; }
 
 /* ---------- ideas ---------- */
 .ideas { display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -325,7 +333,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .line-link:hover { color: var(--ink); }
 
 /* ---------- a day's numbers: "01", the same as the place's pin on the map ---------- */
-.seq { align-self: start; justify-self: start; margin-top: 8px; padding: 1px 4px; font-family: var(--f-mono); font-size: 12px; font-weight: 500; color: var(--ink); background: color-mix(in srgb, var(--c, var(--soft)) 45%, var(--card)); }
+.seq { align-self: start; justify-self: start; display: grid; place-items: center; min-width: 26px; height: 22px; margin-top: 9px; padding: 0 4px; font-family: var(--f-mono); font-size: 12px; line-height: 1; font-weight: 500; color: var(--ink); background: color-mix(in srgb, var(--c, var(--soft)) 45%, var(--card)); }
 .gpin-stop {
   width: auto; min-width: 30px; height: 24px; padding: 0 5px; border-radius: 2px;
   background: color-mix(in srgb, var(--pin, var(--soft)) 45%, var(--card)); border: 1.5px solid var(--pin, var(--ink)); color: var(--ink); box-shadow: var(--float);

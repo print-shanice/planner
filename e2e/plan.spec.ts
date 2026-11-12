@@ -216,3 +216,52 @@ test.describe('the plan', () => {
     await expect(page.getByRole('textbox', { name: 'change du pain et des idées · the pistachio one' })).toBeVisible()
   })
 })
+
+test.describe('a line reads level', () => {
+  // the middle of a line's first row: its time, its icon or number, its name, its status and its ›, all on one level
+  test('time, icon, number, name and status share one middle; the typing line starts where names do', async ({ page }) => {
+    await open(page, '/trip/jp')
+    for (const name of ['monday 7 october', 'tuesday 8 october']) {
+      const day = page.getByRole('region', { name })
+      await day.scrollIntoViewIfNeeded()
+      await expect(day.getByTestId('itin-line').first()).toBeVisible()
+      const rows = await day.evaluate((el) => {
+        const mid = (r: DOMRect) => r.top + r.height / 2
+        // the first line of some text, by its glyphs rather than its box
+        const firstLine = (n: Element | null) => {
+          if (!n) return null
+          if (n instanceof HTMLInputElement) return mid(n.getBoundingClientRect())
+          const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT)
+          let t = w.nextNode()
+          while (t && !t.textContent?.trim()) t = w.nextNode()
+          if (!t) return null
+          const r = document.createRange()
+          r.selectNodeContents(t)
+          const box = r.getClientRects()[0]
+          return box ? mid(box) : null
+        }
+        const box = (n: Element | null) => (n ? mid(n.getBoundingClientRect()) : null)
+        return [...el.querySelectorAll('[data-testid="itin-line"]')].map((line) => ({
+          name: line.textContent?.trim().slice(0, 30) || (line.querySelector('[data-doc-name]') as HTMLInputElement | null)?.value,
+          time: firstLine(line.querySelector('.itin-time input, .itin-time > span:first-child')),
+          mark: box(line.querySelector('.seq, .cat, .marker-finding, .marker-btn.find svg')),
+          title: firstLine(line.querySelector('.itin-title, .doc-name')),
+          pill: box(line.querySelector('.itin-end .pill')),
+          open: box(line.querySelector('.itin-open svg')),
+          nameX: (line.querySelector('.itin-title, .doc-name') as HTMLElement).getBoundingClientRect().left,
+        }))
+      })
+      expect(rows.length).toBeGreaterThan(0)
+      for (const r of rows) {
+        for (const k of ['time', 'mark', 'pill', 'open'] as const) {
+          if (r[k] == null || r.time == null && k === 'time') continue
+          expect(Math.abs(r[k]! - r.title!), `${r.name}: ${k} sits ${(r[k]! - r.title!).toFixed(1)}px off the name`).toBeLessThanOrEqual(1.5)
+        }
+      }
+      // the day's typing line: its name starts where the lines' names start
+      const add = await day.locator('.add-line .line-name').evaluate((n) => n.getBoundingClientRect().left + parseFloat(getComputedStyle(n).paddingLeft))
+      const names = await day.locator('.itin-title, .doc-name').first().evaluate((n) => n.getBoundingClientRect().left + parseFloat(getComputedStyle(n).paddingLeft))
+      expect(Math.abs(add - names)).toBeLessThanOrEqual(1.5)
+    }
+  })
+})
