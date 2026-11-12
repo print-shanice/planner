@@ -13,7 +13,6 @@ import { Pending } from '../../components/Pending'
 import { stopSub, stopTitle } from '../plan/StopRow'
 import { readLine, type LineValues } from './LineEditor'
 import { categoryIcon, categoryOf } from '../../lib/categories'
-import type { ReactNode } from 'react'
 import { NO_INFO, type LineInfo } from '../../lib/lineInfo'
 import { Tooltip } from '../../components/Tooltip'
 import { useSettle } from './useSettle'
@@ -79,8 +78,6 @@ type Props = {
   onOpen?: (s: Stop, day?: string | null) => void
   onLight?: (id: string | null) => void
   editing?: boolean
-  // the reorder handle, for untimed lines
-  grip?: ReactNode
   // what the line holds beyond its name: note, ref, tickets, cost, links
   info?: LineInfo
   // its number on the day (and on the map)
@@ -145,7 +142,7 @@ export function ItinLine(props: Props) {
   return <StaticLine {...props} onEdit={editable ? () => setLive(true) : undefined} />
 }
 
-function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip, info = NO_INFO, seq }: Props & { onEdit?: () => void }) {
+function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, info = NO_INFO, seq }: Props & { onEdit?: () => void }) {
   const s = entry.stop!
   const canEdit = useCanEdit()
   const wide = useWide()
@@ -180,7 +177,6 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, grip
         <span className="itin-end">
           {shows && <LineLinks info={info} />}
           {shows && <Pill status={s.status} kind={s.kind} />}
-          {grip}
           {removable && wide && <RemoveLine stop={s} info={info} />}
           {onEdit && onOpen && <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button>}
         </span>
@@ -198,7 +194,7 @@ function focusNext(from: HTMLElement | null) {
   all[all.indexOf(from as HTMLInputElement) + 1]?.focus()
 }
 
-function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, info = NO_INFO, seq }: Props & { autoFocus?: boolean }) {
+function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = NO_INFO, seq }: Props & { autoFocus?: boolean }) {
   const s = entry.stop!
   const save = useSave('stops')
   const removeLater = useUndoRemove('stops')
@@ -294,7 +290,6 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, grip, i
         <span className="itin-end">
         <LineLinks info={info} />
         <Pill status={s.status} kind={s.kind} />
-        {grip}
         <RemoveLine stop={s} info={info} />
         {dirty
           ? <button type="button" className="btn small line-go" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>
