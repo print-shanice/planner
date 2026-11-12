@@ -129,7 +129,7 @@ function TripScreen() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [wide, !!trip, tab]) // eslint-disable-line react-hooks/exhaustive-deps
-  // once scrolled, the title shrinks so the plan has the room
+  // once scrolled, the bar gets a hairline under it
   useEffect(() => {
     const el = sentinel.current
     if (!el || typeof IntersectionObserver === 'undefined') return

@@ -246,10 +246,6 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .place-card-words { flex: 1; min-width: 0; }
 .place-card-actions { flex-wrap: wrap; }
 .place-card-actions .day-select { flex: 1 1 120px; min-height: 44px; }
-/* scrolled: the title shrinks so the plan has the room (the flags and dates stay) */
-.trip-phone .trip-bar.stuck .trip-title-row h1 { font-size: 22px; }
-.trip-phone .trip-bar.stuck .trip-header { gap: 0; padding-bottom: 2px; }
-.trip-phone .trip-bar.stuck .back-link { min-height: 36px; }
 
 /* the phone map's one choice: which day, the whole trip or the ideas */
 .map-scope {
