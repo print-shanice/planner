@@ -89,3 +89,26 @@
 .side-text { display: flex; flex-direction: column; line-height: 1.25; }
 .side-name { color: var(--ink); }
 .side-dates { color: var(--ink-2); font-family: var(--f-mono); font-size: 11px; }
+
+/* planning a place from its card: which day (a dropdown), a time, one button that says what it will do */
+.place-card-plan { display: grid; gap: 8px; flex: 1 1 100%; }
+.place-card-when { display: flex; gap: 8px; }
+.day-menu {
+  flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: 15px; cursor: pointer;
+}
+.day-menu:hover { filter: brightness(.97); }
+.place-card-time { width: 88px; flex: none; min-height: 44px; font-family: var(--f-mono); }
+.day-list {
+  z-index: 80; max-height: 340px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
+  text-transform: lowercase; font-family: var(--f-body); animation: choice-in .16s ease-out; transform-origin: top left;
+}
+.day-option { display: flex; flex-direction: column; justify-content: center; min-height: 48px; padding: 4px 12px; border-radius: 6px; font-size: 15px; color: var(--ink); cursor: pointer; outline: none; }
+.day-option:hover, .day-option:focus, .day-option:focus-visible { background: var(--soft); }
+.day-option[aria-selected="true"] { font-weight: 600; }
+.day-sub { font-size: 12.5px; font-weight: 400; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.day-month { padding: 10px 12px 4px; }
+.place-card-drag { display: flex; align-items: center; gap: 8px; min-height: 40px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 13px; cursor: grab; user-select: none; touch-action: none; }
+.place-card-drag:hover { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .day-list { animation: none; } }

@@ -67,7 +67,7 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
     carrying, target,
     begin(p, e, opts = {}) {
       stopAll.current()
-      const x0 = e.clientX, y0 = e.clientY
+      const x0 = e.clientX, y0 = e.clientY, t0 = Date.now()
       let started = false
       let over: DropTarget | null = null
       let y = y0
@@ -92,10 +92,14 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
         if (!started) {
           const far = Math.hypot(ev.clientX - x0, ev.clientY - y0)
           // held: moving first means something else (scrolling, selecting, swiping)
-          if (opts.hold) { if (far > 8) stopAll.current(); return }
+          // (a busy page can run the timer late: held long enough counts, whatever the timer says)
+          if (opts.hold) {
+            if (Date.now() - t0 >= opts.hold) start(ev.clientX, ev.clientY)
+            else { if (far > 8) stopAll.current(); return }
+          }
           // a click stays a click: carrying starts once the pointer has really moved
-          if (far < 5) return
-          start(ev.clientX, ev.clientY)
+          else if (far < 5) return
+          else start(ev.clientX, ev.clientY)
         }
         ev.preventDefault()
         y = ev.clientY
@@ -112,7 +116,7 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
       const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') onCancel() }
       // once a finger has picked something up, the page doesn't scroll under it (the plan scrolls itself at the edges)
       const noScroll = (ev: TouchEvent) => { if (started) ev.preventDefault() }
-      if (opts.hold) timer = setTimeout(() => start(x0, y0), opts.hold)
+      if (opts.hold) timer = setTimeout(() => { if (!started) start(x0, y0) }, opts.hold)
       stopAll.current = () => {
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)

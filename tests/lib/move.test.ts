@@ -1,4 +1,4 @@
-import { moveChanges } from '../../src/lib/move'
+import { beforeByTime, moveChanges } from '../../src/lib/move'
 import { trip, stop, cost } from '../factories'
 import type { Stop } from '../../src/lib/types'
 
@@ -72,4 +72,12 @@ it('a brand-new line (not saved yet) gets its whole place in the day', () => {
   const out = moveChanges(fresh, A, 'aimu', ctx(stops))
   expect(out.moved).toMatchObject({ id: 'new', day: A, position: 3, trip_id: 'tk' })
   expect(out.changes).toContainEqual({ id: 'aimu', position: 4 })
+})
+
+it('a line with a time goes in before the first later one; without a time, last', () => {
+  const stops = day21()
+  expect(beforeByTime(on('new', null, '15:30', 0), A, ctx(stops))).toBe('aimu')
+  expect(beforeByTime(on('new', null, '12:00', 0), A, ctx(stops))).toBe('aimu')
+  expect(beforeByTime(on('new', null, '08:00', 0), A, ctx(stops))).toBe('horin')
+  expect(beforeByTime(on('new', null, null, 0), A, ctx(stops))).toBeNull()
 })

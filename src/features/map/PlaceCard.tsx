@@ -1,5 +1,17 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Place, Stop, Trip } from '../../lib/types'
+import { useCosts } from '../../lib/queries'
+import { dayEntries } from '../../lib/agenda'
+import { dayAreas } from '../../lib/itinerary'
+import { beforeByTime } from '../../lib/move'
+import { couldBeTime, readTime } from '../../lib/time'
+import { newId } from '../../lib/id'
+import { useWide } from '../../lib/useWide'
+import { dayLabel } from '../../components/MonthCalendar'
+import { Icon } from '../../components/Icon'
+import { useMove } from '../itinerary/useMove'
+import { useDrag } from '../itinerary/drag'
+import { DayMenu, type DayChoice } from './DayMenu'
 import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { fmtDay, tripDays } from '../../lib/dates'
@@ -31,7 +43,45 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   const idea = !!stop && !stop.day
   const days = tripDays(home)
   const [day, setDay] = useState<string>(defaultDay && days.includes(defaultDay) ? defaultDay : '')
+  const [time, setTime] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
+  const timeBox = useRef<HTMLInputElement>(null)
+  const go = useRef<HTMLButtonElement>(null)
+  const move = useMove(trip)
+  const drag = useDrag()
+  const wide = useWide()
+  const costs = useCosts().data ?? []
+  // what each day already holds, under its name in the list: its areas, else its first few lines
+  const choices: DayChoice[] = days.map((d) => {
+    const entries = dayEntries(trip, trips, stops, d)
+    const areas = dayAreas(entries)
+    const names = entries.filter((e) => e.kind === 'stop' && e.stop).map((e) => stopTitle(e.stop!).toLowerCase())
+    return { date: d, sub: (areas.length ? areas.map((a) => a.toLowerCase()) : names).slice(0, 3).join(' · ') }
+  })
+  const at = readTime(time) ?? null
+  // the line it would be: the idea itself, or a new place
+  const row = (): Stop => {
+    if (stop) return { ...stop, time: at ?? stop.time }
+    const { category, ...bare } = place
+    return {
+      id: fresh.current, trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: null, position: 0, time: at, end_date: null, end_time: null,
+      place: bare, mode: null, origin: null, destination: null, status: 'idea', saved: false, url: '', ref: '', notes: '', category: asCategory(category), flight: null,
+    }
+  }
+  const fresh = useRef(newId())
+  function add() {
+    if (!day) { if (!stop) keep(null); return }
+    const r = row()
+    const ctx = { top: trip, trips, stops, costs }
+    move(r, day, beforeByTime(r, day, ctx), { fresh: !stop, said: `added to ${dayLabel(day)}` })
+    onDone?.()
+  }
+  function pickDay(d: string) {
+    setDay(d)
+    // a day picked: straight on to its time (an idea has no time, so on to the button)
+    setTimeout(() => (d ? timeBox.current : go.current)?.focus(), 0)
+  }
+  const label = !day ? (stop ? 'pick a day' : 'save as an idea') : `add to ${dayLabel(day)}${at ? ` at ${at}` : ''}`
   const title = stop ? stopTitle(stop) : place.name || 'dropped pin'
   const maps = gmapsUrl(stop ?? ({ kind: 'place', place } as Stop))
   const fake = { kind: 'place', category: stop?.category ?? place.category ?? null } as Stop
@@ -64,16 +114,28 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
       {!looking && (
         <div className="place-card-actions">
           {stop && <Button variant={idea ? 'ghost' : 'primary'} onClick={() => sheet?.openStop(stop.id, opened)}>details</Button>}
-          {canEdit && (!stop || idea) && (days.length ? (
-            <select className="input day-select" aria-label="day" value={day} onChange={(e) => setDay(e.target.value)}>
-              <option value="">{stop ? 'pick a day' : 'no date'}</option>
-              {days.map((d) => <option key={d} value={d}>{short(d)}</option>)}
-            </select>
-          ) : (
-            <input className="input day-select" type="date" aria-label="day" value={day} onChange={(e) => setDay(e.target.value)} />
-          ))}
-          {canEdit && !stop && <Button variant="primary" onClick={() => keep(day || null)}>{day ? 'add' : 'save idea'}</Button>}
-          {canEdit && idea && <Button variant="primary" disabled={!day} onClick={() => run(() => save.mutateAsync(scheduleChange(stop!, day, stops)))}>add</Button>}
+          {canEdit && (!stop || idea) && (
+            <div className="place-card-plan">
+              <div className="place-card-when">
+                <DayMenu days={choices} value={day} onPick={pickDay} />
+                {day && <input ref={timeBox} className="input place-card-time" type="text" inputMode="decimal" autoComplete="off" aria-label="time" placeholder="any" value={time}
+                  onChange={(e) => { if (couldBeTime(e.target.value)) setTime(e.target.value) }}
+                  onBlur={() => { const t = readTime(time); if (t) setTime(t) }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }} />}
+              </div>
+              <button ref={go} type="button" className="btn primary" disabled={!day && !!stop} onClick={add}>{label}</button>
+              {wide && drag && (
+                <div className="place-card-drag" onPointerDown={(e) => {
+                  if (e.button !== 0) return
+                  e.preventDefault()
+                  const r = row()
+                  drag.begin(stop ? { kind: 'line', stop: r, label: stopTitle(r).toLowerCase() } : { kind: 'new', stop: r, label: r.title.toLowerCase() }, e)
+                }}>
+                  <Icon name="more" size={16} /><span>or drag it into the plan, where it goes</span>
+                </div>
+              )}
+            </div>
+          )}
           {maps && <a className="text-link" href={maps} target="_blank" rel="noopener noreferrer">google maps →</a>}
         </div>
       )}

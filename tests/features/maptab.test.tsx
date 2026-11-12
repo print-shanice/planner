@@ -9,6 +9,8 @@ vi.mock('../../src/lib/queries', () => ({
   useLinks: () => ({ data: [] }),
   useStops: () => db.stopsQ ?? ({ data: db.stops }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
+  useCosts: () => ({ data: [] }),
+  useRemove: () => ({ mutate: vi.fn(), mutateAsync: vi.fn() }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), reversePlace: db.reverse, searchPlaces: db.search }))
@@ -45,17 +47,43 @@ beforeEach(() => {
 
 const show = (path = '/', phone = false) => render(<MemoryRouter initialEntries={[path]}><MapTab trip={lap} phone={phone} /></MemoryRouter>)
 
-it('adding from a place card inserts at the end of the chosen day', async () => {
+it('adding from a place card: pick a day, the cursor goes to the time, enter puts it in by its time', async () => {
+  db.stops = [
+    stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', time: '10:00', position: 0, place: place({ name: 'Arktikum', lat: 66.5, lng: 25.7 }) }),
+    stop({ id: 's2', trip_id: 'lap', title: 'church', day: '2027-02-08', time: '18:00', position: 1, place: place({ lat: 66.5, lng: 25.71 }) }),
+  ]
   db.reverse.mockResolvedValue({ name: 'Rovaniemi Church', address: 'Yliopistonkatu 2', lat: 66.5079, lng: 25.7287 })
   show()
   await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
   const card = await screen.findByRole('region', { name: 'Rovaniemi Church' })
-  await userEvent.selectOptions(within(card).getByLabelText('day'), '2027-02-08')
-  await userEvent.click(within(card).getByRole('button', { name: 'add' }))
+  // it opens on the day the map shows
+  expect(within(card).getByRole('button', { name: 'add to sun 7 feb' })).toBeInTheDocument()
+  await userEvent.click(within(card).getByRole('button', { name: 'day: sun 7 feb' }))
+  await userEvent.click(screen.getByRole('option', { name: /monday 8 february/ }))
+  const time = within(card).getByRole('textbox', { name: 'time' })
+  expect(time).toHaveFocus()
+  await userEvent.type(time, '1530')
+  expect(within(card).getByRole('button', { name: 'add to mon 8 feb at 15:30' })).toBeInTheDocument()
+  await userEvent.keyboard('{Enter}')
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({
-    trip_id: 'lap', kind: 'place', title: 'Rovaniemi Church', day: '2027-02-08', position: 5,
+    trip_id: 'lap', kind: 'place', title: 'Rovaniemi Church', day: '2027-02-08', time: '15:30', position: 1, saved: false,
     place: expect.objectContaining({ lat: 66.5079, lng: 25.7287 }),
   }))
+  expect(db.save).toHaveBeenCalledWith({ id: 's2', position: 2 })
+})
+
+it('the day list reads like the plan: every day with its places, then no date', async () => {
+  db.reverse.mockResolvedValue({ name: 'Rovaniemi Church', lat: 66.5079, lng: 25.7287 })
+  show('/?day=2027-02-08')
+  await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
+  const card = await screen.findByRole('region', { name: 'Rovaniemi Church' })
+  await userEvent.click(within(card).getByRole('button', { name: 'day: mon 8 feb' }))
+  const list = screen.getByRole('listbox', { name: 'day' })
+  expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual([
+    'sunday 7 february', 'monday 8 februaryarktikum · church', 'tuesday 9 february', 'wednesday 10 february', 'thursday 11 february', 'no datekeep it as an idea',
+  ])
+  await userEvent.keyboard('{Escape}')
+  expect(screen.queryByRole('listbox')).toBeNull()
 })
 
 it('an empty tap with nothing there is a dropped pin', async () => {
@@ -70,8 +98,10 @@ it('saving keeps the place without a day', async () => {
   show()
   await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
   const card = await screen.findByRole('region', { name: 'Rovaniemi Church' })
-  await userEvent.selectOptions(within(card).getByLabelText('day'), '')
-  await userEvent.click(within(card).getByRole('button', { name: 'save idea' }))
+  await userEvent.click(within(card).getByRole('button', { name: /^day: / }))
+  await userEvent.click(screen.getByRole('option', { name: /^no date/ }))
+  expect(within(card).getByRole('button', { name: 'save as an idea' })).toHaveFocus()
+  await userEvent.click(within(card).getByRole('button', { name: 'save as an idea' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ kind: 'place', saved: true, day: null, title: 'Rovaniemi Church' }))
 })
 
@@ -80,8 +110,10 @@ it('a found place keeps the kind the search saw, on the stop and not inside the 
   show()
   await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
   const card = await screen.findByRole('region', { name: 'Kahvila' })
-  await userEvent.selectOptions(within(card).getByLabelText('day'), '')
-  await userEvent.click(within(card).getByRole('button', { name: 'save idea' }))
+  await userEvent.click(within(card).getByRole('button', { name: /^day: / }))
+  await userEvent.click(screen.getByRole('option', { name: /^no date/ }))
+  expect(within(card).getByRole('button', { name: 'save as an idea' })).toHaveFocus()
+  await userEvent.click(within(card).getByRole('button', { name: 'save as an idea' }))
   const row = db.save.mock.calls.at(-1)![0]
   expect(row.category).toBe('cafe')
   expect(row.place).not.toHaveProperty('category')
@@ -314,8 +346,9 @@ it('an idea\'s card adds it to the day', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'tap idea' }))
   const card = screen.getByRole('region', { name: 'cafe' })
   expect(within(card).getByRole('button', { name: 'details' })).toBeInTheDocument()
-  await userEvent.click(within(card).getByRole('button', { name: 'add' }))
-  expect(db.save).toHaveBeenCalledWith({ id: 'cafe', day: '2027-02-08', position: 5, saved: false })
+  await userEvent.click(within(card).getByRole('button', { name: 'add to mon 8 feb' }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'cafe', day: '2027-02-08', position: 2, saved: false })
+  expect(db.save).toHaveBeenCalledWith({ id: 's2', position: 1 })
 })
 
 it('a dated, unsaved place opens with details, not add, when all days show', async () => {
@@ -323,7 +356,7 @@ it('a dated, unsaved place opens with details, not add, when all days show', asy
   await userEvent.click(screen.getByRole('button', { name: 'tap pin' }))
   const card = screen.getByRole('region', { name: 'arktikum' })
   expect(within(card).getByRole('button', { name: 'details' })).toBeInTheDocument()
-  expect(within(card).queryByRole('button', { name: 'add' })).toBeNull()
+  expect(within(card).queryByRole('button', { name: /^add to/ })).toBeNull()
 })
 
 describe('whole trip with side trips', () => {

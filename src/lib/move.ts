@@ -2,7 +2,7 @@ import type { Cost, Stop, Trip } from './types'
 import { ancestors, descendants } from './countries'
 import { addDays, daysBetween } from './dates'
 import { ownerOn } from './agenda'
-import { dayOrder, fitsTime } from './dayOrder'
+import { dayOrder, fitsTime, insertAt } from './dayOrder'
 
 export type MoveCtx = { top: Trip; trips: Trip[]; stops: Stop[]; costs: Cost[] }
 export type Change = Partial<Stop> & { id: string }
@@ -13,14 +13,25 @@ const FIELDS = ['day', 'end_date', 'trip_id', 'saved', 'time', 'end_time', 'posi
 // a line put down on a day, before another line (or last): what has to change. where you put it wins:
 // a time that no longer fits there is cleared (and reported, so it can be undone). a line moving to a day inside
 // a side trip joins the side trip, its costs with it. both days close up their positions
-export function moveChanges(stop: Stop, toDay: string, before: string | null, ctx: MoveCtx): Move {
+// a day's lines in the order they read (without the one being moved), across the whole trip family
+function linesOn(ctx: MoveCtx, d: string, not: string): Stop[] {
   const root = ancestors(ctx.top.id, ctx.trips)[0] ?? ctx.top
   const family = new Set(descendants(root.id, ctx.trips))
   // an untimed check-in ends its day by itself, so it holds no place among the lines
   const placed = (s: Stop) => s.kind !== 'stay' || !!s.time
-  const linesOn = (d: string) => dayOrder(ctx.stops.filter((s) => family.has(s.trip_id) && s.day === d && placed(s) && s.id !== stop.id))
+  return dayOrder(ctx.stops.filter((s) => family.has(s.trip_id) && s.day === d && placed(s) && s.id !== not))
+}
 
-  const target = linesOn(toDay)
+// where a line goes by its time alone: before the first later line, or last
+export function beforeByTime(stop: Stop, toDay: string, ctx: MoveCtx): string | null {
+  const lines = linesOn(ctx, toDay, stop.id)
+  return lines[insertAt(lines, stop.time)]?.id ?? null
+}
+
+export function moveChanges(stop: Stop, toDay: string, before: string | null, ctx: MoveCtx): Move {
+  const lines = (d: string) => linesOn(ctx, d, stop.id)
+
+  const target = lines(toDay)
   let at = before ? target.findIndex((s) => s.id === before) : -1
   if (at < 0) at = target.length
   const newDay = stop.day !== toDay
@@ -44,7 +55,7 @@ export function moveChanges(stop: Stop, toDay: string, before: string | null, ct
     for (const k of FIELDS) if (moved[k] !== stop[k]) (diff as Record<string, unknown>)[k] = moved[k]
     if (Object.keys(diff).length > 1) changes.push(diff)
   })
-  if (newDay && stop.day) linesOn(stop.day).forEach((l, i) => { if (l.position !== i) changes.push({ id: l.id, position: i }) })
+  if (newDay && stop.day) lines(stop.day).forEach((l, i) => { if (l.position !== i) changes.push({ id: l.id, position: i }) })
   const costs = moved.trip_id !== stop.trip_id
     ? ctx.costs.filter((c) => c.stop_id === stop.id).map((c) => ({ id: c.id, trip_id: moved.trip_id }))
     : []
