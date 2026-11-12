@@ -33,6 +33,16 @@ describe('biasFor', () => {
     expect(biasFor(tk, [tk], [airbnb], '2025-09-21')).toEqual({ lat: 35.75, lng: 139.68 })
     expect(biasFor(tk, [tk], [airbnb], '2025-09-19')).toEqual({ lat: 35.75, lng: 139.68 })
   })
+  it("in a side trip, its own bed that night wins over the parent's long stay", () => {
+    const ex = trip({ id: 'ex', start_date: '2027-01-28', end_date: '2027-07-13' })
+    const par = trip({ id: 'par', parent_id: 'ex', start_date: '2027-02-19', end_date: '2027-02-23' })
+    const flat = stop({ id: 'flat', trip_id: 'ex', kind: 'stay', day: '2027-01-28', end_date: '2027-07-13', place: place({ lat: 51.448, lng: 5.49 }) })
+    const hotel = stop({ id: 'hotel', trip_id: 'par', kind: 'stay', day: '2027-02-19', end_date: '2027-02-23', place: place({ lat: 48.859, lng: 2.36 }) })
+    expect(biasFor(par, [ex, par], [flat, hotel], '2027-02-21')).toEqual({ lat: 48.859, lng: 2.36 })
+    // and from the parent's plan, a side trip's day is aimed at the side trip's bed too
+    expect(biasFor(ex, [ex, par], [flat, hotel], '2027-02-21')).toEqual({ lat: 48.859, lng: 2.36 })
+    expect(biasFor(ex, [ex, par], [flat, hotel], '2027-03-10')).toEqual({ lat: 51.448, lng: 5.49 })
+  })
   it("else the day's last located stop, else the trip's base, else its parent's", () => {
     const k = stop({ trip_id: 'tk', day: '2025-09-24', place: place({ lat: 35.31, lng: 139.55 }) })
     expect(biasFor(tk, [tk], [k], '2025-09-24')).toEqual({ lat: 35.31, lng: 139.55 })

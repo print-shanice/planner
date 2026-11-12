@@ -117,6 +117,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .marker-btn:hover, .marker-btn:focus-visible { filter: brightness(.94); }
 .marker-btn.find { color: var(--ink-3); }
 .itin-line:hover .marker-btn.find, .marker-btn.find:focus-visible { color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
+.marker-finding { align-self: start; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 8px; }
 .marker-plus { position: absolute; top: 9px; right: 9px; font: 600 12px/1 var(--f-mono); }
 .marker-menu { position: absolute; z-index: 20; top: 40px; left: -6px; display: grid; min-width: 220px; padding: 6px; border-radius: 10px; background: var(--card); box-shadow: var(--float); }
 .marker-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }

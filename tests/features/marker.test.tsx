@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { stop, place } from '../factories'
@@ -89,4 +89,14 @@ it('a ride (grab, taxi, uber…) has no mode and shows a car; making it getting 
   const train = show(stop({ id: 't', kind: 'journey', mode: 'train', title: 'tozai line' }))
   expect(carPath).toBeTruthy()
   expect(carPath).not.toBe(train.container.querySelector('.cat path')?.getAttribute('d'))
+})
+
+it('while its place is being looked up, the slot pulses and says so', async () => {
+  const { setLocating } = await import('../../src/lib/locating')
+  show(stop({ id: 'o', title: 'kyoto obuya', place: null }))
+  act(() => setLocating('o', true))
+  expect(screen.getByRole('status', { name: 'finding the place' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /find kyoto obuya/ })).toBeNull()
+  act(() => setLocating('o', false))
+  expect(screen.getByRole('button', { name: 'find kyoto obuya on the map' })).toBeInTheDocument()
 })

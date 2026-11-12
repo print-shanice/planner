@@ -32,8 +32,11 @@ export function biasFor(trip: Trip, trips: Trip[], stops: Stop[], day: string | 
   const ids = new Set([...descendants(trip.id, trips), ...up.map((t) => t.id)])
   const mine = stops.filter((s) => ids.has(s.trip_id) && !s.saved)
   if (day) {
-    const bed = mine.find((s) => s.kind === 'stay' && s.day && hasPoint(s.place)
+    // the innermost trip's bed wins: a side trip's hotel, not the exchange flat that covers the whole term
+    const depth = (s: Stop) => ancestors(s.trip_id, trips).length
+    const bed = mine.filter((s) => s.kind === 'stay' && s.day && hasPoint(s.place)
       && (s.day === day || (s.day < day && !!s.end_date && day < s.end_date)))
+      .sort((a, b) => depth(b) - depth(a))[0]
     if (bed) return point(bed.place)
     const there = mine.filter((s) => s.day === day).map((s) => point(s.kind === 'journey' ? s.destination : s.place)).filter(Boolean)
     if (there.length) return there[there.length - 1]

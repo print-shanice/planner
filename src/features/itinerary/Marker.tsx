@@ -7,6 +7,7 @@ import { kindChange } from '../../lib/lineKind'
 import { hasPoint } from '../../lib/walk'
 import { Icon } from '../../components/Icon'
 import { useStartFind } from '../trip/find'
+import { useLocating } from '../../lib/locating'
 import { Chip, Seq } from './ItinLine'
 
 const KIND_WORDS = { place: 'a place', journey: 'getting around', note: 'a note' } as const
@@ -19,6 +20,7 @@ export function Marker({ stop: s, kind, seq }: { stop: Stop; kind: DayEntry['kin
   const find = useStartFind()
   const save = useSave('stops')
   const [open, setOpen] = useState(false)
+  const looking = useLocating(s.id)
   const box = useRef<HTMLSpanElement>(null)
   const title = (s.title || s.place?.name || 'this line').toLowerCase()
 
@@ -35,6 +37,8 @@ export function Marker({ stop: s, kind, seq }: { stop: Stop; kind: DayEntry['kin
   const typedJourney = s.kind === 'journey' && !s.origin && !s.destination
   if (!canEdit || !line || s.kind === 'stay' || (s.kind === 'journey' && !typedJourney)) return <Chip stop={s} quiet={!line} />
   if (s.kind === 'place' && !hasPoint(s.place)) {
+    // being looked up in the background right now
+    if (looking) return <span className="marker-finding" role="status" aria-label="finding the place"><span className="pending-dot pulse" aria-hidden="true" /></span>
     return (
       <button type="button" className="marker-btn find" aria-label={`find ${title} on the map`} title="find on the map" onClick={() => find(s)}>
         <Icon name="pin" size={16} /><span className="marker-plus" aria-hidden="true">+</span>

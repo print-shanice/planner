@@ -24,6 +24,7 @@ import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
 import { HighlightProvider } from './highlight'
 import { DragProvider } from '../itinerary/drag'
+import { useAutoLocate } from '../itinerary/useAutoLocate'
 import { ReadingDayProvider, useReadingDay } from './readingDay'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { CostForm } from '../money/CostForm'
@@ -59,6 +60,12 @@ export function AddForms({ kind, trip, day, onClose }: { kind: AddKind | null; t
       </Sheet>
     </>
   )
+}
+
+// names without a spot are looked up while the trip is open
+function AutoLocate({ trip }: { trip: Trip }) {
+  useAutoLocate(trip)
+  return null
 }
 
 export function TripPage() {
@@ -160,6 +167,7 @@ function TripScreen() {
 
   return (
     <DragProvider trip={trip}>
+    <AutoLocate trip={trip} />
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}${switching ? ' switching' : ''}`} style={{ ...tint(trip.color), ...(wide && planW != null ? { '--plan-w': `${planW}px` } : null) } as CSSProperties}>
       <section className="trip-main" ref={main}>
         {phoneMap ? (

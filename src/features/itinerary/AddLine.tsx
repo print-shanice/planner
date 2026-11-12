@@ -1,13 +1,9 @@
-import { useState } from 'react'
 import type { Mode, Stop, Trip } from '../../lib/types'
 import { guessKind } from '../../lib/lineKind'
 import { useSettle } from './useSettle'
-import { useSave, useStops, useTrips } from '../../lib/queries'
+import { useSave, useStops } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { newId } from '../../lib/id'
-import { searchSpots } from '../../lib/photon'
-import { biasFor, pickGuess } from '../../lib/guess'
-import { Pending } from '../../components/Pending'
 import { dayLabel } from '../../components/MonthCalendar'
 import { LineEditor, type LineValues } from './LineEditor'
 import { flash } from './flash'
@@ -27,8 +23,6 @@ export function AddLine({ trip, day }: { trip: Trip; day: string | null }) {
   const save = useSave('stops')
   const settle = useSettle()
   const stops = useStops().data ?? []
-  const trips = useTrips().data ?? []
-  const [finding, setFinding] = useState(0)
   if (!canEdit) return null
   const label = `add to ${day ? dayLabel(day) : 'no date'}`
 
@@ -45,22 +39,12 @@ export function AddLine({ trip, day }: { trip: Trip; day: string | null }) {
     // a time puts it in its place: the day's order is written down so it stays there
     if (row.time) settle({ place: null, mode: null, origin: null, destination: null, end_date: null, url: '', ref: '', notes: '', category: null, flight: null, ...row } as Stop)
     flash(id)
-    // a to-do has no place to find on the map
-    const near = kind === 'place' ? biasFor(trip, trips, stops, day) : null
-    if (near) {
-      setFinding((n) => n + 1)
-      Promise.resolve().then(() => searchSpots(title, near))
-        .then((found) => { const p = pickGuess(title, found, near); if (p) return save.mutateAsync({ id, place: p }) })
-        .catch(() => { /* no place found: the line just has no pin */ })
-        .finally(() => setFinding((n) => n - 1))
-    }
     return null
   }
 
   return (
     <div className="add-line">
       <LineEditor label={label} onSubmit={add} />
-      {finding > 0 && <Pending label="finding the place" className="add-line-finding" />}
     </div>
   )
 }

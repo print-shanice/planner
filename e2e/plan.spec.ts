@@ -74,6 +74,16 @@ test.describe('the plan', () => {
     await expectLine(sat, 'du pain et des idées')
   })
 
+  test('a name typed on a line is looked up on the map by itself, and gets its number when it plainly matches', async ({ page }) => {
+    await open(page, '/trip/par')
+    const line = page.getByRole('group', { name: 'add to sun 21 feb' })
+    await line.getByRole('textbox', { name: 'add to sun 21 feb' }).fill('louvre museum')
+    await line.getByRole('button', { name: 'add line' }).click()
+    const sun = page.getByRole('region', { name: 'sunday 21 february' })
+    await expect(sun.locator('[data-line] .seq')).toHaveCount(3)
+    await expect(sun.getByRole('button', { name: 'find louvre museum on the map' })).toHaveCount(0)
+  })
+
   test('a line typed without a place finds it on the map from its pin+, and gets its number', async ({ page }) => {
     await open(page, '/trip/par')
     const line = page.getByRole('group', { name: 'add to sun 21 feb' })

@@ -113,15 +113,6 @@ it('an end before the start says so and saves nothing', async () => {
   expect(name()).toHaveValue('museum')
 })
 
-it('quietly finds the place near where you are, keeping your words as the name', async () => {
-  db.spots.mockResolvedValue([place({ name: 'Elsewhere', lat: 35.7, lng: 139.7 }), place({ name: 'Kura Sushi', lat: 35.66, lng: 139.70, city: 'tokyo' })])
-  show(tk())
-  await userEvent.type(name(), 'kura sushi{Enter}')
-  const id = (db.save.mock.calls[0][0] as { id: string }).id
-  await waitFor(() => expect(db.save).toHaveBeenCalledWith({ id, place: expect.objectContaining({ name: 'Kura Sushi' }) }))
-  expect(db.spots).toHaveBeenCalledWith('kura sushi', { lat: 35.68, lng: 139.76 })
-})
-
 it('with no date, it adds to "no date"', async () => {
   show(tk(), null)
   await userEvent.type(screen.getByRole('textbox', { name: 'add to no date' }), 'onsen{Enter}')
