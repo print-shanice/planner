@@ -30,8 +30,9 @@ export function Sheet({ open, title, onClose, children, footer, page, side }: Pr
     if (!open) return
     const before = document.activeElement as HTMLElement | null
     const el = panel.current
-    // a field is ready to type into; a sheet of buttons focuses itself, so no focus ring shows on open
-    const first = el?.querySelector<HTMLElement>('input:not([tabindex="-1"]), textarea, select')
+    // a field is ready to type into; a sheet of buttons focuses itself, so no focus ring shows on open.
+    // a card's fields (data-quiet) wait to be tapped, so a phone's keyboard doesn't jump up
+    const first = el?.querySelector<HTMLElement>('input:not([tabindex="-1"]):not([data-quiet]):not([hidden]), textarea:not([data-quiet]), select:not([data-quiet])')
     ;(first ?? el)?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Tab' && el) {

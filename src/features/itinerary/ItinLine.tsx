@@ -293,7 +293,10 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = 
         <Pill status={s.status} kind={s.kind} />
         <RemoveLine stop={s} info={info} />
         {dirty
-          ? <button type="button" className="btn small line-go" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>
+          ? <span className="line-words">
+              <button type="button" className="line-word quiet" aria-label={`cancel ${title}`} onClick={() => { put(saved.current); setProblem(null); nameRef.current?.blur() }}>cancel</button>
+              <button type="button" className="line-word" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>
+            </span>
           : state === 'saving' ? <Pending label="saving" className="line-state" />
           : state === 'saved' ? <span className="line-state muted" role="status"><Icon name="check" size={15} />saved</span>
           : onOpen ? <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button> : <span />}

@@ -222,6 +222,19 @@ it('a changed time also stores the order the day now reads in, so the line stays
   expect(db.save).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'iyoshi' }))
 })
 
+it('a changed line offers cancel beside save, as words, and cancel puts it back', async () => {
+  show(tokyo())
+  const name = screen.getByRole('textbox', { name: 'change neel' })
+  await userEvent.type(name, ' later')
+  const cancel = screen.getByRole('button', { name: 'cancel neel' })
+  expect(cancel).toHaveTextContent('cancel')
+  expect(screen.getByRole('button', { name: 'save neel' })).not.toHaveClass('btn')
+  await userEvent.click(cancel)
+  expect(name).toHaveValue('neel')
+  expect(screen.queryByRole('button', { name: 'cancel neel' })).toBeNull()
+  expect(db.save).not.toHaveBeenCalled()
+})
+
 it('leaving a line untouched saves nothing; escape puts it back', async () => {
   show(tokyo())
   const name = screen.getByRole('textbox', { name: 'change neel' })
@@ -250,7 +263,7 @@ it('journeys and stays stay tap-to-open', async () => {
   db.stops = [stop({ id: 'fl', trip_id: 'tk', kind: 'journey', day: '2025-09-18', time: '22:00', title: 'sq 638', origin: place({ name: 'changi' }), destination: place({ name: 'narita' }) })]
   show(tokyo())
   expect(screen.queryByRole('textbox', { name: /change changi/ })).toBeNull()
-  await userEvent.click(screen.getByRole('button', { name: /^sq 638 changi → narita|changi → narita.*sq 638/ }))
+  await userEvent.click(screen.getByRole('button', { name: /^sq 638 changi to narita|changi to narita.*sq 638/ }))
   expect(db.open).toHaveBeenCalledWith('fl', '2025-09-18')
 })
 

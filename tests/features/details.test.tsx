@@ -25,7 +25,7 @@ it('says it is asking, then shows the photo, the rating, what it is, the day\'s 
   expect(await screen.findByText('★ 4.2 · 244 reviews · hotel')).toBeInTheDocument()
   expect(screen.getByText('sat · 10:00 am – 2:00 pm')).toBeInTheDocument()
   expect(screen.getByRole('img', { name: 'Hop Inn' })).toHaveAttribute('src', 'https://img/hop.jpg')
-  expect(screen.getByRole('link', { name: 'website →' })).toHaveAttribute('href', 'https://hopinn.example/')
+  expect(screen.getByRole('link', { name: 'website' })).toHaveAttribute('href', 'https://hopinn.example/')
   expect(g.fetch).toHaveBeenCalledWith('g1', expect.arrayContaining(['rating', 'photos']))
 })
 

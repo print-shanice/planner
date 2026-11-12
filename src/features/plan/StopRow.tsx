@@ -12,7 +12,7 @@ const MODE_ICON: Record<string, string> = { flight: 'plane', train: 'train', bus
 const routed = (s: Stop) => s.kind === 'journey' && !!s.origin?.name && !!s.destination?.name
 
 export function stopTitle(s: Stop): string {
-  if (routed(s)) return `${s.origin!.name} → ${s.destination!.name}`
+  if (routed(s)) return `${s.origin!.name} to ${s.destination!.name}`
   return s.title || (s.kind === 'journey' ? s.mode ?? 'journey' : s.place?.name ?? '')
 }
 

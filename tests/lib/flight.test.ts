@@ -48,14 +48,12 @@ describe('canCheck: from a day before leaving until an hour after landing', () =
 })
 
 describe('endBits: what each end of the flight has to say', () => {
-  it('leaving: terminal, gate, check-in desk', () => {
-    expect(endBits(end({ terminal: '2', gate: 'E21', desk: '9-16', belt: '3' }), 'dep')).toEqual(['terminal 2', 'gate e21', 'check-in 9-16'])
-  })
-  it('landing: terminal and belt', () => {
-    expect(endBits(end({ terminal: '4', gate: 'B1', desk: '9', belt: '8' }), 'arr')).toEqual(['terminal 4', 'belt 8'])
+  it('only the terminal and gate, never the check-in desk or belt', () => {
+    expect(endBits(end({ terminal: '2', gate: 'E21', desk: '9-16', belt: '3' }))).toEqual(['terminal 2', 'gate e21'])
+    expect(endBits(end({ terminal: '4', desk: '9', belt: '8' }))).toEqual(['terminal 4'])
   })
   it('leaves out what is not known', () => {
-    expect(endBits(end(), 'dep')).toEqual([])
+    expect(endBits(end())).toEqual([])
   })
 })
 

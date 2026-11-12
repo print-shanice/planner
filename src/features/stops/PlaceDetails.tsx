@@ -23,7 +23,7 @@ export function PlaceDetails({ place, day, compact = false }: { place: Place; da
       <div className="place-details-words">
         {line && <p className="place-rating num">{line}</p>}
         {hours && <p className="muted num">{hours}</p>}
-        {d.website && !compact && <a className="text-link" href={d.website} target="_blank" rel="noopener noreferrer">website →</a>}
+        {d.website && !compact && <a className="text-link" href={d.website} target="_blank" rel="noopener noreferrer">website</a>}
       </div>
     </div>
   )

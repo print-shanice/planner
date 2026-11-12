@@ -81,13 +81,13 @@ test.describe('moving between things', () => {
     await expect(page.getByRole('navigation', { name: 'other trips' })).toHaveCount(0)
   })
 
-  test('a place\'s card links to the trips it is part of and the rest of its day', async ({ page }) => {
+  test('a place\'s card keeps to itself: no trips or rest of its day, the plan beside it shows those', async ({ page }) => {
     await open(page, '/trip/par?day=2027-02-20')
     if (phone(page)) await page.getByText('musée d’orsay').first().click()
     else await page.getByRole('button', { name: 'open musée d’orsay' }).click()
     const card = page.getByRole('dialog')
-    await expect(card.getByRole('link', { name: 'euro summer' })).toBeVisible()
-    await card.getByRole('button', { name: 'du pain et des idées' }).click()
-    await expect(page.getByRole('dialog').getByRole('heading', { name: 'du pain et des idées' })).toBeVisible()
+    await expect(card.getByLabel('from', { exact: true })).toBeVisible()
+    await expect(card.getByRole('link', { name: 'euro summer' })).toHaveCount(0)
+    await expect(card.getByRole('button', { name: 'du pain et des idées' })).toHaveCount(0)
   })
 })

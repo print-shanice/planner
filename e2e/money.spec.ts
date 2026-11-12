@@ -91,7 +91,7 @@ test.describe('money', () => {
     await open(page, '/trip/par?tab=money')
     await page.getByRole('region', { name: 'all costs' }).getByRole('button', { name: /hotel marais/ }).click()
     const card = page.getByRole('dialog', { name: 'hotel marais' })
-    await card.getByRole('button', { name: 'add a cost →' }).click()
+    await card.getByRole('button', { name: 'add a cost' }).click()
     const form = page.getByRole('dialog', { name: 'new cost' })
     await expect(form.getByRole('textbox', { name: 'name' })).toHaveValue('hotel marais')
     await form.getByRole('textbox', { name: 'name' }).fill('city tax')

@@ -33,7 +33,7 @@ test.describe('the map', () => {
     await card.getByRole('button', { name: 'details' }).click()
     const full = page.getByRole('dialog', { name: 'hop inn kyoto shijo omiya' })
     await expect(full).toContainText('★ 4.2 · 244 reviews · hotel')
-    await expect(full.getByRole('link', { name: 'website →' })).toHaveAttribute('href', 'https://hopinn.example/')
+    await expect(full.getByRole('link', { name: 'website' })).toHaveAttribute('href', 'https://hopinn.example/')
     await expect(full.getByRole('img', { name: 'hop inn kyoto shijo omiya' })).toBeVisible()
   })
 

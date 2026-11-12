@@ -169,7 +169,7 @@
 .notes { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
 .files { display: grid; gap: 4px; }
 .file-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 8px; background: var(--soft); }
-.file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; text-decoration: none; }
+.file-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 500; text-decoration: none; text-align: left; }
 .file-add { justify-self: start; cursor: pointer; }
 .file-add.busy { opacity: .5; }
 .move { display: grid; gap: 12px; padding: 14px; border-radius: 8px; background: var(--ground); border: 1px solid var(--line); }
@@ -198,3 +198,82 @@
 .review-form { padding-top: 12px; }
 @media (max-width: 480px) { .fold { gap: 8px; } }
 .fold-action { font-size: 12px; white-space: nowrap; color: var(--ink-2); }
+
+/* ---------- the card is the form (1b): a kind · day label, the times big on top, then its own fields as hairline rows ---------- */
+.stop-view.card { gap: 14px; }
+.card-kicker { margin: -4px 0 0; overflow-wrap: anywhere; }
+.card-times { display: grid; grid-template-columns: minmax(0, 1fr) minmax(56px, 120px) minmax(0, 1fr); gap: 12px; align-items: start; padding: 4px 0 16px; border-bottom: 1px solid var(--line); }
+.card-times.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.card-end { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.card-end.far { text-align: right; }
+.card-time {
+  width: 100%; min-width: 0; min-height: 44px; padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink);
+  font: 400 32px/1.25 var(--f-mono); font-variant-numeric: tabular-nums;
+}
+.card-end.far .card-time { text-align: right; }
+.card-time::placeholder { color: var(--ink-3); }
+.card-time:hover:not(:disabled) { border-bottom-color: var(--line); }
+.card-time:focus { outline: none; border-bottom-color: var(--ink); }
+.card-time:disabled { color: var(--ink); -webkit-text-fill-color: var(--ink); opacity: 1; }
+.card-place { font-size: 15px; line-height: 1.35; }
+.card-day { font-size: 15px; font-weight: 500; }
+.card-bits { font-size: 13px; line-height: 1.5; }
+.card-between { display: grid; justify-items: center; gap: 4px; padding-top: 34px; }
+.card-between .mono { font-size: 12px; color: var(--ink-2); text-align: center; }
+.card-rule { width: 100%; border-top: 1px solid var(--ink); }
+.card-between[aria-hidden="true"] .card-rule { border-top-color: var(--line); }
+@media (max-width: 480px) {
+  .card-times { gap: 8px; }
+  .card-time { font-size: 26px; }
+  .card-place, .card-day { font-size: 14px; }
+  .card-bits { font-size: 12px; }
+  .card-between { padding-top: 28px; }
+}
+.card-live { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 18px; padding-bottom: 4px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.card-live .warn-line { font-size: 13px; }
+.card-live > p { flex-basis: 100%; margin: 0; }
+/* secondary actions are words: underlined, no boxes, no arrows */
+.card-link, .text-btn.btn {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: none; color: var(--ink);
+  font: inherit; font-size: 15px; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: pointer;
+}
+.text-btn.btn { font-weight: 600; text-decoration: none; }
+.card-link:disabled { color: var(--ink-3); cursor: default; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.card-rows { display: grid; grid-template-columns: 112px minmax(0, 1fr); margin: 0; border-top: 1px solid var(--line); }
+.card-rows > dt { padding-top: 16px; border-bottom: 1px solid var(--line); }
+.card-rows > dd { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; align-content: center; min-width: 0; min-height: 48px; margin: 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+@media (max-width: 480px) { .card-rows { grid-template-columns: 92px minmax(0, 1fr); } }
+.card-line { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
+.card-line .copy-text { flex: 1; min-width: 0; padding: 12px 0; overflow-wrap: anywhere; }
+.card-line .card-field { flex: 1; }
+.card-field {
+  width: 100%; min-width: 0; min-height: 46px; padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink);
+  font: inherit; font-size: 15px;
+}
+textarea.card-field { padding: 12px 0; resize: vertical; line-height: 1.45; }
+.card-field.mono { font-family: var(--f-mono); }
+.card-field::placeholder { color: var(--ink-3); }
+.card-field:focus { outline: none; border-bottom-color: var(--ink); }
+.card-field:disabled { color: var(--ink); -webkit-text-fill-color: var(--ink); opacity: 1; }
+/* a choice of words (how it goes, its status): the one it is is bold; nothing is boxed */
+.card-options { display: flex; flex-wrap: wrap; gap: 0 18px; }
+.card-options button { min-height: 46px; padding: 0; border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px; cursor: pointer; }
+.card-options button[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
+.card-options button:disabled { cursor: default; }
+.card-options.status button { font-family: var(--f-mono); font-size: 13px; }
+.card-options.status button::before { content: '['; }
+.card-options.status button::after { content: ']'; }
+.card-options.status button.ok[aria-pressed="true"] { color: var(--ok); }
+.card-options.status button.warn[aria-pressed="true"] { color: var(--warn); }
+.card-plain { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 15px; text-align: left; text-decoration: none; cursor: pointer; }
+.card-rows .money-rows, .card-rows .inspiration, .card-rows .files { width: 100%; padding: 0; border: 0; }
+.card-rows .file-row { padding: 0; background: none; }
+.card-foot { display: flex; align-items: center; gap: 16px; padding-top: 2px; }
+.card-foot .btn.ghost.danger { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink-2); font-weight: 400; }
+.card-foot .btn.ghost.danger.armed { color: var(--warn); }
+.card-saved { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+/* each of a flight end's bits stays whole: a narrow screen wraps between them, never inside one */
+.card-bits { display: flex; flex-wrap: wrap; gap: 0 8px; }
+.card-end.far .card-bits { justify-content: flex-end; }
+.card-bits > span { white-space: nowrap; }

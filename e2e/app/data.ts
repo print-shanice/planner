@@ -45,7 +45,10 @@ const stops = [
   S({ trip_id: 'cph', title: 'tivoli', day: '2025-09-13', place: pl('tivoli', 'copenhagen', 'DK', 55.673, 12.568) }),
   S({ trip_id: 'cph', kind: 'journey', title: 'sk 1552', mode: 'flight', day: '2025-09-12', time: '09:00', end_time: '10:20', origin: pl('schiphol', 'amsterdam', 'NL', 52.31, 4.76), destination: pl('kastrup', 'copenhagen', 'DK', 55.62, 12.65), status: 'booked' }),
   // a past trip far away: flights, a train and a stay the whole-trip map should show
-  S({ trip_id: 'jp', kind: 'journey', title: 'sq 638', mode: 'flight', day: '2024-10-02', time: '23:55', end_date: '2024-10-03', end_time: '07:40', origin: pl('changi', 'singapore', 'SG', 1.36, 103.99), destination: pl('narita', 'tokyo', 'JP', 35.77, 140.39), status: 'booked', ref: 'ABC123' }),
+  S({ trip_id: 'jp', kind: 'journey', title: 'sq 638', mode: 'flight', day: '2024-10-02', time: '23:55', end_date: '2024-10-03', end_time: '07:40', origin: pl('changi', 'singapore', 'SG', 1.36, 103.99), destination: pl('narita', 'tokyo', 'JP', 35.77, 140.39), status: 'booked', ref: 'ABC123',
+    flight: { number: 'SQ 638', airline: 'Singapore Airlines', status: 'Arrived', live: false, checked_at: '2024-10-01T10:00:00.000Z',
+      dep: { iata: 'SIN', airport: 'Singapore Changi', city: 'Singapore', country: 'SG', lat: 1.36, lng: 103.99, scheduled: '2024-10-02 23:55+08:00', revised: null, terminal: '3', gate: 'B5', desk: '6', belt: null },
+      arr: { iata: 'NRT', airport: 'Narita International', city: 'Tokyo', country: 'JP', lat: 35.77, lng: 140.39, scheduled: '2024-10-03 07:40+09:00', revised: null, terminal: '1', gate: null, desk: null, belt: '3' } } }),
   S({ trip_id: 'jp', kind: 'stay', title: 'shinjuku hostel', day: '2024-10-03', end_date: '2024-10-07', place: pl('shinjuku hostel', 'tokyo', 'JP', 35.69, 139.70), status: 'booked' }),
   S({ trip_id: 'jp', title: 'senso-ji', day: '2024-10-04', time: '09:00', category: 'sight', place: pl('senso-ji', 'tokyo', 'JP', 35.715, 139.797) }),
   S({ trip_id: 'jp', title: 'teamlab planets', day: '2024-10-05', time: '13:00', category: 'museum', place: pl('teamlab planets', 'tokyo', 'JP', 35.649, 139.790), status: 'booked' }),

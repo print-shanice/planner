@@ -418,7 +418,7 @@ function DirectionsLine({ stop, leg, answer }: { stop: Stop; leg?: Leg; answer: 
   return (
     <Tooltip text={`open directions from your current location to ${at?.name || 'this place'} in Google Maps`}><a className="walk" href={href}
       aria-label={`${flight ? 'directions to departure airport' : 'directions to'} ${at?.name || 'this place'}${estimate ? ` · ${estimate}` : ''}`} target="_blank" rel="noopener noreferrer">
-      <Icon name="ext" size={14} /><span>{label}{estimate && ` · ${estimate}`}</span><span aria-hidden="true">→</span>
+      <span>{label}{estimate && ` · ${estimate}`}</span>
     </a></Tooltip>
   )
 }

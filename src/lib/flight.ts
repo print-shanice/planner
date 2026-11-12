@@ -27,10 +27,9 @@ export function canCheck(f: Flight, now: Date): boolean {
   return t >= ms(f.dep.scheduled) - 24 * HOUR && t <= ms(f.arr.revised ?? f.arr.scheduled) + HOUR
 }
 
-export function endBits(e: FlightEnd, side: 'dep' | 'arr'): string[] {
-  const bits: [string, string | null][] = side === 'dep'
-    ? [['terminal', e.terminal], ['gate', e.gate], ['check-in', e.desk]]
-    : [['terminal', e.terminal], ['belt', e.belt]]
+// what each end says on the card: only its terminal and gate (shanice: the desk and belt are noise)
+export function endBits(e: FlightEnd): string[] {
+  const bits: [string, string | null][] = [['terminal', e.terminal], ['gate', e.gate]]
   return bits.flatMap(([label, v]) => (v ? [`${label} ${v.toLowerCase()}`] : []))
 }
 

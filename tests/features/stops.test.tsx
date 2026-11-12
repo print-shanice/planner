@@ -195,16 +195,6 @@ it('a failed save keeps the sheet open with the reason', async () => {
   expect(within(d).getByLabelText('name')).toHaveValue('arktikum museum')
 })
 
-it('moving to another trip moves all its costs too', async () => {
-  db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1' }), cost({ id: 'c2', trip_id: 'lap', stop_id: 's1' })]
-  show(<Opener id="s1" />)
-  await userEvent.click(screen.getByRole('button', { name: 'open' }))
-  await userEvent.selectOptions(within(screen.getByRole('dialog')).getByLabelText('trip'), 'par')
-  expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', trip_id: 'par' })
-  expect(db.save).toHaveBeenCalledWith('costs', { id: 'c1', trip_id: 'par' })
-  expect(db.save).toHaveBeenCalledWith('costs', { id: 'c2', trip_id: 'par' })
-})
-
 // a booking's money lives on its card: every cost attached to it, each a tap away from changing who paid
 describe('a booking\'s costs on its card', () => {
   const two = () => {
@@ -242,11 +232,11 @@ describe('a booking\'s costs on its card', () => {
     expect(screen.queryByRole('dialog', { name: 'edit cost' })).toBeNull()
   })
 
-  it('"add a cost →" attaches another cost to the booking, named after it and dated its day', async () => {
+  it('"add a cost" attaches another cost to the booking, named after it and dated its day', async () => {
     two()
     show(<Opener id="s1" />)
     await userEvent.click(screen.getByRole('button', { name: 'open' }))
-    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'add a cost →' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'add a cost' }))
     const form = screen.getByRole('dialog', { name: 'new cost' })
     expect(within(form).getByLabelText('name')).toHaveValue('arktikum')
     await userEvent.type(within(form).getByLabelText('amount'), '45')
@@ -259,7 +249,7 @@ describe('a booking\'s costs on its card', () => {
   it('with no cost yet, the card still offers to add one; offline it does not', async () => {
     show(<Opener id="s1" />)
     await userEvent.click(screen.getByRole('button', { name: 'open' }))
-    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'add a cost →' })).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'add a cost' })).toBeInTheDocument()
     expect(within(screen.getByRole('dialog')).queryByRole('region', { name: 'money' })).toBeNull()
   })
 })
@@ -353,7 +343,7 @@ it('offline, a booking\'s costs are read-only and nothing offers to add one', as
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog')
   expect(within(d).getByText(/paid by kai/)).toBeInTheDocument()
-  expect(within(d).queryByRole('button', { name: 'add a cost →' })).toBeNull()
+  expect(within(d).queryByRole('button', { name: 'add a cost' })).toBeNull()
   expect(within(d).queryByRole('button', { name: /paid by kai/ })).toBeNull()
 })
 
@@ -548,77 +538,149 @@ describe('a stop reads like a place card', () => {
     return within(screen.getByRole('dialog', { name: 'arktikum' }))
   }
 
-  it('status, what and where, then place actions with separate ticket help', async () => {
+  it('says what it is and its day, then its times, then text actions', async () => {
     const d = await open()
-    expect(d.getByText('to book')).toHaveClass('pill', 'warn')
-    expect(d.getByText('museum · rovaniemi')).toBeInTheDocument()
+    expect(d.getByText('museum · mon 8 feb')).toHaveClass('card-kicker')
+    expect(d.getByLabelText('from')).toHaveValue('10:00')
+    expect(d.getByLabelText('until')).toHaveValue('')
     const acts = within(d.getByRole('group', { name: 'actions' }))
-    expect(acts.getAllByRole('button').concat(acts.getAllByRole('link')).filter(a => a.classList.contains('stop-action')).map((a) => a.textContent).sort()).toEqual(['directions', 'map', 'ticket'])
-    expect([...d.getByRole('group', { name: 'actions' }).children].map((a) => a.textContent)).toEqual(['map', 'directions', 'ticket'])
-    await userEvent.click(acts.getByRole('button', { name: 'about ticket uploads' }))
-    expect(screen.getByRole('tooltip')).toHaveTextContent(/PDF or image/)
+    expect([...d.getByRole('group', { name: 'actions' }).children].map((a) => a.textContent)).toEqual(['show on map', 'directions'])
+    expect(acts.getByRole('link', { name: 'directions' })).toBeInTheDocument()
   })
 
-  it('"map" closes the card and shows the place on that day\'s map', async () => {
+  it('has no day, trip or same-day rows: the plan beside it already shows them', async () => {
+    db.stops.push(stop({ id: 's2', trip_id: 'lap', title: 'santa village', day: '2027-02-08', time: '14:00' }))
     const d = await open()
-    await userEvent.click(d.getByRole('button', { name: 'map' }))
+    expect(d.queryByLabelText('day')).toBeNull()
+    expect(d.queryByLabelText('trip')).toBeNull()
+    expect(d.queryByText('same day')).toBeNull()
+    expect(d.queryByText('santa village')).toBeNull()
+  })
+
+  it('opens without a field focused, so a phone keyboard doesn\'t jump up', async () => {
+    await open()
+    expect(document.activeElement?.outerHTML.slice(0, 120)).not.toMatch(/^<(input|textarea)/)
+  })
+
+  it('draws no arrows', async () => {
+    const d = await open()
+    expect(screen.getByRole('dialog').textContent).not.toMatch(/[→›‹]/)
+    void d
+  })
+
+  it('a time typed on the card saves itself when you leave it, and says so', async () => {
+    const d = await open()
+    await userEvent.clear(d.getByLabelText('from'))
+    await userEvent.type(d.getByLabelText('from'), '1130{Enter}')
+    expect(db.save).toHaveBeenCalledWith('stops', expect.objectContaining({ id: 's1', time: '11:30' }))
+    expect(d.getByLabelText('from')).toHaveValue('11:30')
+    expect(await d.findByText('saved')).toBeInTheDocument()
+  })
+
+  it('a time that is not a time goes back to what it was', async () => {
+    const d = await open()
+    await userEvent.clear(d.getByLabelText('from'))
+    await userEvent.type(d.getByLabelText('from'), 'soon{Enter}')
+    expect(db.save).not.toHaveBeenCalled()
+    expect(d.getByLabelText('from')).toHaveValue('10:00')
+  })
+
+  it('status is three bracketed words; the one it is is pressed, and a tap saves another', async () => {
+    const d = await open()
+    const status = within(d.getByRole('group', { name: 'status' }))
+    expect(status.getAllByRole('button').map((b) => b.textContent)).toEqual(['idea', 'to book', 'booked'])
+    expect(status.getByRole('button', { name: 'to book' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(status.getByRole('button', { name: 'booked' }))
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', status: 'booked' })
+  })
+
+  it('a note is to do or done, and tapping the one it is makes it a plain note again', async () => {
+    db.stops = [stop({ id: 's1', trip_id: 'lap', kind: 'note', title: 'arktikum', day: '2027-02-08', status: 'to_book' })]
+    const d = await open()
+    const status = within(d.getByRole('group', { name: 'status' }))
+    expect(status.getAllByRole('button').map((b) => b.textContent)).toEqual(['to do', 'done'])
+    await userEvent.click(status.getByRole('button', { name: 'to do' }))
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', status: 'idea' })
+  })
+
+  it('ref and notes are written straight on the card', async () => {
+    const d = await open()
+    await userEvent.type(d.getByLabelText('ref'), 'XY9{Enter}')
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', ref: 'XY9' })
+    await userEvent.type(d.getByLabelText('notes'), 'bring the museum card')
+    await userEvent.tab()
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', notes: 'bring the museum card' })
+  })
+
+  it('"show on map" closes the card and shows the place on that day\'s map', async () => {
+    const d = await open()
+    await userEvent.click(d.getByRole('button', { name: 'show on map' }))
     const u = new URL('http://x' + screen.getByTestId('loc').textContent)
     expect(u.pathname).toBe('/trip/lap')
     expect(Object.fromEntries(u.searchParams)).toEqual({ tab: 'map', day: '2027-02-08', pin: 's1' })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('its day and trip are right there to change, with "no date" to make it an idea again', async () => {
-    const d = await open()
-    expect(screen.getAllByRole('dialog')).toHaveLength(1)
-    expect(d.getByLabelText('day')).toHaveValue('2027-02-08')
-    expect(within(d.getByLabelText('day')).getByRole('option', { name: 'no date' })).toBeInTheDocument()
-    expect(d.getByLabelText('trip')).toHaveValue('lap')
-  })
-
-  it('a new day moves it there, keeping everything else', async () => {
-    const d = await open()
-    await userEvent.selectOptions(d.getByLabelText('day'), '2027-02-10')
-    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', day: '2027-02-10', position: 0, saved: false })
-  })
-
-  it('"no date" takes it off the plan and keeps it as an idea', async () => {
-    const d = await open()
-    await userEvent.selectOptions(d.getByLabelText('day'), '')
-    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', day: null, end_date: null, position: 0, saved: true })
-  })
-
-  it('"ticket" opens the file picker', async () => {
+  it('"attach a ticket" opens the file picker', async () => {
     const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
     const d = await open()
-    await userEvent.click(d.getByRole('button', { name: 'ticket' }))
+    await userEvent.click(d.getByRole('button', { name: 'attach a ticket' }))
     expect(click).toHaveBeenCalled()
     click.mockRestore()
   })
 
-  it('when and where follow as rows', async () => {
+  it('where it is follows as a row', async () => {
     const d = await open()
-    expect(d.getByText('mon 8 feb · 10:00')).toBeInTheDocument()
     expect(d.getByText('Arktikum, Pohjoisranta 4')).toBeInTheDocument()
   })
 
-  it('a journey with no spot on the map says so: "map" is off and the card offers to add a location', async () => {
+  it('a journey with no spot on the map says so: "show on map" is off and the card offers to add a location', async () => {
     db.stops = [stop({ id: 's1', trip_id: 'lap', kind: 'journey', title: 'arktikum', day: '2027-02-08', place: null })]
     const d = await open()
-    expect(d.getByRole('button', { name: 'map' })).toBeDisabled()
+    expect(d.getByRole('button', { name: 'show on map' })).toBeDisabled()
     expect(d.getByRole('button', { name: 'directions' })).toBeDisabled()
-    await userEvent.click(d.getByRole('button', { name: 'add a location →' }))
+    await userEvent.click(d.getByRole('button', { name: 'add a location' }))
     expect(screen.getByRole('dialog', { name: 'edit' })).toBeInTheDocument()
   })
 
-  it('a place with only a name finds itself when "map" is pressed, keeps the spot and shows it', async () => {
+  it('a journey picks how it goes on the card', async () => {
+    db.stops = [stop({ id: 's1', trip_id: 'lap', kind: 'journey', mode: 'train', title: 'arktikum', day: '2027-02-08', time: '17:16', end_time: '18:40',
+      origin: place({ name: 'kansai airport' }), destination: place({ name: 'kyoto station' }) })]
+    show(<Opener id="s1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    const d = within(screen.getByRole('dialog', { name: 'kansai airport to kyoto station' }))
+    expect(d.getByText('train · mon 8 feb')).toBeInTheDocument()
+    expect(d.getByLabelText('departs')).toHaveValue('17:16')
+    expect(d.getByLabelText('arrives')).toHaveValue('18:40')
+    expect(d.getByText('1 h 24 min')).toBeInTheDocument()
+    const how = within(d.getByRole('group', { name: 'how' }))
+    expect(how.getByRole('button', { name: 'train' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(how.getByRole('button', { name: 'bus' }))
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', mode: 'bus' })
+  })
+
+  it('a stay shows check in and check out with their days and the nights between', async () => {
+    db.stops = [stop({ id: 's1', trip_id: 'lap', kind: 'stay', title: 'arktikum', day: '2027-02-07', time: '15:00', end_date: '2027-02-09', end_time: '10:00', place: place({ name: 'hostel' }) })]
+    const d = await open()
+    expect(d.getByText('stay · sun 7 feb')).toBeInTheDocument()
+    expect(d.getByLabelText('check in')).toHaveValue('15:00')
+    expect(d.getByLabelText('check out')).toHaveValue('10:00')
+    expect(d.getByText('sun 7 feb')).toBeInTheDocument()
+    expect(d.getByText('tue 9 feb')).toBeInTheDocument()
+    expect(d.getByText('2 nights')).toBeInTheDocument()
+    await userEvent.clear(d.getByLabelText('check out'))
+    await userEvent.type(d.getByLabelText('check out'), '11{Enter}')
+    expect(db.save).toHaveBeenCalledWith('stops', expect.objectContaining({ id: 's1', end_time: '11:00' }))
+  })
+
+  it('a place with only a name finds itself when "show on map" is pressed, keeps the spot and shows it', async () => {
     db.trips[0].base = place({ name: 'rovaniemi', lat: 66.5, lng: 25.7 })
     db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: { name: 'arktikum', city: 'rovaniemi', lat: null, lng: null } })]
     const found = place({ name: 'Arktikum', address: 'Pohjoisranta 4', lat: 66.51, lng: 25.73 })
     let answer!: (p: unknown) => void
     finder.locate.mockReturnValueOnce(new Promise((r) => { answer = r }))
     const d = await open()
-    await userEvent.click(d.getByRole('button', { name: 'map' }))
+    await userEvent.click(d.getByRole('button', { name: 'show on map' }))
     expect(d.getByRole('status')).toHaveTextContent('finding the place')
     expect(finder.locate).toHaveBeenCalledWith('arktikum rovaniemi', { lat: 66.5, lng: 25.7 })
     await act(async () => { answer(found) })
@@ -631,23 +693,25 @@ describe('a stop reads like a place card', () => {
     db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: null })]
     finder.locate.mockResolvedValueOnce(null)
     const d = await open()
-    await userEvent.click(d.getByRole('button', { name: 'map' }))
+    await userEvent.click(d.getByRole('button', { name: 'show on map' }))
     expect(await d.findByText("couldn't find arktikum on the map")).toBeInTheDocument()
     expect(db.save).not.toHaveBeenCalled()
-    expect(d.getByRole('button', { name: 'add a location →' })).toBeInTheDocument()
+    expect(d.getByRole('button', { name: 'add a location' })).toBeInTheDocument()
   })
 
   it('a place that has a spot never offers to add one', async () => {
     const d = await open()
-    expect(d.queryByRole('button', { name: 'add a location →' })).toBeNull()
+    expect(d.queryByRole('button', { name: 'add a location' })).toBeNull()
   })
 
-  it('offline, changing the day and ticket are off', async () => {
+  it('offline, nothing on the card changes, but the map still opens', async () => {
     db.canEdit = false
     const d = await open()
-    expect(d.queryByLabelText('day')).toBeNull()
-    expect(d.getByRole('button', { name: 'ticket' })).toBeDisabled()
-    expect(d.getByRole('button', { name: 'map' })).toBeEnabled()
+    expect(d.getByLabelText('from')).toBeDisabled()
+    expect(d.getByLabelText('ref')).toBeDisabled()
+    expect(within(d.getByRole('group', { name: 'status' })).getByRole('button', { name: 'booked' })).toBeDisabled()
+    expect(d.queryByRole('button', { name: 'attach a ticket' })).toBeNull()
+    expect(d.getByRole('button', { name: 'show on map' })).toBeEnabled()
   })
 })
 
@@ -1031,7 +1095,7 @@ describe("a flight's card", () => {
   const flight = (o: object = {}) => ({
     number: 'KL 1001', airline: 'KLM', status: 'Expected', live: true, checked_at: '2027-02-08T05:05:00.000Z',
     dep: end({ terminal: '2', gate: 'E21', desk: '9-16' }),
-    arr: end({ iata: 'LHR', airport: 'London Heathrow', scheduled: '2027-02-08 07:40+00:00', terminal: '4', belt: '8' }),
+    arr: end({ iata: 'LHR', airport: 'London Heathrow', city: 'London', scheduled: '2027-02-08 07:40+00:00', terminal: '4', belt: '8' }),
     ...o,
   })
   const at = (now: string) => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(now)) }
@@ -1045,11 +1109,19 @@ describe("a flight's card", () => {
   }
   const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
-  it('shows each end: terminal, gate and check-in leaving, terminal and belt landing', async () => {
+  it('shows each end by its code and city, with only its terminal and gate', async () => {
     at('2026-11-11T12:00:00Z')
     const d = await openFlight(flight())
-    expect(within(d).getByText('ams · terminal 2 · gate e21 · check-in 9-16')).toBeInTheDocument()
-    expect(within(d).getByText('lhr · terminal 4 · belt 8')).toBeInTheDocument()
+    expect(within(d).getByText('departs · ams')).toBeInTheDocument()
+    expect(within(d).getByText('lands · lhr')).toBeInTheDocument()
+    const times = within(within(d).getByRole('group', { name: 'times' }))
+    expect(times.getByText('amsterdam')).toBeInTheDocument()
+    expect(times.getByText('london')).toBeInTheDocument()
+    expect(times.queryByText(/schiphol|heathrow/i)).toBeNull()
+    expect(within(d).getByText('terminal 2')).toBeInTheDocument()
+    expect(within(d).getByText('gate e21')).toBeInTheDocument()
+    expect(within(d).getByText('terminal 4')).toBeInTheDocument()
+    expect(within(d).queryByText(/check-in|belt/)).toBeNull()
   })
 
   it('warns in words when the flight is delayed', async () => {
@@ -1093,16 +1165,16 @@ describe("a flight's card", () => {
     db.canEdit = false
     const d = await openFlight(flight())
     expect(within(d).getByRole('button', { name: 'check again' })).toBeDisabled()
-    expect(within(d).getByText('ams · terminal 2 · gate e21 · check-in 9-16')).toBeInTheDocument()
+    expect(within(d).getByText('gate e21')).toBeInTheDocument()
   })
 
   it('links to the flight on flightradar24, even before it was looked up', async () => {
     const d = await openFlight(null)
-    expect(within(d).getByRole('link', { name: 'flight status →' })).toHaveAttribute('href', 'https://www.flightradar24.com/data/flights/kl1001')
+    expect(within(d).getByRole('link', { name: 'flight status' })).toHaveAttribute('href', 'https://www.flightradar24.com/data/flights/kl1001')
   })
 
   it('shows none of this for a train', async () => {
     const d = await openFlight(null, 'train')
-    expect(within(d).queryByRole('link', { name: 'flight status →' })).toBeNull()
+    expect(within(d).queryByRole('link', { name: 'flight status' })).toBeNull()
   })
 })
