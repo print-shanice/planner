@@ -383,3 +383,10 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .itin-line:hover .line-remove, .itin-line:focus-within .line-remove, .line-remove.armed { opacity: 1; }
 .line-remove.armed { width: auto; padding: 0 10px; font: 500 12px/1 var(--f-mono); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
 @media (hover: none) { .line-remove { opacity: 1; } }
+
+/* carrying a line or a place: a black rule where it would land, and its name under the pointer */
+.drop-rule { position: relative; height: 0; margin: 0 0 0 4px; border-top: 2px solid var(--ink); }
+.drop-rule::before { content: ''; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+.dragging { opacity: .35; }
+.drag-ghost { position: fixed; z-index: 1000; pointer-events: none; max-width: 260px; padding: 6px 10px; border-radius: 8px; background: var(--ink); color: var(--card); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--float); text-transform: lowercase; }
+body.carrying, body.carrying * { cursor: grabbing !important; user-select: none; }

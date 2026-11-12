@@ -35,6 +35,24 @@ test.describe('the plan', () => {
     await expect(line.getByRole('textbox', { name: 'add to sun 21 feb' })).toHaveValue('')
   })
 
+  test('a line drags by its grip onto another day, landing where the rule shows', async ({ page }) => {
+    await open(page, '/trip/par')
+    const sat = page.getByRole('region', { name: 'saturday 20 february' })
+    const sun = page.getByRole('region', { name: 'sunday 21 february' })
+    const grip = sat.getByRole('button', { name: /^move du pain et des idées/ })
+    // both days in view
+    await grip.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+    const from = (await grip.boundingBox())!
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    const to = (await sun.locator('[data-drop-line]').first().boundingBox())!
+    await page.mouse.move(to.x + 40, to.y + 4, { steps: 12 })
+    await expect(page.locator('.drop-rule')).toHaveCount(1)
+    await page.mouse.up()
+    await expectLine(sun, 'du pain et des idées')
+    await expectLine(sat, 'du pain et des idées', false)
+  })
+
   test('an end before its start is refused with words', async ({ page }) => {
     await open(page, '/trip/par')
     const line = page.getByRole('group', { name: 'add to mon 22 feb' })

@@ -23,6 +23,7 @@ import { tint, dayLabel } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
 import { HighlightProvider } from './highlight'
+import { DragProvider } from '../itinerary/drag'
 import { ReadingDayProvider, useReadingDay } from './readingDay'
 import { OfflineBadge } from '../../components/OfflineBadge'
 import { CostForm } from '../money/CostForm'
@@ -158,6 +159,7 @@ function TripScreen() {
   const menuTitle = onDay ? `add to ${dayLabel(onDay)}` : 'add'
 
   return (
+    <DragProvider trip={trip}>
     <div className={`trip ${wide ? 'trip-wide' : 'trip-phone'} tab-is-${tab}${switching ? ' switching' : ''}`} style={{ ...tint(trip.color), ...(wide && planW != null ? { '--plan-w': `${planW}px` } : null) } as CSSProperties}>
       <section className="trip-main" ref={main}>
         {phoneMap ? (
@@ -188,5 +190,6 @@ function TripScreen() {
       <AddForms kind={kind} trip={owner} day={onDay} onClose={() => setKind(null)} />
       <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}><TripForm trip={trip} onDone={() => setEditing(false)} onDeleted={() => { window.location.hash = trip.parent_id ? `/trip/${trip.parent_id}` : '/' }} /></Sheet>
     </div>
+    </DragProvider>
   )
 }

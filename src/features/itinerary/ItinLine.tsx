@@ -129,7 +129,7 @@ function RemoveLine({ stop: s, info }: { stop: Stop; info: LineInfo }) {
     </button>
   )
 }
-const careful = (s: Stop, info: LineInfo) => s.status === 'booked' || info.tickets > 0 || !!info.cost
+export const careful = (s: Stop, info: LineInfo) => s.status === 'booked' || info.tickets > 0 || !!info.cost
 
 // one line of the doc: the time on the left, what it is on the right. a place or a note is live text you type over
 export function ItinLine(props: Props) {

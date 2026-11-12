@@ -1,8 +1,8 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import type { Stop, Trip } from '../../lib/types'
-import { useCosts, useFiles, useLinks, useSave, useStops, useTrips } from '../../lib/queries'
+import { useCosts, useFiles, useLinks, useStops, useTrips } from '../../lib/queries'
 import { lineInfo, type LineInfo } from '../../lib/lineInfo'
 import { loadState } from '../../lib/load'
 import { daysBetween, fmtDay, fmtRange, todayISO } from '../../lib/dates'
@@ -10,7 +10,10 @@ import { chosenDay, validDay } from '../../lib/agenda'
 import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, overviewItems, type ItinDay, type OverviewItem, type SideRow } from '../../lib/itinerary'
 import { dayLegs, type Leg } from '../../lib/legs'
 import { pinNumbers } from '../../lib/pins'
-import { positionsAfterMove } from '../../lib/order'
+import { useMove } from './useMove'
+import { useDrag } from './drag'
+import { useUndoRemove } from '../../lib/undo'
+import { stopTitle } from '../plan/StopRow'
 import { directionsUrl } from '../../lib/gmaps'
 import { walkWords } from '../../lib/google/routes'
 import { LoadState } from '../../components/States'
@@ -22,7 +25,7 @@ import { useStopSheet } from '../stops/StopSheet'
 import { useHighlight } from '../trip/highlight'
 import { useReadingDay } from '../trip/readingDay'
 import { useWalks, type WalkAnswer } from '../plan/useWalks'
-import { ItinLine } from './ItinLine'
+import { ItinLine, careful } from './ItinLine'
 import { AddLine } from './AddLine'
 import { ParentCalendar } from './ParentCalendar'
 import { PageTurn } from '../../components/PageTurn'
@@ -327,49 +330,43 @@ function useOnScreen<T extends Element>(): [React.RefObject<T>, boolean] {
 }
 
 function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, infoOf, holidays = [] }: DayProps) {
-  const save = useSave('stops')
   const [box, onScreen] = useOnScreen<HTMLElement>()
-  const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
+  const move = useMove(trip)
+  const drag = useDrag()
+  const removeLater = useUndoRemove('stops')
   const areas = dayAreas(day.entries)
   const side = day.owner.id !== trip.id ? day.owner : null
   const timed = day.entries.some((e) => e.kind === 'stop' && e.stop?.time)
   const legs = useMemo(() => dayLegs(day.entries), [day.entries])
   const numbers = useMemo(() => pinNumbers(day.entries), [day.entries])
   const walk = useWalks(legs, onScreen)
-  // only untimed lines move by hand; timed ones keep their time's place
-  const movable = day.entries.filter((e) => e.kind === 'stop' && e.stop && !e.stop.time).map((e) => e.stop!)
+  // every line moves (stays don't: their nights change in their card)
+  const lines = day.entries.filter((e) => e.kind === 'stop' && e.stop).map((e) => e.stop!)
+  const here = drag?.target?.day === day.date ? drag.target : null
 
-  function move(s: Stop, by: number) {
-    const from = movable.findIndex((x) => x.id === s.id)
-    const to = from + by
-    if (from < 0 || to < 0 || to >= movable.length) return
-    for (const c of positionsAfterMove(movable.map((x) => x.id), from, to, movable.map((x) => x.position))) save.mutate(c)
+  // one line up or down; past either end of the day it goes into the day before or after
+  function nudge(s: Stop, dir: -1 | 1) {
+    const i = lines.findIndex((x) => x.id === s.id)
+    if (dir < 0 && i > 0) { move(s, day.date, lines[i - 1].id); return }
+    if (dir > 0 && i < lines.length - 1) { move(s, day.date, lines[i + 2]?.id ?? null); return }
+    const days = [...document.querySelectorAll<HTMLElement>('[data-drop-day]')].map((el) => el.dataset.dropDay!)
+    const other = days[days.indexOf(day.date) + dir]
+    if (!other) return
+    const first = document.querySelector<HTMLElement>(`[data-drop-day="${other}"] [data-drop-line]`)?.dataset.dropLine ?? null
+    move(s, other, dir < 0 ? null : first)
+    const refocus = () => document.querySelector<HTMLElement>(`[data-line="${CSS.escape(s.id)}"] .grip`)?.focus()
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(refocus)
   }
   function key(e: KeyboardEvent<HTMLButtonElement>, s: Stop) {
-    if (e.key === 'ArrowUp') { e.preventDefault(); move(s, -1) }
-    if (e.key === 'ArrowDown') { e.preventDefault(); move(s, 1) }
-  }
-  // drag with a mouse, a finger or a pen
-  function grab(e: RPointerEvent<HTMLButtonElement>, s: Stop) {
-    if (!box.current) return
-    e.preventDefault()
-    const from = movable.findIndex((x) => x.id === s.id)
-    const mids = movable.map((x) => { const r = box.current!.querySelector<HTMLElement>(`[data-line="${x.id}"]`)?.getBoundingClientRect(); return r ? r.top + r.height / 2 : 0 })
-    const startY = e.clientY
-    let to = from
-    setDrag({ id: s.id, dy: 0 })
-    const moveTo = (ev: PointerEvent) => { const dy = ev.clientY - startY; to = mids.filter((m, i) => i !== from && m < mids[from] + dy).length; setDrag({ id: s.id, dy }) }
-    const up = () => {
-      window.removeEventListener('pointermove', moveTo); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up)
-      setDrag(null)
-      if (to !== from) for (const c of positionsAfterMove(movable.map((x) => x.id), from, to, movable.map((x) => x.position))) save.mutate(c)
-    }
-    window.addEventListener('pointermove', moveTo); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up)
+    if (e.key === 'ArrowUp') { e.preventDefault(); nudge(s, -1) }
+    if (e.key === 'ArrowDown') { e.preventDefault(); nudge(s, 1) }
+    // delete takes it away with undo, unless it's booked or holds tickets or a cost (those ask, from ×)
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !careful(s, infoOf(s))) { e.preventDefault(); removeLater(s.id, stopTitle(s).toLowerCase()) }
   }
 
   if (hidden) return <section id={`itin-${day.date}`} data-date={day.date} className="doc-day folded-out" ref={box} />
   return (
-    <section className={`doc-day${day.date === today ? ' is-today' : ''}`} id={`itin-${day.date}`} data-date={day.date} data-testid={`itin-${day.date}`} ref={box}
+    <section className={`doc-day${day.date === today ? ' is-today' : ''}`} id={`itin-${day.date}`} data-date={day.date} data-testid={`itin-${day.date}`} ref={box} data-drop-day={canEdit ? day.date : undefined}
       style={tint((side ?? trip).color)} aria-labelledby={`h-${day.date}`}>
       <header className="doc-day-head">
         <h2 className="doc-date" id={`h-${day.date}`}>{fmtDay(day.date, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
@@ -395,21 +392,26 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
           const s = e.stop!
           // the same number as its pin on the map: only lines with a spot on the map have one
           const seq = e.kind === 'stop' ? numbers.get(s.id) : undefined
-          const isMove = canEdit && e.kind === 'stop' && !s.time && movable.length > 1
+          const isMove = canEdit && e.kind === 'stop'
+          const name = stopTitle(s).toLowerCase() || 'line'
           const grip = isMove ? (
-            <Tooltip text="drag to reorder · or use ↑ and ↓"><button type="button" className="grip" aria-label={`move ${s.title || 'line'} (arrow keys)`} onPointerDown={(ev) => grab(ev, s)} onKeyDown={(ev) => key(ev, s)}>
+            <Tooltip text="drag to move, to any day · or ↑ and ↓"><button type="button" className="grip" aria-label={`move ${name} (arrow keys; delete removes it)`}
+              onPointerDown={(ev) => { if (!drag) return; ev.preventDefault(); ev.stopPropagation(); drag.begin({ kind: 'line', stop: s, label: name }, ev) }} onKeyDown={(ev) => key(ev, s)}>
               <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true"><g fill="currentColor">{[3, 9, 15].flatMap((y) => [<circle key={`a${y}`} cx="3" cy={y} r="1.4" />, <circle key={`b${y}`} cx="9" cy={y} r="1.4" />])}</g></svg>
             </button></Tooltip>
           ) : undefined
           const after = legs.filter((l) => l.from.id === s.id && l.fromKind === e.kind)
           return (
-            <div key={`${s.id}-${e.kind}`} className={drag?.id === s.id && e.kind === 'stop' ? 'dragging' : undefined} style={drag?.id === s.id && e.kind === 'stop' ? { transform: `translateY(${drag.dy}px)` } : undefined}>
+            <div key={`${s.id}-${e.kind}`} data-drop-line={e.kind === 'stop' ? s.id : undefined}
+              className={drag?.carrying?.kind === 'line' && drag.carrying.stop.id === s.id && e.kind === 'stop' ? 'dragging' : undefined}>
+              {here && e.kind === 'stop' && here.before === s.id && <div className="drop-rule" aria-hidden="true" />}
               <ItinLine editing={editing} entry={e} seq={seq} any={timed && e.kind === 'stop'} q={q} grip={grip} info={infoOf(s)}
                 current={current === s.id && e.kind !== 'staying' && e.kind !== 'checkout'} day={day.date} onOpen={onOpen} onLight={onLight} />
               {after.map((l) => <WalkLine key={l.to.id} leg={l} answer={walk(l.a, l.b)} />)}
             </div>
           )
         })}
+        {here && here.before === null && <div className="drop-rule" aria-hidden="true" />}
         {canEdit && <AddLine trip={day.owner} day={day.date} />}
       </div>
     </section>

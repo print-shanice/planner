@@ -268,19 +268,27 @@ it('between located lines, the walk is a link to google maps directions', () => 
   expect(walk.getAttribute('href')).toContain('google.com/maps/dir/')
 })
 
-it('untimed lines reorder by keyboard on their handle; timed lines have none', async () => {
+it('every line moves by keyboard on its handle, timed or not; delete removes it', async () => {
   db.stops = [
-    stop({ id: 'x', trip_id: 'tk', day: '2025-09-19', time: '09:00', title: 'timed' }),
-    stop({ id: 'p', trip_id: 'tk', day: '2025-09-19', title: 'first', position: 0 }),
-    stop({ id: 'q', trip_id: 'tk', day: '2025-09-19', title: 'second', position: 1 }),
+    stop({ id: 'a', trip_id: 'tk', day: '2025-09-19', time: '09:00', title: 'timed', position: 0 }),
+    stop({ id: 'b', trip_id: 'tk', day: '2025-09-19', title: 'second', position: 1 }),
+    stop({ id: 'c', trip_id: 'tk', day: '2025-09-19', time: '12:00', title: 'noon', position: 2 }),
+    stop({ id: 'd', trip_id: 'tk', day: '2025-09-20', time: '10:00', title: 'next day', position: 0 }),
   ]
   show(tokyo(), undefined, false)
-  expect(screen.queryByRole('button', { name: /move timed/ })).toBeNull()
-  const grip = screen.getByRole('button', { name: /move second/ })
-  grip.focus()
-  await userEvent.keyboard('{ArrowUp}')
-  expect(db.save).toHaveBeenCalledWith({ id: 'q', position: 0 })
-  expect(db.save).toHaveBeenCalledWith({ id: 'p', position: 1 })
+  screen.getByRole('button', { name: /move second/ }).focus()
+  await userEvent.keyboard('{ArrowDown}')
+  // under "noon" now, so it goes with it
+  expect(db.save).toHaveBeenCalledWith({ id: 'c', position: 1 })
+  expect(db.save).toHaveBeenCalledWith({ id: 'b', position: 2 })
+  db.save.mockClear()
+  screen.getByRole('button', { name: /move noon/ }).focus()
+  await userEvent.keyboard('{ArrowDown}')
+  // past the end of its day it goes into the next one, on top; 12:00 above 10:00 doesn't fit, so the time clears
+  expect(db.save).toHaveBeenCalledWith({ id: 'c', day: '2025-09-20', time: null, position: 0 })
+  screen.getByRole('button', { name: /move timed/ }).focus()
+  await userEvent.keyboard('{Delete}')
+  expect(db.remove).toHaveBeenCalledWith('a', 'timed')
 })
 
 it('a line with tickets says so', () => {
@@ -359,7 +367,7 @@ it("a line typed on a side trip's day goes to the side trip", async () => {
 it('phone reading opens activity details without entering edit mode', async () => {
   show(tokyo(), undefined, false)
   expect(screen.queryByRole('textbox', { name: 'change narita airport t2' })).toBeNull()
-  await userEvent.click(dayBox('2025-09-19').getByRole('button', { name: /narita airport t2/ }))
+  await userEvent.click(dayBox('2025-09-19').getByRole('button', { name: /^narita airport t2/ }))
   expect(db.open).toHaveBeenCalledWith('narita', '2025-09-19')
 })
 
