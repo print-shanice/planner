@@ -129,7 +129,17 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   }
   useEffect(() => () => readingRef.current.set(null), [])
 
+  // a scroll the planner makes itself (opening on a day, the strip, search) keeps the day it chose:
+  // lines loading above can nudge that day past the top line, and only your own scrolling should change it
+  const pinned = useRef(false)
+  useEffect(() => {
+    const yours = () => { pinned.current = false }
+    const kinds = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+    kinds.forEach((k) => window.addEventListener(k, yours, { capture: true, passive: true }))
+    return () => kinds.forEach((k) => window.removeEventListener(k, yours, { capture: true }))
+  }, [])
   function scrollTo(el: Element | null | undefined, block: ScrollLogicalPosition, smooth = true) {
+    pinned.current = true
     underBar(root.current)
     el?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block })
   }
@@ -153,6 +163,8 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
     landed.current = true
     const target = items.map(dateOf).find((d) => d >= (opensOn ?? ''))
     if (!target || target === dateOf(items[0])) return
+    pinned.current = true
+    setDay(target)
     const land = () => scrollTo(document.querySelector(`.doc [data-date="${target}"]`), 'start', false)
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => requestAnimationFrame(land))
     else land()
@@ -172,6 +184,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
     let frame = 0
     const check = () => {
       frame = 0
+      if (pinned.current) return
       const top = Math.max(scroller?.getBoundingClientRect().top ?? 0, coveredTop()) + 12
       let at: string | null = null
       for (const el of root.current?.querySelectorAll<HTMLElement>('.doc-day[data-date]') ?? []) {

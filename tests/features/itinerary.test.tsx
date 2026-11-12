@@ -443,6 +443,37 @@ it('scrolling Whole trip tracks the visible day after the header scrolls away', 
   } finally { bar.remove() }
 })
 
+describe('a day the planner scrolls to stays the day being read until you scroll yourself', () => {
+  // the days as they sit after the plan has moved: the 18th's lines grew, so the 19th slipped under the line
+  const shifted = () => ['2025-09-18', '2025-09-19', '2025-09-20'].forEach((date, i) => {
+    screen.getByTestId(`itin-${date}`).getBoundingClientRect = () => ({ top: [-300, 40, 500][i] } as DOMRect)
+  })
+  const frame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
+
+  it('opening on a day keeps that day when the page shifts under it', async () => {
+    show(tokyo(), '/trip/tk?tab=itinerary&day=2025-09-19', false)
+    await vi.waitFor(() => expect(day()).toBe('2025-09-19'))
+    shifted()
+    fireEvent.scroll(window)
+    await frame(); await frame()
+    expect(day()).toBe('2025-09-19')
+    // your own scrolling takes over again
+    fireEvent.wheel(window)
+    fireEvent.scroll(window)
+    await vi.waitFor(() => expect(day()).toBe('2025-09-18'))
+  })
+
+  it('a day picked in the strip stays picked while the plan moves there', async () => {
+    show(tokyo(), undefined, false)
+    await userEvent.click(strip().getByRole('button', { name: /20 september/ }))
+    expect(day()).toBe('2025-09-20')
+    shifted()
+    fireEvent.scroll(window)
+    await frame(); await frame()
+    expect(day()).toBe('2025-09-20')
+  })
+})
+
 it('keeps the reading day visible when the viewport changes its scroll container', async () => {
   let isWide = false
   const listeners = new Set<() => void>()
