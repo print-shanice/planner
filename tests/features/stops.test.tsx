@@ -28,6 +28,8 @@ vi.mock('../../src/lib/queries', async () => {
 vi.mock('../../src/lib/id', () => ({ newId: () => 'new-id' }))
 const photon = vi.hoisted(() => ({ search: vi.fn(() => Promise.resolve([] as unknown[])) }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchPlaces: photon.search }))
+const finder = vi.hoisted(() => ({ locate: vi.fn() }))
+vi.mock('../../src/lib/locate', () => ({ locate: finder.locate }))
 const tickets = vi.hoisted(() => ({ open: vi.fn(), keep: vi.fn(() => Promise.resolve()) }))
 vi.mock('../../src/lib/ticketCache', () => ({ openTicket: tickets.open, keepTickets: tickets.keep }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => db.canEdit }))
@@ -585,13 +587,39 @@ describe('a stop reads like a place card', () => {
     expect(d.getByText('Arktikum, Pohjoisranta 4')).toBeInTheDocument()
   })
 
-  it('a place with no spot on the map says so: "map" is off and the card offers to add a location', async () => {
-    db.stops = [stop({ id: 's1', trip_id: 'lap', kind: 'stay', title: 'arktikum', day: '2027-02-08', end_date: '2027-02-10', place: null })]
+  it('a journey with no spot on the map says so: "map" is off and the card offers to add a location', async () => {
+    db.stops = [stop({ id: 's1', trip_id: 'lap', kind: 'journey', title: 'arktikum', day: '2027-02-08', place: null })]
     const d = await open()
     expect(d.getByRole('button', { name: 'map' })).toBeDisabled()
     expect(d.getByRole('button', { name: 'directions' })).toBeDisabled()
     await userEvent.click(d.getByRole('button', { name: 'add a location →' }))
     expect(screen.getByRole('dialog', { name: 'edit' })).toBeInTheDocument()
+  })
+
+  it('a place with only a name finds itself when "map" is pressed, keeps the spot and shows it', async () => {
+    db.trips[0].base = place({ name: 'rovaniemi', lat: 66.5, lng: 25.7 })
+    db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: { name: 'arktikum', city: 'rovaniemi', lat: null, lng: null } })]
+    const found = place({ name: 'Arktikum', address: 'Pohjoisranta 4', lat: 66.51, lng: 25.73 })
+    let answer!: (p: unknown) => void
+    finder.locate.mockReturnValueOnce(new Promise((r) => { answer = r }))
+    const d = await open()
+    await userEvent.click(d.getByRole('button', { name: 'map' }))
+    expect(d.getByRole('status')).toHaveTextContent('finding the place')
+    expect(finder.locate).toHaveBeenCalledWith('arktikum rovaniemi', { lat: 66.5, lng: 25.7 })
+    await act(async () => { answer(found) })
+    expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', place: found })
+    const u = new URL('http://x' + screen.getByTestId('loc').textContent)
+    expect(Object.fromEntries(u.searchParams)).toEqual({ tab: 'map', day: '2027-02-08', pin: 's1' })
+  })
+
+  it('a name that can\'t be found says so and still offers to add a location', async () => {
+    db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: null })]
+    finder.locate.mockResolvedValueOnce(null)
+    const d = await open()
+    await userEvent.click(d.getByRole('button', { name: 'map' }))
+    expect(await d.findByText("couldn't find arktikum on the map")).toBeInTheDocument()
+    expect(db.save).not.toHaveBeenCalled()
+    expect(d.getByRole('button', { name: 'add a location →' })).toBeInTheDocument()
   })
 
   it('a place that has a spot never offers to add one', async () => {

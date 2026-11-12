@@ -34,6 +34,9 @@ import { PlaceDetails } from './PlaceDetails'
 import { expenseCategory } from '../../lib/categories'
 import { SiteIcon } from '../saved/LinkCard'
 import { Help, Tooltip } from '../../components/Tooltip'
+import { Pending } from '../../components/Pending'
+import { locate } from '../../lib/locate'
+import { biasFor } from '../../lib/guess'
 
 const day = (d: string | null, t?: string | null) => (d ? [fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''), t].filter(Boolean).join(' · ') : t ?? '')
 
@@ -104,6 +107,8 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const remove = useRemove('stops')
   const [problem, setProblem] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
+  const [finding, setFinding] = useState(false)
+  const [missed, setMissed] = useState(false)
   // a cost being changed on the card, or 'new' for one being added to this booking
   const [costing, setCosting] = useState<Cost | 'new' | null>(null)
   const inspiration = (useLinks().data ?? []).filter((l) => l.stop_id === stop.id)
@@ -173,6 +178,20 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const what = stop.kind === 'place' ? stopSub(stop) : ''
   // without a spot on the map there's nothing for "map" to show; the card offers to add one instead
   const spot = [stop.place, stop.destination, stop.origin].some((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
+  // a place or stay known only by its name is looked up when "map" is pressed (near where its day happens), kept, then shown
+  const name = (stop.place?.name || stop.title).trim()
+  const city = stop.place?.city?.trim() ?? ''
+  const findable = !spot && canEdit && !!name && (stop.kind === 'place' || stop.kind === 'stay')
+  const findOnMap = () => run(async () => {
+    setFinding(true); setMissed(false)
+    try {
+      const q = city && !name.toLowerCase().includes(city.toLowerCase()) ? `${name} ${city}` : name
+      const found = home ? await locate(q, biasFor(home, trips, stops, stop.day)) : null
+      if (!found) { setMissed(true); return }
+      await save.mutateAsync({ id: stop.id, place: found })
+      showOnMap()
+    } finally { setFinding(false) }
+  })
 
   // the way on to the next stop of the day it was opened from (else its own day); the top trip owns the day's legs
   const on = openedOn ?? stop.day
@@ -196,12 +215,14 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
       {stop.place?.gid && <PlaceDetails place={stop.place} day={stop.day} />}
 
       <div className="stop-actions" role="group" aria-label="actions">
-        <button type="button" className="stop-action" disabled={!spot} onClick={showOnMap}><span className="ico"><Icon name="map" /></span>map</button>
+        <button type="button" className="stop-action" disabled={!(spot || findable) || finding} onClick={spot ? showOnMap : findOnMap}><span className="ico"><Icon name="map" /></span>map</button>
         {maps
           ? <a className="stop-action" href={maps} target="_blank" rel="noopener noreferrer"><span className="ico"><Icon name="ext" /></span>directions</a>
           : <button type="button" className="stop-action" disabled><span className="ico"><Icon name="ext" /></span>directions</button>}
         <div className="help-row"><Tooltip text="attach a ticket or booking confirmation · PDF or image, up to 20 MB"><button type="button" className="stop-action" disabled={!canEdit} onClick={() => picker.current?.open()}><span className="ico"><Icon name="upload" /></span>ticket</button></Tooltip><Help label="about ticket uploads">attach a ticket or booking confirmation · PDF or image, up to 20 MB</Help></div>
       </div>
+      {finding && <Pending label="finding the place" />}
+      {missed && <p className="warn-line" role="alert">{`couldn't find ${name.toLowerCase()} on the map`}</p>}
 
       {canEdit && (
         <div className="when-row plan-row" role="group" aria-label="when">
