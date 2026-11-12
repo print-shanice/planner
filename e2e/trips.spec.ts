@@ -72,13 +72,10 @@ test.describe('trips', () => {
 })
 
 test.describe('moving between things', () => {
-  test('a trip ends with the trips either side of it; a side trip has none, it lives under its trip', async ({ page }) => {
+  test('plans have no other-trips footer on either a trip or a side trip', async ({ page }) => {
     await open(page, '/trip/eu')
-    const turn = page.getByRole('navigation', { name: 'other trips' })
-    await expect(turn.getByRole('link', { name: /lisbon long weekend/ })).toBeVisible()
-    await expect(turn.getByRole('link', { name: /greek islands/ })).toBeVisible()
-    await turn.getByRole('link', { name: /greek islands/ }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'greek islands' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'euro summer' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'other trips' })).toHaveCount(0)
     await open(page, '/trip/par')
     await expect(page.getByRole('heading', { level: 1, name: 'paris' })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'other trips' })).toHaveCount(0)

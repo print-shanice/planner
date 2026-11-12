@@ -27,7 +27,6 @@ import { useWalks, type WalkAnswer } from '../plan/useWalks'
 import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
 import { ParentCalendar } from './ParentCalendar'
-import { PageTurn } from '../../components/PageTurn'
 import { CountryFlag } from '../../components/CountryFlag'
 import { countriesOn, holidaysOn, useHolidays, type Holiday } from '../../lib/holidays'
 import { countryName, tripCountries } from '../../lib/countries'
@@ -38,14 +37,6 @@ import { ClashRow } from '../trip/ClashRow'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { useCanEdit } from '../../lib/offline'
-
-// the trips either side of this one, in date order (side trips aren't stepped through: they live under their trip)
-function TripTurn({ trip, trips }: { trip: Trip; trips: Trip[] }) {
-  const tops = trips.filter((t) => !t.parent_id).sort((a, b) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name))
-  const at = tops.findIndex((t) => t.id === trip.id)
-  const turn = (t?: Trip) => t ? { kicker: t.start_date ? fmtDay(t.start_date, { day: 'numeric', month: 'short', year: t.start_date.slice(0, 4) === trip.start_date?.slice(0, 4) ? undefined : 'numeric' }) : 'no dates', name: t.name, to: `/trip/${t.id}` } : null
-  return <PageTurn label="other trips" prev={turn(tops[at - 1])} next={turn(tops[at + 1])} up={{ to: '/', name: 'all trips' }} />
-}
 
 // only a fixed or sticky bar covers a scrolled day
 function coveredTop() {
@@ -283,7 +274,6 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
         return <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
           hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} />
       })}
-      {!trip.parent_id && <TripTurn trip={trip} trips={trips} />}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>
