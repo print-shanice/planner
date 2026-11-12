@@ -14,7 +14,8 @@ import { FilesSection, filesOf } from './FilesSection'
 import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
 import { stopTitle } from '../plan/StopRow'
-import { FlightFacts } from './FlightFacts'
+import { FlightCheck } from './FlightFacts'
+import { statusWord } from '../../lib/flight'
 import { hostOf as host } from '../../lib/embed'
 import { Sheet } from '../../components/Sheet'
 import { CaptureForm } from '../capture/CaptureForm'
@@ -138,13 +139,14 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
     if (to !== stop.status) put({ status: to })
   }
   const flight = stop.kind === 'journey' && stop.mode === 'flight'
+  // how a looked-up flight is going ("landed", "delayed · leaves 16:45") reads in its label
+  const word = flight && stop.flight ? statusWord(stop.flight) : null
 
   return (
     <div className="stack stop-view card">
-      <p className="card-kicker mono-label">{kicker}</p>
+      <p className="card-kicker mono-label">{kicker}{word && <> · <span className={word.warn ? 'warn-line' : undefined}>{word.text}</span></>}</p>
       {stop.place?.gid && <PlaceDetails place={stop.place} day={stop.day} />}
       <CardTimes stop={stop} canEdit={canEdit} put={put} />
-      <FlightFacts stop={stop} />
 
       <div className="card-actions" role="group" aria-label="actions">
         {maps
@@ -167,6 +169,7 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
             <span className="card-line">
               <TextField label={flight ? 'flight number' : 'name'} value={stop.title} disabled={!canEdit} mono={flight} onSave={(title) => put({ title })} />
               {flight && canEdit && <button type="button" className="card-link" onClick={onEdit}>look up</button>}
+              {flight && <FlightCheck stop={stop} />}
             </span>
           </Row>
         )}

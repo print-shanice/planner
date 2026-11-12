@@ -2,22 +2,19 @@ import { useState } from 'react'
 import type { Stop } from '../../lib/types'
 import { Button } from '../../components/Button'
 import { useCanEdit } from '../../lib/offline'
-import { canCheck, flightError, flightNumber, statusWord, useFlightCheck } from '../../lib/flight'
+import { canCheck, flightError, flightNumber, useFlightCheck } from '../../lib/flight'
 
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
-// a flight's live line under its times: how it's going, when that was checked, and "check again" on the day.
-// its terminals and gates sit with the times above
-export function FlightFacts({ stop }: { stop: Stop }) {
+// around the flight (a day before to an hour after landing): when it was last checked and "check again",
+// in the flight's own row. how it's going sits in the card's label, its terminals and gates with the times
+export function FlightCheck({ stop }: { stop: Stop }) {
   const canEdit = useCanEdit()
   const { check, busy } = useFlightCheck(stop.id)
   const [note, setNote] = useState<string | null>(null)
-  if (stop.kind !== 'journey' || stop.mode !== 'flight') return null
-  const f = stop.flight
+  const f = stop.kind === 'journey' && stop.mode === 'flight' ? stop.flight : null
   const number = f?.number ?? flightNumber(stop.title)
-  if (!number) return null
-  const word = f && statusWord(f)
-  const live = f && canCheck(f, new Date())
+  if (!f || !number || !canCheck(f, new Date())) return null
 
   async function again() {
     setNote(null)
@@ -25,14 +22,11 @@ export function FlightFacts({ stop }: { stop: Stop }) {
     if (e) setNote(flightError(e, number!, stop.day ?? ''))
   }
 
-  if (!word && !live && !note) return null
   return (
-    <div className="card-live">
-      {word && <span className={`mono${word.warn ? ' warn-line' : ''}`}>{word.text}</span>}
-      {live && !f.dep.gate && <span className="mono muted">gate not out yet</span>}
-      {live && <span className="mono muted">checked {clock(f.checked_at)}</span>}
-      {live && <Button className="text-btn" busy={busy && 'checking'} disabled={!canEdit} onClick={() => void again()}>check again</Button>}
-      {note && <p className="warn-line" role="status">{note}</p>}
-    </div>
+    <>
+      <span className="mono muted card-checked">checked {clock(f.checked_at)}</span>
+      <Button className="text-btn" busy={busy && 'checking'} disabled={!canEdit} onClick={() => void again()}>check again</Button>
+      {note && <p className="warn-line card-note" role="status">{note}</p>}
+    </>
   )
 }

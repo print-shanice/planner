@@ -229,9 +229,6 @@
   .card-bits { font-size: 12px; }
   .card-between { padding-top: 28px; }
 }
-.card-live { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 18px; padding-bottom: 4px; border-bottom: 1px solid var(--line); font-size: 13px; }
-.card-live .warn-line { font-size: 13px; }
-.card-live > p { flex-basis: 100%; margin: 0; }
 /* secondary actions are words: underlined, no boxes, no arrows */
 .card-link, .text-btn.btn {
   display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: none; color: var(--ink);
@@ -244,7 +241,10 @@
 .card-rows > dt { padding-top: 16px; border-bottom: 1px solid var(--line); }
 .card-rows > dd { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; align-content: center; min-width: 0; min-height: 48px; margin: 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 @media (max-width: 480px) { .card-rows { grid-template-columns: 92px minmax(0, 1fr); } }
-.card-line { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
+.card-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; width: 100%; min-width: 0; }
+.card-line .card-checked { font-size: 12px; }
+.card-line .card-note { flex-basis: 100%; margin: 0 0 10px; }
+.card-kicker .warn-line { font-size: inherit; }
 .card-line .copy-text { flex: 1; min-width: 0; padding: 12px 0; overflow-wrap: anywhere; }
 .card-line .card-field { flex: 1; }
 .card-field {

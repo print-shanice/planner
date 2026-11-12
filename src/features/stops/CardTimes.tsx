@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Stop } from '../../lib/types'
 import { readTime } from '../../lib/time'
 import { fmtDay, nights } from '../../lib/dates'
-import { endBits } from '../../lib/flight'
+import { canCheck, endBits } from '../../lib/flight'
 import { journeyLength } from '../../lib/span'
 
 export const dayWords = (d: string) => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
@@ -60,7 +60,8 @@ export function CardTimes({ stop: s, canEdit, put }: { stop: Stop; canEdit: bool
     const flight = s.mode === 'flight'
     const from = (f?.dep.city || (flight && s.origin?.city) || s.origin?.name || '').toLowerCase()
     const to = (f?.arr.city || (flight && s.destination?.city) || s.destination?.name || '').toLowerCase()
-    const depBits = f ? endBits(f.dep) : []
+    // on the day, a gate that isn't out yet says so where the gate goes
+    const depBits = f ? [...endBits(f.dep), ...(!f.dep.gate && canCheck(f, new Date()) ? ['gate not out yet'] : [])] : []
     const arrBits = f ? endBits(f.arr) : []
     return (
       <div className="card-times" role="group" aria-label="times">

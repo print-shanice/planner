@@ -1018,6 +1018,21 @@ describe("a flight's card", () => {
     expect(within(d).queryByText(/check-in|belt/)).toBeNull()
   })
 
+  it('how the flight is going sits in its label, not in a section of its own', async () => {
+    at('2026-11-11T12:00:00Z')
+    const d = await openFlight(flight({ status: 'Arrived' }))
+    expect(within(d).getByText('flight · mon 8 feb', { exact: false }).closest('.card-kicker')).toHaveTextContent('flight · mon 8 feb · landed')
+    expect(d.querySelector('.card-live')).toBeNull()
+  })
+
+  it('"check again" and when it was checked sit in the flight row', async () => {
+    at('2027-02-08T05:30:00Z')
+    const d = await openFlight(flight())
+    const row = within(d).getByLabelText('flight number').closest('dd') as HTMLElement
+    expect(within(row).getByRole('button', { name: 'check again' })).toBeInTheDocument()
+    expect(within(row).getByText(/^checked /)).toBeInTheDocument()
+  })
+
   it('warns in words when the flight is delayed', async () => {
     at('2026-11-11T12:00:00Z')
     const d = await openFlight(flight({ status: 'Delayed', dep: end({ revised: '2027-02-08 16:45+01:00' }) }))
