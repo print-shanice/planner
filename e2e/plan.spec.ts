@@ -159,7 +159,7 @@ test.describe('the plan', () => {
     await expect(card.getByRole('button', { name: 'attach a ticket', exact: true })).toBeVisible()
     await expect(card).toContainText('sat 20 feb')
     await expect(card.getByLabel('from', { exact: true })).toHaveValue('10:00')
-    await expect(card.getByRole('link', { name: /^next · du pain et des idées/ })).toBeVisible()
+    await expect(card.getByRole('link', { name: /^next/ })).toHaveCount(0)
     await expect(card.getByLabel('day', { exact: true })).toHaveCount(0)
     await card.getByRole('button', { name: 'edit', exact: true }).click()
     const form = page.getByRole('dialog', { name: 'edit' })

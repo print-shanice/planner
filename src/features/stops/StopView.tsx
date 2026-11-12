@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { Cost, Member, Mode, Stop, StopStatus } from '../../lib/types'
 import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -16,9 +15,6 @@ import { Reviews } from './Reviews'
 import { saveError } from '../../lib/errors'
 import { stopTitle } from '../plan/StopRow'
 import { FlightFacts } from './FlightFacts'
-import { ancestors } from '../../lib/countries'
-import { dayEntries } from '../../lib/agenda'
-import { dayLegs, nextFrom, type Leg } from '../../lib/legs'
 import { hostOf as host } from '../../lib/embed'
 import { Sheet } from '../../components/Sheet'
 import { CaptureForm } from '../capture/CaptureForm'
@@ -26,13 +22,8 @@ import { CostForm } from '../money/CostForm'
 import { PlaceDetails } from './PlaceDetails'
 import { expenseCategory } from '../../lib/categories'
 import { SiteIcon } from '../saved/LinkCard'
-import { locate } from '../../lib/locate'
-import { biasFor } from '../../lib/guess'
 import { useSettle } from '../itinerary/useSettle'
 import { CardTimes, dayWords } from './CardTimes'
-
-// the next stop as the day lists it; a journey by where you board it
-const nextName = (l: Leg) => (l.to.kind === 'journey' ? l.b.name || stopTitle(l.to) : stopTitle(l.to) || l.b.name)
 
 // who a cost is for, in a few words
 export function splitLine(c: Cost, members: Member[]): string {
@@ -91,8 +82,6 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const settle = useSettle()
   const [problem, setProblem] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
-  const [finding, setFinding] = useState(false)
-  const [missed, setMissed] = useState(false)
   // a change on the card says so: "saving…", then "saved" for a moment
   const [saving, setSaving] = useState<'idle' | 'saving' | 'saved'>('idle')
   const quiet = useRef<ReturnType<typeof setTimeout>>()
@@ -101,7 +90,6 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
   const [costing, setCosting] = useState<Cost | 'new' | null>(null)
   const inspiration = (useLinks().data ?? []).filter((l) => l.stop_id === stop.id)
   const picker = useRef<{ open: () => void }>(null)
-  const navigate = useNavigate()
   // every cost attached to this booking (a deposit and a balance can be two), oldest first
   const linked = costs.filter((c) => c.stop_id === stop.id).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
   const maps = stop.kind === 'journey' ? gmapsUrl(stop) : directionsUrl(stop.place)
@@ -136,34 +124,8 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
     onClose()
   })
 
-  // the place on its day's map, with its card open
-  const showOnMap = () => {
-    const q = new URLSearchParams({ tab: 'map', ...(stop.day ? { day: stop.day } : {}), pin: stop.id })
-    onClose()
-    navigate(`/trip/${stop.trip_id}?${q}`)
-  }
-  // without a spot on the map there's nothing to show; the card offers to add one instead
+  // without a spot on the map there's nothing to give directions to; the card offers to add one instead
   const spot = [stop.place, stop.destination, stop.origin].some((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
-  // a place or stay known only by its name is looked up when "show on map" is pressed (near where its day happens), kept, then shown
-  const name = (stop.place?.name || stop.title).trim()
-  const city = stop.place?.city?.trim() ?? ''
-  const findable = !spot && canEdit && !!name && (stop.kind === 'place' || stop.kind === 'stay')
-  const findOnMap = () => run(async () => {
-    setFinding(true); setMissed(false)
-    try {
-      const q = city && !name.toLowerCase().includes(city.toLowerCase()) ? `${name} ${city}` : name
-      const found = home ? await locate(q, biasFor(home, trips, stops, stop.day)) : null
-      if (!found) { setMissed(true); return }
-      await save.mutateAsync({ id: stop.id, place: found })
-      showOnMap()
-    } finally { setFinding(false) }
-  })
-
-  // the way on to the next stop of the day it was opened from (else its own day); the top trip owns the day's legs
-  const on = openedOn ?? stop.day
-  const top = ancestors(stop.trip_id, trips)[0] ?? home
-  const leg = on && top ? nextFrom(stop.id, dayLegs(dayEntries(top, trips, stops, on))) : null
-  const next = leg ? nextName(leg).toLowerCase() : ''
 
   const what = stop.kind === 'journey' ? MODES.find(([m]) => m === stop.mode)?.[1] ?? 'car' : stop.kind === 'place' ? stop.category ?? 'place' : stop.kind
   const kicker = `${what} · ${stop.day ? dayWords(stop.day) : 'no date'}`
@@ -185,13 +147,10 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
       <FlightFacts stop={stop} />
 
       <div className="card-actions" role="group" aria-label="actions">
-        <button type="button" className="card-link" disabled={!(spot || findable) || finding} onClick={spot ? showOnMap : findOnMap}>show on map</button>
         {maps
           ? <a className="card-link" href={maps} target="_blank" rel="noopener noreferrer">{directionsLabel}</a>
           : <button type="button" className="card-link" disabled>{directionsLabel}</button>}
       </div>
-      {finding && <Pending label="finding the place" />}
-      {missed && <p className="warn-line" role="alert">{`couldn't find ${name.toLowerCase()} on the map`}</p>}
 
       <dl className="card-rows">
         {stop.kind === 'journey' && (
@@ -227,11 +186,6 @@ export function StopView({ stop, day: openedOn, onEdit, onClose }: Props) {
             ))}
           </span>
         </Row>
-        {next && leg && (
-          <Row label="next">
-            <a className="card-link" href={directionsUrl(leg.b) ?? undefined} target="_blank" rel="noopener noreferrer" aria-label={`next · ${next}`}>{next}</a>
-          </Row>
-        )}
         {stop.kind !== 'note' && (
           <Row label="ref">
             <span className="card-line">
