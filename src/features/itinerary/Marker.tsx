@@ -47,7 +47,11 @@ export function Marker({ stop: s, kind, seq }: { stop: Stop; kind: DayEntry['kin
     setOpen(false)
     if (k === s.kind) return
     if (k === 'place') { save.mutate({ id: s.id, kind: 'place', mode: null }); find(s) }
-    else if (k === 'journey') save.mutate({ id: s.id, kind: 'journey', mode: guessKind(s.title).mode ?? 'train', place: null })
+    else if (k === 'journey') {
+      // its words pick the mode (a grab is a car: no mode); words that say nothing make it a train
+      const g = guessKind(s.title)
+      save.mutate({ id: s.id, kind: 'journey', mode: g.kind === 'journey' ? g.mode : 'train', place: null })
+    }
     else save.mutate({ id: s.id, kind: 'note', place: null, mode: null })
   }
 

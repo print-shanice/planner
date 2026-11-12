@@ -23,11 +23,12 @@ import { flightError, flightNumber, toDraft, useFlightLookup, type Flight } from
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: (added?: { id: string; day: string | null }) => void }
 
-const MODES: Mode[] = ['flight', 'train', 'bus', 'ferry']
+// a car (grab, taxi, driving) has no mode of its own: null
+const MODES: (Mode | null)[] = ['flight', 'train', 'bus', 'ferry', null]
 
 type Draft = {
   title: string; place: Place | null; day: string; time: string; end_date: string; end_time: string
-  mode: Mode; origin: Place | null; destination: Place | null; status: StopStatus; ref: string; url: string; notes: string
+  mode: Mode | null; origin: Place | null; destination: Place | null; status: StopStatus; ref: string; url: string; notes: string
   category: string
   // a looked-up flight; dropped on save once the number no longer matches it
   flight: Flight | null
@@ -36,7 +37,7 @@ type Draft = {
 function seed(s: Stop): Draft {
   return {
     title: s.title ?? '', place: s.place, day: s.day ?? '', time: s.time ?? '', end_date: s.end_date ?? '', end_time: s.end_time ?? '',
-    mode: s.mode ?? 'train', origin: s.origin, destination: s.destination, status: s.status ?? 'idea',
+    mode: s.mode, origin: s.origin, destination: s.destination, status: s.status ?? 'idea',
     ref: s.ref ?? '', url: s.url ?? '', notes: s.notes ?? '', category: s.category ?? '',
     flight: s.flight ?? null,
   }
@@ -236,7 +237,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       {kind === 'journey' && (<>
         {q('how')}
         <div className="segmented modes" role="group" aria-label="mode">
-          {MODES.map((m) => <button key={m} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m} size={20} /><span>{m}</span></button>)}
+          {MODES.map((m) => <button key={m ?? 'car'} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m ?? 'car'} size={20} /><span>{m ?? 'car'}</span></button>)}
         </div>
         {d.mode === 'flight' && (<>
           <div className="flight-find">

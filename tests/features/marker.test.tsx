@@ -77,3 +77,16 @@ it('offline, a stay, or a journey with its stations: just the icon', () => {
   show(stop({ id: 'f', kind: 'journey', mode: 'flight', origin: place(), destination: place() }))
   expect(screen.queryByRole('button')).toBeNull()
 })
+
+it('a ride (grab, taxi, uber…) has no mode and shows a car; making it getting around keeps it a car', async () => {
+  const { container } = show(stop({ id: 'g', kind: 'note', title: 'uber to the airport' }))
+  await userEvent.click(screen.getByRole('button', { name: 'what uber to the airport is: a note' }))
+  await userEvent.click(screen.getByRole('button', { name: /getting around/ }))
+  expect(db.save).toHaveBeenCalledWith({ id: 'g', kind: 'journey', mode: null, place: null })
+  container.remove()
+  const car = show(stop({ id: 'c', kind: 'journey', mode: null, title: 'grab to changi' }))
+  const carPath = car.container.querySelector('.cat path')?.getAttribute('d')
+  const train = show(stop({ id: 't', kind: 'journey', mode: 'train', title: 'tozai line' }))
+  expect(carPath).toBeTruthy()
+  expect(carPath).not.toBe(train.container.querySelector('.cat path')?.getAttribute('d'))
+})
