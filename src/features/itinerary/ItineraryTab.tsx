@@ -54,6 +54,8 @@ function underBar(root: HTMLElement | null) {
 // how long a line is held still before it's picked up
 const HOLD = 300
 
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '])
+
 const monthOf = (d: string) => fmtDay(d, { month: 'long' })
 
 // the whole trip as one document: every listed day open, its lines, the walks between them.
@@ -132,11 +134,26 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   // a scroll the planner makes itself (opening on a day, the strip, search) keeps the day it chose:
   // lines loading above can nudge that day past the top line, and only your own scrolling should change it
   const pinned = useRef(false)
+  // only scrolling counts (a click or typing doesn't): a wheel, a swipe, a scroll key outside a field, or the scrollbar
   useEffect(() => {
     const yours = () => { pinned.current = false }
-    const kinds = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
-    kinds.forEach((k) => window.addEventListener(k, yours, { capture: true, passive: true }))
-    return () => kinds.forEach((k) => window.removeEventListener(k, yours, { capture: true }))
+    const key = (e: globalThis.KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (SCROLL_KEYS.has(e.key) && !t?.closest?.('input, textarea, select, [contenteditable="true"]')) yours()
+    }
+    // pressing on the scrollbar lands on the scrolling box itself
+    const bar = (e: PointerEvent) => { const t = e.target as Element | null; if (t === document.documentElement || t?.classList?.contains('trip-main')) yours() }
+    const opts = { capture: true, passive: true }
+    window.addEventListener('wheel', yours, opts)
+    window.addEventListener('touchmove', yours, opts)
+    window.addEventListener('keydown', key, opts)
+    window.addEventListener('pointerdown', bar, opts)
+    return () => {
+      window.removeEventListener('wheel', yours, opts)
+      window.removeEventListener('touchmove', yours, opts)
+      window.removeEventListener('keydown', key, opts)
+      window.removeEventListener('pointerdown', bar, opts)
+    }
   }, [])
   function scrollTo(el: Element | null | undefined, block: ScrollLogicalPosition, smooth = true) {
     pinned.current = true

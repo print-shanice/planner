@@ -472,6 +472,20 @@ describe('a day the planner scrolls to stays the day being read until you scroll
     await frame(); await frame()
     expect(day()).toBe('2025-09-20')
   })
+
+  it('a click or typing is not scrolling: the day stays until a wheel, a swipe or a scroll key', async () => {
+    show(tokyo(), '/trip/tk?tab=itinerary&day=2025-09-19', false)
+    await vi.waitFor(() => expect(day()).toBe('2025-09-19'))
+    shifted()
+    fireEvent.pointerDown(dayBox('2025-09-19').getAllByRole('button')[0])
+    fireEvent.keyDown(document.body, { key: 'a' })
+    fireEvent.scroll(window)
+    await frame(); await frame()
+    expect(day()).toBe('2025-09-19')
+    fireEvent.keyDown(document.body, { key: 'PageDown' })
+    fireEvent.scroll(window)
+    await vi.waitFor(() => expect(day()).toBe('2025-09-18'))
+  })
 })
 
 it('keeps the reading day visible when the viewport changes its scroll container', async () => {
