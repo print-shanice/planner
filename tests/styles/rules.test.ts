@@ -20,7 +20,8 @@ const contrast = (a: string, b: string) => {
   return (x + 0.05) / (y + 0.05)
 }
 // every css rule as [selector, body]
-const rules = files('src/styles', '.css').flatMap((f) => read(f).split('}').map((r) => r.split('{').slice(-2) as [string, string]).filter((r) => r.length === 2))
+// comments are left out, so a comment above a rule doesn't become part of its selector
+const rules = files('src/styles', '.css').flatMap((f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').split('}').map((r) => r.split('{').slice(-2) as [string, string]).filter((r) => r.length === 2))
 
 const TRIP = Array.from({ length: 12 }, (_, i) => `--g${i}`)
 
@@ -51,15 +52,16 @@ it('green means booked or paid, nothing else', () => {
   for (const sel of green) expect(sel).toMatch(/\.ok\b|paid/)
 })
 
-const ruleFor = (sel: string) => rules.find(([s]) => s.trim() === sel)?.[1] ?? ''
+// every rule written for a selector, together (a selector can be styled in more than one place)
+const ruleFor = (sel: string) => rules.filter(([s]) => s.trim() === sel).map(([, body]) => body).join(';')
 
 it('icon buttons and the grip are 44px targets', () => {
   expect(ruleFor('.icon-btn')).toMatch(/width:\s*44px;\s*height:\s*44px/)
   expect(ruleFor('.grip')).toMatch(/width:\s*44px;\s*height:\s*44px/)
 })
 
-it('search boxes show focus, since their input hides its own outline', () => {
-  expect(ruleFor('.search-box:focus-within')).toMatch(/outline:\s*2px solid var\(--ink\)/)
+it('search boxes show focus, since their input hides its own outline: one ring, on the box\'s own edge', () => {
+  expect(ruleFor('.search-box:focus-within')).toMatch(/outline:\s*1\.5px solid var\(--ink\);\s*outline-offset:\s*-1\.5px/)
 })
 
 const hsl = (hex: string) => {
