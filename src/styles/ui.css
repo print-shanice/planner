@@ -152,7 +152,8 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(var(--plan-w, 600p
 /* controls that look small still take a 44px tap */
 .btn.small, .segmented button, .chip-pill { position: relative; }
 .btn.small::after, .segmented button::after, .chip-pill::after { content: ''; position: absolute; inset: -5px 0; }
-.search-box:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* one ring, on the box's own edge, like a field */
+.search-box:focus-within { outline: 1.5px solid var(--ink); outline-offset: -1.5px; }
 .maplibregl-ctrl-group button { width: 44px !important; height: 44px !important; }
 
 /* form footer: problem line, extra actions, then save */

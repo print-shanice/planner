@@ -3,7 +3,6 @@
 .itin-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding-top: 4px; }
 .itin-search { display: flex; align-items: center; gap: 2px; }
 .itin-search .search-box { flex: 1; min-width: 0; background: var(--soft); }
-.itin-search .search-box:focus-within { outline: 2px solid var(--ink); }
 .itin-search .search-box input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
 .match-count { flex: none; padding-right: 8px; font-size: 14px; white-space: nowrap; }
 .itin-strip { position: static; margin: 0 -16px; padding: 2px 16px 0; background: none; scroll-padding-inline: 16px; }
