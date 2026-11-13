@@ -1,4 +1,5 @@
 import type { Place } from './types'
+import { distanceKm } from './geo'
 
 const ROUTER = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot'
 const r5 = (x: number) => Number(x.toFixed(5))
@@ -9,11 +10,7 @@ export function hasPoint(p: Place | null | undefined): p is Place & { lat: numbe
 
 // two points this close are one place (an airport and its station's platform), not a walk
 export function tooClose(a: Place, b: Place): boolean {
-  if (!hasPoint(a) || !hasPoint(b)) return false
-  const rad = Math.PI / 180
-  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2
-  return 2 * 6371000 * Math.asin(Math.sqrt(h)) < 150
+  return hasPoint(a) && hasPoint(b) && distanceKm(a, b) < 0.15
 }
 
 export function walkKey(a: Place, b: Place): string | null {

@@ -2,12 +2,11 @@ import type { Place } from './types'
 import { googleConfigured } from './google/config'
 import { PlaceSession } from './google/places'
 import { searchSpots } from './photon'
-import { distanceKm, pickGuess } from './guess'
+import { pickGuess } from './guess'
+import { distanceKm, type Point } from './geo'
 import { normal } from './itinerary'
 import { hasPoint } from './walk'
 import { todayISO } from './dates'
-
-type Point = { lat: number; lng: number }
 
 // a day trip out of town still counts (kamakura from a tokyo bed); the same name in another country doesn't
 const KM = 100

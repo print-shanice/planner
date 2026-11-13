@@ -2,17 +2,9 @@ import type { Place, Stop, Trip } from './types'
 import { hasPoint } from './walk'
 import { ancestors, descendants } from './countries'
 import { normal } from './itinerary'
-
-type Point = { lat: number; lng: number }
+import { distanceKm, type Point } from './geo'
 
 const KM = 20
-
-export function distanceKm(a: Point, b: Point): number {
-  const rad = Math.PI / 180
-  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2
-  return 2 * 6371 * Math.asin(Math.sqrt(h))
-}
 
 // a typed line gets a place only when one is close by and plainly the same thing
 export function pickGuess(title: string, results: Place[], near: Point | null): Place | null {

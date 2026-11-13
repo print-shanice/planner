@@ -1,5 +1,6 @@
 import type { Place, Review, Stop, Trip } from './types'
 import { countryName, firstVisits } from './countries'
+import { distanceKm } from './geo'
 
 // what the travels scrapbook shows. only what has happened counts: a journey once its day has come,
 // a country once you've been (the globe's own rule)
@@ -14,13 +15,7 @@ const at = (p: Place | null): LngLat | null =>
   p && Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat!) <= 90 && Math.abs(p.lng!) <= 180 ? [p.lng!, p.lat!] : null
 
 // the straight line over the earth, in km
-export function km(a: LngLat, b: LngLat): number {
-  const r = (d: number) => (d * Math.PI) / 180
-  const dLat = r(b[1] - a[1])
-  const dLng = r(b[0] - a[0])
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a[1])) * Math.cos(r(b[1])) * Math.sin(dLng / 2) ** 2
-  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)))
-}
+export const km = (a: LngLat, b: LngLat): number => distanceKm({ lng: a[0], lat: a[1] }, { lng: b[0], lat: b[1] })
 
 const nameOf = (p: Place | null) => (p?.city || p?.name || '').toLowerCase()
 
