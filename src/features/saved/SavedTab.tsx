@@ -22,6 +22,8 @@ import { stopTitle } from '../plan/stopText'
 import { LinkCard } from './LinkCard'
 import { JotLine } from './JotLine'
 import { Help, Tooltip } from '../../components/Tooltip'
+import { Pending } from '../../components/Pending'
+import { useLocating } from '../../lib/locating'
 
 // put an idea on a day right from its row: the trip's days, or any date when the trip has none yet
 export function DayPick({ stop, home, label = 'add to day' }: { stop: Stop; home: Trip; label?: string }) {
@@ -43,6 +45,8 @@ export function DayPick({ stop, home, label = 'add to day' }: { stop: Stop; home
 
 function IdeaRow({ stop, trips, links }: { stop: Stop; trips: Trip[]; links: Link[] }) {
   const sheet = useStopSheet()
+  // the trip's place finder is looking this one up in the background
+  const looking = useLocating(stop.id)
   const home = trips.find((t) => t.id === stop.trip_id)
   const c = categoryOf(stop)
   const n = links.filter((l) => l.stop_id === stop.id).length
@@ -56,7 +60,7 @@ function IdeaRow({ stop, trips, links }: { stop: Stop; trips: Trip[]; links: Lin
       <Chip stop={stop} quiet />
       <button type="button" className="doc-row-main" onClick={() => sheet?.openStop(stop.id)}>
         <span className="doc-row-title">{stopTitle(stop)}</span>
-        {sub && <span className="muted">{sub}</span>}
+        {looking ? <Pending label="finding the place" /> : sub && <span className="muted">{sub}</span>}
       </button>
       {home && <DayPick stop={stop} home={home} />}
       <SaveFailed table="stops" id={stop.id} />

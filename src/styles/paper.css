@@ -278,7 +278,6 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .jot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .jot input { flex: 1; min-width: 0; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line); background: none; font-size: 16px; color: var(--ink); }
 .jot input:focus-visible { outline: none; border-bottom: 2px solid var(--ink); }
-.jot-finding { flex-basis: 100%; font-size: 13px; }
 
 /* a long trip's plan is its calendar; the month's side trips sit under it, then the day you picked */
 .parent-cal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding-top: 14px; }

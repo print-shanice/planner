@@ -1,4 +1,4 @@
-import { render, screen, within, cleanup } from '@testing-library/react'
+import { act, render, screen, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
@@ -19,6 +19,7 @@ vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import(
 import { LinksTab, SavedTab } from '../../src/features/saved/SavedTab'
 import { CaptureForm } from '../../src/features/capture/CaptureForm'
 import { failSave } from '../../src/lib/pending'
+import { setLocating } from '../../src/lib/locating'
 
 const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
 
@@ -237,13 +238,15 @@ it('an idea can be jotted down with just its name, no date and no form', async (
   expect(screen.getByRole('textbox', { name: 'jot an idea' })).toHaveValue('')
 })
 
-it('a jotted idea gets pinned to a matching place nearby, with its kind, keeping your words', async () => {
+it("a jotted idea is left to the trip's own place finder, and its row says so while it looks", async () => {
   db.trips = [{ ...lap, base: place({ lat: 66.5, lng: 25.7 }) }, trip({ id: 'par', name: 'paris' })]
-  spots.mockResolvedValueOnce([place({ name: 'Kahvila Kauppayhtiö', lat: 66.501, lng: 25.72, category: 'cafe' })])
   render(<MemoryRouter><SavedTab trip={db.trips[0]} /></MemoryRouter>)
   await userEvent.type(screen.getByRole('textbox', { name: 'jot an idea' }), 'kauppayhtiö{Enter}')
-  await vi.waitFor(() => expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ category: 'cafe', place: expect.objectContaining({ name: 'Kahvila Kauppayhtiö' }) })))
-  const pinned = db.save.mock.calls.at(-1)![0]
-  expect(pinned.title).toBeUndefined()
-  expect(pinned.place).not.toHaveProperty('category')
+  expect(db.save).toHaveBeenCalledTimes(1)
+  expect(spots).not.toHaveBeenCalled()
+  const row = screen.getByRole('button', { name: /kotisaari/ })
+  expect(within(row).queryByText('finding the place')).toBeNull()
+  act(() => setLocating('s9', true))
+  expect(within(row).getByText('finding the place')).toBeInTheDocument()
+  act(() => setLocating('s9', false))
 })
