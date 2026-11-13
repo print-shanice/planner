@@ -266,10 +266,8 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .section-wait { min-height: calc(100dvh - 260px); }
 .totoro-img { width: min(180px, 45vw); height: auto; mix-blend-mode: multiply; }
 
-/* a long trip's plan: months, its own days, and one row per side trip that opens it */
-.side-row { padding: 14px 0; }
+/* a side trip's colour, as a bar (a side trip line without flags) */
 .side-row-bar { flex: none; width: 4px; border-radius: 0; background: var(--c); }
-.side-row-name { font-family: var(--f-head); font-weight: 400; font-size: 32px; line-height: 1.25; letter-spacing: -0.015em; color: var(--ink); }
 .warn-text { color: var(--warn); font-weight: 600; }
 .side-now {
   display: grid; gap: 2px; margin: 16px 0 0; padding: 12px 14px; border-radius: 0; text-decoration: none; color: inherit;
