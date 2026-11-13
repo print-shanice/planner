@@ -6,7 +6,6 @@ import { newId } from '../../lib/id'
 import { formatMoney } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
 import { useToast } from '../../components/Toast'
-import { ChoiceMenu } from '../../components/ChoiceMenu'
 import { checkCost, costDraft, costValues } from '../stops/CostFields'
 
 // a cost typed straight into money: a name, an amount and its currency (the trip's to start with, kept for the next one)
@@ -23,7 +22,7 @@ export function AddCost({ trip }: { trip: Trip }) {
   const [problem, setProblem] = useState<string | null>(null)
   if (!canEdit) return null
   // the trip's own currency first, even without a live rate, then the rest
-  const choices = [trip.currency, ...currencyList(rates).filter((c) => c !== trip.currency)].map((c) => ({ value: c, label: c.toLowerCase() }))
+  const choices = [trip.currency, ...currencyList(rates).filter((c) => c !== trip.currency)]
 
   function add(e: FormEvent) {
     e.preventDefault()
@@ -43,12 +42,15 @@ export function AddCost({ trip }: { trip: Trip }) {
 
   return (
     <div className="add-cost">
-      <form className="jot" onSubmit={add}>
-        <input type="text" aria-label="add a cost" placeholder="add a cost…" value={title} autoComplete="off" enterKeyHint="next"
+      {/* three boxes, each plainly its own field, the currency picked like "show in" above */}
+      <form className="cost-line" onSubmit={add}>
+        <input type="text" className="input cost-name-in" aria-label="add a cost" placeholder="add a cost…" value={title} autoComplete="off" enterKeyHint="next"
           onChange={(e) => { setProblem(null); setTitle(e.target.value) }} />
-        <input type="text" className="jot-amount num" aria-label="amount" placeholder="0" value={amount} inputMode="decimal" autoComplete="off" enterKeyHint="done"
+        <input type="text" className="input cost-amount-in num" aria-label="amount" placeholder="0" value={amount} inputMode="decimal" autoComplete="off" enterKeyHint="done"
           onChange={(e) => { setProblem(null); setAmount(e.target.value) }} />
-        <ChoiceMenu label={currency.toLowerCase()} ariaLabel="currency" options={choices} onPick={setCurrency} className="jot-currency" />
+        <select className="input cur-select" aria-label="currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+          {choices.map((c) => <option key={c} value={c}>{c.toLowerCase()}</option>)}
+        </select>
         <button type="submit" className="btn small line-go" aria-label="add cost" disabled={!title.trim() && !amount.trim()}>add</button>
       </form>
       {problem && <p role="alert" className="warn-line">{problem}</p>}

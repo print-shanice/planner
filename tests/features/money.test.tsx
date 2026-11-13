@@ -410,18 +410,19 @@ describe('adding a cost right in money', () => {
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'riad', amount: 300, currency: 'MAD' }))
   })
 
-  it('the currency is the planner\'s own dropdown, starting on the trip\'s; another can be picked', async () => {
+  it('the currency is picked like the "show in" one above, starting on the trip\'s; the fields are boxes of their own', async () => {
     show(t)
-    const cur = screen.getByRole('button', { name: 'currency' })
-    expect(cur).toHaveTextContent('eur')
-    expect(screen.queryByRole('combobox', { name: 'currency' })).toBeNull()
-    await userEvent.click(cur)
-    await userEvent.click(within(screen.getByRole('listbox', { name: 'currency' })).getByText('gbp'))
-    expect(cur).toHaveTextContent('gbp')
+    const cur = screen.getByRole('combobox', { name: 'currency' })
+    expect(cur).toHaveDisplayValue('eur')
+    expect(cur).toHaveClass('input', 'cur-select')
+    expect(screen.getByRole('textbox', { name: 'add a cost' })).toHaveClass('input')
+    expect(screen.getByRole('textbox', { name: 'amount' })).toHaveClass('input')
+    expect(screen.getByRole('textbox', { name: 'add a cost' }).closest('form')).not.toHaveClass('jot')
+    await userEvent.selectOptions(cur, 'GBP')
     await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'tea')
     await userEvent.type(screen.getByRole('textbox', { name: 'amount' }), '4{Enter}')
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'tea', amount: 4, currency: 'GBP' }))
-    expect(cur).toHaveTextContent('gbp')
+    expect(cur).toHaveDisplayValue('gbp')
   })
 
   it('a missing or wrong amount says so and saves nothing', async () => {

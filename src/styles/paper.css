@@ -391,8 +391,11 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 .kind-filter button:hover { color: var(--ink); }
 .kind-filter button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 
-/* money: a cost typed in, name then amount */
-.add-cost .jot input.jot-amount { flex: 0 0 88px; text-align: right; }
+/* money: a cost typed in as three boxes (name, amount, currency) and add */
+.cost-line { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.cost-line .cost-name-in { flex: 1; min-width: 0; }
+.cost-line .cost-amount-in { flex: 0 0 84px; width: 84px; text-align: right; }
+.cost-line .cur-select { flex: none; }
+.cost-line .input:focus-visible { outline: none; border-color: var(--ink); }
 .add-cost .warn-line { margin: 6px 0 0; }
 .ideas .add-place + .link-list, .ideas .add-place + .empty { margin-top: 16px; }
-.add-cost .jot-currency { flex: none; min-height: 44px; }
