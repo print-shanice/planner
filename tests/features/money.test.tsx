@@ -410,6 +410,20 @@ describe('adding a cost right in money', () => {
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'riad', amount: 300, currency: 'MAD' }))
   })
 
+  it('the currency is the planner\'s own dropdown, starting on the trip\'s; another can be picked', async () => {
+    show(t)
+    const cur = screen.getByRole('button', { name: 'currency' })
+    expect(cur).toHaveTextContent('eur')
+    expect(screen.queryByRole('combobox', { name: 'currency' })).toBeNull()
+    await userEvent.click(cur)
+    await userEvent.click(within(screen.getByRole('listbox', { name: 'currency' })).getByText('gbp'))
+    expect(cur).toHaveTextContent('gbp')
+    await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'tea')
+    await userEvent.type(screen.getByRole('textbox', { name: 'amount' }), '4{Enter}')
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'tea', amount: 4, currency: 'GBP' }))
+    expect(cur).toHaveTextContent('gbp')
+  })
+
   it('a missing or wrong amount says so and saves nothing', async () => {
     show(t)
     await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'sauna{Enter}')

@@ -395,3 +395,4 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 .add-cost .jot input.jot-amount { flex: 0 0 88px; text-align: right; }
 .add-cost .warn-line { margin: 6px 0 0; }
 .ideas .add-place + .link-list, .ideas .add-place + .empty { margin-top: 16px; }
+.add-cost .jot-currency { flex: none; min-height: 44px; }
