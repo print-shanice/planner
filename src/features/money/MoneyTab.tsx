@@ -21,6 +21,7 @@ import { Pending } from '../../components/Pending'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { useSubmit } from '../../components/FormFooter'
 import { colourVar } from '../../lib/colors'
+import { Avatar } from '../../components/Avatar'
 import { Help, Tooltip } from '../../components/Tooltip'
 
 const LABEL = Object.fromEntries(CATEGORIES)
@@ -89,7 +90,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
     return formatMoney(converted ?? eur, converted == null ? 'EUR' : cur, { whole: true })
   }
   const faceColor = (id: string) => colourVar(members.find((m) => m.user_id === id)?.color)
-  const Face = ({ id }: { id: string }) => <span className="avatar" aria-hidden="true" style={{ background: faceColor(id) }}>{(members.find((m) => m.user_id === id)?.name || '?').slice(0, 1)}</span>
+  const Face = ({ id }: { id: string }) => <Avatar member={members.find((m) => m.user_id === id)} />
   // a breakdown row: its name and amount over a bar, paid in green and planned hatched, against the biggest row
   const byTrip = [trip, ...kids].map((x) => {
     const mine = x.id === trip.id ? costs.filter((c) => c.trip_id === trip.id) : costs.filter((c) => descendants(x.id, trips).includes(c.trip_id))

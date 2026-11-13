@@ -7,6 +7,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Switch } from '../../components/Switch'
 import { colourVar } from '../../lib/colors'
 import { Help, Tooltip } from '../../components/Tooltip'
+import { Avatar, memberName } from '../../components/Avatar'
 
 export type SplitMode = 'even' | 'some' | 'amounts'
 export type CostDraft = {
@@ -94,7 +95,7 @@ const SPLIT_HELP: Record<SplitMode, string> = {
   some: 'split equally between the people you select',
   amounts: 'enter each person’s share of the total',
 }
-const who = (m: Member) => (m.name || m.email).toLowerCase()
+const who = memberName
 
 // payment: the paid switch, shown between the amount and who paid
 type Props = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[]; rates: Rates | null; payment?: ReactNode; autoFocus?: boolean }
@@ -136,9 +137,9 @@ export function CostFields({ value: d, onChange, members, rates, payment, autoFo
           // who paid: tap a face
           <div className="stack-xs"><span className="label">paid by {people.find(m => m.user_id === d.paid_by) ? who(people.find(m => m.user_id === d.paid_by)!) : '…'}</span><div className="faces" role="group" aria-label="paid by">
             {people.map((m) => (
-              <Tooltip key={m.user_id!} text={`paid by ${who(m)}`}><button type="button" className="face" aria-label={(m.name || m.email).toLowerCase()} aria-pressed={d.paid_by === m.user_id}
+              <Tooltip key={m.user_id!} text={`paid by ${who(m)}`}><button type="button" className="face" aria-label={who(m)} aria-pressed={d.paid_by === m.user_id}
                 onClick={() => set({ paid_by: m.user_id! })} style={{ '--c': colourVar(m.color) } as CSSProperties}>
-                <span className="avatar">{(m.name || m.email).slice(0, 1)}</span>
+                <Avatar member={m} />
               </button></Tooltip>
             ))}
           </div></div>
@@ -155,7 +156,7 @@ export function CostFields({ value: d, onChange, members, rates, payment, autoFo
               <Tooltip key={m.user_id!} text={`for ${who(m)}`}><button type="button" className="face" aria-label={`for ${who(m)}`} aria-pressed={d.among.includes(m.user_id!)}
                 onClick={() => set({ among: d.among.includes(m.user_id!) ? d.among.filter((x) => x !== m.user_id) : [...d.among, m.user_id!] })}
                 style={{ '--c': colourVar(m.color) } as CSSProperties}>
-                <span className="avatar">{who(m).slice(0, 1)}</span>
+                <Avatar member={m} />
               </button></Tooltip>
             ))}
           </div>

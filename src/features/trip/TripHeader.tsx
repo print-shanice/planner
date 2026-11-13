@@ -14,7 +14,7 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
-import { colourVar } from '../../lib/colors'
+import { Avatar, memberName } from '../../components/Avatar'
 import { Tooltip } from '../../components/Tooltip'
 
 // where the trip is, right now and when you go: "par 11:02 · same time as you · usually 9° / 3°".
@@ -87,8 +87,8 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
           <Icon name="back" />{up && <CountryFlag code={flagsOf(up)[0]} />}<span>{upName}</span>
         </Link>
         {/* the people sharing the trip are also the way into its settings */}
-        <Tooltip text={`edit trip details · shared with ${members.map(m => m.name || m.email).join(', ')}`}><button type="button" className="avatars trip-people" aria-label="edit trip" disabled={!canEdit} onClick={onEdit}>
-          {members.map((m) => <span key={m.email} className="avatar" style={{ background: colourVar(m.color) }}>{(m.name || m.email).slice(0, 1)}</span>)}
+        <Tooltip text={`edit trip details · shared with ${members.map(memberName).join(', ')}`}><button type="button" className="avatars trip-people" aria-label="edit trip" disabled={!canEdit} onClick={onEdit}>
+          {members.map((m) => <Avatar key={m.email} member={m} />)}
         </button></Tooltip>
       </div>
       {route.length > 0 && (

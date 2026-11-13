@@ -10,11 +10,12 @@ import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
 import { SaveFailed } from '../../components/SaveFailed'
+import { Avatar, memberName } from '../../components/Avatar'
 import { useSwipeAway } from '../../lib/swipe'
 
-const who = (m: Member) => (m.name || m.email).toLowerCase()
+const who = memberName
 const Face = ({ m, ticked }: { m: Member; ticked?: boolean }) => (
-  <span className="avatar" style={{ background: colourVar(m.color) }}>{who(m).slice(0, 1)}{ticked && <span className="pack-face-tick"><Icon name="check" size={10} /></span>}</span>
+  <Avatar member={m}>{ticked && <span className="pack-face-tick"><Icon name="check" size={10} /></span>}</Avatar>
 )
 
 // whose a thing is, as faces: its owner's, or everyone's overlapping for a shared thing (a ✓ on whoever has packed it)
