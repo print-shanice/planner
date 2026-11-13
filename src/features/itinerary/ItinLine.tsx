@@ -10,6 +10,7 @@ import { Pill } from '../../components/Pill'
 import { Icon } from '../../components/Icon'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Pending } from '../../components/Pending'
+import { useArmed } from '../../components/TwoTapDelete'
 import { stopSub, stopTitle } from '../plan/stopText'
 import { readLine, type LineValues } from './LineEditor'
 import { categoryIcon, categoryOf } from '../../lib/categories'
@@ -112,12 +113,7 @@ function LineLinks({ info }: { info: LineInfo }) {
 // × at the end of a line: gone at once with undo. something booked, or holding tickets or a cost, asks once first
 function RemoveLine({ stop: s, info }: { stop: Stop; info: LineInfo }) {
   const removeLater = useUndoRemove('stops')
-  const [armed, setArmed] = useState(false)
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(false), 3000)
-    return () => clearTimeout(t)
-  }, [armed])
+  const [armed, setArmed] = useArmed()
   const title = stopTitle(s).toLowerCase()
   return (
     <button type="button" className={`icon-btn line-remove${armed ? ' armed' : ''}`} aria-label={`remove ${title}`} title="remove"

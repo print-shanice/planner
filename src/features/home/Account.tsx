@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../lib/auth'
 import { forgetDevice, useOnline } from '../../lib/offline'
@@ -7,6 +7,7 @@ import { Sheet } from '../../components/Sheet'
 import { Icon } from '../../components/Icon'
 import { Button, IconButton } from '../../components/Button'
 import { Copy } from '../../components/Copy'
+import { useArmed } from '../../components/TwoTapDelete'
 import { hasSaveKey, newSaveKey } from '../../lib/saveKey'
 import { Help } from '../../components/Tooltip'
 
@@ -61,13 +62,8 @@ function SaveKey({ online }: { online: boolean }) {
   const [key, setKey] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
-  const [armed, setArmed] = useState(false)
+  const [armed, setArmed] = useArmed()
   const replacing = !!key || has.data === true
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(false), 3000)
-    return () => clearTimeout(t)
-  }, [armed])
 
   async function make() {
     if (replacing && !armed) { setArmed(true); return }
