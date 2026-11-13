@@ -1,13 +1,12 @@
 import type { CSSProperties } from 'react'
 import { monthWeeks, type Span } from '../lib/calendar'
-import { fmtDay } from '../lib/dates'
+import { dayLabel, fmtDay } from '../lib/dates'
 import { Icon } from './Icon'
 import { CountryFlag } from './CountryFlag'
 import { colourVar } from '../lib/colors'
 
 export const tint = (color: number | null | undefined) => ({ '--c': colourVar(color) }) as CSSProperties
 const WEEKDAYS = ['m', 't', 'w', 't', 'f', 's', 's']
-export const dayLabel = (d: string) => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
 
 type Props = {
   // the month in the title

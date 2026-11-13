@@ -7,7 +7,6 @@ import { beforeByTime } from '../../lib/move'
 import { couldBeTime, readTime } from '../../lib/time'
 import { newId } from '../../lib/id'
 import { useWide } from '../../lib/useWide'
-import { dayLabel } from '../../components/MonthCalendar'
 import { Icon } from '../../components/Icon'
 import { useMove } from '../itinerary/useMove'
 import { useDrag } from '../itinerary/drag'
@@ -15,7 +14,7 @@ import { DayMenu, type DayChoice } from './DayMenu'
 import { newPlaceStop } from './newStop'
 import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
-import { fmtDay, tripDays } from '../../lib/dates'
+import { dayLabel, tripDays } from '../../lib/dates'
 import { gmapsUrl } from '../../lib/gmaps'
 import { asCategory, categoryOf } from '../../lib/categories'
 import { Button } from '../../components/Button'
@@ -28,8 +27,6 @@ import { PlaceDetails } from '../stops/PlaceDetails'
 
 // looking: a tap on the map is still being turned into a place name
 type Props = { trip: Trip; place: Place; stop?: Stop; day?: string | null; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
-
-const short = (d: string) => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
 
 // a picked pin or a found place: what it is, and the three things you'd do with it: look, plan it, go there
 export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking, onClose, onDone }: Props) {
@@ -82,7 +79,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   const maps = gmapsUrl(stop ?? ({ kind: 'place', place } as Stop))
   const fake = { kind: 'place', category: stop?.category ?? place.category ?? null } as Stop
   const sub = stop
-    ? [stop.day ? short(stop.day) : 'idea', stopSub(stop)].filter(Boolean).join(' · ')
+    ? [stop.day ? dayLabel(stop.day) : 'idea', stopSub(stop)].filter(Boolean).join(' · ')
     : [categoryOf(fake) === 'place' ? '' : categoryOf(fake), place.address].filter(Boolean).join(' · ')
 
   async function run(fn: () => Promise<unknown>) {

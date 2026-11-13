@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Stop } from '../../lib/types'
 import { readTime } from '../../lib/time'
-import { fmtDay, nights } from '../../lib/dates'
+import { dayLabel, nights } from '../../lib/dates'
 import { canCheck, endBits } from '../../lib/flight'
 import { journeyLength } from '../../lib/span'
-
-export const dayWords = (d: string) => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
 
 type Put = (changes: Partial<Stop>) => void
 
@@ -73,7 +71,7 @@ export function CardTimes({ stop: s, canEdit, put }: { stop: Stop; canEdit: bool
         <Between text={journeyLength(s)} />
         <End label={`${lands}${code(f?.arr.iata)}`} end>
           <TimeField label={lands} value={s.end_time} disabled={off} onSave={(end_time) => put({ end_time })} />
-          {s.end_date && s.end_date !== s.day && <span className="card-day">{dayWords(s.end_date)}</span>}
+          {s.end_date && s.end_date !== s.day && <span className="card-day">{dayLabel(s.end_date)}</span>}
           {to && <span className="card-place">{to}</span>}
           {arrBits.length > 0 && <span className="card-bits mono">{arrBits.map((b) => <span key={b}>{b}</span>)}</span>}
         </End>
@@ -86,12 +84,12 @@ export function CardTimes({ stop: s, canEdit, put }: { stop: Stop; canEdit: bool
       <div className="card-times" role="group" aria-label="times">
         <End label="check in">
           <TimeField label="check in" value={s.time} disabled={off} onSave={(time) => put({ time })} />
-          {s.day && <span className="card-day">{dayWords(s.day)}</span>}
+          {s.day && <span className="card-day">{dayLabel(s.day)}</span>}
         </End>
         <Between text={n ? `${n} ${n === 1 ? 'night' : 'nights'}` : null} />
         <End label="check out" end>
           <TimeField label="check out" value={s.end_time} disabled={off} onSave={(end_time) => put({ end_time })} />
-          {s.end_date && <span className="card-day">{dayWords(s.end_date)}</span>}
+          {s.end_date && <span className="card-day">{dayLabel(s.end_date)}</span>}
         </End>
       </div>
     )

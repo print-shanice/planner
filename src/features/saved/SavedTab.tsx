@@ -3,7 +3,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import type { Link, Stop, Trip } from '../../lib/types'
 import { useLinks, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
-import { fmtDay, tripDays } from '../../lib/dates'
+import { dayLabel, tripDays } from '../../lib/dates'
 import { loadState } from '../../lib/load'
 import { categoryOf } from '../../lib/categories'
 import { scheduleChange, unscheduled } from '../../lib/schedule'
@@ -34,7 +34,7 @@ export function DayPick({ stop, home, label = 'add to day' }: { stop: Stop; home
   return days.length ? (
     <Tooltip text="move this into the plan; its notes, tickets and links stay attached"><select className="text-select" aria-label={`${label}: ${stopTitle(stop)}`} value="" onChange={(e) => go(e.target.value)}>
       <option value="">{label}</option>
-      {days.map((d) => <option key={d} value={d}>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')}</option>)}
+      {days.map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
     </select></Tooltip>
   ) : (
     <label className="text-select date-pick"><span>{label}</span><input type="date" aria-label={`${label}: ${stopTitle(stop)}`} value="" onChange={(e) => go(e.target.value)} /></label>

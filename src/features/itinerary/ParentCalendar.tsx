@@ -4,7 +4,7 @@ import type { Stop, Trip } from '../../lib/types'
 import { innermostDay, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { chosenDay, dayEntries, validDay } from '../../lib/agenda'
 import { sideRows, type ItinDay } from '../../lib/itinerary'
-import { addDays, fmtDay, fmtRange } from '../../lib/dates'
+import { addDays, dayLabel, fmtRange } from '../../lib/dates'
 import { PageTurn } from '../../components/PageTurn'
 import { stopTitle } from '../plan/stopText'
 import { MonthCalendar, tint } from '../../components/MonthCalendar'
@@ -57,7 +57,7 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay, ho
   const turn = (d: string | null) => {
     if (!d) return null
     const first = dayEntries(trip, trips, stops, d).find((e) => e.kind === 'stop' && e.stop)?.stop
-    return { kicker: fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }), name: first ? stopTitle(first).toLowerCase() : undefined, onClick: () => pick(d) }
+    return { kicker: dayLabel(d), name: first ? stopTitle(first).toLowerCase() : undefined, onClick: () => pick(d) }
   }
   const rows = useMemo(() => sideRows(trip, trips, stops).filter((i) => i.date.slice(0, 7) <= month && i.end.slice(0, 7) >= month), [trip, trips, stops, month])
 

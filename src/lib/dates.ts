@@ -77,6 +77,9 @@ export function fmtDay(d: string, opts: Intl.DateTimeFormatOptions = { day: 'num
   return new Date(toMs(d)).toLocaleDateString('en-GB', { timeZone: 'UTC', ...opts }).toLowerCase()
 }
 
+// a day, short: "sat 20 feb"
+export const dayLabel = (d: string): string => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
+
 export function fmtRange(a: string | null, b: string | null): string {
   if (!a) return ''
   if (!b || a === b) return fmtDay(a)

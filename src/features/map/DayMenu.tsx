@@ -1,7 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { fmtDay } from '../../lib/dates'
-import { dayLabel } from '../../components/MonthCalendar'
+import { dayLabel, fmtDay } from '../../lib/dates'
 import { Icon } from '../../components/Icon'
 
 export type DayChoice = { date: string; sub: string }

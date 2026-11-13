@@ -1,5 +1,3 @@
-import { dayLabel } from '../../components/MonthCalendar'
-import { useSettle } from '../itinerary/useSettle'
 import { useId, useRef, useState, type FormEvent } from 'react'
 import type { Mode, Place, Stop, StopStatus, Trip } from '../../lib/types'
 import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '../../lib/queries'
@@ -21,6 +19,8 @@ import { Button } from '../../components/Button'
 import { useCanEdit } from '../../lib/offline'
 import { flightError, flightNumber, toDraft, useFlightLookup, type Flight } from '../../lib/flight'
 import { readTime } from '../../lib/time'
+import { dayLabel } from '../../lib/dates'
+import { useSettle } from '../itinerary/useSettle'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: (added?: { id: string; day: string | null }) => void }
 

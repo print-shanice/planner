@@ -4,7 +4,7 @@ import { useSettle } from './useSettle'
 import { useSave, useStops } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { newId } from '../../lib/id'
-import { dayLabel } from '../../components/MonthCalendar'
+import { dayLabel } from '../../lib/dates'
 import { LineEditor, type LineValues } from './LineEditor'
 import { flash } from './flash'
 

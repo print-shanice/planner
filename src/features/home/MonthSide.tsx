@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
 import type { Holiday } from '../../lib/holidays'
-import { addDays, fmtDay, fmtRange } from '../../lib/dates'
+import { addDays, dayLabel, fmtDay, fmtRange } from '../../lib/dates'
 import { tint } from '../../components/MonthCalendar'
 import { TripMark } from '../../components/TripMark'
 import { CountryFlag } from '../../components/CountryFlag'
@@ -85,7 +85,7 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
           <h3 className="mono-label">public holidays in {name}</h3>
           {hols.map((h) => (
             <div key={`${h.date}-${h.country}-${h.name}`} className="hol-row">
-              <span className="num">{fmtDay(h.date, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+              <span className="num">{dayLabel(h.date)}</span>
               <span className="hol-name">{h.name} <CountryFlag code={h.country} /></span>
               <span className="hol-trip">{h.trip.name}</span>
             </div>

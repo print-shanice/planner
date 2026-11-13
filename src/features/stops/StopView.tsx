@@ -24,7 +24,8 @@ import { PlaceDetails } from './PlaceDetails'
 import { expenseCategory } from '../../lib/categories'
 import { SiteIcon } from '../saved/LinkCard'
 import { useSettle } from '../itinerary/useSettle'
-import { CardTimes, dayWords } from './CardTimes'
+import { CardTimes } from './CardTimes'
+import { dayLabel } from '../../lib/dates'
 
 // who a cost is for, in a few words
 export function splitLine(c: Cost, members: Member[]): string {
@@ -128,7 +129,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   const spot = [stop.place, stop.destination, stop.origin].some((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
 
   const what = stop.kind === 'journey' ? MODES.find(([m]) => m === stop.mode)?.[1] ?? 'car' : stop.kind === 'place' ? stop.category ?? 'place' : stop.kind
-  const kicker = `${what} · ${stop.day ? dayWords(stop.day) : 'no date'}`
+  const kicker = `${what} · ${stop.day ? dayLabel(stop.day) : 'no date'}`
   const statuses: [StopStatus, string][] = stop.kind === 'note'
     ? [['to_book', 'to do'], ['booked', 'done']]
     : [['idea', 'idea'], ['to_book', 'to book'], ['booked', 'booked']]

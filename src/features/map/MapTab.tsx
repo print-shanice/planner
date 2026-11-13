@@ -3,7 +3,7 @@ import { chosenDay, dayEntries, ownerOn, validDay } from '../../lib/agenda'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
-import { dayColor, fmtDay, todayISO } from '../../lib/dates'
+import { dayColor, dayLabel, fmtDay, todayISO } from '../../lib/dates'
 import { reversePlace } from '../../lib/photon'
 import { placeFromMap } from '../../lib/google/places'
 import { dayLegs } from '../../lib/legs'
@@ -165,7 +165,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
     ? data.beds.features.flatMap((f) => {
       const s = stops.find((x) => x.id === f.properties.id)
       const nm = s ? s.title || s.place?.name || '' : ''
-      return nm ? [{ id: f.properties.id, n: null, icon: 'bed' as const, color: dayColor(trip.color), title: `staying at ${nm}`.toLowerCase(), sub: s?.day ? fmtDay(s.day, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '') : '' }] : []
+      return nm ? [{ id: f.properties.id, n: null, icon: 'bed' as const, color: dayColor(trip.color), title: `staying at ${nm}`.toLowerCase(), sub: s?.day ? dayLabel(s.day) : '' }] : []
     })
     : []
   const items: PlaceItem[] = overview
@@ -217,7 +217,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
         </div>
         {phone ? <label className="map-scope"><span>show</span><select aria-label="map scope" value={filter} onChange={e => setFilter(e.target.value)}>
           <option value="all">whole trip</option>
-          {[...new Set([...days, ...(isDay ? [filter] : [])])].sort().map(d => <option key={d} value={d}>{fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' })}</option>)}
+          {[...new Set([...days, ...(isDay ? [filter] : [])])].sort().map(d => <option key={d} value={d}>{dayLabel(d)}</option>)}
           <option value="saved">ideas</option>
         </select></label> : null}
         {load.state === 'loading' && <span className="chip-pill quiet" role="status" aria-label="loading">loading</span>}

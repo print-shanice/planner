@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Place, Stop, Trip } from '../../lib/types'
-import { dayLabel } from '../../components/MonthCalendar'
+import { dayLabel } from '../../lib/dates'
 import { useSave } from '../../lib/queries'
 import { useMove } from './useMove'
 import { asCategory } from '../../lib/categories'

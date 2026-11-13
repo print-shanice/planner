@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { fmtDay, todayISO } from '../lib/dates'
+import { dayLabel, fmtDay, todayISO } from '../lib/dates'
 import { monthWeeks, shiftMonth } from '../lib/calendar'
 import { readTime } from '../lib/time'
 import { Sheet } from './Sheet'
 import { Icon } from './Icon'
-import { dayLabel } from './MonthCalendar'
 
 type Props = {
   type: 'date' | 'time'; label: string; value: string; onChange: (v: string) => void; min?: string
@@ -12,7 +11,6 @@ type Props = {
   around?: string | null; span?: [string, string] | null
 }
 
-const shown = (type: Props['type'], v: string) => (type === 'date' ? fmtDay(v, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '') : v)
 const WEEKDAYS = ['m', 't', 'w', 't', 'f', 's', 's']
 // always six rows, so the arrows stay put from month to month
 const sixWeeks = (month: string) => {
@@ -39,9 +37,9 @@ export function Pick({ type, label, value, onChange, min, around, span }: Props)
   const pick = (d: string) => { onChange(d); setOpen(false) }
   return (
     <span className="pick date" data-empty={value ? undefined : ''}>
-      <button type="button" className="pick-open" aria-label={`choose ${label}${value ? `, ${shown('date', value)}` : ''}`}
+      <button type="button" className="pick-open" aria-label={`choose ${label}${value ? `, ${dayLabel(value)}` : ''}`}
         onClick={() => { setMonth(opensOn()); setOpen(true) }}>
-        <span className="pick-text">{value ? shown('date', value) : 'date'}</span>
+        <span className="pick-text">{value ? dayLabel(value) : 'date'}</span>
       </button>
       <input type="date" className="sr-only" tabIndex={-1} aria-label={label} value={value} min={min} onChange={(e) => onChange(e.target.value)} />
       <Sheet open={open} title={label} onClose={() => setOpen(false)}>

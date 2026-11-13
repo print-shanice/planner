@@ -59,3 +59,8 @@ it('fmtRange is short and lowercase', async () => {
   expect(fmtRange('2027-02-07', '2027-02-11')).toBe('7 – 11 feb')
   expect(fmtRange('2027-01-28', '2027-07-13')).toBe('28 jan – 13 jul')
 })
+
+it('dayLabel is the short day, lowercase and without a comma', async () => {
+  const { dayLabel } = await import('../../src/lib/dates')
+  expect(dayLabel('2027-02-20')).toBe('sat 20 feb')
+})
