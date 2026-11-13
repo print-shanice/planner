@@ -390,3 +390,8 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 .kind-filter button { flex: none; min-height: 44px; padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink-3); font-size: 14px; cursor: pointer; white-space: nowrap; }
 .kind-filter button:hover { color: var(--ink); }
 .kind-filter button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* money: a cost typed in, name then amount */
+.add-cost .jot input.jot-amount { flex: 0 0 88px; text-align: right; }
+.add-cost .warn-line { margin: 6px 0 0; }
+.ideas .add-place + .link-list, .ideas .add-place + .empty { margin-top: 16px; }

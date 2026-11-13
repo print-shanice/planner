@@ -262,7 +262,7 @@ for (const path of ['/trip/summer', '/trip/summer?tab=money', '/trip/summer?tab=
   it(`one + and no other add buttons (${path})`, () => {
     show(path)
     expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
-    expect(screen.queryByRole('button', { name: /add activity|add cost|save link|save place/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /add activity|save link|save place/ })).toBeNull()
   })
 }
 

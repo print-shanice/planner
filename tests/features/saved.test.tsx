@@ -158,6 +158,34 @@ it('side trips without dates are not listed with places (home and the trip tree 
   expect(screen.queryByRole('button', { name: 'set dates' })).toBeNull()
 })
 
+it('a link is added right in the links tab: pasted, named after its site, for this trip', async () => {
+  showLinks()
+  await userEvent.type(screen.getByRole('textbox', { name: 'add a link' }), 'look https://www.instagram.com/reel/NEW1/ !')
+  await userEvent.click(screen.getByRole('button', { name: 'add link' }))
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://www.instagram.com/reel/NEW1/', title: 'instagram', trip_id: 'lap', stop_id: null }))
+  expect(screen.getByRole('textbox', { name: 'add a link' })).toHaveValue('')
+})
+
+it('a link already in this trip is not added twice', async () => {
+  showLinks()
+  await userEvent.type(screen.getByRole('textbox', { name: 'add a link' }), 'https://youtu.be/abc{Enter}')
+  expect(db.save).not.toHaveBeenCalled()
+  expect(screen.getByRole('status', { name: 'already there' })).toHaveTextContent('already in links')
+})
+
+it('a link saved in another trip moves here instead of being added again', async () => {
+  showLinks()
+  await userEvent.type(screen.getByRole('textbox', { name: 'add a link' }), 'https://example.com{Enter}')
+  expect(db.save).toHaveBeenCalledWith({ id: 'l3', trip_id: 'lap' })
+})
+
+it('something that is not a link says so', async () => {
+  showLinks()
+  await userEvent.type(screen.getByRole('textbox', { name: 'add a link' }), 'hello there{Enter}')
+  expect(db.save).not.toHaveBeenCalled()
+  expect(screen.getByRole('alert')).toHaveTextContent('check the link')
+})
+
 it('a link can move to another trip', async () => {
   showLinks()
   await userEvent.click(within(screen.getAllByTestId('link-card')[0]).getByRole('button', { name: 'more' }))

@@ -33,6 +33,11 @@ export function platformOf(url: string): Platform {
 const TRACKING = /^(utm_\w+|igsh|igshid|si|fbclid|gclid|mc_\w+|ref|ref_src|is_from_webapp|sender_device|feature|t|s|_r)$/i
 
 // one key per thing saved: the same reel shared twice (with different tracking bits) is one link
+const PLATFORM_NAME: Record<Platform, string> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', web: '' }
+
+// what a new link is called until someone names it: the app it's from, else its site
+export const linkTitle = (url: string): string => PLATFORM_NAME[platformOf(url)] || hostOf(url)
+
 export function linkKey(raw: string): string {
   let u: URL
   try { u = new URL(raw.trim()) } catch { return raw.trim().toLowerCase() }

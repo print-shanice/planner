@@ -384,3 +384,38 @@ describe('money at a glance', () => {
     expect(rows[0]).toHaveTextContent('€200')
   })
 })
+
+describe('adding a cost right in money', () => {
+  const t = trip({ id: 'lap', currency: 'EUR' })
+  beforeEach(() => { db.trips = [t]; db.costs = []; db.stops = []; db.members = null; db.ratesQ = null; db.costsQ = null; db.save.mockReset().mockResolvedValue({}) })
+
+  it('a name and an amount save an estimate in the trip\'s currency, shared by everyone', async () => {
+    show(t)
+    await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'sauna')
+    await userEvent.type(screen.getByRole('textbox', { name: 'amount' }), '24,50')
+    await userEvent.click(screen.getByRole('button', { name: 'add cost' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({
+      trip_id: 'lap', stop_id: null, title: 'sauna', amount: 24.5, currency: 'EUR', status: 'estimate', paid_by: null, split_among: ['u1', 'u2'], date: null,
+    }))
+    expect(screen.getByRole('textbox', { name: 'add a cost' })).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'amount' })).toHaveValue('')
+  })
+
+  it('a trip in a currency without a rate still saves in that currency', async () => {
+    const mad = trip({ id: 'mar', currency: 'MAD' })
+    db.trips = [mad]
+    show(mad)
+    await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'riad')
+    await userEvent.type(screen.getByRole('textbox', { name: 'amount' }), '300{Enter}')
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'riad', amount: 300, currency: 'MAD' }))
+  })
+
+  it('a missing or wrong amount says so and saves nothing', async () => {
+    show(t)
+    await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'sauna{Enter}')
+    expect(screen.getByRole('alert')).toHaveTextContent('check the amount')
+    await userEvent.type(screen.getByRole('textbox', { name: 'amount' }), 'abc{Enter}')
+    expect(screen.getByRole('alert')).toHaveTextContent('check the amount')
+    expect(db.save).not.toHaveBeenCalled()
+  })
+})

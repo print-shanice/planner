@@ -4,7 +4,7 @@ import { useLinks, useSave, useStops, useTrips } from '../../lib/queries'
 import { newId } from '../../lib/id'
 import { hostOf } from '../../lib/embed'
 import { draftKey, useDraft } from '../../lib/drafts'
-import { extractUrl, findSaved, platformOf, type Incoming } from '../../lib/capture'
+import { extractUrl, findSaved, linkTitle, type Incoming } from '../../lib/capture'
 import { descendants } from '../../lib/countries'
 import { byStart } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
@@ -14,8 +14,6 @@ import { SiteIcon } from '../saved/LinkCard'
 import { stopTitle } from '../plan/stopText'
 
 type Draft = { id: string; url: string; title: string; note: string; trip: string; stop: string }
-
-const PLATFORM: Record<string, string> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', web: '' }
 
 function tripLabel(t: Trip, trips: Trip[]): string {
   const parent = trips.find((x) => x.id === t.parent_id)
@@ -68,7 +66,7 @@ export function CaptureForm({ initial, tripId, stopId, link, onDone }: { initial
         // the same reel twice is one link: it moves to where you put it now, keeping what it had
         saved = await save.mutateAsync({ id: already.id, ...fields, note: fields.note || already.note, ...(form.title.trim() ? { title: form.title.trim() } : {}) })
       } else {
-        saved = await save.mutateAsync({ id: form.id, url, title: form.title.trim() || PLATFORM[platformOf(url)] || hostOf(url), ...fields })
+        saved = await save.mutateAsync({ id: form.id, url, title: form.title.trim() || linkTitle(url), ...fields })
       }
       const t = trips.find((x) => x.id === fields.trip_id)
       toast.show({ text: `saved to ${t ? t.name.toLowerCase() : 'inbox'}` })
@@ -87,7 +85,7 @@ export function CaptureForm({ initial, tripId, stopId, link, onDone }: { initial
         </span>
       </label>
       {already && <p className="note-line" role="status">already saved in {where}{already.title ? ` · ${already.title}` : ''}</p>}
-      <label className="field"><span className="label">title</span><input value={form.title} placeholder={url ? PLATFORM[platformOf(url)] || hostOf(url) : ''} onChange={(e) => set({ title: e.target.value })} /></label>
+      <label className="field"><span className="label">title</span><input value={form.title} placeholder={url ? linkTitle(url) : ''} onChange={(e) => set({ title: e.target.value })} /></label>
       <label className="field"><span className="label">note</span><textarea value={form.note} onChange={(e) => set({ note: e.target.value })} /></label>
       <label className="field">
         <span className="label">trip</span>

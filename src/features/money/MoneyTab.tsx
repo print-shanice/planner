@@ -16,6 +16,7 @@ import { Pill } from '../../components/Pill'
 import { Sheet } from '../../components/Sheet'
 import { useStopSheet } from '../stops/StopSheet'
 import { CostForm } from './CostForm'
+import { AddCost } from './AddCost'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Pending } from '../../components/Pending'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
@@ -141,6 +142,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         </div>
       )}
       {over > 0 && <p className="warn-line">{show(over)} over budget</p>}
+      <AddCost trip={trip} />
 
       {settle && (
         <section className="settle-box" aria-label="settle up">
