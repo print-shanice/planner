@@ -23,7 +23,7 @@ vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.online, useOnline
 vi.mock('../../src/features/map/MapTab', () => ({ MapTab: () => <p>map here</p> }))
 
 import { TripPage } from '../../src/features/trip/TripPage'
-import { readTab } from '../../src/features/trip/tabs'
+import { readTab, packingHome } from '../../src/features/trip/tabs'
 
 function Probe() {
   const l = useLocation()
@@ -153,31 +153,40 @@ function wide(on: boolean) {
 }
 afterEach(() => wide(false))
 
-it('phones show seven sections in a bar at the bottom', () => {
+it('phones show six sections in a bar at the bottom', () => {
   show('/trip/summer')
   const nav = screen.getByRole('navigation', { name: 'trip sections' })
   expect(nav).toHaveClass('tab-bar')
-  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'map', 'places', 'notes', 'links', 'money', 'packing'])
+  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'map', 'places', 'notes', 'links', 'money'])
   expect(sections().getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-it('laptops show one quiet row of six tabs, with the map always beside', async () => {
+it('laptops show one quiet row of five tabs, with the map always beside', async () => {
   wide(true)
   show('/trip/summer')
   expect(screen.getByRole('navigation', { name: 'trip sections' })).toHaveClass('section-tabs')
-  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'places', 'notes', 'links', 'money', 'packing'])
+  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'places', 'notes', 'links', 'money'])
   expect(await screen.findByText('map here')).toBeInTheDocument()
   await userEvent.click(sections().getByRole('button', { name: 'money' }))
   expect(screen.getByText('map here')).toBeInTheDocument()
 })
 
 it('no section has a second layer of navigation inside it', async () => {
-  for (const tab of ['', '?tab=places', '?tab=notes', '?tab=links', '?tab=money', '?tab=packing']) {
+  for (const tab of ['', '?tab=places', '?tab=notes', '?tab=links', '?tab=money']) {
     const r = show(`/trip/summer${tab}`)
     expect(screen.queryByRole('group', { name: /saved|plan view|show/ })).toBeNull()
     expect(screen.getAllByRole('navigation').filter((n) => n.getAttribute('aria-label') !== 'days')).toHaveLength(1)
     r.unmount()
   }
+})
+
+it('packing lives on home now: an old packing link goes there, for this trip', async () => {
+  for (const old of ['tab=packing', 'tab=more', 'tab=saved&view=packing']) {
+    const r = show(`/trip/summer?${old}`)
+    expect(await screen.findByText('home')).toBeInTheDocument()
+    r.unmount()
+  }
+  expect(packingHome('summer')).toBe('/?view=packing&trip=summer')
 })
 
 it('old links land on the new sections', () => {
@@ -189,7 +198,6 @@ it('old links land on the new sections', () => {
   expect(read('tab=notes')).toBe('notes')
   expect(read('tab=links')).toBe('links')
   expect(read('tab=saved&view=links')).toBe('links')
-  for (const old of ['tab=packing', 'tab=more', 'tab=saved&view=packing', 'tab=more&view=packing']) expect(read(old)).toBe('packing')
   expect(read('tab=map')).toBe('map')
   // a laptop always has the map beside the plan
   expect(read('tab=map', true)).toBe('plan')
@@ -250,7 +258,7 @@ it('the people sharing the trip are the way into its settings', async () => {
 
 const OPTIONS = ['place', 'stay', 'journey', 'note', 'cost', 'link', 'side trip']
 
-for (const path of ['/trip/summer', '/trip/summer?tab=money', '/trip/summer?tab=places', '/trip/summer?tab=notes', '/trip/summer?tab=links', '/trip/summer?tab=packing']) {
+for (const path of ['/trip/summer', '/trip/summer?tab=money', '/trip/summer?tab=places', '/trip/summer?tab=notes', '/trip/summer?tab=links']) {
   it(`one + and no other add buttons (${path})`, () => {
     show(path)
     expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
@@ -373,7 +381,7 @@ it('the map says it is loading while its code arrives', async () => {
 it('a tapped tab lights up at once, before the page has caught up', async () => {
   const { TripSummary } = await import('../../src/features/trip/TripSummary')
   const onPick = vi.fn()
-  render(<TripSummary bar active="plan" onPick={onPick} tabs={['plan', 'map', 'places', 'notes', 'links', 'money', 'packing']} />)
+  render(<TripSummary bar active="plan" onPick={onPick} tabs={['plan', 'map', 'places', 'notes', 'links', 'money']} />)
   fireEvent.click(screen.getByRole('button', { name: 'money' }))
   // lit straight away, before the section has even started to change
   expect(screen.getByRole('button', { name: 'money' })).toHaveAttribute('aria-pressed', 'true')

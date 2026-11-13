@@ -27,6 +27,7 @@ import { AccountButton } from './Account'
 import { Inbox } from './Inbox'
 import { CaptureForm } from '../capture/CaptureForm'
 import { peekPending } from '../../lib/capture'
+import { HomePacking } from '../packing/HomePacking'
 
 // trips grouped by the month they start, in order; undated ones last
 function byMonth(tops: Trip[]): [string, Trip[]][] {
@@ -44,8 +45,8 @@ const readShowAs = (): ShowAs => { try { return localStorage.getItem('home-show'
 // maplibre is large and needs webgl; load it after the page shows
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
-type View = 'trips' | 'inbox' | 'travels'
-const VIEWS: View[] = ['trips', 'inbox', 'travels']
+type View = 'trips' | 'inbox' | 'packing' | 'travels'
+const VIEWS: View[] = ['trips', 'inbox', 'packing', 'travels']
 
 export function HomePage() {
   const travelsId = useId()
@@ -199,6 +200,8 @@ export function HomePage() {
             {inbox.length === 0 && !waiting && <EmptyState title="inbox is empty" />}
           </div>
         )}
+
+        {view === 'packing' && <section className="home-packing-view" aria-label="packing"><HomePacking trips={trips} /></section>}
 
         {view === 'travels' && (
           <Travels trips={trips} stops={stops} reviews={reviews} today={today} globe={({ routes, focus, ready }) => (

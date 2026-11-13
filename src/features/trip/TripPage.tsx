@@ -16,10 +16,9 @@ import { ItineraryTab } from '../itinerary/ItineraryTab'
 import { MoneyTab } from '../money/MoneyTab'
 import { LinksTab, PlacesTab } from '../saved/SavedTab'
 import { NotesTab } from '../notes/NotesTab'
-import { PackingTab } from '../packing/PackingTab'
 import { TripSummary } from './TripSummary'
 import { TripHeader } from './TripHeader'
-import { PHONE_TABS, readTab, WIDE_TABS, type Tab } from './tabs'
+import { isPackingLink, packingHome, PHONE_TABS, readTab, WIDE_TABS, type Tab } from './tabs'
 import { tint } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
 import { AddSheet, type AddKind } from './AddSheet'
@@ -118,6 +117,9 @@ function TripScreen() {
     if (stops.some((s) => s.id === opening)) sheet?.openStop(opening, params.get('day'))
     setParams((p) => { const n = new URLSearchParams(p); n.delete('open'); return n }, { replace: true })
   }, [opening, !!sq.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  // packing moved to home: an old link goes there, for this trip
+  const toPacking = !!id && isPackingLink(params)
+  useEffect(() => { if (toPacking) navigate(packingHome(id!), { replace: true }) }, [toPacking]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (trip && tab === 'plan' && tq.data && sq.data) rememberPlan({ tripId: trip.id, day: reading.day ?? selected })
   }, [trip?.id, tab, reading.day, selected, tq.data, sq.data])
@@ -192,7 +194,6 @@ function TripScreen() {
         {tab === 'notes' && <section className="trip-section" aria-label="notes"><NotesTab trip={trip} /></section>}
         {tab === 'links' && <section className="trip-section" aria-label="links"><LinksTab trip={trip} /></section>}
         {tab === 'money' && <section className="trip-section" aria-label="money"><MoneyTab trip={trip} /></section>}
-        {tab === 'packing' && <section className="trip-section" aria-label="packing"><PackingTab trip={trip} /></section>}
       </section>
       {wide && <SplitHandle width={planW} onChange={setPlanW} />}
       {wide && <aside className="trip-map" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} ideas={tab === 'places'} /></Suspense></aside>}

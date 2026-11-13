@@ -12,6 +12,7 @@ const db = vi.hoisted(() => ({
   links: [] as unknown[],
   members: [] as unknown[],
   reviews: [] as unknown[],
+  packing: [] as unknown[],
   globe: null as null | { pins: { code: string }[]; routes?: { line: [number, number][]; mode: string | null }[]; focus?: { code: string; n: number } | null },
   save: vi.fn((r: unknown) => Promise.resolve(r)),
   remove: vi.fn(() => Promise.resolve()),
@@ -22,6 +23,7 @@ vi.mock('../../src/lib/queries', () => ({
   useLinks: () => ({ data: db.links }),
   useMembers: () => ({ data: db.members }),
   useReviews: () => ({ data: db.reviews }),
+  usePacking: () => ({ data: db.packing }),
   useRates: () => ({ data: null }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, isPending: false }),
@@ -64,7 +66,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-11-05T10:00:00'))
   localStorage.clear()
-  db.trips = []; db.stops = []; db.links = []; db.reviews = []; db.save.mockClear(); db.remove.mockClear()
+  db.trips = []; db.stops = []; db.links = []; db.reviews = []; db.packing = []; db.save.mockClear(); db.remove.mockClear()
   db.globe = null; env.online = true
   keyApi.has.mockReset().mockResolvedValue(false); keyApi.make.mockReset().mockResolvedValue('a1'.repeat(32))
   db.members = []; env.signOut.mockReset().mockResolvedValue(undefined); env.forget.mockReset().mockResolvedValue(undefined)
@@ -491,7 +493,7 @@ describe('trips, the view home opens on', () => {
   it('lists trips by the month they start, each trip\'s side trips in its band, and the sidebar counts down to the next', () => {
     db.trips = europe()
     show()
-    expect(views().map((v) => v.textContent)).toEqual(['trips', 'inbox', 'travels'])
+    expect(views().map((v) => v.textContent)).toEqual(['trips', 'inbox', 'packing', 'travels'])
     expect(views()[0]).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('heading', { level: 2, name: 'upcoming trips' })).toBeInTheDocument()
     expect([...document.querySelectorAll('.home-upcoming .month-h')].map((m) => m.textContent)).toEqual(['january 2027', 'june 2027'])
@@ -696,12 +698,14 @@ describe('the switch', () => {
       { id: 'l2', trip_id: 'ex', url: 'https://example.com/b', title: 'b', note: '' },
     ]
     show()
-    expect(views().map((v) => v.textContent)).toEqual(['trips', 'inbox · 1', 'travels'])
+    expect(views().map((v) => v.textContent)).toEqual(['trips', 'inbox · 1', 'packing', 'travels'])
     await userEvent.click(views()[1])
     expect(views()[1]).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: /^a/ })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'upcoming trips' })).toBeNull()
     await userEvent.click(views()[2])
+    expect(screen.getByRole('region', { name: 'packing' })).toBeInTheDocument()
+    await userEvent.click(views()[3])
     expect(screen.getByTestId('totals')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'globe' })).toBeInTheDocument()
   })
@@ -898,5 +902,44 @@ describe('travels, the scrapbook under the globe', () => {
     expect(screen.queryByRole('heading', { name: 'passport' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'favourites' })).toBeNull()
     expect(screen.getByTestId('totals')).toBeInTheDocument()
+  })
+})
+
+describe('packing, one trip at a time from home', () => {
+  const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
+  const gr = trip({ id: 'gr', name: 'greece', start_date: '2027-07-20', end_date: '2027-07-30' })
+  const old = trip({ id: 'old', name: 'lisbon', start_date: '2026-05-01', end_date: '2026-05-04' })
+  beforeEach(() => {
+    db.trips = [gr, lap, old]
+    db.packing = [
+      { id: 'p1', trip_id: 'lap', text: 'thermal gloves', packed_by: [], position: 0 },
+      { id: 'p2', trip_id: 'gr', text: 'sunscreen', packed_by: [], position: 0 },
+    ]
+  })
+
+  it('opens on the trip coming up next', () => {
+    show('/?view=packing')
+    expect(screen.getByRole('button', { name: 'packing for which trip' })).toHaveTextContent('lapland')
+    expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('thermal gloves')
+    expect(screen.queryByText('sunscreen')).toBeNull()
+  })
+
+  it('another trip is picked from the menu, and the address keeps it', async () => {
+    show('/?view=packing')
+    await userEvent.click(screen.getByRole('button', { name: 'packing for which trip' }))
+    await userEvent.click(within(screen.getByRole('listbox')).getByText('greece'))
+    expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('sunscreen')
+    expect(screen.getByRole('button', { name: 'packing for which trip' })).toHaveTextContent('greece')
+  })
+
+  it('a trip in the address opens on it', () => {
+    show('/?view=packing&trip=gr')
+    expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('sunscreen')
+  })
+
+  it('with no trips there is nothing to pack for', () => {
+    db.trips = []
+    show('/?view=packing')
+    expect(screen.getByText('no trips yet')).toBeInTheDocument()
   })
 })

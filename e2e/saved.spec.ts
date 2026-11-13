@@ -118,7 +118,7 @@ test.describe('packing', () => {
   })
 
   test("a face shows that person's things and the shared ones; a shared tick is theirs alone", async ({ page }) => {
-    await open(page, '/trip/eu?tab=packing')
+    await open(page, '/?view=packing&trip=eu')
     const pack = page.getByRole('region', { name: 'packing' })
     await pack.getByRole('button', { name: 'maya' }).click()
     await expect(pack).toContainText('1 of 2 packed')
