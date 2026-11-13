@@ -21,11 +21,12 @@ import { Marker } from './Marker'
 import { useWide } from '../../lib/useWide'
 import { useSwipeAway } from '../../lib/swipe'
 import { useSaveNote } from '../../lib/saveNote'
+import { modeIcon } from '../../lib/lineKind'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
   const c = categoryOf(stop)
-  return <span className={`cat${quiet ? ' quiet' : ''}${stop.kind === 'stay' ? ' bed' : ''}`} title={c}><Icon name={stop.kind === 'journey' && stop.mode === 'flight' ? 'plane' : stop.kind === 'journey' ? stop.mode ?? 'car' : categoryIcon(c)} size={15} /></span>
+  return <span className={`cat${quiet ? ' quiet' : ''}${stop.kind === 'stay' ? ' bed' : ''}`} title={c}><Icon name={stop.kind === 'journey' ? modeIcon(stop.mode) : categoryIcon(c)} size={15} /></span>
 }
 
 // a numbered line: "01", the same number as its pin on the map, so the list and the map read together

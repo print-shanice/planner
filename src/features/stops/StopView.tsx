@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import type { Cost, Member, Mode, Stop, StopStatus } from '../../lib/types'
+import type { Cost, Member, Stop, StopStatus } from '../../lib/types'
 import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { formatMoney } from '../../lib/money'
@@ -25,6 +25,7 @@ import { SiteIcon } from '../saved/LinkCard'
 import { useSettle } from '../itinerary/useSettle'
 import { CardTimes } from './CardTimes'
 import { useSaveNote } from '../../lib/saveNote'
+import { MODES, modeWord } from '../../lib/lineKind'
 import { dayLabel } from '../../lib/dates'
 
 // who a cost is for, in a few words
@@ -44,9 +45,6 @@ function costLine(c: Cost, members: Member[]) {
   parts.push(splitLine(c, members))
   return parts.join(' · ')
 }
-
-// a car (grab, taxi, driving) has no mode of its own: null
-const MODES: [Mode | null, string][] = [['flight', 'flight'], ['train', 'train'], ['bus', 'bus'], ['ferry', 'ferry'], [null, 'car']]
 
 type Props = { stop: Stop; onEdit: () => void; onClose: () => void }
 
@@ -119,7 +117,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   // without a spot on the map there's nothing to give directions to; the card offers to add one instead
   const spot = [stop.place, stop.destination, stop.origin].some((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
 
-  const what = stop.kind === 'journey' ? MODES.find(([m]) => m === stop.mode)?.[1] ?? 'car' : stop.kind === 'place' ? stop.category ?? 'place' : stop.kind
+  const what = stop.kind === 'journey' ? modeWord(stop.mode) : stop.kind === 'place' ? stop.category ?? 'place' : stop.kind
   const kicker = `${what} · ${stop.day ? dayLabel(stop.day) : 'no date'}`
   const statuses: [StopStatus, string][] = stop.kind === 'note'
     ? [['to_book', 'to do'], ['booked', 'done']]
@@ -149,8 +147,8 @@ export function StopView({ stop, onEdit, onClose }: Props) {
         {stop.kind === 'journey' && (
           <Row label="how">
             <span className="card-options" role="group" aria-label="how">
-              {MODES.map(([m, word]) => (
-                <button key={word} type="button" aria-pressed={stop.mode === m} disabled={!canEdit} onClick={() => { if (stop.mode !== m) put({ mode: m }) }}>{word}</button>
+              {MODES.map((m) => (
+                <button key={modeWord(m)} type="button" aria-pressed={stop.mode === m} disabled={!canEdit} onClick={() => { if (stop.mode !== m) put({ mode: m }) }}>{modeWord(m)}</button>
               ))}
             </span>
           </Row>

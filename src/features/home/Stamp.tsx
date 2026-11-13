@@ -1,6 +1,8 @@
 import { useId, type CSSProperties } from 'react'
 import { iconPath } from '../../components/Icon'
 import { stampDate, stampStyle } from '../../lib/stampStyle'
+import { modeIcon } from '../../lib/lineKind'
+import type { Mode } from '../../lib/types'
 
 // a passport stamp, drawn here so it works offline and wears the planner's fonts and the trip's colour.
 // it's modelled on the real thing: every schengen country shares the european entry stamp (code in a ring of
@@ -9,7 +11,6 @@ import { stampDate, stampStyle } from '../../lib/stampStyle'
 const hash = (s: string) => [...s].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7)
 
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
-const MODE_ICON: Record<string, string> = { flight: 'plane', train: 'train', bus: 'bus', ferry: 'ferry' }
 // about how wide one letter is in each lettering (mono, with its letter spacing), in the stamp's own units
 const PER: Record<string, number> = { 'stamp-big': 9.9, 'stamp-name': 7.2, 'stamp-small': 4.5, 'stamp-serial': 5.1, 'stamp-cc': 8 }
 // words centred at x,y. given the room they have (w), words that would be wider are squeezed to fit, so nothing spills over the stamp's edge
@@ -18,7 +19,7 @@ const T = ({ className, x, y, w, children }: { className: string; x: number; y: 
   return <text className={className} x={x} y={y} textAnchor="middle" fill="currentColor" stroke="none" {...(tight ? { textLength: w, lengthAdjust: 'spacingAndGlyphs' } : null)}>{children}</text>
 }
 
-type Props = { code: string; name: string; date: string; iso: string; port: string | null; mode: string | null }
+type Props = { code: string; name: string; date: string; iso: string; port: string | null; mode: Mode | null }
 
 export function Stamp({ code, name, date, iso, port, mode }: Props) {
   const id = useId().replace(/:/g, '')
@@ -30,7 +31,7 @@ export function Stamp({ code, name, date, iso, port, mode }: Props) {
   const style = stampStyle(code)
   const where = cut(port ?? name, 14)
   const when = stampDate(iso, style)
-  const icon = mode ? MODE_ICON[mode] : undefined
+  const icon = mode ? modeIcon(mode) : undefined
   return (
     <svg className="stamp-art" viewBox="0 0 120 120" aria-hidden="true" data-style={style} style={{ '--tilt': `${tilt}deg` } as CSSProperties}>
       <defs>

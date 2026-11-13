@@ -8,6 +8,11 @@ const BY_ROAD = /\b(grab|taxi|cab|uber|didi|lyft|bolt|gojek|car|drive)\b/i
 const GETTING_AROUND = /\b(bus|train|line|metro|subway|shinkansen|ferry|express|tram)\b/i
 const SHOPPY = /\b(store|shop|cafe|café|bar|restaurant|museum|bakery|house|building)\b/i
 
+// how you get around, in the order the form and the card offer them; a car is no mode at all (null)
+export const MODES: (Mode | null)[] = ['flight', 'train', 'bus', 'ferry', null]
+export const modeWord = (m: Mode | null): string => m ?? 'car'
+export const modeIcon = (m: Mode | null): string => (m === 'flight' ? 'plane' : m ?? 'car')
+
 export function guessKind(text: string): { kind: 'place' | 'journey' | 'note'; mode: Mode | null } {
   const t = text.trim()
   if (/^walk\b/i.test(t)) return { kind: 'note', mode: null }

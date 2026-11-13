@@ -24,3 +24,9 @@ it('a shop that happens to say "line" or "train" is still a place', () => {
   expect(guessKind('kyoto obuya')).toEqual({ kind: 'place', mode: null })
   expect(guessKind('online shop pickup')).toEqual({ kind: 'place', mode: null })
 })
+
+it('a mode reads as its word and icon; no mode is a car, a flight a plane', async () => {
+  const { MODES, modeIcon, modeWord } = await import('../../src/lib/lineKind')
+  expect(MODES.map(modeWord)).toEqual(['flight', 'train', 'bus', 'ferry', 'car'])
+  expect(MODES.map(modeIcon)).toEqual(['plane', 'train', 'bus', 'ferry', 'car'])
+})

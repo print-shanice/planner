@@ -20,13 +20,11 @@ import { Button } from '../../components/Button'
 import { useCanEdit } from '../../lib/offline'
 import { flightError, flightNumber, toDraft, useFlightLookup, type Flight } from '../../lib/flight'
 import { readTime } from '../../lib/time'
+import { MODES, modeIcon, modeWord } from '../../lib/lineKind'
 import { dayLabel } from '../../lib/dates'
 import { useSettle } from '../itinerary/useSettle'
 
 type Props = { stop: Stop; trip: Trip | undefined; isNew: boolean; onDone: (added?: { id: string; day: string | null }) => void }
-
-// a car (grab, taxi, driving) has no mode of its own: null
-const MODES: (Mode | null)[] = ['flight', 'train', 'bus', 'ferry', null]
 
 type Draft = {
   title: string; place: Place | null; day: string; time: string; end_date: string; end_time: string
@@ -265,7 +263,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       {kind === 'journey' && (<>
         {q('how')}
         <div className="segmented modes" role="group" aria-label="mode">
-          {MODES.map((m) => <button key={m ?? 'car'} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={m === 'flight' ? 'plane' : m ?? 'car'} size={20} /><span>{m ?? 'car'}</span></button>)}
+          {MODES.map((m) => <button key={modeWord(m)} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={modeIcon(m)} size={20} /><span>{modeWord(m)}</span></button>)}
         </div>
         {d.mode === 'flight' && (<>
           <div className="flight-find" role="group" aria-label="flight lookup">

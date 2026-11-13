@@ -7,6 +7,8 @@ import { iconPath } from '../../components/Icon'
 import { GlobeTip } from './GlobeTip'
 import { Loading } from '../../components/Loading'
 import { openLayer } from '../../lib/layers'
+import { modeIcon } from '../../lib/lineKind'
+import type { Mode } from '../../lib/types'
 
 type Status = Map<string, 'been' | 'planned'>
 // routes: journeys to draw (an opened way of getting around); focus: a country to turn to and point at (a tapped passport stamp)
@@ -38,11 +40,11 @@ const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').
 const globeFile = (name: string) => `${import.meta.env.BASE_URL}globe/${name}`
 
 // a glyph for how you went, sitting on the middle of its route: a plane, a train, a bus, a ferry
-function glyphElement(mode: string): HTMLDivElement {
+function glyphElement(mode: Mode): HTMLDivElement {
   const el = document.createElement('div')
   el.className = 'globe-glyph'
   el.setAttribute('aria-hidden', 'true')
-  const name = mode === 'flight' ? 'plane' : mode
+  const name = modeIcon(mode)
   el.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${iconPath(name)}"/></svg>`
   return el
 }
