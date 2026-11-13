@@ -24,6 +24,7 @@ import { expenseCategory } from '../../lib/categories'
 import { SiteIcon } from '../saved/LinkCard'
 import { useSettle } from '../itinerary/useSettle'
 import { CardTimes } from './CardTimes'
+import { useSaveNote } from '../../lib/saveNote'
 import { dayLabel } from '../../lib/dates'
 
 // who a cost is for, in a few words
@@ -82,10 +83,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   const settle = useSettle()
   const [problem, setProblem] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
-  // a change on the card says so: "saving…", then "saved" for a moment
-  const [saving, setSaving] = useState<'idle' | 'saving' | 'saved'>('idle')
-  const quiet = useRef<ReturnType<typeof setTimeout>>()
-  useEffect(() => () => clearTimeout(quiet.current), [])
+  const [saving, track] = useSaveNote()
   // a cost being changed on the card, or 'new' for one being added to this booking
   const [costing, setCosting] = useState<Cost | 'new' | null>(null)
   const inspiration = (useLinks().data ?? []).filter((l) => l.stop_id === stop.id)
@@ -105,13 +103,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   // one change from the card; a new time also writes down the day's order, like a typed line
   const put = (changes: Partial<Stop>) => run(async () => {
     if ('time' in changes) settle({ ...stop, ...changes })
-    clearTimeout(quiet.current)
-    setSaving('saving')
-    try {
-      await save.mutateAsync({ id: stop.id, ...changes })
-      setSaving('saved')
-      quiet.current = setTimeout(() => setSaving('idle'), 1800)
-    } catch (e) { setSaving('idle'); throw e }
+    await track(save.mutateAsync({ id: stop.id, ...changes }))
   })
 
   const del = () => run(async () => {

@@ -20,6 +20,7 @@ import { useSettle } from './useSettle'
 import { Marker } from './Marker'
 import { useWide } from '../../lib/useWide'
 import { useSwipeAway } from '../../lib/swipe'
+import { useSaveNote } from '../../lib/saveNote'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
@@ -199,10 +200,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = 
   const [v, setV] = useState(() => valuesOf(s))
   const [problem, setProblem] = useState<string | null>(null)
   const [timeOpen, setTimeOpen] = useState(false)
-  // a save says so: "saving…" while it goes, then "saved" for a moment
-  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
-  const quiet = useRef<ReturnType<typeof setTimeout>>()
-  useEffect(() => () => clearTimeout(quiet.current), [])
+  const [state, track] = useSaveNote()
   const box = useRef<HTMLDivElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   // what's on screen and what was last saved, read fresh from handlers that fire as focus moves
@@ -245,11 +243,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = 
     put(line)
     if (Object.keys(changed).length) {
       if ('time' in changed) settle({ ...s, ...changed } as Stop)
-      clearTimeout(quiet.current)
-      setState('saving')
-      save.mutateAsync({ id: s.id, ...changed })
-        .then(() => { setState('saved'); quiet.current = setTimeout(() => setState('idle'), 1800) })
-        .catch(() => setState('idle')) // "couldn't save" shows under the line, with retry
+      track(save.mutateAsync({ id: s.id, ...changed })).catch(() => { /* "couldn't save" shows under the line, with retry */ })
     }
     return true
   }
