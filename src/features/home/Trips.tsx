@@ -2,13 +2,14 @@ import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { TripMark } from '../../components/TripMark'
-import { byStart, countdown, fmtDay, fmtRange, nights } from '../../lib/dates'
+import { byStart, countdown, fmtDay, fmtRange, nightsWord } from '../../lib/dates'
+import { count } from '../../lib/words'
 import { tint } from '../../components/MonthCalendar'
 import { clockIn, hereCode, placeCode, useNow, zoneOf } from '../../lib/localTime'
 
 export function when(t: Trip, today: string): string {
   const cd = countdown(t, today)
-  if (cd.kind === 'upcoming') return `in ${cd.days} ${cd.days === 1 ? 'day' : 'days'}`
+  if (cd.kind === 'upcoming') return `in ${count(cd.days, 'day')}`
   if (cd.kind === 'ongoing') return 'now'
   return ''
 }
@@ -68,10 +69,8 @@ export function TripFamilies({ tops, trips, keepEnded = false, ...rest }: { tops
   )
 }
 
-const nightsWord = (t: Trip) => { const n = nights(t.start_date, t.end_date); return n ? `${n} ${n === 1 ? 'night' : 'nights'}` : '' }
-
 function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, hrefOf }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; i: number } & FamilyProps) {
-  const meta = [nightsWord(t), when(t, today)].filter(Boolean).join(' · ')
+  const meta = [nightsWord(t.start_date, t.end_date), when(t, today)].filter(Boolean).join(' · ')
   return (
     <li className="family" data-testid="trip-family" style={{ ...tint(t.color), '--i': Math.min(i, 12) } as CSSProperties}>
       <Link to={hrefOf?.(t) ?? `/trip/${t.id}`} className="trip-item family-head" data-testid="trip-item" data-depth={0}>

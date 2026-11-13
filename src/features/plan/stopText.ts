@@ -1,5 +1,5 @@
 import type { Stop } from '../../lib/types'
-import { nights } from '../../lib/dates'
+import { nightsWord } from '../../lib/dates'
 
 const routed = (s: Stop) => s.kind === 'journey' && !!s.origin?.name && !!s.destination?.name
 
@@ -14,8 +14,7 @@ export function stopSub(s: Stop): string {
     return [s.mode, routed(s) ? s.title : '', times].filter(Boolean).join(' · ')
   }
   if (s.kind === 'stay') {
-    const n = nights(s.day, s.end_date)
-    return [s.time, n ? `${n} ${n === 1 ? 'night' : 'nights'}` : ''].filter(Boolean).join(' · ')
+    return [s.time, nightsWord(s.day, s.end_date)].filter(Boolean).join(' · ')
   }
   if (s.kind === 'note') return (s.notes ?? '').split('\n')[0]
   // the time has its own column in a day

@@ -37,6 +37,7 @@ import { ClashRow } from '../trip/ClashRow'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { useCanEdit } from '../../lib/offline'
+import { count } from '../../lib/words'
 
 // only a fixed or sticky bar covers a scrolled day
 function coveredTop() {
@@ -286,7 +287,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
       {clashes.map((c) => <ClashRow key={`${c.a.id}-${c.b.id}`} clash={c} canEdit={canEdit} onAdjust={adjust} />)}
       {(sideNow || sideNext) && (
         <Link className="side-now" to={`/trip/${(sideNow ?? sideNext)!.trip.id}${sideNow ? `?day=${today}` : ''}`} style={tint((sideNow ?? sideNext)!.trip.color)}>
-          <span className="mono-label">{sideNow ? `now · day ${daysBetween(sideNow.date, today) + 1} of ${sideNow.nights + 1}` : `next · in ${daysBetween(today, sideNext!.date)} ${daysBetween(today, sideNext!.date) === 1 ? 'day' : 'days'}`}</span>
+          <span className="mono-label">{sideNow ? `now · day ${daysBetween(sideNow.date, today) + 1} of ${sideNow.nights + 1}` : `next · in ${count(daysBetween(today, sideNext!.date), 'day')}`}</span>
           <span className="side-now-name">{(sideNow ?? sideNext)!.trip.name} →</span>
         </Link>
       )}

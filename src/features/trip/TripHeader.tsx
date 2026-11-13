@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
 import { ancestors, countryName, descendants } from '../../lib/countries'
 import { useTripFlags } from '../../lib/tripGuess'
-import { fmtRange, nights, todayISO } from '../../lib/dates'
+import { fmtRange, nightsWord, todayISO } from '../../lib/dates'
 import { clockIn, diffWords, offsetOf, placeCode, useNow, zoneOf } from '../../lib/localTime'
 import { tempWords, useTemps, weatherAsk } from '../../lib/weather'
 import { useMembers, useStops, useTrips } from '../../lib/queries'
@@ -75,8 +75,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
   // the countries as a route over the title, like a departures board: where it's based first, then the rest
   // in the order you reach them (by the first day planned there)
   const route = routeOrder(countries, trip, trips, stops)
-  const n = nights(trip.start_date, trip.end_date)
-  const when = [fmtRange(trip.start_date, trip.end_date), n ? `${n} ${n === 1 ? 'night' : 'nights'}` : ''].filter(Boolean).join(' · ')
+  const when = [fmtRange(trip.start_date, trip.end_date), nightsWord(trip.start_date, trip.end_date)].filter(Boolean).join(' · ')
   const up = parent
   const upName = up ? up.name : 'all trips'
 

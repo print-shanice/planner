@@ -14,8 +14,8 @@ import { SaveFailed } from '../../components/SaveFailed'
 import { Sheet } from '../../components/Sheet'
 import { tripItems } from './Trips'
 import { TripForm } from './TripForm'
+import { count } from '../../lib/words'
 
-const links = (n: number) => `${n} ${n === 1 ? 'link' : 'links'}`
 // the menu's first choice: make a trip for it there and then (no trip id can look like this)
 const NEW = 'new trip'
 
@@ -83,9 +83,9 @@ export function Inbox({ links: all, trips }: { links: Link[]; trips: Trip[] }) {
       {n > 0 && (
         <div className="bulk-bar" role="region" aria-label="selected links">
           <span className="bulk-count">{n} selected</span>
-          <ChoiceMenu label="add to a trip" ariaLabel={`move ${links(n)} to a trip`} options={choices} disabled={!canEdit}
+          <ChoiceMenu label="add to a trip" ariaLabel={`move ${count(n, 'link')} to a trip`} options={choices} disabled={!canEdit}
             onPick={(trip) => { if (trip === NEW) { setMaking(chosen); return } chosen.forEach((id) => save.mutate({ id, trip_id: trip })); clear() }} />
-          <button type="button" className="text-link bulk-delete" aria-label={`delete ${links(n)}`} disabled={!canEdit}
+          <button type="button" className="text-link bulk-delete" aria-label={`delete ${count(n, 'link')}`} disabled={!canEdit}
             onClick={() => { removeLater(chosen); clear() }}>delete</button>
           <button type="button" className="icon-btn bulk-x" aria-label="clear selection" onClick={clear}><Icon name="close" size={18} /></button>
         </div>

@@ -11,6 +11,7 @@ import { MonthCalendar, tint } from '../../components/MonthCalendar'
 import { Link } from 'react-router-dom'
 import { useTripFlags } from '../../lib/tripGuess'
 import { TripMark } from '../../components/TripMark'
+import { count } from '../../lib/words'
 
 type Props = { trip: Trip; trips: Trip[]; stops: Stop[]; today: string; onDay: (d: string) => void; renderDay: (d: ItinDay) => ReactNode; holiday?: (d: string) => string | null }
 
@@ -74,7 +75,7 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay, ho
               <Link to={`/trip/${r.trip.id}${r.date <= today && r.end >= today ? `?day=${today}` : ''}`} className="side-line">
                 {flagsOf(r.trip).length ? <TripMark codes={flagsOf(r.trip)} max={3} /> : <span className="side-row-bar" aria-hidden="true" />}
                 <span className="side-line-name">{r.trip.name}</span>
-                <span className="side-line-meta mono">{fmtRange(r.date, r.end)} · {r.nights}n{r.places ? ` · ${r.places} ${r.places === 1 ? 'place' : 'places'}` : ''}</span>
+                <span className="side-line-meta mono">{fmtRange(r.date, r.end)} · {r.nights}n{r.places ? ` · ${count(r.places, 'place')}` : ''}</span>
                 {r.toBook > 0 && <span className="warn-text side-line-book">{r.toBook} to do</span>}
                 <span aria-hidden="true">→</span>
               </Link>

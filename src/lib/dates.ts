@@ -1,5 +1,6 @@
 import type { Stop, Trip } from './types'
 import { colourVar } from './colors'
+import { count } from './words'
 
 const DAY = 86_400_000
 const toMs = (d: string) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 12)
@@ -27,6 +28,12 @@ export function tripDays(t: Trip): string[] {
 export function nights(a: string | null, b: string | null): number | null {
   if (!a || !b) return null
   return Math.max(0, daysBetween(a, b))
+}
+
+// "3 nights" between two dates, or nothing when there are none
+export function nightsWord(a: string | null, b: string | null): string {
+  const n = nights(a, b)
+  return n ? count(n, 'night') : ''
 }
 
 export function stayDays(s: Stop): string[] {

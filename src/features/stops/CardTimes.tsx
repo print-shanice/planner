@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Stop } from '../../lib/types'
 import { readTime } from '../../lib/time'
-import { dayLabel, nights } from '../../lib/dates'
+import { dayLabel, nightsWord } from '../../lib/dates'
 import { canCheck, endBits } from '../../lib/flight'
 import { journeyLength } from '../../lib/span'
 
@@ -79,14 +79,13 @@ export function CardTimes({ stop: s, canEdit, put }: { stop: Stop; canEdit: bool
     )
   }
   if (s.kind === 'stay') {
-    const n = nights(s.day, s.end_date)
     return (
       <div className="card-times" role="group" aria-label="times">
         <End label="check in">
           <TimeField label="check in" value={s.time} disabled={off} onSave={(time) => put({ time })} />
           {s.day && <span className="card-day">{dayLabel(s.day)}</span>}
         </End>
-        <Between text={n ? `${n} ${n === 1 ? 'night' : 'nights'}` : null} />
+        <Between text={nightsWord(s.day, s.end_date) || null} />
         <End label="check out" end>
           <TimeField label="check out" value={s.end_time} disabled={off} onSave={(end_time) => put({ end_time })} />
           {s.end_date && <span className="card-day">{dayLabel(s.end_date)}</span>}

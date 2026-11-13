@@ -24,6 +24,7 @@ import { JotLine } from './JotLine'
 import { Help, Tooltip } from '../../components/Tooltip'
 import { Pending } from '../../components/Pending'
 import { useLocating } from '../../lib/locating'
+import { count } from '../../lib/words'
 
 // put an idea on a day right from its row: the trip's days, or any date when the trip has none yet
 export function DayPick({ stop, home, label = 'add to day' }: { stop: Stop; home: Trip; label?: string }) {
@@ -53,7 +54,7 @@ function IdeaRow({ stop, trips, links }: { stop: Stop; trips: Trip[]; links: Lin
   const where = stop.place?.area || stop.place?.city || ''
   // the side trip it's for, unless that's just the city again
   const side = home && home.parent_id && home.name.toLowerCase() !== where.toLowerCase() ? home.name : ''
-  const sub = [c === 'place' || c === 'note' ? '' : c, where, side, n ? `${n} ${n === 1 ? 'link' : 'links'}` : '']
+  const sub = [c === 'place' || c === 'note' ? '' : c, where, side, n ? count(n, 'link') : '']
     .filter(Boolean).join(' · ').toLowerCase()
   return (
     <li className="doc-row idea-row" data-stop={stop.id}>

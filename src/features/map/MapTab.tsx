@@ -30,6 +30,7 @@ import { useReadingDay } from '../trip/readingDay'
 import { useHighlight } from '../trip/highlight'
 import { Icon } from '../../components/Icon'
 import { Tooltip } from '../../components/Tooltip'
+import { count } from '../../lib/words'
 
 type Card = { place: Place; stopId?: string; seq: number; looking?: boolean }
 
@@ -173,8 +174,8 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
     : bed
     ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...lineItems]
     : [...stayItems, ...lineItems]
-  const count = `${pinItems.length} ${pinItems.length === 1 ? 'place' : 'places'}`
-  const listTitle = overview ? `${overview.sides.length} side ${overview.sides.length === 1 ? 'trip' : 'trips'}` : filter === 'all' ? count : filter === 'saved' ? `${data.saved.features.length} ideas` : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${count}`
+  const places = count(pinItems.length, 'place')
+  const listTitle = overview ? count(overview.sides.length, 'side trip') : filter === 'all' ? places : filter === 'saved' ? count(data.saved.features.length, 'idea') : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${places}`
   // a tall places sheet covers more than the usual margin, so the fit clears it
   const sheetH = phone && !card ? sheetHeight(items, listOpen) : 0
   const inset = useMemo(() => ({ top: PHONE_INSET.top, bottom: Math.max(PHONE_INSET.bottom, sheetH ? sheetH + SHEET_LIFT : 0) }), [sheetH])

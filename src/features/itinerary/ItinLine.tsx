@@ -22,6 +22,7 @@ import { useWide } from '../../lib/useWide'
 import { useSwipeAway } from '../../lib/swipe'
 import { useSaveNote } from '../../lib/saveNote'
 import { modeIcon } from '../../lib/lineKind'
+import { count } from '../../lib/words'
 
 // the kind of place, in the colour of the trip that owns the day (stays and ideas stay ink and grey)
 export function Chip({ stop, quiet }: { stop: Stop; quiet?: boolean }) {
@@ -97,7 +98,7 @@ function InfoRow({ info, q }: { info: LineInfo; q: string }) {
       {bits && <span className="itin-bits mono">
         {info.ref && <span className="bit"><span className="bit-key">ref</span><span className="keep-case"><Marked text={info.ref} q={q} /></span></span>}
         {info.flight && <span className={`bit${info.flight.warn ? ' warn' : ''}`}><Icon name="plane" size={13} /><span>{info.flight.text}</span></span>}
-        {info.tickets > 0 && <span className="bit"><Icon name="file" size={13} /><span>{`${info.tickets} ${info.tickets === 1 ? 'ticket' : 'tickets'}`}</span></span>}
+        {info.tickets > 0 && <span className="bit"><Icon name="file" size={13} /><span>{count(info.tickets, 'ticket')}</span></span>}
         {info.cost && <span className={`bit${info.cost.paid ? ' paid' : ''}`}><Icon name="money" size={13} /><span>{info.cost.text}</span></span>}
       </span>}
     </>

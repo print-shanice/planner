@@ -1,6 +1,7 @@
 import type { Place } from '../../lib/types'
 import { hoursOn, useDetails } from '../../lib/google/details'
 import { Pending } from '../../components/Pending'
+import { count } from '../../lib/words'
 
 // what google says about a place, under its name on the card: its photo, how it is rated, what it is,
 // its hours on the plan's day, and its website. compact: no photo (the map's small card)
@@ -12,7 +13,7 @@ export function PlaceDetails({ place, day, compact = false }: { place: Place; da
   if (!d) return null
   const line = [
     d.rating != null ? `★ ${d.rating.toFixed(1)}` : null,
-    d.ratings != null && d.rating != null ? `${d.ratings.toLocaleString('en-GB')} ${d.ratings === 1 ? 'review' : 'reviews'}` : null,
+    d.ratings != null && d.rating != null ? count(d.ratings, 'review') : null,
     d.kind,
   ].filter(Boolean).join(' · ')
   const hours = hoursOn(d.weekdays, day)

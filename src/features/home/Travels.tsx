@@ -7,6 +7,7 @@ import { Icon } from '../../components/Icon'
 import { tint } from '../../components/MonthCalendar'
 import { stopTitle } from '../plan/stopText'
 import { Stamp } from './Stamp'
+import { count } from '../../lib/words'
 import { Help, Tooltip } from '../../components/Tooltip'
 
 export type GlobeAsk = { routes: GlobeRoute[]; focus: { code: string; n: number } | null; ready: boolean }
@@ -65,7 +66,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
           <section className="scrap" aria-labelledby="scrap-passport">
             <div className="scrap-head">
               <h2 id="scrap-passport" className="head">passport</h2>
-              <span className="mono-label">{s.length} {s.length === 1 ? 'stamp' : 'stamps'}</span>
+              <span className="mono-label">{count(s.length, 'stamp')}</span>
             </div>
             <div className="passport">
               {s.map((st, i) => {
