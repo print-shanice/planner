@@ -173,11 +173,11 @@ export function PlacesTab({ trip }: { trip: Trip }) {
   return (
     <div className="ideas places">
       <LoadState load={load} />
-      <AddPlace trip={trip} trips={trips} stops={stops} />
       <label className="search-box ideas-search">
         <Icon name="search" size={18} />
         <input type="search" role="searchbox" aria-label="search places" placeholder="search places" value={query} onChange={(e) => setQuery(e.target.value)} />
       </label>
+      <AddPlace trip={trip} trips={trips} stops={stops} />
       {kinds.length > 1 && (
         <div className="kind-filter" role="group" aria-label="kind">
           <button type="button" aria-pressed={!on} onClick={() => setKind(null)}>all</button>
