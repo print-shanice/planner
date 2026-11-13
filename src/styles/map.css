@@ -10,8 +10,6 @@
 .back-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-phone .map-top { top: calc(env(safe-area-inset-top) + 66px); }
 .trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 80px); }
-/* the credits stay visible above everything that covers the bottom of the map */
-.trip-phone .map-tab .maplibregl-ctrl-bottom-right { top: calc(env(safe-area-inset-top) + 168px); bottom: auto; }
 
 /* the map's places, as a sheet you pull up above the tab bar */
 .places-sheet {
@@ -59,9 +57,7 @@
 .place-card .muted { font-size: 14px; }
 .place-card-actions { display: flex; align-items: center; gap: 8px; }
 .place-card-actions .icon-btn[aria-pressed="true"] { background: var(--ink); color: var(--card); }
-.maplibregl-ctrl-group { border-radius: 8px !important; box-shadow: var(--float) !important; }
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
-.map-tab .maplibregl-canvas:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
 /* laptops: the map follows the plan's day; this zooms out to every place */
 .whole-trip { position: absolute; left: 12px; bottom: 12px; z-index: 2; color: var(--ink-2); }
 .whole-trip[aria-pressed="true"] .icon { color: inherit; }
