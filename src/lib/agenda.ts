@@ -1,6 +1,6 @@
 import type { Place, Stop, Trip } from './types'
 import { tripDays, type DayEntry } from './dates'
-import { descendants } from './countries'
+import { ancestors, descendants } from './countries'
 import { dayOrder } from './dayOrder'
 
 export function validDay(day: string | null): day is string {
@@ -54,17 +54,12 @@ export function chosenDay(trip: Trip, trips: Trip[], stops: Stop[], requested: s
 
 const covers = (t: Trip, d: string) => !!t.start_date && t.start_date <= d && (t.end_date ?? t.start_date) >= d
 
-function depth(t: Trip, trips: Trip[]): number {
-  let n = 0
-  for (let p = t.parent_id; p && n < 20; n++) p = trips.find((x) => x.id === p)?.parent_id ?? null
-  return n
-}
-
 // the innermost trip in the family that the day belongs to
 export function ownerOn(trip: Trip, trips: Trip[], date: string | null): Trip {
   if (!date) return trip
   const ids = new Set(descendants(trip.id, trips))
-  return trips.filter((t) => ids.has(t.id) && covers(t, date)).sort((a, b) => depth(b, trips) - depth(a, trips))[0] ?? trip
+  const depth = (t: Trip) => ancestors(t.id, trips).length
+  return trips.filter((t) => ids.has(t.id) && covers(t, date)).sort((a, b) => depth(b) - depth(a))[0] ?? trip
 }
 
 // a day's entries as the plan reads them: a side trip's own bed that night replaces the parent's "staying at"
