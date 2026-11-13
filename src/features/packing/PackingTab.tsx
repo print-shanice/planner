@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { Member, PackingItem, Trip } from '../../lib/types'
 import { useMembers, usePacking, useSave } from '../../lib/queries'
 import { useAuth } from '../../lib/auth'
@@ -10,9 +10,7 @@ import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
 import { Icon } from '../../components/Icon'
 import { SaveFailed } from '../../components/SaveFailed'
-
-// a swipe further left than this removes the item (with undo)
-const SWIPE = 80
+import { useSwipeAway } from '../../lib/swipe'
 
 const who = (m: Member) => (m.name || m.email).toLowerCase()
 const Face = ({ m, ticked }: { m: Member; ticked?: boolean }) => (
@@ -37,20 +35,10 @@ function Whose({ p, people, view }: { p: PackingItem; people: Member[]; view: st
 }
 
 function Row({ p, packed, whose, canEdit, onTick, onEdit, onRemove }: { p: PackingItem; packed: boolean; whose: ReactNode; canEdit: boolean; onTick: () => void; onEdit: () => void; onRemove: () => void }) {
-  const start = useRef<number | null>(null)
-  const [dx, setDx] = useState(0)
-  const down = (e: PointerEvent<HTMLLIElement>) => { if (canEdit) start.current = e.clientX }
-  const move = (e: PointerEvent<HTMLLIElement>) => { if (start.current != null) setDx(Math.min(0, e.clientX - start.current)) }
-  const up = (e: PointerEvent<HTMLLIElement>) => {
-    if (start.current == null) return
-    const far = e.clientX - start.current < -SWIPE
-    start.current = null
-    setDx(0)
-    if (far) onRemove()
-  }
+  // a swipe to the left removes it, with undo
+  const swipe = useSwipeAway(onRemove, canEdit, 'left')
   return (
-    <li className={packed ? 'packed' : ''} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { start.current = null; setDx(0) }}
-      style={dx ? { transform: `translateX(${dx}px)` } : undefined}>
+    <li className={packed ? 'packed' : ''} {...swipe}>
       <label className="pack-tick">
         <input type="checkbox" aria-label={p.text} checked={packed} disabled={!canEdit} onChange={onTick} />
         <span className="tick" aria-hidden="true">{packed && <Icon name="check" size={16} />}</span>

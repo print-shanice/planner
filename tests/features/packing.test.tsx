@@ -143,6 +143,17 @@ it('a short swipe does nothing', () => {
   expect(screen.getByRole('status')).not.toHaveTextContent('removed')
 })
 
+it('a long swipe right does nothing (only left removes)', () => {
+  db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
+  render(<ToastProvider><PackingTab trip={trip({ id: 'lap' })} /></ToastProvider>)
+  const li = screen.getByRole('list', { name: 'packing' }).querySelector('li') as HTMLElement
+  fireEvent.pointerDown(li, { clientX: 100, pointerId: 1 })
+  fireEvent.pointerMove(li, { clientX: 250, pointerId: 1 })
+  expect(li.style.transform).toBe('')
+  fireEvent.pointerUp(li, { clientX: 250, pointerId: 1 })
+  expect(screen.getByRole('status')).not.toHaveTextContent('removed')
+})
+
 it('adding sits as the last row of the list', () => {
   db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
   render(<PackingTab trip={trip({ id: 'lap' })} />)
