@@ -129,7 +129,9 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .marker-opt.on { font-weight: 600; }
 .marker-opt .muted { margin-left: auto; font-size: 12.5px; font-weight: 400; }
 .cat.bed { border-radius: 6px; }
-.cat.bed:not(.quiet) { background: var(--ink); }
+.cat.bed:not(.quiet) { background: var(--ink); color: var(--card); }
+/* in places, a stay's mark is round like every other pin on the map */
+.places-list .cat.bed { border-radius: 50%; }
 .dragging { position: relative; z-index: 3; background: var(--ground); box-shadow: 0 0 0 1px var(--ink); border-radius: 6px; }
 .walk {
   display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: 0 0 2px 90px; padding: 0 4px;

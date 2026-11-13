@@ -20,6 +20,7 @@ vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import(
 
 import { LinksTab } from '../../src/features/saved/SavedTab'
 import { PlacesTab } from '../../src/features/places/PlacesTab'
+import { Icon } from '../../src/components/Icon'
 import { CaptureForm } from '../../src/features/capture/CaptureForm'
 import { failSave } from '../../src/lib/pending'
 import { setLocating } from '../../src/lib/locating'
@@ -61,6 +62,15 @@ it('places are every place in the trip, the ones in the itinerary too (stays inc
   expect(screen.queryByText('buy wool socks')).toBeNull()
   expect(screen.queryByText('flight in')).toBeNull()
   expect(screen.queryAllByTestId('link-card')).toHaveLength(0)
+})
+
+it('each place wears the same mark as its pin on the map beside: a plain ring with its kind, a bed for a stay', () => {
+  db.stops.push(stop({ id: 'st', trip_id: 'lap', kind: 'stay', title: 'new lion city hotel', day: '2027-02-07', end_date: '2027-02-10' }), stop({ id: 'pl', trip_id: 'lap', title: 'planned', day: '2027-02-08', category: 'cafe' }))
+  const { container } = show()
+  const mark = (id: string) => container.querySelector(`[data-stop="${id}"] .cat`)!
+  for (const id of ['s9', 'st', 'pl']) expect(mark(id)).toHaveClass('quiet')
+  const bed = render(<Icon name="bed" />).container.querySelector('path')!.getAttribute('d')
+  expect(mark('st').querySelector('path')!.getAttribute('d')).toBe(bed)
 })
 
 it('a kind filter shows only that kind, and the map is told which places show', async () => {

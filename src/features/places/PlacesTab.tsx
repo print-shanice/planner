@@ -81,7 +81,8 @@ function PlaceRow({ stop, trip, trips, links }: { stop: Stop; trip: Trip; trips:
     .filter(Boolean).join(' · ').toLowerCase()
   return (
     <li className="doc-row idea-row" data-stop={stop.id}>
-      <Chip stop={stop} quiet={!stop.day} />
+      {/* the same mark as its pin on the map beside: a plain ring with its kind (a bed for a stay) */}
+      <Chip stop={stop} quiet />
       <button type="button" className="doc-row-main" onClick={() => sheet?.openStop(stop.id, stop.day)}>
         <span className="doc-row-title">{stopTitle(stop)}</span>
         {looking ? <Pending label="finding the place" /> : sub && <span className="muted">{sub}</span>}
@@ -179,7 +180,7 @@ export function PlacesTab({ trip }: { trip: Trip }) {
         </div>
       )}
       {!shown.length && <EmptyState title={q || on ? 'nothing found' : 'no places yet'} />}
-      {/* one list: not planned yet first (grey), then what's in the itinerary (in its trip's colour), no dates */}
+      {/* one list: not planned yet first, then what's in the itinerary, no dates */}
       {shown.length > 0 && <ul className="doc-list places-list" aria-label="places">{shown.map(row)}</ul>}
     </div>
   )
