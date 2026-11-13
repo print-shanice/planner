@@ -42,14 +42,24 @@ beforeEach(() => {
 const show = () => render(<MemoryRouter><PlacesTab trip={lap} /></MemoryRouter>)
 const showLinks = () => render(<MemoryRouter><LinksTab trip={lap} /></MemoryRouter>)
 
-it('places are every place in the trip, not planned yet first, then the planned ones with their day; notes live elsewhere', () => {
-  db.stops.push(stop({ id: 'n1', trip_id: 'lap', kind: 'note', title: 'buy wool socks', day: null, position: 1 }), stop({ id: 'pl', trip_id: 'lap', title: 'planned', day: '2027-02-08' }))
+it('places are every place in the trip, the ones in the itinerary too (stays included), in one list with no dates; notes live elsewhere', () => {
+  db.stops.push(
+    stop({ id: 'n1', trip_id: 'lap', kind: 'note', title: 'buy wool socks', day: null, position: 1 }),
+    stop({ id: 'pl', trip_id: 'lap', title: 'planned', day: '2027-02-08' }),
+    stop({ id: 'st', trip_id: 'lap', kind: 'stay', title: 'glass igloo', day: '2027-02-07', end_date: '2027-02-10' }),
+    stop({ id: 'jn', trip_id: 'lap', kind: 'journey', title: 'flight in', day: '2027-02-07' }),
+  )
   show()
   expect(screen.queryByRole('group', { name: /saved|show/ })).toBeNull()
-  expect(within(screen.getByRole('list', { name: 'not planned yet' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('kotisaari')])
-  expect(within(screen.getByRole('list', { name: 'in the plan' })).getByText('planned')).toBeInTheDocument()
-  expect(screen.getByRole('combobox', { name: 'day for planned' })).toHaveDisplayValue('mon 8 feb')
+  const rows = within(screen.getByRole('list', { name: 'places' })).getAllByRole('listitem').map((li) => li.textContent)
+  expect(rows).toEqual([expect.stringContaining('kotisaari'), expect.stringContaining('glass igloo'), expect.stringContaining('planned')])
+  // a planned place shows no day and nothing to pick; one not planned yet can go onto a day
+  expect(rows[1]).not.toMatch(/feb/)
+  expect(rows[2]).not.toMatch(/feb/)
+  expect(screen.queryByRole('combobox', { name: /planned|glass igloo/ })).toBeNull()
+  expect(screen.getByRole('combobox', { name: 'add to day: kotisaari' })).toBeInTheDocument()
   expect(screen.queryByText('buy wool socks')).toBeNull()
+  expect(screen.queryByText('flight in')).toBeNull()
   expect(screen.queryAllByTestId('link-card')).toHaveLength(0)
 })
 
@@ -80,7 +90,7 @@ it('a place already there is not added twice: it says where it is instead', asyn
   await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'kotis')
   await userEvent.click(await screen.findByRole('button', { name: /Kotisaari/ }))
   expect(db.save).not.toHaveBeenCalled()
-  expect(screen.getByRole('status', { name: 'already there' })).toHaveTextContent('kotisaari is already in places · not planned yet')
+  expect(screen.getByRole('status', { name: 'already there' })).toHaveTextContent('kotisaari is already in places')
 })
 
 it('typing a name already there and pressing add is blocked too', async () => {
@@ -98,13 +108,6 @@ it('on a trip with side trips, a place can go to a side trip, its costs with it'
   await userEvent.selectOptions(screen.getByRole('combobox', { name: 'add to day: kotisaari' }), 'trip:ivalo')
   expect(db.save).toHaveBeenCalledWith({ id: 's9', trip_id: 'ivalo' })
   expect(db.save).toHaveBeenCalledWith({ id: 'c', trip_id: 'ivalo' })
-})
-
-it('a planned place can go back to not planned', async () => {
-  db.stops.push(stop({ id: 'pl', trip_id: 'lap', title: 'planned', day: '2027-02-08', time: '10:00' }))
-  show()
-  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'day for planned' }), 'none')
-  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'pl', day: null, saved: true }))
 })
 
 it('a place reads as its kind and where it is', () => {
@@ -219,7 +222,7 @@ it('a link whose save failed says so', () => {
 it('a place whose save failed says so', () => {
   failSave('stops', 's9', { day: '2027-02-08' }, false)
   show()
-  expect(within(screen.getByRole('list', { name: 'not planned yet' })).getByRole('alert')).toHaveTextContent("couldn't save")
+  expect(within(screen.getByRole('list', { name: 'places' })).getByRole('alert')).toHaveTextContent("couldn't save")
 })
 
 describe('saving a link', () => {

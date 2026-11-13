@@ -5,12 +5,12 @@ import { distanceKm } from './geo'
 import { hasPoint } from './walk'
 import { CATEGORIES, categoryOf } from './categories'
 
-// the places tab: every place in the trip and its side trips, planned or not (not planned yet first, then by day),
-// plus stays and journeys still without a day so nothing undated is lost. notes live in notes
+// the places tab: every place and stay in the trip and its side trips, in the itinerary or not (not planned yet first,
+// then by day), plus journeys still without a day so nothing undated is lost. notes live in notes
 export function tripPlaces(trip: Trip, trips: Trip[], stops: Stop[]): Stop[] {
   const ids = new Set(descendants(trip.id, trips))
   return stops
-    .filter((s) => ids.has(s.trip_id) && s.kind !== 'note' && (s.kind === 'place' || !s.day))
+    .filter((s) => ids.has(s.trip_id) && s.kind !== 'note' && (s.kind === 'place' || s.kind === 'stay' || !s.day))
     .sort((a, b) => (a.day ?? '').localeCompare(b.day ?? '') || a.position - b.position || a.title.localeCompare(b.title))
 }
 

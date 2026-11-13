@@ -7,7 +7,7 @@ const side = trip({ id: 'prg', parent_id: 'eu', start_date: '2027-06-05', end_da
 const trips = [top, side, trip({ id: 'jp' })]
 
 describe('a trip\'s places', () => {
-  it('every place in the trip and its side trips, planned or not; not-yet-planned first, then by day', () => {
+  it('every place and stay in the trip and its side trips, planned or not; not-yet-planned first, then by day', () => {
     const stops = [
       stop({ id: 'late', trip_id: 'eu', day: '2027-06-20' }),
       stop({ id: 'idea', trip_id: 'prg', day: null }),
@@ -17,7 +17,7 @@ describe('a trip\'s places', () => {
       stop({ id: 'loose-stay', trip_id: 'eu', kind: 'stay', day: null }),
       stop({ id: 'far', trip_id: 'jp', day: null }),
     ]
-    expect(tripPlaces(top, trips, stops).map((s) => s.id)).toEqual(['idea', 'loose-stay', 'early', 'late'])
+    expect(tripPlaces(top, trips, stops).map((s) => s.id)).toEqual(['idea', 'loose-stay', 'stay', 'early', 'late'])
   })
 })
 

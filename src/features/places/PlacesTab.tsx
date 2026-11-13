@@ -29,8 +29,8 @@ import { flash } from '../itinerary/flash'
 import { stopTitle } from '../plan/stopText'
 import { SearchResults, usePlaceField } from '../plan/usePlaceSearch'
 
-// when a place happens, from its row: a day of the trip (one inside a side trip joins that side trip), back to
-// not planned, or, while not planned, another trip of the family. a trip without dates takes any date
+// a place not planned yet goes onto a day of the trip from its row (one inside a side trip joins that side trip),
+// or onto another trip of the family. a trip without dates takes any date. planned places are moved in the plan
 function PlaceWhen({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[] }) {
   const save = useSave('stops')
   const saveCost = useSave('costs')
@@ -38,34 +38,30 @@ function PlaceWhen({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[
   const costs = useCosts().data ?? []
   const move = useMove(trip)
   const canEdit = useCanEdit()
-  if (!canEdit) return null
+  if (!canEdit || stop.day) return null
   const days = tripDays(trip)
-  const name = stopTitle(stop)
-  const label = stop.day ? `day for ${name}` : `add to day: ${name}`
+  const label = `add to day: ${stopTitle(stop)}`
   const family = descendants(trip.id, trips).map((id) => trips.find((t) => t.id === id)!).filter(Boolean)
   const toDay = (d: string) => move(stop, d, beforeByTime(stop, d, { top: trip, trips, stops, costs }), { said: `added to ${dayLabel(d)}` })
-  const unplan = () => save.mutate({ id: stop.id, day: null, saved: true, position: nextPosition(stops, stop.trip_id, null, stop.id) })
   const toTrip = (id: string) => {
     save.mutate({ id: stop.id, trip_id: id })
     for (const c of costs.filter((c) => c.stop_id === stop.id)) saveCost.mutate({ id: c.id, trip_id: id })
   }
   function pick(v: string) {
-    if (v === 'none') unplan()
-    else if (v.startsWith('day:')) toDay(v.slice(4))
+    if (v.startsWith('day:')) toDay(v.slice(4))
     else if (v.startsWith('trip:')) toTrip(v.slice(5))
   }
   if (!days.length) return (
-    <label className="text-select date-pick"><span>{stop.day ? dayLabel(stop.day) : 'add to day'}</span>
-      <input type="date" aria-label={label} value={stop.day ?? ''} onChange={(e) => (e.target.value ? toDay(e.target.value) : unplan())} />
+    <label className="text-select date-pick"><span>add to day</span>
+      <input type="date" aria-label={label} value="" onChange={(e) => { if (e.target.value) toDay(e.target.value) }} />
     </label>
   )
   const side = (d: string) => { const o = ownerOn(trip, trips, d); return o.id === trip.id ? '' : ` · ${o.name}` }
-  const others = stop.day ? [] : family.filter((t) => t.id !== stop.trip_id)
+  const others = family.filter((t) => t.id !== stop.trip_id)
   return (
-    <select className="text-select" aria-label={label} value={stop.day ? `day:${stop.day}` : ''} onChange={(e) => pick(e.target.value)}>
-      {!stop.day && <option value="">add to day</option>}
+    <select className="text-select" aria-label={label} value="" onChange={(e) => pick(e.target.value)}>
+      <option value="">add to day</option>
       <optgroup label="days">{days.map((d) => <option key={d} value={`day:${d}`}>{dayLabel(d)}{side(d)}</option>)}</optgroup>
-      {stop.day && <option value="none">not planned</option>}
       {others.length > 0 && <optgroup label="trip">{others.map((t) => <option key={t.id} value={`trip:${t.id}`}>{t.name}</option>)}</optgroup>}
     </select>
   )
@@ -133,7 +129,7 @@ function AddPlace({ trip, trips, stops }: { trip: Trip; trips: Trip[]; stops: St
       </form>
       {already && (
         <p role="status" aria-label="already there" className="warn-line">
-          {stopTitle(already).toLowerCase()} is already in places · {already.day ? dayLabel(already.day) : 'not planned yet'}
+          {stopTitle(already).toLowerCase()} is already in places
         </p>
       )}
       <SearchResults field={field} label="places found" quiet />
@@ -143,8 +139,8 @@ function AddPlace({ trip, trips, stops }: { trip: Trip; trips: Trip[]; stops: St
 
 const has = (q: string, ...xs: (string | null | undefined)[]) => !q || xs.some((x) => !!x && normal(x).includes(q))
 
-// every place of the trip and its side trips: added by search (with a pin on the map), filtered by kind,
-// searched, and put on a day (or a side trip) from its row
+// every place and stay of the trip and its side trips, the itinerary's too: added by search (with a pin on the map),
+// filtered by kind, searched, and (not planned yet) put on a day or a side trip from its row. the map beside shows them all
 export function PlacesTab({ trip }: { trip: Trip }) {
   const tq = useTrips()
   const lq = useLinks()
@@ -166,8 +162,6 @@ export function PlacesTab({ trip }: { trip: Trip }) {
   useEffect(() => () => setShownPlaces(null), [])
   if (load.state !== 'ready' && !stops.length) return <LoadState load={load} />
 
-  const later = shown.filter((s) => !s.day)
-  const planned = shown.filter((s) => s.day)
   const row = (s: Stop) => <PlaceRow key={s.id} stop={s} trip={trip} trips={trips} links={links} />
 
   return (
@@ -185,14 +179,8 @@ export function PlacesTab({ trip }: { trip: Trip }) {
         </div>
       )}
       {!shown.length && <EmptyState title={q || on ? 'nothing found' : 'no places yet'} />}
-      {later.length > 0 && (<>
-        <h3 className="mono-label">not planned yet · {later.length}</h3>
-        <ul className="doc-list" aria-label="not planned yet">{later.map(row)}</ul>
-      </>)}
-      {planned.length > 0 && (<>
-        <h3 className="mono-label">in the plan · {planned.length}</h3>
-        <ul className="doc-list" aria-label="in the plan">{planned.map(row)}</ul>
-      </>)}
+      {/* one list: not planned yet first (grey), then what's in the itinerary (in its trip's colour), no dates */}
+      {shown.length > 0 && <ul className="doc-list places-list" aria-label="places">{shown.map(row)}</ul>}
     </div>
   )
 }
