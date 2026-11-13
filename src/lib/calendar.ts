@@ -1,5 +1,5 @@
-import type { Place, Stop, Trip } from './types'
-import { addDays, countdown, tripDays, type DayEntry } from './dates'
+import type { Trip } from './types'
+import { addDays, countdown } from './dates'
 
 // months are 'YYYY-MM'; days are 'YYYY-MM-DD'
 export function shiftMonth(m: string, n: number): string {
@@ -15,12 +15,6 @@ export function monthWeeks(m: string): (string | null)[][] {
   for (let d = first; d.startsWith(m); d = addDays(d, 1)) cells.push(d)
   while (cells.length % 7) cells.push(null)
   return Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7))
-}
-
-// the monday-first week a day sits in, every day filled (a folded calendar shows one)
-export function weekOf(d: string): string[] {
-  const lead = (new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7
-  return Array.from({ length: 7 }, (_, i) => addDays(d, i - lead))
 }
 
 const end = (t: Trip) => t.end_date ?? t.start_date!
@@ -46,10 +40,6 @@ export function tripSpan(t: Trip): Span | null {
 const within = (s: Span, d: string) => s.start <= d && s.end >= d
 const spanOrder = (a: Span, b: Span) => a.start.localeCompare(b.start) || b.end.localeCompare(a.end) || a.name.localeCompare(b.name)
 
-export function ribbonDay(d: string, spans: Span[]): Span | undefined {
-  return spans.filter((s) => within(s, d)).sort(spanOrder)[0]
-}
-
 // the innermost trip on a day: a side trip (or its side trip) wins over the trip it sits in
 export function innermostDay(d: string, spans: Span[], depth: (s: Span) => number): Span | undefined {
   return spans.filter((s) => within(s, d)).sort((a, b) => depth(b) - depth(a) || spanOrder(a, b))[0]
@@ -70,60 +60,5 @@ export function weekBars(week: (string | null)[], spans: Span[]): Bar[] {
     lanes[lane] = to
     out.push({ span: s, from, to, starts: week[from] === s.start, ends: week[to] === s.end, lane })
   }
-  return out
-}
-
-const city = (p: Place | null | undefined) => p?.city?.trim() || null
-
-// on the trip's own days (not a side trip's): the city of that night's stay, else where a journey takes you, else the base
-export function citySpans(trip: Trip, stops: Stop[], children: Trip[]): Span[] {
-  const kids = children.map(tripSpan).filter((x): x is Span => !!x)
-  const home = city(trip.base) ?? (trip.base?.name?.trim() || null)
-  const out: Span[] = []
-  for (const d of tripDays(trip)) {
-    if (kids.some((k) => within(k, d))) continue
-    const stay = stops.find((s) => s.kind === 'stay' && s.day && city(s.place)
-      && (s.end_date && s.end_date > s.day ? s.day <= d && d < s.end_date : s.day === d))
-    const journey = stops.find((s) => s.kind === 'journey' && s.day === d && city(s.destination))
-    const name = city(stay?.place) ?? city(journey?.destination) ?? home
-    if (!name) continue
-    const last = out[out.length - 1]
-    if (last && last.name === name && addDays(last.end, 1) === d) last.end = d
-    else out.push({ id: `city-${d}`, name, start: d, end: d, color: null })
-  }
-  return out
-}
-
-export type PlanItem =
-  | { kind: 'day'; date: string; entries: DayEntry[] }
-  | { kind: 'fold'; date: string; trip: Trip }
-
-// a side trip's days are planned in the side trip, so the parent shows them as one row;
-// a day the parent has its own plans on (not just "staying at") still shows
-export function planItems(days: { date: string; entries: DayEntry[] }[], children: Trip[]): PlanItem[] {
-  const kids = children.map(tripSpan).filter((x): x is Span => !!x)
-  const items: PlanItem[] = []
-  for (const d of days) {
-    const entries = d.entries.filter((e) => e.kind !== 'sidetrip')
-    const own = entries.some((e) => e.kind !== 'staying')
-    if (!own && kids.some((k) => within(k, d.date))) continue
-    items.push({ kind: 'day', date: d.date, entries })
-  }
-  for (const k of kids) items.push({ kind: 'fold', date: k.start, trip: k.trip! })
-  const rank = (i: PlanItem) => (i.kind === 'fold' ? 0 : 1)
-  return items.sort((a, b) => a.date.localeCompare(b.date) || rank(a) - rank(b))
-}
-
-// every trip with a day in the month: top-level by start, each followed by its own side trips
-export function monthTree(m: string, trips: Trip[]): { trip: Trip; depth: number }[] {
-  const last = addDays(`${shiftMonth(m, 1)}-01`, -1)
-  const shown = trips.filter((t) => t.start_date && t.start_date <= last && end(t) >= `${m}-01`).sort(byStart)
-  const ids = new Set(shown.map((t) => t.id))
-  const out: { trip: Trip; depth: number }[] = []
-  const walk = (t: Trip, depth: number) => {
-    out.push({ trip: t, depth })
-    for (const k of shown) if (k.parent_id === t.id) walk(k, depth + 1)
-  }
-  for (const t of shown) if (!t.parent_id || !ids.has(t.parent_id)) walk(t, 0)
   return out
 }

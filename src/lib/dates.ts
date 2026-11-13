@@ -55,44 +55,6 @@ export function visibleDays(t: Trip, stops: Stop[], children: Trip[]): string[] 
   return [...set].filter(inTrip).sort()
 }
 
-const byOrder = (a: Stop, b: Stop) =>
-  a.position - b.position || (a.time ?? '99').localeCompare(b.time ?? '99')
-
-export function groupByDay(t: Trip, stops: Stop[], children: Trip[]) {
-  const days = new Map<string, DayEntry[]>()
-  const push = (d: string, e: DayEntry) => {
-    if (!days.has(d)) days.set(d, [])
-    days.get(d)!.push(e)
-  }
-  for (const d of visibleDays(t, stops, children)) days.set(d, [])
-  const undated: Stop[] = []
-  const rank = { sidetrip: 0, checkout: 1, staying: 2, stop: 3, checkin: 3 }
-
-  for (const c of children) if (c.start_date) push(c.start_date, { kind: 'sidetrip', trip: c })
-  for (const s of [...stops].sort(byOrder)) {
-    if (!s.day) { undated.push(s); continue }
-    if (s.kind === 'stay') {
-      const ds = stayDays(s)
-      ds.forEach((d, i) => {
-        const kind = i === 0 ? 'checkin' : i === ds.length - 1 ? 'checkout' : 'staying'
-        // "staying at" only joins days that are already shown
-        if (kind !== 'staying' || days.has(d)) push(d, { kind, stop: s })
-      })
-    } else push(s.day, { kind: 'stop', stop: s })
-  }
-  const out = [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, entries]) => ({
-    date,
-    entries: entries.sort((a, b) => {
-      const ra = a.kind === 'stop' ? 3 : rank[a.kind]
-      const rb = b.kind === 'stop' ? 3 : rank[b.kind]
-      if (ra !== rb) return ra - rb
-      if (a.stop && b.stop && a.kind === 'stop' && b.kind === 'stop') return byOrder(a.stop, b.stop)
-      return 0
-    }),
-  }))
-  return { days: out, undated }
-}
-
 export function countdown(t: Trip, today: string): { kind: 'upcoming' | 'ongoing' | 'done' | 'undated'; days: number } {
   if (!t.start_date) return { kind: 'undated', days: 0 }
   if (today < t.start_date) return { kind: 'upcoming', days: daysBetween(today, t.start_date) }
