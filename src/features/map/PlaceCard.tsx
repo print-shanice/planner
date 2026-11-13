@@ -6,6 +6,7 @@ import { dayAreas } from '../../lib/itinerary'
 import { beforeByTime } from '../../lib/move'
 import { couldBeTime, readTime } from '../../lib/time'
 import { newId } from '../../lib/id'
+import { nextPosition } from '../../lib/schedule'
 import { useWide } from '../../lib/useWide'
 import { Icon } from '../../components/Icon'
 import { useMove } from '../itinerary/useMove'
@@ -86,11 +87,10 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
     setProblem(null)
     try { await fn(); onDone?.() } catch (e) { setProblem(saveError(e)) }
   }
-  const lastOn = (d: string | null) => Math.max(-1, ...stops.filter((s) => s.trip_id === trip.id && (s.day ?? null) === d).map((s) => s.position)) + 1
   // a new place: kept as an idea, or put straight on the chosen day; its kind comes from the search
   const keep = (d: string | null) => run(() => {
     const { category, ...bare } = place
-    return save.mutateAsync({ trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: d, position: lastOn(d), place: bare, status: 'idea', saved: !d, category: asCategory(category) })
+    return save.mutateAsync({ trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: d, position: nextPosition(stops, trip.id, d), place: bare, status: 'idea', saved: !d, category: asCategory(category) })
   })
 
   return (

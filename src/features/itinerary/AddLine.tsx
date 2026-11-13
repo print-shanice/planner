@@ -4,6 +4,7 @@ import { useSettle } from './useSettle'
 import { useSave, useStops } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { newId } from '../../lib/id'
+import { nextPosition } from '../../lib/schedule'
 import { dayLabel } from '../../lib/dates'
 import { LineEditor, type LineValues } from './LineEditor'
 import { flash } from './flash'
@@ -30,7 +31,7 @@ export function AddLine({ trip, day }: { trip: Trip; day: string | null }) {
     const { title, kind, status, mode } = readTag(v.title)
     if (!title) return
     const id = newId()
-    const position = Math.max(-1, ...stops.filter((s) => s.trip_id === trip.id && (s.day ?? null) === day).map((s) => s.position)) + 1
+    const position = nextPosition(stops, trip.id, day)
     const row = {
       id, trip_id: trip.id, kind, title, day, time: v.time || null, end_time: v.end || null,
       status, saved: false, position, ...(kind === 'journey' ? { mode, place: null } : {}),

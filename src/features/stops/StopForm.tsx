@@ -2,6 +2,7 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import type { Mode, Place, Stop, StopStatus, Trip } from '../../lib/types'
 import { useCosts, useMembers, useRates, useRemove, useSave, useStops } from '../../lib/queries'
 import { newId } from '../../lib/id'
+import { nextPosition } from '../../lib/schedule'
 import { hasPoint } from '../../lib/walk'
 import { Fold } from '../../components/Fold'
 import { Switch } from '../../components/Switch'
@@ -172,9 +173,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       const row = toRow(draft, kind)
       const day = row.day ?? null
       const moved = isNew || day !== (stop.day ?? null)
-      const position = moved
-        ? Math.max(-1, ...allStops.filter((s) => s.trip_id === stop.trip_id && s.id !== id && (s.day ?? null) === day).map((s) => s.position)) + 1
-        : stop.position
+      const position = moved ? nextPosition(allStops, stop.trip_id, day, id) : stop.position
       if (isNew) {
         // an idea added from saved stays saved
         await save.mutateAsync({ ...row, id, trip_id: stop.trip_id, kind, position, ...(stop.saved ? { saved: true } : {}) })
