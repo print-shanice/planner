@@ -1,6 +1,6 @@
 import type { Feature, FeatureCollection, LineString } from 'geojson'
 import type { Stop, Trip } from '../../lib/types'
-import { dayColor, fmtRange } from '../../lib/dates'
+import { byStart, dayColor, fmtRange } from '../../lib/dates'
 import { descendants } from '../../lib/countries'
 import { placeOut } from '../../lib/legs'
 import { hasPoint } from '../../lib/walk'
@@ -23,10 +23,7 @@ function sideAt(child: Trip, trips: Trip[], stops: Stop[]): [number, number] | n
 export function overviewFeatures(trip: Trip, trips: Trip[], stops: Stop[]): Overview {
   const b = trip.base
   const home = hasPoint(b) ? { name: (b.city || b.name).toLowerCase(), at: [b.lng, b.lat] as [number, number] } : null
-  const kids = trips.filter((t) => t.parent_id === trip.id).sort((a, c) => {
-    if (!a.start_date !== !c.start_date) return a.start_date ? -1 : 1
-    return (a.start_date ?? '').localeCompare(c.start_date ?? '') || a.name.localeCompare(c.name)
-  })
+  const kids = trips.filter((t) => t.parent_id === trip.id).sort(byStart)
   const sides: SidePin[] = kids.map((c) => ({
     id: c.id,
     name: c.name.toLowerCase(),

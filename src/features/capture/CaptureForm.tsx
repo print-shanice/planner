@@ -6,6 +6,7 @@ import { hostOf } from '../../lib/embed'
 import { draftKey, useDraft } from '../../lib/drafts'
 import { extractUrl, findSaved, platformOf, type Incoming } from '../../lib/capture'
 import { descendants } from '../../lib/countries'
+import { byStart } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
 import { useToast } from '../../components/Toast'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
@@ -45,7 +46,7 @@ export function CaptureForm({ initial, tripId, stopId, link, onDone }: { initial
   // never itself: while it saves, its own new row is already in the list
   const already = useMemo(() => (url && !link ? findSaved(url, links.filter((l) => l.id !== form.id)) : undefined), [url, links, link, form.id])
   const where = already ? (trips.find((t) => t.id === already.trip_id)?.name ?? 'inbox') : null
-  const top = trips.filter((t) => !t.parent_id).sort((a, b) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999'))
+  const top = trips.filter((t) => !t.parent_id).sort(byStart)
   const ordered = top.flatMap((t) => descendants(t.id, trips).map((id) => trips.find((x) => x.id === id)!).filter(Boolean))
   const places = form.trip ? stops.filter((s) => s.trip_id === form.trip && (s.kind === 'place' || s.kind === 'stay')).sort((a, b) => stopTitle(a).localeCompare(stopTitle(b))) : []
 

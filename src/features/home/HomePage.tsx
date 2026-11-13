@@ -2,7 +2,7 @@ import { lazy, Suspense, useId, useLayoutEffect, useMemo, useRef, useState } fro
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLinks, useReviews, useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
-import { countdown, fmtDay, todayISO } from '../../lib/dates'
+import { addDays, byStart, countdown, fmtDay, todayISO } from '../../lib/dates'
 import { resumePlan } from '../../lib/resume'
 import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
@@ -21,7 +21,6 @@ import { Calendar } from './Calendar'
 import { MonthSide } from './MonthSide'
 import { countriesOn, holidaysOn, useHolidays } from '../../lib/holidays'
 import { ownerOn } from '../../lib/agenda'
-import { addDays } from '../../lib/dates'
 import { Travels } from './Travels'
 import { TripForm } from './TripForm'
 import { AccountButton } from './Account'
@@ -98,7 +97,6 @@ export function HomePage() {
   const lists = useMemo(() => homeLists(trips, stops, today), [trips, stops, today])
 
   const top = trips.filter((t) => !t.parent_id)
-  const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
   const upcoming = top.filter((t) => countdown(t, today).kind !== 'done').sort(byStart)
   const past = top.filter((t) => countdown(t, today).kind === 'done').sort((a, b) => byStart(b, a))
   const lead = leadTrip(trips, today)

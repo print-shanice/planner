@@ -2,20 +2,17 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { ancestors } from '../../lib/countries'
-import { fmtRange } from '../../lib/dates'
+import { byStart, fmtRange } from '../../lib/dates'
 import { Icon } from '../../components/Icon'
 import { TripMark } from '../../components/TripMark'
 import { tint } from '../../components/MonthCalendar'
-
-// side trips in date order, the undated ones last
-const order = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
 
 // the whole family of a trip, from the top: open along the way to the current trip, folded elsewhere
 export function TripTree({ trips, current, onPick, flagsOf }: { trips: Trip[]; current: string; onPick: () => void; flagsOf?: (t: Trip) => string[] }) {
   const path = ancestors(current, trips)
   const root = path[0] ?? trips.find((t) => t.id === current)!
   const [open, setOpen] = useState(() => new Set([...path.map((t) => t.id), current]))
-  const kids = (id: string) => trips.filter((t) => t.parent_id === id).sort(order)
+  const kids = (id: string) => trips.filter((t) => t.parent_id === id).sort(byStart)
 
   // a plain function, not a component, so expanding a row keeps focus on its toggle
   function node(t: Trip, depth: number): JSX.Element {

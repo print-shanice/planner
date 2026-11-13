@@ -55,6 +55,10 @@ export function visibleDays(t: Trip, stops: Stop[], children: Trip[]): string[] 
   return [...set].filter(inTrip).sort()
 }
 
+// trips in date order, the undated ones last, then by name
+export const byStart = (a: Trip, b: Trip): number =>
+  (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
+
 export function countdown(t: Trip, today: string): { kind: 'upcoming' | 'ongoing' | 'done' | 'undated'; days: number } {
   if (!t.start_date) return { kind: 'undated', days: 0 }
   if (today < t.start_date) return { kind: 'upcoming', days: daysBetween(today, t.start_date) }

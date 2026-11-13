@@ -2,11 +2,9 @@ import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Trip } from '../../lib/types'
 import { TripMark } from '../../components/TripMark'
-import { countdown, fmtDay, fmtRange, nights } from '../../lib/dates'
+import { byStart, countdown, fmtDay, fmtRange, nights } from '../../lib/dates'
 import { tint } from '../../components/MonthCalendar'
 import { clockIn, hereCode, placeCode, useNow, zoneOf } from '../../lib/localTime'
-
-const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
 
 export function when(t: Trip, today: string): string {
   const cd = countdown(t, today)

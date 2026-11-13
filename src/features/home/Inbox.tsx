@@ -6,7 +6,7 @@ import { safeUrl } from '../../lib/embed'
 import { linkName } from '../../lib/capture'
 import { useUndoRemove } from '../../lib/undo'
 import { useSwipeAway } from '../../lib/swipe'
-import { countdown, todayISO } from '../../lib/dates'
+import { byStart, countdown, todayISO } from '../../lib/dates'
 import { ChoiceMenu, type Choice } from '../../components/ChoiceMenu'
 import { Icon } from '../../components/Icon'
 import { SiteIcon } from '../saved/LinkCard'
@@ -15,7 +15,6 @@ import { Sheet } from '../../components/Sheet'
 import { tripItems } from './Trips'
 import { TripForm } from './TripForm'
 
-const byStart = (a: Trip, b: Trip) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999') || a.name.localeCompare(b.name)
 const links = (n: number) => `${n} ${n === 1 ? 'link' : 'links'}`
 // the menu's first choice: make a trip for it there and then (no trip id can look like this)
 const NEW = 'new trip'

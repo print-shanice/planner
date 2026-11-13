@@ -1,5 +1,6 @@
 import type { Stop, Trip } from './types'
 import { chosenDay } from './agenda'
+import { byStart } from './dates'
 
 const KEY = 'planner-resume'
 export type PlanningContext = { tripId: string; day: string | null }
@@ -14,8 +15,7 @@ export function resumePlan(trips: Trip[], stops: Stop[], today: string): Plannin
     const trip = trips.find(t => t.id === value?.tripId)
     if (trip) return { tripId: trip.id, day: chosenDay(trip, trips, stops, typeof value?.day === 'string' ? value.day : null, today) }
   } catch { /* stale or unavailable storage: use the next trip */ }
-  const trip = trips.filter(t => !t.parent_id && (!t.end_date || t.end_date >= today))
-    .sort((a, b) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999'))[0]
+  const trip = trips.filter(t => !t.parent_id && (!t.end_date || t.end_date >= today)).sort(byStart)[0]
   return trip ? { tripId: trip.id, day: chosenDay(trip, trips, stops, null, today) } : null
 }
 

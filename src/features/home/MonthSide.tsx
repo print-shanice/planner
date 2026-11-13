@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
 import type { Holiday } from '../../lib/holidays'
-import { addDays, dayLabel, fmtDay, fmtRange } from '../../lib/dates'
+import { addDays, byStart, dayLabel, fmtDay, fmtRange } from '../../lib/dates'
 import { tint } from '../../components/MonthCalendar'
 import { TripMark } from '../../components/TripMark'
 import { CountryFlag } from '../../components/CountryFlag'
@@ -24,7 +24,6 @@ const lastDay = (month: string) => {
 }
 // the hidden tab can't be tabbed into or read out (react 18 doesn't know `inert` yet, so it goes on as a plain attribute)
 const away = (hidden: boolean) => (hidden ? ({ inert: '' } as object) : {})
-const byStart = (a: Trip, b: Trip) => (a.start_date ?? '').localeCompare(b.start_date ?? '') || a.name.localeCompare(b.name)
 
 export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
   const [tab, setTab] = useState<'on' | 'todo'>('on')
