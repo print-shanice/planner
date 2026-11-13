@@ -14,7 +14,8 @@ import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { ItineraryTab } from '../itinerary/ItineraryTab'
 import { MoneyTab } from '../money/MoneyTab'
-import { LinksTab, SavedTab } from '../saved/SavedTab'
+import { LinksTab, PlacesTab } from '../saved/SavedTab'
+import { NotesTab } from '../notes/NotesTab'
 import { PackingTab } from '../packing/PackingTab'
 import { TripSummary } from './TripSummary'
 import { TripHeader } from './TripHeader'
@@ -187,13 +188,14 @@ function TripScreen() {
         {switching && <Loading className="section-wait" />}
         {tab === 'plan' && <ItineraryTab trip={trip} searchSlot={searchSlot} />}
         {phoneMap && <section className="map-section" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} phone /></Suspense></section>}
-        {tab === 'ideas' && <section className="trip-section" aria-label="ideas"><SavedTab trip={trip} /></section>}
+        {tab === 'places' && <section className="trip-section" aria-label="places"><PlacesTab trip={trip} /></section>}
+        {tab === 'notes' && <section className="trip-section" aria-label="notes"><NotesTab trip={trip} /></section>}
         {tab === 'links' && <section className="trip-section" aria-label="links"><LinksTab trip={trip} /></section>}
         {tab === 'money' && <section className="trip-section" aria-label="money"><MoneyTab trip={trip} /></section>}
         {tab === 'packing' && <section className="trip-section" aria-label="packing"><PackingTab trip={trip} /></section>}
       </section>
       {wide && <SplitHandle width={planW} onChange={setPlanW} />}
-      {wide && <aside className="trip-map" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} ideas={tab === 'ideas'} /></Suspense></aside>}
+      {wide && <aside className="trip-map" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} ideas={tab === 'places'} /></Suspense></aside>}
       {!wide && <TripSummary bar tabs={PHONE_TABS} active={tab} onPick={pick} />}
       <AddSheet open={menu} title={menuTitle} onClose={() => setMenu(false)} onPick={k => { setMenu(false); setKind(k) }} />
       <AddForms kind={kind} trip={owner} day={onDay} onClose={() => setKind(null)} />

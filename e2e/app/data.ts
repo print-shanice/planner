@@ -36,7 +36,7 @@ const stops = [
   S({ trip_id: 'lap', kind: 'journey', title: 'flight to rovaniemi', mode: 'flight', day: '2027-03-04', time: '06:40', end_time: '12:15', origin: pl('eindhoven airport', 'eindhoven', 'NL', 51.45, 5.37), destination: pl('rovaniemi airport', 'rovaniemi', 'FI', 66.56, 25.83), status: 'to_book' }),
   S({ trip_id: 'lap', kind: 'stay', title: 'glass igloo', day: '2027-03-04', end_date: '2027-03-09', place: pl('arctic glass igloo', 'rovaniemi', 'FI', 66.55, 25.85), status: 'to_book' }),
   S({ trip_id: 'lap', title: 'husky ride', day: '2027-03-05', place: pl('husky park', 'rovaniemi', 'FI', 66.52, 25.9) }),
-  S({ trip_id: 'bcn', kind: 'stay', title: 'flat in gràcia', day: '2027-04-15', end_date: '2027-04-20', place: pl('gràcia flat', 'barcelona', 'ES', 41.403, 2.157), status: 'booked' }),
+  S({ trip_id: 'bcn', kind: 'stay', title: 'flat in gràcia', day: '2027-04-15', end_date: '2027-04-20', place: pl('gràcia flat', 'barcelona', 'ES', 41.403, 2.157), status: 'booked', notes: 'key box code comes by email the day before' }),
   S({ trip_id: 'bcn', title: 'sagrada família', day: '2027-04-16', time: '10:15', place: pl('sagrada família', 'barcelona', 'ES', 41.403, 2.174), status: 'booked' }),
   S({ trip_id: 'gr', kind: 'stay', title: 'room near the port', day: '2027-07-20', end_date: '2027-07-30', place: pl('naxos port', 'naxos', 'GR', 37.105, 25.375) }),
   S({ trip_id: 'lis', kind: 'stay', title: 'alfama flat', day: '2026-05-01', end_date: '2026-05-04', place: pl('alfama flat', 'lisbon', 'PT', 38.711, -9.13), status: 'booked' }),
@@ -59,7 +59,7 @@ const stops = [
   S({ trip_id: 'jp', kind: 'journey', title: 'haruka', mode: 'train', day: '2024-10-11', time: '14:00', end_time: '15:20', origin: pl('kyoto station', 'kyoto', 'JP', 34.985, 135.758), destination: pl('kansai airport', 'osaka', 'JP', 34.43, 135.24), status: 'booked' }),
   S({ trip_id: 'jp', kind: 'journey', title: 'sq 619', mode: 'flight', day: '2024-10-11', time: '18:00', end_time: '23:40', origin: pl('kansai airport', 'osaka', 'JP', 34.43, 135.24), destination: pl('changi', 'singapore', 'SG', 1.36, 103.99), status: 'booked' }),
   // a busy travel day in barcelona: a flight in, a train, timed and untimed places, a note with no place
-  S({ trip_id: 'bcn', kind: 'journey', title: 'vy 8312', mode: 'flight', day: '2027-04-15', time: '07:05', end_time: '09:10', origin: pl('eindhoven airport', 'eindhoven', 'NL', 51.45, 5.37), destination: pl('el prat', 'barcelona', 'ES', 41.297, 2.083), status: 'booked', ref: 'Q7TZ2L' }),
+  S({ trip_id: 'bcn', kind: 'journey', title: 'vy 8312', mode: 'flight', day: '2027-04-15', time: '07:05', end_time: '09:10', origin: pl('eindhoven airport', 'eindhoven', 'NL', 51.45, 5.37), destination: pl('el prat', 'barcelona', 'ES', 41.297, 2.083), status: 'booked', ref: 'Q7TZ2L', notes: 'check in online the day before\none cabin bag only' }),
   S({ trip_id: 'bcn', kind: 'journey', title: 'r2 nord', mode: 'train', day: '2027-04-15', time: '10:00', end_time: '10:30', origin: pl('el prat t2 station', 'barcelona', 'ES', 41.304, 2.072), destination: pl('passeig de gràcia', 'barcelona', 'ES', 41.392, 2.165), position: 1 }),
   S({ trip_id: 'bcn', title: 'satan\'s coffee corner', day: '2027-04-15', position: 2, category: 'cafe', place: pl('satan\'s coffee', 'barcelona', 'ES', 41.383, 2.176) }),
   S({ trip_id: 'bcn', title: 'la boqueria', day: '2027-04-15', position: 3, category: 'shopping', place: pl('la boqueria', 'barcelona', 'ES', 41.3817, 2.1716) }),
@@ -67,6 +67,7 @@ const stops = [
   S({ trip_id: 'bcn', title: 'bunkers del carmel sunset', day: '2027-04-15', time: '19:30', category: 'sight', place: pl('bunkers del carmel', 'barcelona', 'ES', 41.419, 2.162) }),
   S({ trip_id: 'bcn', title: 'bar del pla', day: '2027-04-15', time: '21:30', category: 'restaurant', place: pl('bar del pla', 'barcelona', 'ES', 41.385, 2.180) }),
   // undated ideas
+  S({ trip_id: 'bcn', kind: 'note', title: 'gifts to bring back', notes: 'turrón for the flatmates' }),
   S({ trip_id: 'bcn', title: 'park güell', saved: true, category: 'park', place: pl('park güell', 'barcelona', 'ES', 41.4145, 2.1527) }),
   S({ trip_id: 'bcn', title: 'nomad coffee', category: 'cafe', place: pl('nomad coffee', 'barcelona', 'ES', 41.388, 2.178) }),
 ]

@@ -1,25 +1,50 @@
 import { test, expect, open, expectLine } from './fixtures'
 
-test.describe('ideas', () => {
-  test('jotting an idea keeps it undated; a day select puts it on the plan', async ({ page }) => {
-    await open(page, '/trip/bcn?tab=ideas')
-    const ideas = page.getByRole('region', { name: 'ideas' })
-    await expect(ideas).toContainText('park güell')
-    await ideas.getByRole('textbox', { name: 'jot an idea' }).fill('tibidabo at sunset')
-    await ideas.getByRole('button', { name: 'add idea' }).click()
-    await expect(ideas).toContainText('tibidabo at sunset')
-    await ideas.getByRole('combobox', { name: 'add to day: tibidabo at sunset' }).selectOption('2027-04-16')
-    await expect(ideas).not.toContainText('tibidabo at sunset')
+test.describe('places', () => {
+  test('jotting a place keeps it undated; a day select puts it on the plan', async ({ page }) => {
+    await open(page, '/trip/bcn?tab=places')
+    const places = page.getByRole('region', { name: 'places' })
+    await expect(places).toContainText('park güell')
+    await places.getByRole('textbox', { name: 'jot a place' }).fill('tibidabo at sunset')
+    await places.getByRole('button', { name: 'add place' }).click()
+    await expect(places).toContainText('tibidabo at sunset')
+    await places.getByRole('combobox', { name: 'add to day: tibidabo at sunset' }).selectOption('2027-04-16')
+    await expect(places).not.toContainText('tibidabo at sunset')
     await open(page, '/trip/bcn?day=2027-04-16')
     await expectLine(page.getByRole('region', { name: 'friday 16 april' }), 'tibidabo at sunset')
   })
 
-  test('ideas are searched as one list', async ({ page }) => {
-    await open(page, '/trip/bcn?tab=ideas')
-    const ideas = page.getByRole('region', { name: 'ideas' })
-    await ideas.getByRole('searchbox', { name: 'search ideas' }).fill('nomad')
-    await expect(ideas).toContainText('nomad coffee')
-    await expect(ideas).not.toContainText('park güell')
+  test('places are searched as one list', async ({ page }) => {
+    await open(page, '/trip/bcn?tab=places')
+    const places = page.getByRole('region', { name: 'places' })
+    await places.getByRole('searchbox', { name: 'search places' }).fill('nomad')
+    await expect(places).toContainText('nomad coffee')
+    await expect(places).not.toContainText('park güell')
+  })
+})
+
+test.describe('notes', () => {
+  test('every note in the trip in one place, following the trip, and searchable', async ({ page }) => {
+    await open(page, '/trip/bcn?tab=notes')
+    const notes = page.getByRole('region', { name: 'notes' })
+    await expect(notes.getByRole('list', { name: 'no date' })).toContainText('gifts to bring back')
+    const day = notes.getByRole('list', { name: 'thu 15 apr' })
+    await expect(day).toContainText('one cabin bag only')
+    await expect(day).toContainText('key box code comes by email')
+    await expect(day).toContainText('buy t-casual card')
+    await notes.getByRole('searchbox', { name: 'search notes' }).fill('cabin')
+    await expect(notes).toContainText('one cabin bag only')
+    await expect(notes).not.toContainText('gifts to bring back')
+  })
+
+  test('a jotted note lands under no date, and a tap opens its card', async ({ page }) => {
+    await open(page, '/trip/bcn?tab=notes')
+    const notes = page.getByRole('region', { name: 'notes' })
+    await notes.getByRole('textbox', { name: 'jot a note' }).fill('ask about the late check-out')
+    await notes.getByRole('button', { name: 'add note' }).click()
+    await expect(notes.getByRole('list', { name: 'no date' })).toContainText('ask about the late check-out')
+    await notes.getByRole('button', { name: /key box code/ }).click()
+    await expect(page.getByRole('dialog', { name: /flat in gràcia/ })).toBeVisible()
   })
 })
 

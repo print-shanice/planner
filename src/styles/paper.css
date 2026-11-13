@@ -169,6 +169,18 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .ideas .link-foot { padding: 8px 0; flex-wrap: wrap; }
 .link-place { font-size: 13px; }
 
+/* ---------- notes: what it's on above, the words below, the whole note kept ---------- */
+.note-row { border-bottom: 1px solid var(--line); }
+.note-main { display: grid; gap: 4px; width: 100%; min-height: 44px; padding: 10px 0; border: 0; background: none; text-align: left; color: inherit; text-decoration: none; font: inherit; cursor: pointer; }
+.note-main:active { filter: brightness(.95); }
+.note-on { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.note-on > .cat { margin-top: 0; }
+.note-title { overflow-wrap: anywhere; }
+.note-words { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.45; color: var(--ink); }
+.note-row.note .note-title { font-size: 16px; font-weight: 500; color: var(--ink); }
+.note-row.note .note-words { font-size: 14px; color: var(--ink-2); }
+.note-trip { color: var(--ink-3); }
+
 /* ---------- forms ---------- */
 .category-pick { display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
 .category-pick::-webkit-scrollbar { display: none; }

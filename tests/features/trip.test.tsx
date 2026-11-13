@@ -153,26 +153,26 @@ function wide(on: boolean) {
 }
 afterEach(() => wide(false))
 
-it('phones show six sections in a bar at the bottom', () => {
+it('phones show seven sections in a bar at the bottom', () => {
   show('/trip/summer')
   const nav = screen.getByRole('navigation', { name: 'trip sections' })
   expect(nav).toHaveClass('tab-bar')
-  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'map', 'ideas', 'links', 'money', 'packing'])
+  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'map', 'places', 'notes', 'links', 'money', 'packing'])
   expect(sections().getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-it('laptops show one quiet row of five tabs, with the map always beside', async () => {
+it('laptops show one quiet row of six tabs, with the map always beside', async () => {
   wide(true)
   show('/trip/summer')
   expect(screen.getByRole('navigation', { name: 'trip sections' })).toHaveClass('section-tabs')
-  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'ideas', 'links', 'money', 'packing'])
+  expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'places', 'notes', 'links', 'money', 'packing'])
   expect(await screen.findByText('map here')).toBeInTheDocument()
   await userEvent.click(sections().getByRole('button', { name: 'money' }))
   expect(screen.getByText('map here')).toBeInTheDocument()
 })
 
 it('no section has a second layer of navigation inside it', async () => {
-  for (const tab of ['', '?tab=ideas', '?tab=links', '?tab=money', '?tab=packing']) {
+  for (const tab of ['', '?tab=places', '?tab=notes', '?tab=links', '?tab=money', '?tab=packing']) {
     const r = show(`/trip/summer${tab}`)
     expect(screen.queryByRole('group', { name: /saved|plan view|show/ })).toBeNull()
     expect(screen.getAllByRole('navigation').filter((n) => n.getAttribute('aria-label') !== 'days')).toHaveLength(1)
@@ -185,7 +185,8 @@ it('old links land on the new sections', () => {
   expect(read('')).toBe('plan')
   for (const old of ['calendar', 'plan', 'itinerary', 'nope']) expect(read(`tab=${old}`)).toBe('plan')
   for (const old of ['cost', 'money']) expect(read(`tab=${old}`)).toBe('money')
-  for (const old of ['ideas', 'saved']) expect(read(`tab=${old}`)).toBe('ideas')
+  for (const old of ['ideas', 'saved', 'places']) expect(read(`tab=${old}`)).toBe('places')
+  expect(read('tab=notes')).toBe('notes')
   expect(read('tab=links')).toBe('links')
   expect(read('tab=saved&view=links')).toBe('links')
   for (const old of ['tab=packing', 'tab=more', 'tab=saved&view=packing', 'tab=more&view=packing']) expect(read(old)).toBe('packing')
@@ -249,7 +250,7 @@ it('the people sharing the trip are the way into its settings', async () => {
 
 const OPTIONS = ['place', 'stay', 'journey', 'note', 'cost', 'link', 'side trip']
 
-for (const path of ['/trip/summer', '/trip/summer?tab=money', '/trip/summer?tab=ideas', '/trip/summer?tab=links', '/trip/summer?tab=packing']) {
+for (const path of ['/trip/summer', '/trip/summer?tab=money', '/trip/summer?tab=places', '/trip/summer?tab=notes', '/trip/summer?tab=links', '/trip/summer?tab=packing']) {
   it(`one + and no other add buttons (${path})`, () => {
     show(path)
     expect(screen.getAllByRole('button', { name: 'add' })).toHaveLength(1)
@@ -283,8 +284,8 @@ it('a stay starts on the day you are reading, with no check-out made up', async 
   expect(within(d).getByLabelText('check-out')).toHaveValue('')
 })
 
-it('from ideas, nothing gets a date it was not given', async () => {
-  show('/trip/summer?tab=ideas')
+for (const tab of ['places', 'notes']) it(`from ${tab}, nothing gets a date it was not given`, async () => {
+  show(`/trip/summer?tab=${tab}`)
   await userEvent.click(screen.getByRole('button', { name: 'add' }))
   await userEvent.click(within(screen.getByRole('dialog', { name: 'add' })).getByRole('button', { name: 'stay' }))
   expect(within(await screen.findByRole('dialog', { name: 'new stay' })).getByLabelText('check-in')).toHaveValue('')
@@ -329,8 +330,8 @@ async function addPlace(path: string) {
   return db.save.mock.calls.at(-1)?.[0] as Record<string, unknown>
 }
 
-it('a place added from ideas has no day', async () => {
-  expect(await addPlace('/trip/summer?tab=ideas')).toEqual(expect.objectContaining({ kind: 'place', day: null }))
+it('a place added from places has no day', async () => {
+  expect(await addPlace('/trip/summer?tab=places')).toEqual(expect.objectContaining({ kind: 'place', day: null }))
 })
 
 it('a place added to a trip without dates has no day', async () => {
@@ -372,7 +373,7 @@ it('the map says it is loading while its code arrives', async () => {
 it('a tapped tab lights up at once, before the page has caught up', async () => {
   const { TripSummary } = await import('../../src/features/trip/TripSummary')
   const onPick = vi.fn()
-  render(<TripSummary bar active="plan" onPick={onPick} tabs={['plan', 'map', 'ideas', 'links', 'money', 'packing']} />)
+  render(<TripSummary bar active="plan" onPick={onPick} tabs={['plan', 'map', 'places', 'notes', 'links', 'money', 'packing']} />)
   fireEvent.click(screen.getByRole('button', { name: 'money' }))
   // lit straight away, before the section has even started to change
   expect(screen.getByRole('button', { name: 'money' })).toHaveAttribute('aria-pressed', 'true')

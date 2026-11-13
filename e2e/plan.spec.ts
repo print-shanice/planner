@@ -184,8 +184,8 @@ test.describe('the plan', () => {
     await form.getByRole('button', { name: 'save' }).click()
     await page.getByRole('dialog', { name: 'montmartre walk' }).getByRole('button', { name: 'close' }).click()
     await expectLine(sun, 'montmartre walk', false)
-    await open(page, '/trip/par?tab=ideas')
-    await expect(page.getByRole('region', { name: 'ideas' })).toContainText('montmartre walk')
+    await open(page, '/trip/par?tab=places')
+    await expect(page.getByRole('region', { name: 'places' })).toContainText('montmartre walk')
   })
 
   test('the card edits a booking: booked, with its reference', async ({ page }) => {

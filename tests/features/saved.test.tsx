@@ -16,7 +16,7 @@ vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.online, useOnline
 const spots = vi.hoisted(() => vi.fn(() => Promise.resolve([] as unknown[])))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchSpots: spots }))
 
-import { LinksTab, SavedTab } from '../../src/features/saved/SavedTab'
+import { LinksTab, PlacesTab } from '../../src/features/saved/SavedTab'
 import { CaptureForm } from '../../src/features/capture/CaptureForm'
 import { failSave } from '../../src/lib/pending'
 import { setLocating } from '../../src/lib/locating'
@@ -35,19 +35,20 @@ beforeEach(() => {
   db.save.mockReset().mockResolvedValue({}); db.remove.mockReset().mockResolvedValue(undefined)
 })
 
-const show = () => render(<MemoryRouter><SavedTab trip={lap} /></MemoryRouter>)
+const show = () => render(<MemoryRouter><PlacesTab trip={lap} /></MemoryRouter>)
 const showLinks = () => render(<MemoryRouter><LinksTab trip={lap} /></MemoryRouter>)
 
-it('ideas are the places and notes without a day; links have their own tab', () => {
+it('places are the ones without a day; notes and planned places live elsewhere', () => {
   db.stops.push(stop({ id: 'n1', trip_id: 'lap', kind: 'note', title: 'buy wool socks', day: null, position: 1 }), stop({ trip_id: 'lap', title: 'planned', day: '2027-02-08' }))
   show()
   expect(screen.queryByRole('group', { name: /saved|show/ })).toBeNull()
-  expect(within(screen.getByRole('list', { name: 'ideas' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('kotisaari'), expect.stringContaining('buy wool socks')])
+  expect(within(screen.getByRole('list', { name: 'places' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('kotisaari')])
+  expect(screen.queryByText('buy wool socks')).toBeNull()
   expect(screen.queryByText('planned')).toBeNull()
   expect(screen.queryAllByTestId('link-card')).toHaveLength(0)
 })
 
-it('an idea reads as its kind and where it is', () => {
+it('a place reads as its kind and where it is', () => {
   show()
   expect(screen.getByText('restaurant · rovaniemi')).toBeInTheDocument()
 })
@@ -64,10 +65,10 @@ it('links are tidy rows, newest first: title above its site, the note after, no 
   expect(within(cards[1]).getByText('skyscanner.net')).toBeInTheDocument()
 })
 
-it('ideas and links each search their own list', async () => {
+it('places and links each search their own list', async () => {
   db.stops.push(stop({ trip_id: 'lap', title: 'sauna night', day: null }))
   const r = show()
-  await userEvent.type(screen.getByRole('searchbox', { name: 'search ideas' }), 'sauna')
+  await userEvent.type(screen.getByRole('searchbox', { name: 'search places' }), 'sauna')
   expect(screen.getByText('sauna night')).toBeInTheDocument()
   expect(screen.queryByText('kotisaari')).toBeNull()
   r.unmount()
@@ -76,26 +77,26 @@ it('ideas and links each search their own list', async () => {
   expect(screen.getAllByTestId('link-card')).toHaveLength(1)
 })
 
-it('an idea goes onto a day straight from its row, as the same stop', async () => {
+it('a place goes onto a day straight from its row, as the same stop', async () => {
   show()
   await userEvent.selectOptions(screen.getByRole('combobox', { name: 'add to day: kotisaari' }), '2027-02-09')
   expect(db.save).toHaveBeenCalledWith({ id: 's9', day: '2027-02-09', position: 0, saved: false })
 })
 
-it('an idea in a trip without dates picks any date', async () => {
+it('a place in a trip without dates picks any date', async () => {
   const nd = trip({ id: 'nd', name: 'someday', start_date: null, end_date: null })
   db.trips.push(nd)
   db.stops = [stop({ id: 'x', trip_id: 'nd', title: 'gelato', day: null })]
-  render(<MemoryRouter><SavedTab trip={nd} /></MemoryRouter>)
+  render(<MemoryRouter><PlacesTab trip={nd} /></MemoryRouter>)
   const pick = screen.getByLabelText('add to day: gelato')
   expect(pick).toHaveAttribute('type', 'date')
 })
 
-it('side trips without dates wait here with "set dates"', () => {
+it('side trips without dates are not listed with places (home and the trip tree show them)', () => {
   db.trips.push(trip({ id: 'rome', parent_id: 'lap', name: 'someday rome', start_date: null, end_date: null }))
   show()
-  expect(screen.getByRole('link', { name: 'someday rome' })).toHaveAttribute('href', '/trip/rome')
-  expect(screen.getByRole('button', { name: 'set dates' })).toBeInTheDocument()
+  expect(screen.queryByText('someday rome')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'set dates' })).toBeNull()
 })
 
 it('a link can move to another trip', async () => {
@@ -128,10 +129,10 @@ it('a link whose save failed says so', () => {
   expect(within(screen.getAllByTestId('link-card')[0]).getByRole('alert')).toHaveTextContent("couldn't save")
 })
 
-it('an idea whose save failed says so', () => {
+it('a place whose save failed says so', () => {
   failSave('stops', 's9', { day: '2027-02-08' }, false)
   show()
-  expect(within(screen.getByRole('list', { name: 'ideas' })).getByRole('alert')).toHaveTextContent("couldn't save")
+  expect(within(screen.getByRole('list', { name: 'places' })).getByRole('alert')).toHaveTextContent("couldn't save")
 })
 
 describe('saving a link', () => {
@@ -231,17 +232,17 @@ it('a new link being saved never calls itself already saved', async () => {
   expect(screen.queryByText(/already saved/)).toBeNull()
 })
 
-it('an idea can be jotted down with just its name, no date and no form', async () => {
+it('a place can be jotted down with just its name, no date and no form', async () => {
   show()
-  await userEvent.type(screen.getByRole('textbox', { name: 'jot an idea' }), 'that rooftop bar{Enter}')
+  await userEvent.type(screen.getByRole('textbox', { name: 'jot a place' }), 'that rooftop bar{Enter}')
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'lap', kind: 'place', title: 'that rooftop bar', day: null }))
-  expect(screen.getByRole('textbox', { name: 'jot an idea' })).toHaveValue('')
+  expect(screen.getByRole('textbox', { name: 'jot a place' })).toHaveValue('')
 })
 
-it("a jotted idea is left to the trip's own place finder, and its row says so while it looks", async () => {
+it("a jotted place is left to the trip's own place finder, and its row says so while it looks", async () => {
   db.trips = [{ ...lap, base: place({ lat: 66.5, lng: 25.7 }) }, trip({ id: 'par', name: 'paris' })]
-  render(<MemoryRouter><SavedTab trip={db.trips[0]} /></MemoryRouter>)
-  await userEvent.type(screen.getByRole('textbox', { name: 'jot an idea' }), 'kauppayhtiö{Enter}')
+  render(<MemoryRouter><PlacesTab trip={db.trips[0]} /></MemoryRouter>)
+  await userEvent.type(screen.getByRole('textbox', { name: 'jot a place' }), 'kauppayhtiö{Enter}')
   expect(db.save).toHaveBeenCalledTimes(1)
   expect(spots).not.toHaveBeenCalled()
   const row = screen.getByRole('button', { name: /kotisaari/ })

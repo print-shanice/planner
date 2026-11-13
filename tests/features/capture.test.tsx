@@ -33,7 +33,7 @@ it('a link kept from before signing in is picked up, and forgotten once saved', 
   expect(screen.getByLabelText('title')).toHaveValue('cafe reel')
   await userEvent.selectOptions(screen.getByLabelText('trip'), 'eu')
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
-  expect(await screen.findByRole('link', { name: 'open euro summer →' })).toHaveAttribute('href', '/trip/eu?tab=ideas')
+  expect(await screen.findByRole('link', { name: 'open euro summer →' })).toHaveAttribute('href', '/trip/eu?tab=links')
   expect(peekPending()).toBeNull()
 })
 

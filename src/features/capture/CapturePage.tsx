@@ -27,7 +27,7 @@ export function CapturePage() {
           <h1 className="head">{saved.title || saved.url}</h1>
           <p className="muted">{trip ? `in ${trip.name}` : 'in your inbox'}</p>
           <div className="text-links">
-            {trip && <Link className="text-link" to={`/trip/${trip.id}?tab=ideas`}>open {trip.name} →</Link>}
+            {trip && <Link className="text-link" to={`/trip/${trip.id}?tab=links`}>open {trip.name} →</Link>}
             <Link className="text-link" to="/">all trips →</Link>
             <button type="button" className="text-link" onClick={() => { setSaved(null); setAgain((n) => n + 1) }}>save another →</button>
           </div>
