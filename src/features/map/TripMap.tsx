@@ -3,7 +3,7 @@ import { Loading } from '../../components/Loading'
 import type { Place } from '../../lib/types'
 import type { MapData } from './features'
 import type { Overview } from './overview'
-import { iconPath } from '../../components/Icon'
+import { iconSvg } from '../../components/Icon'
 import { googleMapId } from '../../lib/google/config'
 import { lib, loadGoogle, useGoogleState } from '../../lib/google/loader'
 import { useOnline } from '../../lib/offline'
@@ -48,10 +48,6 @@ export const css = (v: string) => {
   return m ? root().getPropertyValue(m[1]).trim() || v : v
 }
 
-function svg(name: string, size = 16): string {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${iconPath(name)}"></path></svg>`
-}
-
 // a stop: its number in a tag edged in its trip's colour; ideas, beds and arrivals keep their marks
 export function pinElement(o: { icon: string; color?: string; number?: number | null; kind: 'stop' | 'idea' | 'bed' | 'end'; label: string }): HTMLElement {
   const el = document.createElement('button')
@@ -65,7 +61,7 @@ export function pinElement(o: { icon: string; color?: string; number?: number | 
     n.className = 'gpin-n'
     n.textContent = String(o.number).padStart(2, '0')
     el.append(n)
-  } else if (o.kind !== 'end') el.innerHTML = svg(o.icon, o.kind === 'idea' ? 14 : 16)
+  } else if (o.kind !== 'end') el.innerHTML = iconSvg(o.icon, o.kind === 'idea' ? 14 : 16)
   return el
 }
 
@@ -73,7 +69,7 @@ function sidePin(name: string, dates: string, color: string | null, home: boolea
   const el = document.createElement(home ? 'div' : 'button')
   if (!home) (el as HTMLButtonElement).type = 'button'
   el.className = `side-pin${home ? ' home' : ''}`
-  if (home) el.innerHTML = svg('bed')
+  if (home) el.innerHTML = iconSvg('bed')
   else {
     const dot = document.createElement('span')
     dot.className = 'side-dot'

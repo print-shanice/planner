@@ -51,6 +51,10 @@ export type IconName = keyof typeof P
 
 export const iconPath = (name: string) => P[name] ?? ''
 
+// the same icon as markup, for elements built outside react (map pins, the globe's route glyphs)
+export const iconSvg = (name: string, size = 16): string =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${iconPath(name)}"></path></svg>`
+
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}

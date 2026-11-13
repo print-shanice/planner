@@ -3,7 +3,7 @@ import maplibregl, { type ExpressionSpecification, type GeoJSONSource, type Laye
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GlobePin } from '../../lib/countries'
 import { arc, type GlobeRoute, type LngLat } from '../../lib/travels'
-import { iconPath } from '../../components/Icon'
+import { iconSvg } from '../../components/Icon'
 import { GlobeTip } from './GlobeTip'
 import { Loading } from '../../components/Loading'
 import { openLayer } from '../../lib/layers'
@@ -44,8 +44,7 @@ function glyphElement(mode: Mode): HTMLDivElement {
   const el = document.createElement('div')
   el.className = 'globe-glyph'
   el.setAttribute('aria-hidden', 'true')
-  const name = modeIcon(mode)
-  el.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${iconPath(name)}"/></svg>`
+  el.innerHTML = iconSvg(modeIcon(mode), 14)
   return el
 }
 
