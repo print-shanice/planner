@@ -2,10 +2,6 @@ import type { Stop, Trip } from './types'
 import { addDays, daysBetween } from './dates'
 import { descendants } from './countries'
 
-// one rule everywhere: something is in the plan when it has a day, and an idea when it hasn't.
-// older rows can say saved: true with a day; the day wins
-export const isScheduled = (s: Pick<Stop, 'day'>): boolean => !!s.day
-
 const lastOn = (stops: Stop[], tripId: string, day: string | null, not: string) =>
   Math.max(-1, ...stops.filter((s) => s.trip_id === tripId && (s.day ?? null) === day && s.id !== not).map((s) => s.position))
 
@@ -16,11 +12,8 @@ export function scheduleChange(s: Stop, day: string, stops: Stop[]): Partial<Sto
   return change
 }
 
-// back to an idea: no day (and so no check-out or arrival date); the time is kept for when it's planned again
-export function unscheduleChange(s: Stop, stops: Stop[]): Partial<Stop> & { id: string } {
-  return { id: s.id, day: null, end_date: null, position: lastOn(stops, s.trip_id, null, s.id) + 1, saved: true }
-}
-
+// one rule everywhere: something is in the plan when it has a day, and an idea when it hasn't.
+// older rows can say saved: true with a day; the day wins
 export function unscheduled(trip: Trip, trips: Trip[], stops: Stop[]): Stop[] {
   const ids = new Set(descendants(trip.id, trips))
   return stops

@@ -1,4 +1,4 @@
-import { canCheck, endBits, flightError, flightNumber, invokeFlight, statusUrl, statusWord, toDraft } from '../../src/lib/flight'
+import { canCheck, endBits, flightError, flightNumber, invokeFlight, statusWord, toDraft } from '../../src/lib/flight'
 import type { Flight, FlightEnd } from '../../supabase/functions/flight/shape'
 
 const invoke = vi.hoisted(() => vi.fn())
@@ -110,12 +110,6 @@ describe('flightError: what to tell people', () => {
     expect(flightError('unavailable', 'KL 1001', '2027-02-17')).toBe("couldn't look it up, try again")
     expect(flightError('offline', 'KL 1001', '2027-02-17')).toBe('offline')
     expect(flightError('not_flight', 'KL 1001', '2027-02-17')).toBe('add the flight number and day first')
-  })
-})
-
-describe('statusUrl', () => {
-  it('opens the flight on flightradar24', () => {
-    expect(statusUrl('KL 1001')).toBe('https://www.flightradar24.com/data/flights/kl1001')
   })
 })
 

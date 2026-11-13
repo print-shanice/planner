@@ -1,14 +1,7 @@
-import { walkSeconds, walkLabel } from '../../src/lib/walk'
+import { walkSeconds } from '../../src/lib/walk'
 import { place } from '../factories'
 
 afterEach(() => vi.restoreAllMocks())
-
-it('walk label rounds and hides long walks', () => {
-  expect(walkLabel(530)).toBe('9 min walk')
-  expect(walkLabel(20)).toBe('1 min walk')
-  expect(walkLabel(7300)).toBeNull()
-  expect(walkLabel(null)).toBeNull()
-})
 
 it('walk is null without coordinates and does not fetch', async () => {
   const spy = vi.spyOn(globalThis, 'fetch')

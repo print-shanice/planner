@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CATEGORIES, categoryOf, fromGoogleTypes, fromOsm, categoryIcon, categoryLabel } from '../../src/lib/categories'
+import { CATEGORIES, categoryOf, fromGoogleTypes, fromOsm, categoryIcon } from '../../src/lib/categories'
 import { stop } from '../factories'
 
 describe('place categories', () => {
@@ -21,7 +21,6 @@ describe('place categories', () => {
     expect(categoryOf(stop({ category: 'Museum' }))).toBe('museum')
     expect(categoryOf(stop({ category: 'something odd' }))).toBe('place')
     expect(categoryOf(stop({ category: null }))).toBe('place')
-    expect(categoryLabel('place')).toBe('place')
   })
 
   it('detects from google place types, most specific first', () => {

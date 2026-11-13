@@ -73,10 +73,6 @@ export function readShareParams(search: string, hash: string): Incoming | null {
   return { url, title, text }
 }
 
-export function captureHref(base: string, url: string): string {
-  return `${base}#/save?url=${encodeURIComponent(url)}`
-}
-
 // held on this device until someone signed in can save it; never written to the database before that
 const KEY = 'planner-capture'
 
@@ -86,12 +82,6 @@ export function keepPending(c: Incoming): void {
 
 export function peekPending(): Incoming | null {
   try { return JSON.parse(localStorage.getItem(KEY) ?? 'null') as Incoming | null } catch { return null }
-}
-
-export function takePending(): Incoming | null {
-  const c = peekPending()
-  forgetCapture()
-  return c
 }
 
 export function forgetCapture(): void {

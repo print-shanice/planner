@@ -35,7 +35,6 @@ export function categoryOf(s: Pick<Stop, 'kind' | 'category'>): Kindish {
 }
 
 export const categoryIcon = (c: Kindish): string => ICON[c]
-export const categoryLabel = (c: Kindish): string => c
 
 // google's place types, in the order that tells the most
 const GOOGLE: [Category, string[]][] = [

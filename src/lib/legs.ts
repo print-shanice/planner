@@ -49,7 +49,3 @@ export function dayLegs(entries: DayEntry[]): Leg[] {
   }
   return legs
 }
-
-export function nextFrom(stopId: string, legs: Leg[]): Leg | null {
-  return legs.find((l) => l.from.id === stopId) ?? null
-}

@@ -41,6 +41,3 @@ export async function lib<T>(name: string): Promise<T> {
   await loadGoogle()
   return (await google.maps.importLibrary(name)) as T
 }
-
-// for tests
-export function resetGoogle(): void { state = 'idle'; loading = null; for (const l of listeners) l() }

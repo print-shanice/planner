@@ -42,10 +42,6 @@ export function statusWord(f: Flight): { text: string; warn: boolean } | null {
   return CALM[f.status] ? { text: CALM[f.status], warn: false } : null
 }
 
-export function statusUrl(number: string): string {
-  return `https://www.flightradar24.com/data/flights/${number.replace(/\s+/g, '').toLowerCase()}`
-}
-
 function toPlace(e: FlightEnd): Place {
   return { name: e.airport, ...(e.city ? { city: e.city } : {}), ...(e.country ? { country: e.country } : {}), lat: e.lat, lng: e.lng }
 }

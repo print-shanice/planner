@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractUrl, linkKey, platformOf, findSaved, readShareParams, keepPending, takePending, peekPending, captureHref, linkName } from '../../src/lib/capture'
+import { extractUrl, linkKey, platformOf, findSaved, readShareParams, keepPending, peekPending, forgetCapture, linkName } from '../../src/lib/capture'
 import type { Link } from '../../src/lib/types'
 
 const link = (url: string, o: Partial<Link> = {}): Link => ({ id: url, trip_id: null, url, title: '', note: '', ...o })
@@ -44,16 +44,14 @@ describe('link capture', () => {
     expect(readShareParams('', '#/trip/1')).toBeNull()
   })
 
-  it('keeps a capture through signing in, and only hands it out once', () => {
+  it('keeps a capture through signing in, until it is forgotten', () => {
     keepPending({ url: 'https://a.com', title: '', text: '' })
     expect(peekPending()?.url).toBe('https://a.com')
-    expect(takePending()?.url).toBe('https://a.com')
-    expect(takePending()).toBeNull()
+    expect(peekPending()?.url).toBe('https://a.com')
+    forgetCapture()
+    expect(peekPending()).toBeNull()
   })
 
-  it('builds the address the shortcut opens', () => {
-    expect(captureHref('https://print-shanice.github.io/planner/', 'https://a.com/?x=1&y=2')).toBe('https://print-shanice.github.io/planner/#/save?url=https%3A%2F%2Fa.com%2F%3Fx%3D1%26y%3D2')
-  })
 })
 
 describe('linkName', () => {

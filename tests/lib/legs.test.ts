@@ -1,4 +1,4 @@
-import { dayLegs, nextFrom, tonightsBed, mapBed } from '../../src/lib/legs'
+import { dayLegs, tonightsBed, mapBed } from '../../src/lib/legs'
 import type { DayEntry } from '../../src/lib/dates'
 import { stop, place } from '../factories'
 
@@ -63,12 +63,6 @@ it("tonight's bed and the map's bed", () => {
   expect(mapBed([e(X, 'checkout'), e(Y, 'checkin')])).toBe(Y)
   expect(tonightsBed([e(X, 'checkout')])).toBeNull()
   expect(mapBed([e(X, 'checkout')])).toBe(X)
-})
-
-it('next from a stop is its own leg', () => {
-  const legs = dayLegs([e(spot('A', 0)), e(spot('B', 1)), e(spot('C', 2))])
-  expect(nextFrom('B', legs)?.to.id).toBe('C')
-  expect(nextFrom('C', legs)).toBeNull()
 })
 
 it('a journey with only a destination leaves you there', () => {

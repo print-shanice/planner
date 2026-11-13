@@ -40,8 +40,3 @@ export async function walkSeconds(a: Place, b: Place): Promise<number | null> {
     return null
   }
 }
-
-export function walkLabel(sec: number | null): string | null {
-  if (sec == null || sec > 7200) return null
-  return `${Math.max(1, Math.round(sec / 60))} min walk`
-}
