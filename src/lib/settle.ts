@@ -1,14 +1,28 @@
-import type { Cost } from './types'
+import type { Cost, Member } from './types'
 import { toEur, type Rates } from './money'
 
 // paying someone back: it squares a debt and is never spending
 export const isPayback = (c: Cost) => c.category === 'repayment'
 
-// who a cost is for: its own list, else (older rows) everyone or the one person
-function sharers(c: Cost, members: string[]): string[] {
-  if (c.split_among?.length) return c.split_among
-  if (c.split && c.split !== 'even') return [c.split]
-  return members.length ? members : [c.paid_by!]
+// the people a cost names as its own: its list, else (older rows) the one person in split. null: everyone
+export const namedSharers = (c: Pick<Cost, 'split' | 'split_among'>): string[] | null =>
+  c.split_among?.length ? c.split_among : c.split && c.split !== 'even' ? [c.split] : null
+
+// exact shares, in the cost's own currency, when it was split by amounts
+export const exactShares = (c: Pick<Cost, 'split_amounts'>): Record<string, number> | null =>
+  c.split_amounts && Object.keys(c.split_amounts).length ? c.split_amounts : null
+
+// who a cost is for: the people it names, else everyone (or, with nobody known, whoever paid)
+const sharers = (c: Cost, members: string[]): string[] => namedSharers(c) ?? (members.length ? members : [c.paid_by!])
+
+// who a cost is for, in a few words
+export function splitLine(c: Cost, members: Member[]): string {
+  const who = (id: string) => members.find((m) => m.user_id === id)?.name ?? 'someone'
+  if (exactShares(c)) return 'exact amounts'
+  const among = namedSharers(c)
+  const everyone = members.filter((m) => m.user_id).map((m) => m.user_id!)
+  if (!among || (among.length === everyone.length && among.every((x) => everyone.includes(x)))) return 'split evenly'
+  return among.length === 1 ? `only for ${who(among[0])}` : `for ${among.map(who).join(' and ')}`
 }
 
 export function balances(costs: Cost[], members: string[], rates: Rates | null): Record<string, number> {
@@ -19,7 +33,7 @@ export function balances(costs: Cost[], members: string[], rates: Rates | null):
     const eur = toEur(c.amount, c.currency, rates, c.eur_rate)
     if (eur == null || !Number.isFinite(eur)) continue
     add(c.paid_by, eur)
-    const shares = c.split_amounts && Object.keys(c.split_amounts).length ? c.split_amounts : null
+    const shares = exactShares(c)
     if (shares && c.amount) {
       for (const [who, part] of Object.entries(shares)) add(who, -eur * (Number(part) / c.amount))
       continue

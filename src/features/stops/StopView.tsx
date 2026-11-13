@@ -3,6 +3,7 @@ import type { Cost, Member, Stop, StopStatus } from '../../lib/types'
 import { useCosts, useFiles, useLinks, useMembers, useRemove, useSave, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { formatMoney } from '../../lib/money'
+import { splitLine } from '../../lib/settle'
 import { gmapsUrl, directionsUrl } from '../../lib/gmaps'
 import { supabase } from '../../lib/supabase'
 import { hostOf, safeUrl } from '../../lib/embed'
@@ -27,16 +28,6 @@ import { CardTimes } from './CardTimes'
 import { useSaveNote } from '../../lib/saveNote'
 import { MODES, modeWord } from '../../lib/lineKind'
 import { dayLabel } from '../../lib/dates'
-
-// who a cost is for, in a few words
-export function splitLine(c: Cost, members: Member[]): string {
-  const who = (id: string) => members.find((m) => m.user_id === id)?.name ?? 'someone'
-  if (c.split_amounts && Object.keys(c.split_amounts).length) return 'exact amounts'
-  const among = c.split_among?.length ? c.split_among : c.split !== 'even' ? [c.split] : null
-  const everyone = members.filter((m) => m.user_id).map((m) => m.user_id!)
-  if (!among || (among.length === everyone.length && among.every((x) => everyone.includes(x)))) return 'split evenly'
-  return among.length === 1 ? `only for ${who(among[0])}` : `for ${among.map(who).join(' and ')}`
-}
 
 function costLine(c: Cost, members: Member[]) {
   const who = (id: string | null) => members.find((m) => m.user_id === id)?.name

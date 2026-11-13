@@ -1,5 +1,5 @@
 import { cost } from '../factories'
-import { splitLine } from '../../src/features/stops/StopView'
+import { splitLine } from '../../src/lib/settle'
 
 const members = [
   { email: 's@x', user_id: 'u1', name: 'shanice', color: 0 },

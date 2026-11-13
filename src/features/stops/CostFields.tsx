@@ -1,6 +1,7 @@
 import type { Cost, Member } from '../../lib/types'
 import type { Rates } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
+import { exactShares, namedSharers } from '../../lib/settle'
 import { useAuth } from '../../lib/auth'
 import type { CSSProperties, ReactNode } from 'react'
 import { Switch } from '../../components/Switch'
@@ -20,8 +21,8 @@ const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((
 export function costDraft(c: Cost | undefined, fallback: string, rates: Rates | null, people: string[] = []): CostDraft {
   const cur = c?.currency ?? fallback
   const known = currencyList(rates).includes(cur)
-  const amounts = c?.split_amounts && Object.keys(c.split_amounts).length ? c.split_amounts : null
-  const among = c?.split_among?.length ? c.split_among : c?.split && c.split !== 'even' ? [c.split] : null
+  const amounts = c ? exactShares(c) : null
+  const among = c ? namedSharers(c) : null
   const mode: SplitMode = amounts ? 'amounts' : among && !(people.length && sameSet(among, people)) ? 'some' : 'even'
   return {
     amount: c ? String(c.amount) : '',
