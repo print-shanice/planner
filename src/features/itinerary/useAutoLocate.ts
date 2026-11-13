@@ -5,7 +5,7 @@ import { useCanEdit } from '../../lib/offline'
 import { descendants } from '../../lib/countries'
 import { biasFor } from '../../lib/guess'
 import { hasPoint } from '../../lib/walk'
-import { asCategory } from '../../lib/categories'
+import { placeChange } from '../../lib/stops'
 import { quietFind } from '../../lib/quietFind'
 import { setLocating } from '../../lib/locating'
 
@@ -51,10 +51,7 @@ export function useAutoLocate(trip: Trip) {
         try {
           const own = trips.find((t) => t.id === s.trip_id) ?? trip
           const p = await quietFind(title, biasFor(own, trips, stops, s.day))
-          if (p) {
-            const { category, ...bare } = p
-            save.mutate({ id: s.id, place: bare, ...(s.category ? {} : { category: asCategory(category) }) })
-          }
+          if (p) save.mutate(placeChange(s, p))
         } catch { /* not found this time: its pin+ still finds it by hand */ } finally {
           setLocating(s.id, false)
         }

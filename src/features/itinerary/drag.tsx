@@ -4,7 +4,7 @@ import type { Place, Stop, Trip } from '../../lib/types'
 import { dayLabel } from '../../lib/dates'
 import { useSave } from '../../lib/queries'
 import { useMove } from './useMove'
-import { asCategory } from '../../lib/categories'
+import { placeChange } from '../../lib/stops'
 
 // what's being carried: a line of the plan (or an idea), or a new place from the map
 export type DragPayload =
@@ -61,7 +61,7 @@ export function DragProvider({ trip, children }: { trip: Trip; children: ReactNo
     if (p.kind === 'line') { moveRef.current(p.stop, t.day, t.before); return }
     moveRef.current(p.stop, t.day, t.before, { fresh: true, said: `added to ${dayLabel(t.day)}` })
     // a google result has its spot fetched once it's been put down
-    p.resolve?.().then(({ category, ...place }) => save.mutate({ id: p.stop.id, place, ...(p.stop.category ? {} : { category: asCategory(category) }) }))
+    p.resolve?.().then((place) => save.mutate(placeChange(p.stop, place)))
       .catch(() => { /* stays a name: "find on the map" can still find it */ })
   }
 

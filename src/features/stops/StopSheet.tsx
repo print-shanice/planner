@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { useSearchParams } from 'react-router-dom'
 import type { Stop, StopKind } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
-import { newId } from '../../lib/id'
+import { blankStop } from '../../lib/stops'
 import { Sheet } from '../../components/Sheet'
 import { StopForm } from './StopForm'
 import { StopView } from './StopView'
@@ -14,14 +14,6 @@ const Ctx = createContext<Api | null>(null)
 export const useStopSheet = () => useContext(Ctx)
 
 type State = { n: number; mode: 'view' | 'edit'; id: string; draft?: Stop; day?: string | null } | null
-
-export function blankStop(kind: StopKind, tripId: string, defaults: Partial<Stop> = {}): Stop {
-  return {
-    id: newId(), trip_id: tripId, kind, title: '', day: null, position: 0, time: null, end_date: null, end_time: null,
-    place: null, mode: kind === 'journey' ? 'train' : null, origin: null, destination: null, status: 'idea', saved: false,
-    url: '', ref: '', notes: '', category: null, flight: null, ...defaults,
-  }
-}
 
 export function StopSheetProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(null)

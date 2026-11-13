@@ -12,12 +12,12 @@ import { Icon } from '../../components/Icon'
 import { useMove } from '../itinerary/useMove'
 import { useDrag } from '../itinerary/drag'
 import { DayMenu, type DayChoice } from './DayMenu'
-import { newPlaceStop } from './newStop'
+import { newPlaceStop } from '../../lib/stops'
 import { useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { dayLabel, tripDays } from '../../lib/dates'
 import { gmapsUrl } from '../../lib/gmaps'
-import { asCategory, categoryOf } from '../../lib/categories'
+import { categoryOf } from '../../lib/categories'
 import { Button } from '../../components/Button'
 import { Pending } from '../../components/Pending'
 import { useStopSheet } from '../stops/StopSheet'
@@ -88,10 +88,8 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
     try { await fn(); onDone?.() } catch (e) { setProblem(saveError(e)) }
   }
   // a new place: kept as an idea, or put straight on the chosen day; its kind comes from the search
-  const keep = (d: string | null) => run(() => {
-    const { category, ...bare } = place
-    return save.mutateAsync({ trip_id: trip.id, kind: 'place', title: place.name || 'dropped pin', day: d, position: nextPosition(stops, trip.id, d), place: bare, status: 'idea', saved: !d, category: asCategory(category) })
-  })
+  const keep = (d: string | null) => run(() =>
+    save.mutateAsync({ ...newPlaceStop(place, trip.id, null, fresh.current), day: d, position: nextPosition(stops, trip.id, d), saved: !d }))
 
   return (
     <section className="place-card" aria-label={looking ? 'finding the place' : title}>

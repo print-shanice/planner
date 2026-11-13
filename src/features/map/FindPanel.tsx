@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { Stop } from '../../lib/types'
 import { useSave } from '../../lib/queries'
-import { asCategory } from '../../lib/categories'
+import { placeChange } from '../../lib/stops'
 import { kindChange } from '../../lib/lineKind'
 import { Icon } from '../../components/Icon'
 import { Pending } from '../../components/Pending'
@@ -18,8 +18,7 @@ export function FindPanel({ stop, near, onDone }: Props) {
   const { q, results, failed, busy, change, run, pick: resolve } = usePlaceSearch(near)
   const name = (stop.title || 'this line').toLowerCase()
   const { pick, picking, failed: lost } = usePick(resolve, (p) => {
-    const { category, ...bare } = p
-    save.mutate({ id: stop.id, place: bare, ...(stop.category ? {} : { category: asCategory(category) }) })
+    save.mutate(placeChange(stop, p))
     flash(stop.id)
     onDone()
   })

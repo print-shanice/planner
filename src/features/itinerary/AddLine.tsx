@@ -1,10 +1,11 @@
-import type { Mode, Stop, Trip } from '../../lib/types'
+import type { Mode, Trip } from '../../lib/types'
 import { guessKind } from '../../lib/lineKind'
 import { useSettle } from './useSettle'
 import { useSave, useStops } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { newId } from '../../lib/id'
 import { nextPosition } from '../../lib/schedule'
+import { blankStop } from '../../lib/stops'
 import { dayLabel } from '../../lib/dates'
 import { LineEditor, type LineValues } from './LineEditor'
 import { flash } from './flash'
@@ -38,7 +39,7 @@ export function AddLine({ trip, day }: { trip: Trip; day: string | null }) {
     }
     save.mutateAsync(row).catch(() => { /* the line stays with "couldn't save" and a retry */ })
     // a time puts it in its place: the day's order is written down so it stays there
-    if (row.time) settle({ place: null, mode: null, origin: null, destination: null, end_date: null, url: '', ref: '', notes: '', category: null, flight: null, ...row } as Stop)
+    if (row.time) settle(blankStop(kind, trip.id, row))
     flash(id)
   }
 
