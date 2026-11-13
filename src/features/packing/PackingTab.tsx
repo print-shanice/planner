@@ -84,7 +84,7 @@ export function PackingTab({ trip }: { trip: Trip }) {
   const [editing, setEditing] = useState<{ id: string; text: string; owner: string | null } | null>(null)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
-  if (load.state !== 'ready') return <LoadState load={load} blocks={1} />
+  if (load.state !== 'ready') return <LoadState load={load} />
   const done = items.filter(packed).length
 
   async function submit() {

@@ -73,7 +73,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
     return { people: each, moves: transfers(bal), most: Math.max(...each.map((p) => Math.abs(p.balance)), 0.01) }
   }, [allCosts, top.id, trips, members, rates])
 
-  if (load.state !== 'ready') return <LoadState load={load} blocks={2} />
+  if (load.state !== 'ready') return <LoadState load={load} />
 
   const sorted = [...costs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || a.title.localeCompare(b.title))
   const show = (v: number) => formatMoney(v, cur, { whole: true })

@@ -150,7 +150,7 @@ export function HomePage() {
       <div key={view} className={`home-body ${shown.from}`.trim()}>
         {view === 'trips' && (
           <div className="home-trips">
-            <LoadState load={load} blocks={1} />
+            <LoadState load={load} />
             {/* the schedule: trips by the month they start, side trips in their trip's band; the month calendar is a switch away */}
             <section className="home-section home-upcoming">
               <div className="section-head">

@@ -78,7 +78,7 @@ export function SavedTab({ trip }: { trip: Trip }) {
   const links = lq.data ?? []
   const stops = sq.data ?? []
   const load = loadState(tq, lq, sq)
-  if (load.state !== 'ready' && !stops.length) return <LoadState load={load} blocks={2} />
+  if (load.state !== 'ready' && !stops.length) return <LoadState load={load} />
 
   const q = normal(query.trim())
   const someday = trips.filter((t) => t.parent_id === trip.id && !t.start_date && has(q, t.name)).sort((a, b) => a.name.localeCompare(b.name))
@@ -131,7 +131,7 @@ export function LinksTab({ trip }: { trip: Trip }) {
   const stops = sq.data ?? []
   const load = loadState(tq, lq)
   const ids = useMemo(() => new Set(descendants(trip.id, trips)), [trip.id, trips])
-  if (load.state !== 'ready' && !links.length) return <LoadState load={load} blocks={2} />
+  if (load.state !== 'ready' && !links.length) return <LoadState load={load} />
   const q = normal(query.trim())
   const shown = links.filter((l) => l.trip_id && ids.has(l.trip_id))
     .filter((l) => has(q, l.title, l.url, l.note, stops.find((s) => s.id === l.stop_id)?.title))

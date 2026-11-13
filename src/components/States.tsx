@@ -2,11 +2,6 @@ import type { Load } from '../lib/load'
 import { EmptyState } from './EmptyState'
 import { Loading } from './Loading'
 
-// anything still loading shows totoro (blocks is kept for older callers; the animation is the same everywhere)
-export function Skeleton(_: { blocks?: number }) {
-  return <Loading />
-}
-
 export function LoadNotice({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="notice" role="alert">
@@ -17,9 +12,9 @@ export function LoadNotice({ onRetry }: { onRetry: () => void }) {
 }
 
 // not ready: the whole view; ready: a "couldn't load" line over the saved copy when the refresh failed
-export function LoadState({ load, blocks }: { load: Load; blocks?: number }) {
+export function LoadState({ load }: { load: Load }) {
   switch (load.state) {
-    case 'loading': return <Skeleton blocks={blocks} />
+    case 'loading': return <Loading />
     case 'offline': return <EmptyState title="offline" />
     case 'failed': return <LoadNotice onRetry={load.retry} />
     default: return load.stale ? <LoadNotice onRetry={load.retry} /> : null

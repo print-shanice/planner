@@ -226,7 +226,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
     else if (right > box.scrollLeft + box.clientWidth) box.scrollTo({ left: right - box.clientWidth, behavior: 'smooth' })
   }, [onDay])
 
-  if (load.state !== 'ready' && !it.days.length) return <LoadState load={load} blocks={2} />
+  if (load.state !== 'ready' && !it.days.length) return <LoadState load={load} />
   // where you are (or go next) when the trip is folded: straight into that side trip
   const sides = fold ? sideRows(trip, trips, stops) : []
   const sideNow = sides.find((i) => i.date <= today && i.end >= today)
