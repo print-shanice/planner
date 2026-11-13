@@ -1,17 +1,39 @@
 import { test, expect, open, expectLine } from './fixtures'
 
 test.describe('places', () => {
-  test('jotting a place keeps it undated; a day select puts it on the plan', async ({ page }) => {
+  test('a typed name is kept undated; a day select puts it on the plan, and it stays listed with its day', async ({ page }) => {
     await open(page, '/trip/bcn?tab=places')
     const places = page.getByRole('region', { name: 'places' })
     await expect(places).toContainText('park güell')
-    await places.getByRole('textbox', { name: 'jot a place' }).fill('tibidabo at sunset')
+    await places.getByRole('combobox', { name: 'add a place' }).fill('tibidabo at sunset')
     await places.getByRole('button', { name: 'add place' }).click()
-    await expect(places).toContainText('tibidabo at sunset')
-    await places.getByRole('combobox', { name: 'add to day: tibidabo at sunset' }).selectOption('2027-04-16')
-    await expect(places).not.toContainText('tibidabo at sunset')
+    await expect(places.getByRole('list', { name: 'not planned yet' })).toContainText('tibidabo at sunset')
+    await places.getByRole('combobox', { name: 'add to day: tibidabo at sunset' }).selectOption('day:2027-04-16')
+    await expect(places.getByRole('list', { name: 'in the plan' })).toContainText('tibidabo at sunset')
     await open(page, '/trip/bcn?day=2027-04-16')
     await expectLine(page.getByRole('region', { name: 'friday 16 april' }), 'tibidabo at sunset')
+  })
+
+  test('adding a place searches google maps; the same place is never added twice', async ({ page }) => {
+    await open(page, '/trip/par?tab=places')
+    const places = page.getByRole('region', { name: 'places' })
+    const add = places.getByRole('combobox', { name: 'add a place' })
+    await add.fill('louvre')
+    await places.getByRole('list', { name: 'places found' }).getByRole('button', { name: /louvre museum/i }).click()
+    await expect(places.getByRole('list', { name: 'not planned yet' })).toContainText(/louvre museum/i)
+    await expect(add).toHaveValue('')
+    await add.fill('louvre')
+    await places.getByRole('list', { name: 'places found' }).getByRole('button', { name: /louvre museum/i }).click()
+    await expect(places.getByRole('status', { name: 'already there' })).toContainText('already in places')
+    await expect(places.getByRole('list', { name: 'not planned yet' }).getByText(/louvre museum/i)).toHaveCount(1)
+  })
+
+  test('the kind filter keeps one kind', async ({ page }) => {
+    await open(page, '/trip/bcn?tab=places')
+    const places = page.getByRole('region', { name: 'places' })
+    await places.getByRole('group', { name: 'kind' }).getByRole('button', { name: /^park/ }).click()
+    await expect(places).toContainText('park güell')
+    await expect(places).not.toContainText('nomad coffee')
   })
 
   test('places are searched as one list', async ({ page }) => {

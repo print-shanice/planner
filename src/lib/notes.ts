@@ -3,7 +3,6 @@ import { descendants } from './countries'
 import { normal } from './itinerary'
 import { hostOf } from './embed'
 import { stopTitle } from '../features/plan/stopText'
-import { unscheduled } from './schedule'
 import { dayEntries } from './agenda'
 
 // one thing written down: a note line, the notes on a place, stay or journey, or a link's note
@@ -57,7 +56,3 @@ export function tripNotes(trip: Trip, trips: Trip[], stops: Stop[], links: Link[
   const days = dates.map((date) => ({ date, items: lines(onDay(date)) })).filter((d) => d.items.length)
   return { undated, days }
 }
-
-// the places tab: everything without a day except notes (those live in notes)
-export const undatedPlaces = (trip: Trip, trips: Trip[], stops: Stop[]): Stop[] =>
-  unscheduled(trip, trips, stops).filter((s) => s.kind !== 'note')

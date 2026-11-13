@@ -381,3 +381,13 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 body.carrying, body.carrying * { cursor: grabbing !important; user-select: none; }
 /* a phone line is held to carry it: no copy/look-up bubble, no text selection while holding */
 .trip-phone .itin-line { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* ---------- places: add by search, filter by kind ---------- */
+.add-place { display: grid; }
+.add-place .warn-line { margin: 6px 0 0; }
+.places .ideas-search { margin-top: 12px; }
+.kind-filter { display: flex; gap: 18px; overflow-x: auto; margin: 10px -16px 0; padding: 0 16px; scrollbar-width: none; }
+.kind-filter::-webkit-scrollbar { display: none; }
+.kind-filter button { flex: none; min-height: 44px; padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink-3); font-size: 14px; cursor: pointer; white-space: nowrap; }
+.kind-filter button:hover { color: var(--ink); }
+.kind-filter button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }

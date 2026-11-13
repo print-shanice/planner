@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { tripNotes, undatedPlaces } from '../../src/lib/notes'
+import { tripNotes } from '../../src/lib/notes'
 import { stop, trip } from '../factories'
 import type { Link } from '../../src/lib/types'
 
@@ -98,16 +98,5 @@ describe('a trip\'s notes', () => {
 
   it('an empty note line is left out', () => {
     expect(tripNotes(top, trips, [stop({ trip_id: 'eu', kind: 'note', title: ' ', notes: '', day: null })], []).undated).toEqual([])
-  })
-})
-
-describe('undated places', () => {
-  it('are the places without a day, notes left out', () => {
-    const stops = [
-      stop({ id: 'p', trip_id: 'prg', kind: 'place', title: 'café kafka', day: null }),
-      stop({ id: 'n', trip_id: 'eu', kind: 'note', title: 'socks', day: null }),
-      stop({ id: 'd', trip_id: 'eu', kind: 'place', title: 'dated', day: '2027-06-02' }),
-    ]
-    expect(undatedPlaces(top, trips, stops).map((s) => s.id)).toEqual(['p'])
   })
 })

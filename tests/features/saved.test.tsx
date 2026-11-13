@@ -3,20 +3,23 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
-const db = vi.hoisted(() => ({ trips: [] as any[], links: [] as any[], stops: [] as any[], save: vi.fn(), remove: vi.fn(), linksQ: null as null | Record<string, unknown>, online: true }))
+const db = vi.hoisted(() => ({ costs: [] as any[], trips: [] as any[], links: [] as any[], stops: [] as any[], save: vi.fn(), remove: vi.fn(), linksQ: null as null | Record<string, unknown>, online: true }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useLinks: () => db.linksQ ?? ({ data: db.links }),
   useStops: () => ({ data: db.stops }),
   useRates: () => ({ data: null }),
+  useCosts: () => ({ data: db.costs }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: db.remove, mutate: db.remove, isPending: false }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.online, useOnline: () => db.online }))
 const spots = vi.hoisted(() => vi.fn(() => Promise.resolve([] as unknown[])))
-vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchSpots: spots }))
+const found = vi.hoisted(() => vi.fn(() => Promise.resolve([] as unknown[])))
+vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchSpots: spots, searchPlaces: found }))
 
-import { LinksTab, PlacesTab } from '../../src/features/saved/SavedTab'
+import { LinksTab } from '../../src/features/saved/SavedTab'
+import { PlacesTab } from '../../src/features/places/PlacesTab'
 import { CaptureForm } from '../../src/features/capture/CaptureForm'
 import { failSave } from '../../src/lib/pending'
 import { setLocating } from '../../src/lib/locating'
@@ -33,19 +36,75 @@ beforeEach(() => {
   ]
   db.stops = [stop({ id: 's9', trip_id: 'lap', title: 'kotisaari', day: null, saved: true, category: 'restaurant', place: place({ name: 'Kotisaari', city: 'rovaniemi' }) })]
   db.save.mockReset().mockResolvedValue({}); db.remove.mockReset().mockResolvedValue(undefined)
+  db.costs = []; found.mockReset().mockResolvedValue([])
 })
 
 const show = () => render(<MemoryRouter><PlacesTab trip={lap} /></MemoryRouter>)
 const showLinks = () => render(<MemoryRouter><LinksTab trip={lap} /></MemoryRouter>)
 
-it('places are the ones without a day; notes and planned places live elsewhere', () => {
-  db.stops.push(stop({ id: 'n1', trip_id: 'lap', kind: 'note', title: 'buy wool socks', day: null, position: 1 }), stop({ trip_id: 'lap', title: 'planned', day: '2027-02-08' }))
+it('places are every place in the trip, not planned yet first, then the planned ones with their day; notes live elsewhere', () => {
+  db.stops.push(stop({ id: 'n1', trip_id: 'lap', kind: 'note', title: 'buy wool socks', day: null, position: 1 }), stop({ id: 'pl', trip_id: 'lap', title: 'planned', day: '2027-02-08' }))
   show()
   expect(screen.queryByRole('group', { name: /saved|show/ })).toBeNull()
-  expect(within(screen.getByRole('list', { name: 'places' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('kotisaari')])
+  expect(within(screen.getByRole('list', { name: 'not planned yet' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('kotisaari')])
+  expect(within(screen.getByRole('list', { name: 'in the plan' })).getByText('planned')).toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: 'day for planned' })).toHaveDisplayValue('mon 8 feb')
   expect(screen.queryByText('buy wool socks')).toBeNull()
-  expect(screen.queryByText('planned')).toBeNull()
   expect(screen.queryAllByTestId('link-card')).toHaveLength(0)
+})
+
+it('a kind filter shows only that kind, and the map is told which places show', async () => {
+  db.stops.push(stop({ id: 'c1', trip_id: 'lap', title: 'kahvila', day: null, category: 'cafe', position: 1 }))
+  show()
+  const kinds = screen.getByRole('group', { name: 'kind' })
+  expect(within(kinds).getAllByRole('button').map((b) => b.textContent)).toEqual(['all', 'cafe · 1', 'restaurant · 1'])
+  await userEvent.click(within(kinds).getByRole('button', { name: 'cafe · 1' }))
+  expect(screen.getByText('kahvila')).toBeInTheDocument()
+  expect(screen.queryByText('kotisaari')).toBeNull()
+  const { shownPlaces } = await import('../../src/lib/shownPlaces')
+  expect(shownPlaces()).toEqual(['c1'])
+})
+
+it('adding a place searches for it; picking a result saves it with its spot, not planned yet', async () => {
+  found.mockResolvedValue([place({ name: 'Arktikum', lat: 66.51, lng: 25.73, category: 'museum' })])
+  show()
+  await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'arktik')
+  await userEvent.click(await screen.findByRole('button', { name: /Arktikum/ }))
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'lap', kind: 'place', title: 'Arktikum', day: null, category: 'museum', place: expect.objectContaining({ lat: 66.51, lng: 25.73 }) }))
+  expect(screen.getByRole('combobox', { name: 'add a place' })).toHaveValue('')
+})
+
+it('a place already there is not added twice: it says where it is instead', async () => {
+  found.mockResolvedValue([place({ name: 'Kotisaari', lat: 52, lng: 5 })])
+  show()
+  await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'kotis')
+  await userEvent.click(await screen.findByRole('button', { name: /Kotisaari/ }))
+  expect(db.save).not.toHaveBeenCalled()
+  expect(screen.getByRole('status', { name: 'already there' })).toHaveTextContent('kotisaari is already in places · not planned yet')
+})
+
+it('typing a name already there and pressing add is blocked too', async () => {
+  show()
+  await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'KOTISAARI')
+  await userEvent.click(screen.getByRole('button', { name: 'add place' }))
+  expect(db.save).not.toHaveBeenCalled()
+  expect(screen.getByRole('status', { name: 'already there' })).toHaveTextContent('already in places')
+})
+
+it('on a trip with side trips, a place can go to a side trip, its costs with it', async () => {
+  db.trips.push(trip({ id: 'ivalo', parent_id: 'lap', name: 'ivalo', start_date: null, end_date: null }))
+  db.costs = [{ id: 'c', trip_id: 'lap', stop_id: 's9' }]
+  show()
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'add to day: kotisaari' }), 'trip:ivalo')
+  expect(db.save).toHaveBeenCalledWith({ id: 's9', trip_id: 'ivalo' })
+  expect(db.save).toHaveBeenCalledWith({ id: 'c', trip_id: 'ivalo' })
+})
+
+it('a planned place can go back to not planned', async () => {
+  db.stops.push(stop({ id: 'pl', trip_id: 'lap', title: 'planned', day: '2027-02-08', time: '10:00' }))
+  show()
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'day for planned' }), 'none')
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'pl', day: null, saved: true }))
 })
 
 it('a place reads as its kind and where it is', () => {
@@ -79,8 +138,8 @@ it('places and links each search their own list', async () => {
 
 it('a place goes onto a day straight from its row, as the same stop', async () => {
   show()
-  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'add to day: kotisaari' }), '2027-02-09')
-  expect(db.save).toHaveBeenCalledWith({ id: 's9', day: '2027-02-09', position: 0, saved: false })
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'add to day: kotisaari' }), 'day:2027-02-09')
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 's9', day: '2027-02-09', saved: false }))
 })
 
 it('a place in a trip without dates picks any date', async () => {
@@ -95,7 +154,7 @@ it('a place in a trip without dates picks any date', async () => {
 it('side trips without dates are not listed with places (home and the trip tree show them)', () => {
   db.trips.push(trip({ id: 'rome', parent_id: 'lap', name: 'someday rome', start_date: null, end_date: null }))
   show()
-  expect(screen.queryByText('someday rome')).toBeNull()
+  expect(screen.queryByRole('link', { name: 'someday rome' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'set dates' })).toBeNull()
 })
 
@@ -132,7 +191,7 @@ it('a link whose save failed says so', () => {
 it('a place whose save failed says so', () => {
   failSave('stops', 's9', { day: '2027-02-08' }, false)
   show()
-  expect(within(screen.getByRole('list', { name: 'places' })).getByRole('alert')).toHaveTextContent("couldn't save")
+  expect(within(screen.getByRole('list', { name: 'not planned yet' })).getByRole('alert')).toHaveTextContent("couldn't save")
 })
 
 describe('saving a link', () => {
@@ -232,17 +291,17 @@ it('a new link being saved never calls itself already saved', async () => {
   expect(screen.queryByText(/already saved/)).toBeNull()
 })
 
-it('a place can be jotted down with just its name, no date and no form', async () => {
+it('enter adds the name as typed, no date and no form (the place finder pins it later)', async () => {
   show()
-  await userEvent.type(screen.getByRole('textbox', { name: 'jot a place' }), 'that rooftop bar{Enter}')
+  await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'that rooftop bar{Enter}')
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'lap', kind: 'place', title: 'that rooftop bar', day: null }))
-  expect(screen.getByRole('textbox', { name: 'jot a place' })).toHaveValue('')
+  expect(screen.getByRole('combobox', { name: 'add a place' })).toHaveValue('')
 })
 
 it("a jotted place is left to the trip's own place finder, and its row says so while it looks", async () => {
   db.trips = [{ ...lap, base: place({ lat: 66.5, lng: 25.7 }) }, trip({ id: 'par', name: 'paris' })]
   render(<MemoryRouter><PlacesTab trip={db.trips[0]} /></MemoryRouter>)
-  await userEvent.type(screen.getByRole('textbox', { name: 'jot a place' }), 'kauppayhtiö{Enter}')
+  await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'kauppayhtiö{Enter}')
   expect(db.save).toHaveBeenCalledTimes(1)
   expect(spots).not.toHaveBeenCalled()
   const row = screen.getByRole('button', { name: /kotisaari/ })

@@ -18,6 +18,7 @@ import { newPlaceStop } from '../../lib/stops'
 import { useDrag } from '../itinerary/drag'
 import type { Hit } from '../plan/usePlaceSearch'
 import { biasFor } from '../../lib/guess'
+import { useShownPlaces } from '../../lib/shownPlaces'
 import { useCanEdit } from '../../lib/offline'
 import { busyDays, EMPTY, mapFeatures, type Filter } from './features'
 import { hasSideTrips, overviewFeatures } from './overview'
@@ -130,7 +131,10 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
   // the same object while its content is the same, so a realtime change elsewhere doesn't rebuild the html pins
   const overviewKey = overviewNow ? JSON.stringify(overviewNow) : ''
   const overview = useMemo(() => overviewNow, [overviewKey]) // eslint-disable-line react-hooks/exhaustive-deps
-  const data = useMemo(() => overview ? { ...EMPTY, lines: overview.lines } : mapFeatures(trip, trips, stops, filter), [overview, trip, trips, stops, filter])
+  // beside the places tab, the map shows what the list shows
+  const listed = useShownPlaces()
+  const only = ideas ? listed : null
+  const data = useMemo(() => overview ? { ...EMPTY, lines: overview.lines } : mapFeatures(trip, trips, stops, filter, only), [overview, trip, trips, stops, filter, only])
   const openTrip = (id: string) => navigate(phone ? `/trip/${id}?tab=map` : `/trip/${id}`)
   const days = useMemo(() => busyDays(trip, trips, stops), [trip, trips, stops])
   const stop = card?.stopId ? stops.find((s) => s.id === card.stopId) : undefined

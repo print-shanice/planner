@@ -36,8 +36,9 @@ export const EMPTY: MapData = {
 // ideas this near a day's pins are worth showing on it
 const NEAR_KM = 10
 
-export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Filter): MapData {
-  if (filter === 'saved') return { ...EMPTY, saved: savedOnly(trip, trips, stops) }
+// only: the places tab's list (planned or not), when the map sits beside it
+export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Filter, only?: string[] | null): MapData {
+  if (filter === 'saved') return { ...EMPTY, saved: savedOnly(trip, trips, stops, only) }
   const ids = new Set(descendants(trip.id, trips))
   const pins: Feature<Point, PinProps>[] = []
   const ends: Feature<Point, EndProps>[] = []
@@ -115,10 +116,11 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
   return { pins: fc(pins), ends: fc(ends), beds: fc(beds), names: fc(names), lines: fc(lines), saved: fc(saved) }
 }
 
-function savedOnly(trip: Trip, trips: Trip[], stops: Stop[]): FeatureCollection<Point, SavedProps> {
+function savedOnly(trip: Trip, trips: Trip[], stops: Stop[], only?: string[] | null): FeatureCollection<Point, SavedProps> {
   const ids = new Set(descendants(trip.id, trips))
+  const listed = only ? new Set(only) : null
   return fc(stops
-    .filter(s => ids.has(s.trip_id) && !s.day && s.kind !== 'journey' && hasPoint(s.place))
+    .filter(s => ids.has(s.trip_id) && (listed ? listed.has(s.id) : !s.day) && s.kind !== 'journey' && hasPoint(s.place))
     .map(s => pt(s.place!, { id: s.id, saved: s.saved, icon: categoryIcon(categoryOf(s)) })))
 }
 
