@@ -88,6 +88,21 @@ it('the day list reads like the plan: every day with its places, then no date', 
   expect(screen.queryByRole('listbox')).toBeNull()
 })
 
+it('the day list opens on the chosen day, typing jumps to a day, and the page scrolling closes it', async () => {
+  db.reverse.mockResolvedValue({ name: 'Rovaniemi Church', lat: 66.5079, lng: 25.7287 })
+  show('/?day=2027-02-08')
+  await userEvent.click(screen.getByRole('button', { name: 'tap map' }))
+  const card = await screen.findByRole('region', { name: 'Rovaniemi Church' })
+  await userEvent.click(within(card).getByRole('button', { name: 'day: mon 8 feb' }))
+  expect(screen.getByRole('option', { name: /monday 8 february/ })).toHaveFocus()
+  await userEvent.keyboard('{ArrowDown}')
+  expect(screen.getByRole('option', { name: /tuesday 9 february/ })).toHaveFocus()
+  await userEvent.keyboard('thu')
+  expect(screen.getByRole('option', { name: /thursday 11 february/ })).toHaveFocus()
+  fireEvent.scroll(window)
+  expect(screen.queryByRole('listbox')).toBeNull()
+})
+
 it('an empty tap with nothing there is a dropped pin', async () => {
   db.reverse.mockResolvedValue(null)
   show()
