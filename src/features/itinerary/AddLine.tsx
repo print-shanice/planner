@@ -26,9 +26,9 @@ export function AddLine({ trip, day }: { trip: Trip; day: string | null }) {
   if (!canEdit) return null
   const label = `add to ${day ? dayLabel(day) : 'no date'}`
 
-  function add(v: LineValues): string | null {
+  function add(v: LineValues) {
     const { title, kind, status, mode } = readTag(v.title)
-    if (!title) return null
+    if (!title) return
     const id = newId()
     const position = Math.max(-1, ...stops.filter((s) => s.trip_id === trip.id && (s.day ?? null) === day).map((s) => s.position)) + 1
     const row = {
@@ -39,7 +39,6 @@ export function AddLine({ trip, day }: { trip: Trip; day: string | null }) {
     // a time puts it in its place: the day's order is written down so it stays there
     if (row.time) settle({ place: null, mode: null, origin: null, destination: null, end_date: null, url: '', ref: '', notes: '', category: null, flight: null, ...row } as Stop)
     flash(id)
-    return null
   }
 
   return (
