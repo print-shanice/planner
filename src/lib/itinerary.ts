@@ -110,33 +110,23 @@ export function marked(text: string, q: string): { text: string; hit: boolean }[
   return out
 }
 
-// a long trip (over three weeks) with dated side trips reads as an overview: each side trip is one row
-// you open, and the trip itself keeps only its own days
-export const OVERVIEW_DAYS = 21
+// a long trip (over three weeks) with dated side trips reads as an overview: its calendar, where each side trip
+// opens on its own, and the trip itself keeps only its own days
+const OVERVIEW_DAYS = 21
 export function foldsSideTrips(trip: Trip, trips: Trip[]): boolean {
   const long = !trip.start_date || !trip.end_date || daysBetween(trip.start_date, trip.end_date) + 1 > OVERVIEW_DAYS
   return long && trips.some((t) => t.parent_id === trip.id && !!t.start_date)
 }
 
-export type SideRow = { kind: 'side'; trip: Trip; date: string; end: string; nights: number; places: number; toBook: number }
-export type OverviewItem = { kind: 'day'; day: ItinDay } | SideRow
+export type SideRow = { trip: Trip; date: string; end: string; nights: number; places: number; toBook: number }
 
-export function overviewItems(trip: Trip, trips: Trip[], stops: Stop[], today?: string): OverviewItem[] {
-  const sides = trips.filter((t) => t.parent_id === trip.id && t.start_date)
-  const inSide = (d: string) => sides.some((t) => t.start_date! <= d && (t.end_date ?? t.start_date!) >= d)
-  const items: OverviewItem[] = sides.map((t) => {
+// one row per dated side trip, in date order, with what's in it at a glance
+export function sideRows(trip: Trip, trips: Trip[], stops: Stop[]): SideRow[] {
+  return trips.filter((t) => t.parent_id === trip.id && t.start_date).map((t) => {
     const fam = new Set(descendants(t.id, trips))
     const mine = stops.filter((s) => fam.has(s.trip_id))
     const end = t.end_date ?? t.start_date!
-    return { kind: 'side', trip: t, date: t.start_date!, end, nights: daysBetween(t.start_date!, end),
+    return { trip: t, date: t.start_date!, end, nights: daysBetween(t.start_date!, end),
       places: mine.filter((s) => s.kind === 'place' && s.day).length, toBook: mine.filter((s) => s.status === 'to_book').length }
-  })
-  for (const d of itineraryDays(trip, trips, stops, today).days) {
-    if (!inSide(d.date)) { items.push({ kind: 'day', day: d }); continue }
-    // inside a side trip, only the trip's own lines stay (the train there, a booking made from home)
-    const own = d.entries.filter((e) => e.stop?.trip_id === trip.id && e.kind !== 'staying')
-    if (own.length) items.push({ kind: 'day', day: { ...d, owner: trip, entries: own } })
-  }
-  const at = (i: OverviewItem) => (i.kind === 'side' ? i.date : i.day.date)
-  return items.sort((a, b) => at(a).localeCompare(at(b)) || (a.kind === 'side' ? -1 : 1))
+  }).sort((a, b) => a.date.localeCompare(b.date))
 }

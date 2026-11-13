@@ -553,6 +553,14 @@ describe('a long trip with side trips', () => {
     expect(linkDay()).toBe('2027-01-30')
   })
 
+  it("on a side trip's first day, only the trip's own line shows under the calendar (the train there)", () => {
+    db.stops.push(stop({ id: 'train', trip_id: 'eu', kind: 'journey', day: '2027-02-19', title: 'thalys' }),
+      stop({ id: 'arc', trip_id: 'paris', day: '2027-02-19', title: 'arc de triomphe' }))
+    show(eu(), '/trip/eu?day=2027-02-19', false)
+    expect(screen.getByText('thalys')).toBeInTheDocument()
+    expect(screen.queryByText('arc de triomphe')).toBeNull()
+  })
+
   it('search still finds what is inside the side trips', async () => {
     show(eu(), '/trip/eu', false)
     await search('louvre')

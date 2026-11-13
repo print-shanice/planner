@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Stop, Trip } from '../../lib/types'
 import { innermostDay, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { chosenDay, dayEntries, validDay } from '../../lib/agenda'
-import { overviewItems, type ItinDay, type SideRow } from '../../lib/itinerary'
+import { sideRows, type ItinDay } from '../../lib/itinerary'
 import { addDays, fmtDay, fmtRange } from '../../lib/dates'
 import { PageTurn } from '../../components/PageTurn'
 import { stopTitle } from '../plan/stopText'
@@ -59,7 +59,7 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay, ho
     const first = dayEntries(trip, trips, stops, d).find((e) => e.kind === 'stop' && e.stop)?.stop
     return { kicker: fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' }), name: first ? stopTitle(first).toLowerCase() : undefined, onClick: () => pick(d) }
   }
-  const rows = useMemo(() => overviewItems(trip, trips, stops, today).filter((i): i is SideRow => i.kind === 'side' && i.date.slice(0, 7) <= month && i.end.slice(0, 7) >= month), [trip, trips, stops, today, month])
+  const rows = useMemo(() => sideRows(trip, trips, stops).filter((i) => i.date.slice(0, 7) <= month && i.end.slice(0, 7) >= month), [trip, trips, stops, month])
 
   return (
     <div className="parent-cal">

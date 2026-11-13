@@ -5,9 +5,9 @@ import type { Stop, Trip } from '../../lib/types'
 import { useCosts, useFiles, useLinks, useStops, useTrips } from '../../lib/queries'
 import { lineInfo, type LineInfo } from '../../lib/lineInfo'
 import { loadState } from '../../lib/load'
-import { daysBetween, fmtDay, fmtRange, todayISO } from '../../lib/dates'
+import { daysBetween, fmtDay, todayISO } from '../../lib/dates'
 import { chosenDay, validDay } from '../../lib/agenda'
-import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, overviewItems, type ItinDay, type OverviewItem, type SideRow } from '../../lib/itinerary'
+import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, sideRows, type ItinDay } from '../../lib/itinerary'
 import { dayLegs, placeIn, type Leg } from '../../lib/legs'
 import { pinNumbers } from '../../lib/pins'
 import { useMove } from './useMove'
@@ -93,8 +93,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   // a long trip with side trips is an overview (one row per side trip); searching always looks through everything
   const fold = foldsSideTrips(trip, trips) && !query
   // folded, the calendar is the way around; the list below is only for a trip that isn't
-  const items: OverviewItem[] = useMemo(() => fold ? [] : it.days.map((day) => ({ kind: 'day' as const, day })), [fold, it])
-  const dateOf = (i: OverviewItem) => (i.kind === 'side' ? i.date : i.day.date)
+  const items: ItinDay[] = fold ? [] : it.days
   const matches = useMemo(() => findMatches({ ...it, undated: [] }, query), [it, query])
   const hitDays = useMemo(() => new Set(matches.map((m) => m.date ?? '')), [matches])
   const current = matches[cur] ?? null
@@ -123,7 +122,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   const asked = params.get('day')
   // where the document opens: the link's day, else today in the trip, else its first day
   const opensOn = validDay(asked) ? asked : chosenDay(trip, trips, stops, null, today)
-  const onDay = reading.day ?? items.map(dateOf).find((d) => d >= (opensOn ?? '')) ?? (items[0] ? dateOf(items[0]) : null)
+  const onDay = reading.day ?? items.map((d) => d.date).find((d) => d >= (opensOn ?? '')) ?? items[0]?.date ?? null
   const readingRef = useRef(reading)
   readingRef.current = reading
   function setDay(d: string | null) {
@@ -178,8 +177,8 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   useLayoutEffect(() => {
     if (landed.current || load.state !== 'ready' || !items.length || fold) return
     landed.current = true
-    const target = items.map(dateOf).find((d) => d >= (opensOn ?? ''))
-    if (!target || target === dateOf(items[0])) return
+    const target = items.map((d) => d.date).find((d) => d >= (opensOn ?? ''))
+    if (!target || target === items[0].date) return
     pinned.current = true
     setDay(target)
     const land = () => scrollTo(document.querySelector(`.doc [data-date="${target}"]`), 'start', false)
@@ -229,9 +228,9 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
 
   if (load.state !== 'ready' && !it.days.length) return <LoadState load={load} blocks={2} />
   // where you are (or go next) when the trip is folded: straight into that side trip
-  const sideRows = fold ? overviewItems(trip, trips, stops, today).filter((i): i is SideRow => i.kind === 'side') : []
-  const sideNow = sideRows.find((i) => i.date <= today && i.end >= today)
-  const sideNext = !sideNow ? sideRows.find((i) => i.date > today) : undefined
+  const sides = fold ? sideRows(trip, trips, stops) : []
+  const sideNow = sides.find((i) => i.date <= today && i.end >= today)
+  const sideNext = !sideNow ? sides.find((i) => i.date > today) : undefined
   const onOpen = sheet ? (s: Stop, day?: string | null) => sheet.openStop(s.id, day) : undefined
   const inTrip = !!trip.start_date && !!trip.end_date && today >= trip.start_date && today <= trip.end_date
 
@@ -258,12 +257,9 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
         <div className="doc-strip-row">
           {inTrip && !fold && <button type="button" className="today-chip" aria-label="jump to today" onClick={() => jumpDay(today)}>today</button>}
           {!fold && <nav className="doc-strip" aria-label="days" ref={strip}>
-            {items.map((item, i) => {
-              const date = dateOf(item)
-              const newMonth = i === 0 || monthOf(date) !== monthOf(dateOf(items[i - 1]))
-              const month = newMonth && <span className="strip-month" aria-hidden="true">{fmtDay(date, { month: 'short' })}</span>
-              if (item.kind === 'side') return null
-              const d = item.day
+            {items.map((d, i) => {
+              const newMonth = i === 0 || monthOf(d.date) !== monthOf(items[i - 1].date)
+              const month = newMonth && <span className="strip-month" aria-hidden="true">{fmtDay(d.date, { month: 'short' })}</span>
               const side = d.owner.id !== trip.id ? d.owner : null
               return (
                 <span key={d.date} className="strip-item">
@@ -298,37 +294,16 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
       {fold && <ParentCalendar trip={trip} trips={trips} stops={stops} today={today} onDay={setDay} holiday={(d) => holidaysFor(d).map((h) => h.name.toLowerCase()).join(', ') || null}
         renderDay={(d) => <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q="" hidden={false}
           current={null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} />} />}
-      {items.map((item) => {
-        if (item.kind === 'side') return <SideTrip key={`side-${item.trip.id}`} row={item} today={today} />
-        const d = item.day
-        return <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
+      {items.map((d) => (
+        <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
           hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} />
-      })}
+      ))}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>
     </div>
   )
 })
-
-// a side trip on its parent's plan: one row that opens it, with what's in it at a glance
-function SideTrip({ row, today }: { row: SideRow; today: string }) {
-  const on = row.date <= today && row.end >= today
-  const what = [row.places ? `${row.places} ${row.places === 1 ? 'place' : 'places'}` : '', on ? 'on now' : ''].filter(Boolean).join(' · ')
-  return (
-    <section className="doc-day side-row" id={`itin-side-${row.trip.id}`} data-date={row.date} style={tint(row.trip.color)} aria-label={row.trip.name}>
-      <Link className="side-row-link" to={`/trip/${row.trip.id}${on ? `?day=${today}` : ''}`}>
-        <span className="side-row-bar" aria-hidden="true" />
-        <span className="side-row-body">
-          <span className="mono-label">{fmtRange(row.date, row.end)} · {row.nights} {row.nights === 1 ? 'night' : 'nights'}</span>
-          <span className="side-row-name">{row.trip.name}</span>
-          {(what || row.toBook > 0) && <span className="side-row-what muted">{what}{row.toBook > 0 && <>{what ? ' · ' : ''}<span className="warn-text">{row.toBook} to do</span></>}</span>}
-        </span>
-        <span className="side-row-go" aria-hidden="true">→</span>
-      </Link>
-    </section>
-  )
-}
 
 type DayProps = {
   day: ItinDay; trip: Trip; today: string; editing: boolean; canEdit: boolean; q: string; hidden: boolean; current: string | null

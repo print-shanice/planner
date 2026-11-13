@@ -122,7 +122,7 @@ describe('marked', () => {
   })
 })
 
-import { overviewItems, foldsSideTrips } from '../../src/lib/itinerary'
+import { sideRows, foldsSideTrips } from '../../src/lib/itinerary'
 describe('a long trip with side trips reads as an overview', () => {
   const eu = trip({ id: 'eu', name: 'exchange', start_date: '2027-01-28', end_date: '2027-07-13' })
   const paris = trip({ id: 'paris', parent_id: 'eu', name: 'paris', start_date: '2027-02-19', end_date: '2027-02-23', color: 2 })
@@ -144,19 +144,12 @@ describe('a long trip with side trips reads as an overview', () => {
     expect(foldsSideTrips(short, [short, trip({ parent_id: 'b', start_date: '2027-04-17', end_date: '2027-04-17' })])).toBe(false)
   })
 
-  it('each side trip is one row at its start; the parent keeps only its own days', () => {
-    const items = overviewItems(eu, trips, stops)
-    expect(items.map((i) => (i.kind === 'side' ? `side:${i.trip.id}` : `day:${i.day.date}`))).toEqual([
-      'day:2027-01-28', 'day:2027-01-30', 'side:paris', 'day:2027-02-19', 'side:lap', 'day:2027-07-13',
-    ])
-    // on a side trip's first day, only the parent's own line shows (the train there), not the side trip's plan
-    const d19 = items.find((i) => i.kind === 'day' && i.day.date === '2027-02-19')!
-    expect(d19.kind === 'day' && d19.day.entries.map((e) => e.stop!.id)).toEqual(['train'])
+  it('lists one row per dated side trip, in date order', () => {
+    expect(sideRows(eu, trips, stops).map((r) => r.trip.id)).toEqual(['paris', 'lap'])
   })
 
   it('a side trip row knows how much is in it', () => {
-    const items = overviewItems(eu, trips, [...stops, stop({ trip_id: 'paris', day: '2027-02-21', status: 'to_book' })])
-    const row = items.find((i) => i.kind === 'side' && i.trip.id === 'paris')!
-    expect(row.kind === 'side' && { places: row.places, toBook: row.toBook, nights: row.nights }).toEqual({ places: 2, toBook: 1, nights: 4 })
+    const row = sideRows(eu, trips, [...stops, stop({ trip_id: 'paris', day: '2027-02-21', status: 'to_book' })]).find((r) => r.trip.id === 'paris')!
+    expect({ places: row.places, toBook: row.toBook, nights: row.nights }).toEqual({ places: 2, toBook: 1, nights: 4 })
   })
 })
