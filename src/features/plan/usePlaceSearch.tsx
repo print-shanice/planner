@@ -76,7 +76,45 @@ export function usePlaceSearch(near?: { lat: number; lng: number; zoom?: number 
   return { q, results, failed, busy, change, run, clear, pick }
 }
 
-export function SearchStatus({ busy, failed, results, onRetry }: { busy: boolean; failed: boolean; results: unknown[] | null; onRetry: () => void }) {
+// a search whose picked result becomes a place: picking can take a moment (google fetches the place then),
+// so it says so, and says when it fails. done gets the place and the result it came from
+export function usePlaceField(near: Parameters<typeof usePlaceSearch>[0], done: (p: Place, h: Hit) => void) {
+  const search = usePlaceSearch(near)
+  const [picking, setPicking] = useState(false)
+  const [lost, setLost] = useState(false)
+  async function pick(h: Hit) {
+    setPicking(true); setLost(false)
+    try { done(await search.pick(h), h) } catch { setLost(true) } finally { setPicking(false) }
+  }
+  return { ...search, resolve: search.pick, pick, picking, lost }
+}
+
+type Field = ReturnType<typeof usePlaceField>
+
+// under a search box: searching, retry, finding the picked place, and the results, the same in every search.
+// quiet: no "nothing found" (a name that's fine as words alone); max: show only the first few
+export function SearchResults({ field, label, max, quiet, onGrab }: {
+  field: Field; label?: string; max?: number; quiet?: boolean
+  onGrab?: (h: Hit, e: { clientX: number; clientY: number }) => void
+}) {
+  const { busy, failed, results, picking, lost, pick, run, q } = field
+  const shown = results?.slice(0, max)
+  return (
+    <>
+      <SearchStatus busy={busy} failed={failed} results={quiet ? null : results} onRetry={() => run(q, 1)} />
+      {picking && <div className="search-note"><Pending label="finding the place" /></div>}
+      {lost && <p className="warn-line search-note">couldn't get that place</p>}
+      {shown && shown.length > 0 && (
+        <ul className="results" aria-label={label}>
+          {shown.map((h) => <li key={h.key}><HitRow hit={h} onPick={() => pick(h)} onGrab={onGrab ? (e) => onGrab(h, e) : undefined} /></li>)}
+          <li><PoweredBy /></li>
+        </ul>
+      )}
+    </>
+  )
+}
+
+function SearchStatus({ busy, failed, results, onRetry }: { busy: boolean; failed: boolean; results: unknown[] | null; onRetry: () => void }) {
   if (busy) return <div className="search-note"><Pending label="searching" /></div>
   if (failed) return (
     <div className="search-note">
@@ -90,7 +128,7 @@ export function SearchStatus({ busy, failed, results, onRetry }: { busy: boolean
 
 // one row of results, the same in every search
 // onGrab: on a laptop's map, a result can also be carried into the plan beside it
-export function HitRow({ hit, onPick, onGrab }: { hit: Hit; onPick: () => void; onGrab?: (e: { clientX: number; clientY: number }) => void }) {
+function HitRow({ hit, onPick, onGrab }: { hit: Hit; onPick: () => void; onGrab?: (e: { clientX: number; clientY: number }) => void }) {
   return (
     <button type="button" className="result" onClick={onPick} onPointerDown={onGrab ? (e) => { if (e.button === 0) onGrab(e) } : undefined}>
       <Icon name={categoryIcon((hit.category as Kindish) ?? 'place') || 'pin'} size={18} />
@@ -100,7 +138,7 @@ export function HitRow({ hit, onPick, onGrab }: { hit: Hit; onPick: () => void; 
 }
 
 // google's search results must say where they came from when there's no google map beside them
-export function PoweredBy() {
+function PoweredBy() {
   if (!googleConfigured()) return null
   return <p className="powered-by" translate="no">Google Maps</p>
 }

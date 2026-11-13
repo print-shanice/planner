@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import type { Place } from '../../lib/types'
-import { HitRow, PoweredBy, SearchStatus, usePlaceSearch, type Hit } from './usePlaceSearch'
-import { usePick } from './usePick'
+import { SearchResults, usePlaceField, type Hit } from './usePlaceSearch'
 import { Icon } from '../../components/Icon'
-import { Pending } from '../../components/Pending'
 
 // onGrab: a result carried off the list (the laptop's map into the plan); resolve fetches its spot when it's put down
 type Props = { near?: { lat: number; lng: number; zoom?: number } | null; onPick: (p: Place) => void; label?: string; alwaysOpen?: boolean; onGrab?: (h: Hit, e: { clientX: number; clientY: number }, resolve: () => Promise<Place>) => void }
 
 export function AddPlaceField({ near, onPick, label = 'add a place', alwaysOpen = false, onGrab }: Props) {
   const [open, setOpen] = useState(alwaysOpen)
-  const { q, results, failed, busy, change, run, clear, pick: resolve } = usePlaceSearch(near)
-  const { pick, picking, failed: lost } = usePick(resolve, (p) => { onPick(p); close() })
+  const field = usePlaceField(near, (p) => { onPick(p); close() })
+  const { q, change, run, clear } = field
 
   function close() { setOpen(alwaysOpen); clear() }
 
@@ -34,15 +32,7 @@ export function AddPlaceField({ near, onPick, label = 'add a place', alwaysOpen 
           }} />
         {(!alwaysOpen || q) && <button type="button" className="icon-btn" aria-label="cancel" onClick={close}><Icon name="close" size={18} /></button>}
       </div>
-      <SearchStatus busy={busy} failed={failed} results={results} onRetry={() => run()} />
-      {picking && <div className="search-note"><Pending label="finding the place" /></div>}
-      {lost && <p className="warn-line search-note">couldn't get that place</p>}
-      {results && results.length > 0 && (
-        <ul className="results">
-          {results.map((h) => <li key={h.key}><HitRow hit={h} onPick={() => pick(h)} onGrab={onGrab ? (e) => onGrab(h, e, () => resolve(h)) : undefined} /></li>)}
-          <li><PoweredBy /></li>
-        </ul>
-      )}
+      <SearchResults field={field} onGrab={onGrab ? (h, e) => onGrab(h, e, () => field.resolve(h)) : undefined} />
     </div>
   )
 }

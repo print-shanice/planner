@@ -4,9 +4,7 @@ import { useSave } from '../../lib/queries'
 import { placeChange } from '../../lib/stops'
 import { kindChange } from '../../lib/lineKind'
 import { Icon } from '../../components/Icon'
-import { Pending } from '../../components/Pending'
-import { HitRow, PoweredBy, SearchStatus, usePlaceSearch } from '../plan/usePlaceSearch'
-import { usePick } from '../plan/usePick'
+import { SearchResults, usePlaceField } from '../plan/usePlaceSearch'
 import { flash } from '../itinerary/flash'
 
 type Props = { stop: Stop; near: { lat: number; lng: number } | null; onDone: () => void }
@@ -15,13 +13,13 @@ type Props = { stop: Stop; near: { lat: number; lng: number } | null; onDone: ()
 // it may not be a place at all, so it can become getting around or a note from here too
 export function FindPanel({ stop, near, onDone }: Props) {
   const save = useSave('stops')
-  const { q, results, failed, busy, change, run, pick: resolve } = usePlaceSearch(near)
   const name = (stop.title || 'this line').toLowerCase()
-  const { pick, picking, failed: lost } = usePick(resolve, (p) => {
+  const field = usePlaceField(near, (p) => {
     save.mutate(placeChange(stop, p))
     flash(stop.id)
     onDone()
   })
+  const { q, change, run } = field
   useEffect(() => { change(stop.title); void run(stop.title, 1) }, [stop.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const become = (k: 'journey' | 'note') => { save.mutate(kindChange(stop, k)); flash(stop.id); onDone() }
 
@@ -36,15 +34,7 @@ export function FindPanel({ stop, near, onDone }: Props) {
         <input type="search" role="searchbox" aria-label={`find ${name}`} value={q} enterKeyHint="search"
           onChange={(e) => change(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void run() } }} />
       </div>
-      <SearchStatus busy={busy} failed={failed} results={results} onRetry={() => run(q, 1)} />
-      {picking && <div className="search-note"><Pending label="finding the place" /></div>}
-      {lost && <p className="warn-line search-note">couldn't get that place</p>}
-      {results && results.length > 0 && (
-        <ul className="results" aria-label="places">
-          {results.slice(0, 5).map((h) => <li key={h.key}><HitRow hit={h} onPick={() => pick(h)} /></li>)}
-          <li><PoweredBy /></li>
-        </ul>
-      )}
+      <SearchResults field={field} label="places" max={5} />
       <p className="find-foot"><span className="muted">not a place?</span>
         <button type="button" className="text-link" onClick={() => become('journey')}>getting around</button>
         <button type="button" className="text-link" onClick={() => become('note')}>a note</button>
