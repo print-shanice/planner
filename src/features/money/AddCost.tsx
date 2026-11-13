@@ -42,11 +42,11 @@ export function AddCost({ trip }: { trip: Trip }) {
 
   return (
     <div className="add-cost">
-      {/* three boxes, each plainly its own field, the currency picked like "show in" above */}
-      <form className="cost-line" onSubmit={add}>
-        <input type="text" className="input cost-name-in" aria-label="add a cost" placeholder="add a cost…" value={title} autoComplete="off" enterKeyHint="next"
+      {/* the same typing line as links, its name and amount underlined apart; the currency picked like "show in" above */}
+      <form className="jot cost-line" onSubmit={add}>
+        <input type="text" className="cost-name-in" aria-label="add a cost" placeholder="add a cost…" value={title} autoComplete="off" enterKeyHint="next"
           onChange={(e) => { setProblem(null); setTitle(e.target.value) }} />
-        <input type="text" className="input cost-amount-in num" aria-label="amount" placeholder="0" value={amount} inputMode="decimal" autoComplete="off" enterKeyHint="done"
+        <input type="text" className="cost-amount-in num" aria-label="amount" placeholder="0" value={amount} inputMode="decimal" autoComplete="off" enterKeyHint="done"
           onChange={(e) => { setProblem(null); setAmount(e.target.value) }} />
         <select className="input cur-select" aria-label="currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
           {choices.map((c) => <option key={c} value={c}>{c.toLowerCase()}</option>)}

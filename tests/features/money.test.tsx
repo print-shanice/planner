@@ -31,7 +31,9 @@ it('money tab totals in the display currency and shows left-out count', () => {
   show(t)
   expect(screen.getByTestId('money-total')).toHaveTextContent('S$144')
   expect(screen.getByText('in total')).toBeInTheDocument()
-  expect(screen.getByText('ecb rates, 4 nov · 1 not converted')).toBeInTheDocument()
+  // no rates footnote; only what's left out is said
+  expect(screen.queryByText(/ecb rates/)).toBeNull()
+  expect(screen.getByText('1 not converted')).toBeInTheDocument()
 })
 
 it('over budget shows the amber line', () => {
@@ -410,14 +412,15 @@ describe('adding a cost right in money', () => {
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'riad', amount: 300, currency: 'MAD' }))
   })
 
-  it('the currency is picked like the "show in" one above, starting on the trip\'s; the fields are boxes of their own', async () => {
+  it('the currency is picked like the "show in" one above, starting on the trip\'s; the line reads like links', async () => {
     show(t)
     const cur = screen.getByRole('combobox', { name: 'currency' })
     expect(cur).toHaveDisplayValue('eur')
     expect(cur).toHaveClass('input', 'cur-select')
-    expect(screen.getByRole('textbox', { name: 'add a cost' })).toHaveClass('input')
-    expect(screen.getByRole('textbox', { name: 'amount' })).toHaveClass('input')
-    expect(screen.getByRole('textbox', { name: 'add a cost' }).closest('form')).not.toHaveClass('jot')
+    // the same typing line as links: underlined fields, apart from each other, and a plain "add"
+    expect(screen.getByRole('textbox', { name: 'add a cost' }).closest('form')).toHaveClass('jot', 'cost-line')
+    expect(screen.getByRole('textbox', { name: 'add a cost' })).not.toHaveClass('input')
+    expect(screen.getByRole('textbox', { name: 'amount' })).not.toHaveClass('input')
     await userEvent.selectOptions(cur, 'GBP')
     await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'tea')
     await userEvent.type(screen.getByRole('textbox', { name: 'amount' }), '4{Enter}')
@@ -433,4 +436,13 @@ describe('adding a cost right in money', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('check the amount')
     expect(db.save).not.toHaveBeenCalled()
   })
+})
+
+it('with every cost converted there is no footnote at all', () => {
+  const t = trip({ id: 'lap', currency: 'EUR' })
+  db.trips = [t]
+  db.costs = [cost({ trip_id: 'lap', amount: 10, currency: 'EUR' })]
+  db.ratesQ = null
+  show(t)
+  expect(screen.queryByText(/ecb rates|not converted/)).toBeNull()
 })

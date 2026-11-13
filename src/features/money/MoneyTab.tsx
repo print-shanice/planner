@@ -238,7 +238,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
       )}
 
       {!rates && rq.isLoading && <p className="footnote"><Pending label="loading rates" /></p>}
-      {rates && <p className="footnote muted">{`ecb rates, ${fmtDay(rates.date)}`}{t.leftOut > 0 ? ` · ${t.leftOut} not converted` : ''}</p>}
+      {rates && t.leftOut > 0 && <p className="footnote muted">{`${t.leftOut} not converted`}</p>}
 
       <Sheet page open={!!editing} title="edit cost" onClose={() => setEditing(null)}>
         {editing && <CostForm key={editing.id} trip={trip} cost={editing} onDone={() => setEditing(null)} />}
