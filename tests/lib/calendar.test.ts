@@ -1,8 +1,5 @@
-import { monthWeeks, openingMonth, shiftMonth, tripSpan, weekBars, type Span } from '../../src/lib/calendar'
-import type { Trip } from '../../src/lib/types'
+import { monthWeeks, openingMonth, shiftMonth } from '../../src/lib/calendar'
 import { trip } from '../factories'
-
-const spans = (ts: Trip[]) => ts.map(tripSpan).filter((x): x is Span => !!x)
 
 it('shifts months across years both ways', () => {
   expect(shiftMonth('2027-12', 1)).toBe('2028-01')
@@ -29,24 +26,4 @@ it('opens on a trip that is on now, else the soonest upcoming start', () => {
   expect(openingMonth([sum, ex, old, side], '2026-11-05')).toBe('2027-01')
   expect(openingMonth([sum, ex], '2027-03-02')).toBe('2027-03')
   expect(openingMonth([old, trip({ start_date: null, end_date: null })], '2026-11-05')).toBeNull()
-})
-
-it('clips side-trip bars to the week and stacks overlaps in lanes', () => {
-  const week = ['2027-02-08', '2027-02-09', '2027-02-10', '2027-02-11', '2027-02-12', '2027-02-13', '2027-02-14']
-  const lap = trip({ id: 'lap', start_date: '2027-02-07', end_date: '2027-02-11' })
-  const par = trip({ id: 'par', start_date: '2027-02-10', end_date: '2027-02-12' })
-  const ber = trip({ id: 'ber', start_date: '2027-02-13', end_date: '2027-02-20' })
-  const far = trip({ id: 'far', start_date: '2027-03-01', end_date: '2027-03-02' })
-  const bars = weekBars(week, spans([ber, par, far, lap]))
-  expect(bars.map((b) => [b.span.id, b.from, b.to, b.starts, b.ends, b.lane])).toEqual([
-    ['lap', 0, 3, false, true, 0],
-    ['par', 2, 4, true, true, 1],
-    ['ber', 5, 6, true, false, 0],
-  ])
-})
-
-it('only counts the days of the week that are in the month', () => {
-  const week = [null, null, null, null, '2027-01-01', '2027-01-02', '2027-01-03']
-  const nye = trip({ start_date: '2026-12-30', end_date: '2027-01-02' })
-  expect(weekBars(week, spans([nye])).map((b) => [b.from, b.to, b.starts, b.ends])).toEqual([[4, 5, false, true]])
 })

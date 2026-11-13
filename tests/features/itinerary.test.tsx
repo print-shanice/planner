@@ -531,7 +531,6 @@ describe('a long trip with side trips', () => {
     expect(cal.querySelector('[data-day="2027-02-19"]')).toHaveAttribute('data-ribbon', 'start')
     expect((cal.querySelector('[data-day="2027-02-20"]') as HTMLElement).style.getPropertyValue('--c')).toBe('var(--g2)')
     expect((cal.querySelector('[data-day="2027-02-18"]') as HTMLElement).style.getPropertyValue('--c')).toBe('var(--g0)')
-    expect(cal.querySelector('.cal-label')).toBeNull()
     // tapping a side trip's day opens that side trip on it
     await userEvent.click(within(cal).getByRole('button', { name: 'sat 20 feb' }))
     expect(screen.getByTestId('loc').textContent).toBe('?day=2027-02-20')

@@ -63,7 +63,7 @@ export function ParentCalendar({ trip, trips, stops, today, onDay, renderDay, ho
 
   return (
     <div className="parent-cal">
-      <MonthCalendar month={month} today={today} ribbon={owner} bars={[]} flag={(sp) => (sp.trip ? flagsOf(sp.trip)[0] ?? null : null)} selected={selected}
+      <MonthCalendar month={month} today={today} ribbon={owner} flag={(sp) => (sp.trip ? flagsOf(sp.trip)[0] ?? null : null)} selected={selected}
         onPrev={month > start.slice(0, 7) ? () => setMonth(shiftMonth(month, -1)) : undefined}
         onNext={month < end.slice(0, 7) ? () => setMonth(shiftMonth(month, 1)) : undefined}
         onDay={pick} canPick={inRange} marked={(d) => own.has(d)} holiday={holiday} />

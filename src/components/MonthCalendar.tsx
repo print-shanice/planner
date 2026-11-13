@@ -1,7 +1,5 @@
-import type { Trip } from '../lib/types'
 import type { CSSProperties } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { monthWeeks, weekBars, type Span } from '../lib/calendar'
+import { monthWeeks, type Span } from '../lib/calendar'
 import { fmtDay } from '../lib/dates'
 import { Icon } from './Icon'
 import { CountryFlag } from './CountryFlag'
@@ -14,45 +12,29 @@ export const dayLabel = (d: string) => fmtDay(d, { weekday: 'short', day: 'numer
 type Props = {
   // the month in the title
   month: string
-  // one folded week instead of the whole month
-  week?: string[]
-  // move back or on by a month (a week when folded); missing means you can't
+  // move back or on by a month; missing means you can't
   onPrev?: () => void
   onNext?: () => void
-  // phones fold the calendar to a week; this opens it to the whole month and back
-  fold?: { open: boolean; onToggle: () => void }
   today: string
   // the trip whose ribbon a day sits on
   ribbon: (d: string) => Span | undefined
-  // trips drawn as named bars in their colour; spans without a trip (cities) are grey
-  bars: Span[]
   selected?: string | null
   // days become buttons when set; only days that pass `canPick`
   onDay?: (d: string) => void
   canPick?: (d: string) => boolean
   // days with something planned get a dot
   marked?: (d: string) => boolean
-  // inside a trip, side-trip bars are real links with the side trip's flag
-  linkBars?: boolean
   // the flag a ribbon wears: it sits on the first day of every stretch of that ribbon, row by row,
   // so each colour on the month says which country it is
   flag?: (s: Span) => string | null | undefined
-  // the countries a trip goes to, for the flag on its label (else its base's)
-  codes?: (t: Trip) => string[]
   // a public holiday that day where you'll be: a short amber rule under the day, and its name read out
   holiday?: (d: string) => string | null | undefined
 }
 
 function Week({ week, p }: { week: (string | null)[]; p: Props }) {
-  const navigate = useNavigate()
   const owners = week.map((d) => (d ? p.ribbon(d) : undefined))
-  const bars = weekBars(week, p.bars)
-  // a week only makes room for the bars it has
-  const lanes = bars.reduce((n, b) => Math.max(n, b.lane + 1), 0)
-  // inside a trip a side trip colours its days' squares instead of drawing a bar under them
-  const side = (d: string | null) => (p.linkBars && d ? bars.find((b) => b.span.start <= d && b.span.end >= d)?.span : undefined)
   return (
-    <div className={`cal-week${p.linkBars ? ' squares' : ''}`} style={{ gridTemplateRows: `44px${lanes ? ` repeat(${lanes}, ${p.linkBars ? 18 : 20}px)` : ''}` }}>
+    <div className="cal-week">
       {week.map((d, i) => {
         if (!d) return <span key={i} className="cal-day" style={{ gridColumn: i + 1 }} />
         const t = owners[i]
@@ -65,16 +47,13 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           if (owners[i - 1] !== t) edge += 'l'
           if (owners[i + 1] !== t) edge += 'r'
         }
-        const st = side(d)
-        const sideAt = st ? (st.start === st.end ? 'one' : d === st.start ? 'start' : d === st.end ? 'end' : 'on') : undefined
-        const sideEdge = st ? `${side(week[i - 1] ?? null) !== st ? 'l' : ''}${side(week[i + 1] ?? null) !== st ? 'r' : ''}` : ''
         const attrs = {
-          'data-day': d, 'data-side': sideAt, 'data-side-edge': sideEdge || undefined, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
+          'data-day': d, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
           'aria-current': d === p.today ? ('date' as const) : undefined,
           'data-planned': p.marked?.(d) || undefined,
           'data-holiday': p.holiday?.(d) ? '' : undefined,
           title: p.holiday?.(d) || undefined,
-          style: { gridColumn: i + 1, ...(t ? tint(t.color) : st ? tint(st.color) : {}) },
+          style: { gridColumn: i + 1, ...(t ? tint(t.color) : {}) },
         }
         const code = t && edge.includes('l') ? p.flag?.(t) : null
         const n = <><span className="cal-n num">{+d.slice(8)}</span>{code && <span className="cal-flag"><CountryFlag code={code} /></span>}</>
@@ -82,35 +61,12 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         if (p.onDay && pickable) {
           return (
             <button key={d} type="button" className="cal-day" {...attrs} aria-label={[dayLabel(d), p.holiday?.(d)].filter(Boolean).join(' · ')}
-              aria-pressed={p.selected === d} onClick={() => st?.trip ? navigate(`/trip/${st.trip.id}?day=${d}`) : p.onDay!(d)}>
+              aria-pressed={p.selected === d} onClick={() => p.onDay!(d)}>
               {n}
             </button>
           )
         }
         return <span key={d} className="cal-day" {...attrs} data-out={(p.onDay && !pickable) || undefined}>{n}</span>
-      })}
-      {bars.map((b) => {
-        if (p.linkBars && b.span.trip) {
-          // Keep one label, including when a trip began before the visible month.
-          const labelDay = (p.week ? [p.week] : monthWeeks(p.month))
-            .map((days) => days.filter((d) => d && d >= b.span.start && d <= b.span.end))
-            .sort((a, c) => c.length - a.length)[0]?.[0]
-          if (!labelDay || !week.includes(labelDay)) return null
-          return (
-            <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} className="cal-label" title={b.span.name}
-              style={{ gridColumn: `${b.from + 1} / ${b.to + 2}`, gridRow: b.lane + 2, ...tint(b.span.color) }}>
-              <CountryFlag code={p.codes?.(b.span.trip)[0] ?? b.span.trip.base?.country} /> {b.span.name}
-            </Link>
-          )
-        }
-        const props = {
-          className: `cal-bar${b.span.trip ? '' : ' city'}`, 'data-testid': b.span.trip ? 'cal-bar' : 'cal-city',
-          'data-starts': b.starts || undefined, 'data-ends': b.ends || undefined, title: b.span.name, 'aria-hidden': true,
-          style: { gridColumn: `${b.from + 1} / ${b.to + 2}`, gridRow: b.lane + 2, ...(b.span.trip ? tint(b.span.color) : {}) },
-        }
-        return b.span.trip
-          ? <Link key={b.span.id} to={`/trip/${b.span.trip.id}`} tabIndex={-1} {...props}>{b.span.name}</Link>
-          : <span key={b.span.id} {...props}>{b.span.name}</span>
       })}
     </div>
   )
@@ -119,30 +75,23 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
 export function MonthCalendar(p: Props) {
   const m = p.month
   const name = fmtDay(`${m}-01`, { month: 'long', year: 'numeric' })
-  const step = p.week ? 'week' : 'month'
-  const weeks = p.week ? [p.week] : monthWeeks(m)
   return (
-    <div className={`cal${p.week ? ' folded' : ''}`} data-testid="calendar" role="group" aria-label={name}>
+    <div className="cal" data-testid="calendar" role="group" aria-label={name}>
       <div className="cal-head">
         <p className="cal-title head" aria-live="polite">
           <span className="cal-month">{fmtDay(`${m}-01`, { month: 'long' })}</span>{' '}
           <span className="cal-year">{m.slice(0, 4)}</span>
         </p>
-        <button type="button" className="icon-btn" aria-label={`previous ${step}`} disabled={!p.onPrev} onClick={p.onPrev}>
+        <button type="button" className="icon-btn" aria-label="previous month" disabled={!p.onPrev} onClick={p.onPrev}>
           <Icon name="back" />
         </button>
-        <button type="button" className="icon-btn" aria-label={`next ${step}`} disabled={!p.onNext} onClick={p.onNext}>
+        <button type="button" className="icon-btn" aria-label="next month" disabled={!p.onNext} onClick={p.onNext}>
           <Icon name="next" />
         </button>
-        {p.fold && (
-          <button type="button" className="icon-btn cal-fold" aria-label="whole month" aria-expanded={p.fold.open} onClick={p.fold.onToggle}>
-            <Icon name="chevron" />
-          </button>
-        )}
       </div>
-      <div className="cal-grid" key={p.week ? p.week[0] : m} aria-hidden={p.onDay ? undefined : true}>
+      <div className="cal-grid" key={m} aria-hidden={p.onDay ? undefined : true}>
         <div className="cal-weekdays" aria-hidden="true">{WEEKDAYS.map((d, i) => <span key={i}>{d}</span>)}</div>
-        {weeks.map((w, i) => <Week key={i} week={w} p={p} />)}
+        {monthWeeks(m).map((w, i) => <Week key={i} week={w} p={p} />)}
       </div>
     </div>
   )

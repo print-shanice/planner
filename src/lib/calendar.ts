@@ -44,21 +44,3 @@ const spanOrder = (a: Span, b: Span) => a.start.localeCompare(b.start) || b.end.
 export function innermostDay(d: string, spans: Span[], depth: (s: Span) => number): Span | undefined {
   return spans.filter((s) => within(s, d)).sort((a, b) => depth(b) - depth(a) || spanOrder(a, b))[0]
 }
-
-export type Bar = { span: Span; from: number; to: number; starts: boolean; ends: boolean; lane: number }
-
-export function weekBars(week: (string | null)[], spans: Span[]): Bar[] {
-  const lanes: number[] = [] // the last column each lane is busy until
-  const out: Bar[] = []
-  for (const s of [...spans].sort(spanOrder)) {
-    const cols = week.flatMap((d, i) => (d && within(s, d) ? [i] : []))
-    if (!cols.length) continue
-    const from = cols[0]
-    const to = cols[cols.length - 1]
-    let lane = lanes.findIndex((busy) => busy < from)
-    if (lane < 0) lane = lanes.length
-    lanes[lane] = to
-    out.push({ span: s, from, to, starts: week[from] === s.start, ends: week[to] === s.end, lane })
-  }
-  return out
-}

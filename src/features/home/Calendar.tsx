@@ -30,7 +30,7 @@ export function Calendar({ trips, flagsOf = none, today, holiday, aside }: { tri
     <div className="home-month">
       <div className="home-cal">
         <MonthCalendar month={m} onPrev={() => setMonth(shiftMonth(m, -1))} onNext={() => setMonth(shiftMonth(m, 1))}
-          today={today} ribbon={(d) => innermostDay(d, all, depth)} bars={[]} flag={flag} holiday={holiday}
+          today={today} ribbon={(d) => innermostDay(d, all, depth)} flag={flag} holiday={holiday}
           canPick={(d) => !!owner(d)} onDay={(d) => { const t = owner(d); if (t) navigate(`/trip/${t.id}?day=${d}`) }} />
       </div>
       {aside?.(m)}
