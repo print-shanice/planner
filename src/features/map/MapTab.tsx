@@ -123,7 +123,6 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
     setParams((p) => { const n = new URLSearchParams(p); n.delete('pin'); return n }, { replace: true })
   }, [pin, stops, setParams])
 
-
   const navigate = useNavigate()
   // the whole trip with side trips is an overview: home and one pin per side trip
   const overviewNow = useMemo(() => filter === 'all' && sides ? overviewFeatures(trip, trips, stops) : null, [trip, trips, stops, filter, sides])

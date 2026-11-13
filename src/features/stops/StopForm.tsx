@@ -199,7 +199,6 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
     })
   }
 
-  const set2 = set
   const when = (rows: [string, 'day' | 'end_date' | null, 'time' | 'end_time' | null][]) => (
     <div className="when">
       {rows.map(([label, dk, tk]) => (
@@ -215,7 +214,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const q = (text: string) => <p className="form-q">{text}</p>
   const named = (label: string) => (
     <NamePlace label={label} name={d.title} place={d.place} near={near} autoFocus={isNew}
-      onName={(title) => set2({ title })} onPlace={(p) => set2(p ? { place: p, title: keptName(d.title, p.name), ...(!d.category && p.category ? { category: p.category } : {}) } : { place: null })} />
+      onName={(title) => set({ title })} onPlace={(p) => set(p ? { place: p, title: keptName(d.title, p.name), ...(!d.category && p.category ? { category: p.category } : {}) } : { place: null })} />
   )
   const link = <label className="field"><span className="label">link</span><input type="url" inputMode="url" value={d.url} onChange={(e) => set({ url: e.target.value })} /></label>
   const notes = <label className="field"><span className="label">notes</span><textarea value={d.notes} onChange={(e) => set({ notes: e.target.value })} /></label>

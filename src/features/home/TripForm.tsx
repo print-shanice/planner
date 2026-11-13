@@ -14,7 +14,6 @@ import { COLOUR_NAMES, PICKER_ORDER, colourIndex, colourVar } from '../../lib/co
 
 type Props = { trip?: Trip; parentId?: string | null; onDone: (saved?: string) => void; onDeleted?: () => void }
 
-
 export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
   const trips = useTrips().data ?? []
   const rates = useRates().data ?? null

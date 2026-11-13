@@ -46,7 +46,6 @@ export function useRates() {
   return useQuery<Rates>({ queryKey: ['rates'], queryFn: fetchRates, staleTime: 6 * 60 * 60 * 1000, retry: 0 })
 }
 
-
 type Row = { id?: string } & Record<string, unknown>
 
 // tables whose rows show "couldn't save"; elsewhere a kept failure would look saved when it isn't

@@ -75,8 +75,6 @@ export function costValues(d: CostDraft, people: string[]) {
   }
 }
 
-
-
 type PaymentProps = { value: CostDraft; onChange: (d: CostDraft) => void; members: Member[] }
 
 // paid or not paid; it sits at the top of wherever the cost is (the cost header, or under a cost's name).

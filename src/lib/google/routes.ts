@@ -62,7 +62,6 @@ export async function walkLegs(legs: { a: Pt; b: Pt }[]): Promise<void> {
   }))
 }
 
-
 export function walkWords(w: Walk | null | undefined): string | null {
   if (!w || w.seconds > 7200) return null
   const min = Math.max(1, Math.round(w.seconds / 60))
