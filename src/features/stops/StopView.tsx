@@ -5,7 +5,7 @@ import { useCanEdit } from '../../lib/offline'
 import { formatMoney } from '../../lib/money'
 import { gmapsUrl, directionsUrl } from '../../lib/gmaps'
 import { supabase } from '../../lib/supabase'
-import { safeUrl } from '../../lib/embed'
+import { hostOf, safeUrl } from '../../lib/embed'
 import { Icon } from '../../components/Icon'
 import { Copy } from '../../components/Copy'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
@@ -16,7 +16,6 @@ import { saveError } from '../../lib/errors'
 import { stopTitle } from '../plan/stopText'
 import { FlightCheck } from './FlightFacts'
 import { statusWord } from '../../lib/flight'
-import { hostOf as host } from '../../lib/embed'
 import { Sheet } from '../../components/Sheet'
 import { CaptureForm } from '../capture/CaptureForm'
 import { CostForm } from '../money/CostForm'
@@ -221,7 +220,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
           <Row label="links">
             <section className="inspiration" aria-label="links">
               {inspiration.map((l) => (
-                <a key={l.id} className="card-plain" href={safeUrl(l.url) ?? undefined} target="_blank" rel="noopener noreferrer"><SiteIcon url={l.url} /><span>{l.title || host(l.url)}</span></a>
+                <a key={l.id} className="card-plain" href={safeUrl(l.url) ?? undefined} target="_blank" rel="noopener noreferrer"><SiteIcon url={l.url} /><span>{l.title || hostOf(l.url)}</span></a>
               ))}
               {canEdit && <button type="button" className="card-link" onClick={() => setLinking(true)}>add a link</button>}
             </section>
@@ -260,8 +259,4 @@ export function StopView({ stop, onEdit, onClose }: Props) {
       </div>
     </div>
   )
-}
-
-function hostOf(url: string) {
-  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }
