@@ -1,4 +1,5 @@
-import { tripDays, stayDays, visibleDays, countdown, nights, dayColor } from '../../src/lib/dates'
+import { tripDays, stayDays, visibleDays, countdown, nights } from '../../src/lib/dates'
+import { colourVar } from '../../src/lib/colors'
 import { trip, stop } from '../factories'
 
 const t = trip({ id: 't0', start_date: '2027-02-07', end_date: '2027-02-11' })
@@ -47,11 +48,11 @@ it('countdown', () => {
   expect(countdown(trip({ start_date: null }), '2027-03-01')).toEqual({ kind: 'undated', days: 0 })
 })
 
-it('dayColor is the trip colour', () => {
-  expect(dayColor(0)).toBe('var(--g0)')
-  expect(dayColor(7)).toBe('var(--g7)')
-  expect(dayColor(13)).toBe('var(--g1)')
-  expect(dayColor(null)).toBe('var(--g0)')
+it("a trip's colour wraps round the twelve", () => {
+  expect(colourVar(0)).toBe('var(--g0)')
+  expect(colourVar(7)).toBe('var(--g7)')
+  expect(colourVar(13)).toBe('var(--g1)')
+  expect(colourVar(null)).toBe('var(--g0)')
 })
 
 it('fmtRange is short and lowercase', async () => {

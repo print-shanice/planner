@@ -26,6 +26,7 @@ import { SiteIcon } from '../saved/LinkCard'
 import { useSettle } from '../itinerary/useSettle'
 import { CardTimes } from './CardTimes'
 import { useSaveNote } from '../../lib/saveNote'
+import { hasPoint } from '../../lib/walk'
 import { MODES, modeWord } from '../../lib/lineKind'
 import { dayLabel } from '../../lib/dates'
 
@@ -106,7 +107,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   })
 
   // without a spot on the map there's nothing to give directions to; the card offers to add one instead
-  const spot = [stop.place, stop.destination, stop.origin].some((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
+  const spot = [stop.place, stop.destination, stop.origin].some(hasPoint)
 
   const what = stop.kind === 'journey' ? modeWord(stop.mode) : stop.kind === 'place' ? stop.category ?? 'place' : stop.kind
   const kicker = `${what} · ${stop.day ? dayLabel(stop.day) : 'no date'}`

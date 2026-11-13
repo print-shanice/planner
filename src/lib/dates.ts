@@ -1,5 +1,4 @@
 import type { Stop, Trip } from './types'
-import { colourVar } from './colors'
 import { count } from './words'
 
 const DAY = 86_400_000
@@ -72,11 +71,6 @@ export function countdown(t: Trip, today: string): { kind: 'upcoming' | 'ongoing
   const end = t.end_date ?? t.start_date
   if (today <= end) return { kind: 'ongoing', days: daysBetween(t.start_date, today) + 1 }
   return { kind: 'done', days: 0 }
-}
-
-// a trip's colour, for its numbers and pins
-export function dayColor(color: number | null | undefined): string {
-  return colourVar(color)
 }
 
 export function todayISO(): string {

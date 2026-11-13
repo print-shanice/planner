@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, LineString } from 'geojson'
 import type { Stop, Trip } from '../../lib/types'
-import { byStart, dayColor, fmtRange } from '../../lib/dates'
+import { byStart, fmtRange } from '../../lib/dates'
+import { colourVar } from '../../lib/colors'
 import { descendants } from '../../lib/countries'
 import { placeOut } from '../../lib/legs'
 import { hasPoint } from '../../lib/walk'
@@ -28,7 +29,7 @@ export function overviewFeatures(trip: Trip, trips: Trip[], stops: Stop[]): Over
     id: c.id,
     name: c.name.toLowerCase(),
     dates: fmtRange(c.start_date, c.end_date),
-    color: dayColor(c.color),
+    color: colourVar(c.color),
     at: sideAt(c, trips, stops),
   }))
   const features: Feature<LineString, LineProps>[] = home

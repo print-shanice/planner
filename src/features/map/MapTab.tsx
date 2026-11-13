@@ -3,7 +3,8 @@ import { chosenDay, dayEntries, ownerOn, validDay } from '../../lib/agenda'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Place, Trip } from '../../lib/types'
 import { useStops, useTrips } from '../../lib/queries'
-import { dayColor, dayLabel, fmtDay, todayISO } from '../../lib/dates'
+import { dayLabel, fmtDay, todayISO } from '../../lib/dates'
+import { colourVar } from '../../lib/colors'
 import { reversePlace } from '../../lib/photon'
 import { placeFromMap } from '../../lib/google/places'
 import { dayLegs } from '../../lib/legs'
@@ -137,7 +138,7 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
   // the shown day's walks, along the streets, in the colour of the trip that owns the day
   const legs = useMemo(() => isDay ? dayLegs(dayEntries(trip, trips, stops, filter)) : [], [isDay, trip, trips, stops, filter])
   const walk = useWalks(legs, isDay)
-  const dayTint = isDay ? dayColor(ownerOn(trip, trips, filter).color) : ''
+  const dayTint = isDay ? colourVar(ownerOn(trip, trips, filter).color) : ''
   const walkNow = legs.map((l) => ({ path: walk(l.a, l.b)?.path ?? [], color: dayTint }))
   // the same lines while nothing about them changed, so the map doesn't redraw them on every render
   const walkSig = walkNow.map((w) => `${w.color}:${w.path.length}:${w.path[0]?.lat ?? ''}`).join('|')
@@ -165,13 +166,13 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
     ? data.beds.features.flatMap((f) => {
       const s = stops.find((x) => x.id === f.properties.id)
       const nm = s ? s.title || s.place?.name || '' : ''
-      return nm ? [{ id: f.properties.id, n: null, icon: 'bed' as const, color: dayColor(trip.color), title: `staying at ${nm}`.toLowerCase(), sub: s?.day ? dayLabel(s.day) : '' }] : []
+      return nm ? [{ id: f.properties.id, n: null, icon: 'bed' as const, color: colourVar(trip.color), title: `staying at ${nm}`.toLowerCase(), sub: s?.day ? dayLabel(s.day) : '' }] : []
     })
     : []
   const items: PlaceItem[] = overview
     ? overview.sides.map((s) => ({ id: s.id, n: null, color: s.color, title: s.name, sub: s.dates }))
     : bed
-    ? [{ id: bed.id, n: null, icon: 'bed', color: dayColor(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...lineItems]
+    ? [{ id: bed.id, n: null, icon: 'bed', color: colourVar(trip.color), title: `staying at ${bedName}`.toLowerCase(), sub: '' }, ...lineItems]
     : [...stayItems, ...lineItems]
   const places = count(pinItems.length, 'place')
   const listTitle = overview ? count(overview.sides.length, 'side trip') : filter === 'all' ? places : filter === 'saved' ? count(data.saved.features.length, 'idea') : `${fmtDay(filter, { weekday: 'long', day: 'numeric' }).replace(',', '')} · ${places}`

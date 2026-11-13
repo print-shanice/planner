@@ -16,15 +16,15 @@ import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
 import { Avatar, memberName } from '../../components/Avatar'
 import { Tooltip } from '../../components/Tooltip'
+import { hasPoint } from '../../lib/walk'
 
 // where the trip is, right now and when you go: "par 11:02 · same time as you · usually 9° / 3°".
 // shown while the trip is still ahead or under way
 function TripNow({ trip, country, stops }: { trip: Trip; country?: string; stops: Stop[] }) {
   const now = useNow()
   const today = todayISO()
-  const spot = [trip.base, ...stops.filter((s) => s.trip_id === trip.id).map((s) => s.place)]
-    .find((p) => p != null && Number.isFinite(p.lat) && Number.isFinite(p.lng))
-  const at = spot ? { lat: spot.lat!, lng: spot.lng! } : null
+  const spot = [trip.base, ...stops.filter((s) => s.trip_id === trip.id).map((s) => s.place)].find(hasPoint)
+  const at = spot ? { lat: spot.lat, lng: spot.lng } : null
   const temps = useTemps(at, weatherAsk(trip.start_date, trip.end_date, today)).data
   const zone = zoneOf(trip.base?.country ?? country, trip.base?.lng ?? spot?.lng)
   if (trip.end_date && trip.end_date < today) return null

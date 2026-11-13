@@ -1,6 +1,6 @@
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson'
 import type { Place, Stop, Trip } from '../../lib/types'
-import { dayColor } from '../../lib/dates'
+import { colourVar } from '../../lib/colors'
 import { dayEntries, ownerOn } from '../../lib/agenda'
 import { ancestors, descendants } from '../../lib/countries'
 import { mapBed } from '../../lib/legs'
@@ -56,7 +56,7 @@ export function mapFeatures(trip: Trip, trips: Trip[], stops: Stop[], filter: Fi
   const dates = filter === 'all' ? [...new Set(mine.flatMap(s => s.day ? [s.day] : []))].sort() : [filter]
   for (const date of dates) {
     const entries = dayEntries(trip, trips, stops, date)
-    const color = dayColor(ownerOn(trip, trips, date).color)
+    const color = colourVar(ownerOn(trip, trips, date).color)
     const numbers = pinNumbers(entries)
     const path: [number, number][] = []
     for (const e of entries) {
