@@ -67,8 +67,6 @@
 .files { display: grid; gap: 4px; }
 .file-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 8px; background: var(--soft); }
 .file-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 500; text-decoration: none; text-align: left; }
-.file-add { justify-self: start; cursor: pointer; }
-.file-add.busy { opacity: .5; }
 .move { display: grid; gap: 12px; padding: 14px; border-radius: 8px; background: var(--ground); border: 1px solid var(--line); }
 .file-name { border: 0; background: none; text-align: left; padding: 10px 0; color: inherit; }
 .ticket { display: grid; gap: 12px; }

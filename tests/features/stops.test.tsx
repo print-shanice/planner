@@ -710,6 +710,16 @@ it('uploading a ticket says so on the card', async () => {
   expect(within(d).getByText('uploading…')).toBeInTheDocument()
 })
 
+it('a first ticket that fails to upload says so', async () => {
+  const { supabase } = await import('../../src/lib/supabase') as any
+  supabase.storage.from = () => ({ remove: db.storageRemove, upload: async () => ({ error: new Error('nope') }) })
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  await userEvent.upload(within(d).getByLabelText('add file'), new File(['x'], 'pass.pdf', { type: 'application/pdf' }))
+  expect(await within(d).findByText("couldn't upload, try again")).toBeInTheDocument()
+})
+
 describe('forms are calm full pages', () => {
   async function newStay() {
     show(<Opener kind="stay" />)

@@ -14,8 +14,8 @@ export function filesOf(files: FileRow[] | undefined, stopId: string) {
   return (files ?? []).filter((f) => f.stop_id === stopId)
 }
 
-// the stop's "ticket" button opens the picker through pickerRef
-export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit: boolean; pickerRef?: Ref<{ open: () => void }> }) {
+// the card's "attach a ticket" opens the picker through pickerRef: there's no add button here
+export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit: boolean; pickerRef: Ref<{ open: () => void }> }) {
   const input = useRef<HTMLInputElement>(null)
   useImperativeHandle(pickerRef, () => ({ open: () => input.current?.click() }), [])
   const files = filesOf(useFiles().data, stop.id)
@@ -64,7 +64,9 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
     await remove.mutateAsync(f.id)
   }
 
-  if (!files.length && !busy && (!canEdit || pickerRef)) return pickerRef && canEdit ? <input ref={input} type="file" accept="image/*,application/pdf" multiple hidden aria-label="add file" onChange={(e) => { upload(e.target.files); e.target.value = '' }} /> : null
+  const picker = canEdit && <input ref={input} type="file" accept="image/*,application/pdf" multiple hidden disabled={busy} aria-label="add file"
+    onChange={(e) => { upload(e.target.files); e.target.value = '' }} />
+  if (!files.length && !busy && !problem) return picker || null
   return (
     <section className="files" aria-label="files">
       {files.map((f) => (
@@ -75,16 +77,7 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
           {canEdit && <button type="button" className="icon-btn" aria-label={`remove ${f.name}`} onClick={() => drop(f)}><Icon name="trash" size={18} /></button>}
         </div>
       ))}
-      {canEdit && (pickerRef ? (
-        <input ref={input} type="file" accept="image/*,application/pdf" multiple hidden disabled={busy} aria-label="add file"
-          onChange={(e) => { upload(e.target.files); e.target.value = '' }} />
-      ) : (
-        <label className={`btn ghost small file-add${busy ? ' busy' : ''}`}>
-          <Icon name="upload" size={18} /><span>add file</span>
-          <input ref={input} type="file" accept="image/*,application/pdf" multiple hidden disabled={busy}
-            onChange={(e) => { upload(e.target.files); e.target.value = '' }} />
-        </label>
-      ))}
+      {picker}
       {busy && <Pending label="uploading…" />}
       {problem && <p className="warn-line">{problem}</p>}
       <Sheet open={!!viewing} title={viewing?.file.name ?? ''} onClose={() => setViewing(null)}>
