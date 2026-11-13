@@ -21,9 +21,7 @@ export function SiteIcon({ url }: { url: string }) {
   return <img className="site-icon" src={`https://www.google.com/s2/favicons?domain=${host}&sz=64`} alt="" width={20} height={20} loading="lazy" onError={() => setFailed(true)} />
 }
 
-type Pick = { on: boolean; onToggle: () => void }
-
-export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pick?: Pick }) {
+export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
   const [editing, setEditing] = useState(false)
   const href = safeUrl(link.url) ?? undefined
   const save = useSave('links')
@@ -37,7 +35,6 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
   return (
     <article className="link-card" data-testid="link-card">
       <div className="link-foot">
-        {pick && <input type="checkbox" className="pick" aria-label={title} checked={pick.on} onChange={pick.onToggle} />}
         <a href={href} target="_blank" rel="noopener noreferrer" className="link-text">
           <SiteIcon url={link.url} />
           <span className="stack-xs">
@@ -46,7 +43,7 @@ export function LinkCard({ link, trips, pick }: { link: Link; trips: Trip[]; pic
           </span>
         </a>
         {place && <button type="button" className="text-select link-place" onClick={() => sheet?.openStop(place.id)}>{stopTitle(place).toLowerCase()} →</button>}
-        {canEdit && !pick && (
+        {canEdit && (
           <ItemMenu title={title}>
             {(close) => (<>
               <button type="button" className="btn ghost" onClick={() => { close(); setEditing(true) }}>edit link</button>
