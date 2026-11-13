@@ -37,6 +37,14 @@ test.describe('places', () => {
     await expect(places).not.toContainText('nomad coffee')
   })
 
+  test("a place's mark shows it on the map with its card, like a numbered line in the plan", async ({ page }) => {
+    await open(page, '/trip/par?tab=places')
+    await page.getByRole('region', { name: 'places' }).getByRole('button', { name: 'show hotel marais on the map' }).click()
+    await expect(page.getByRole('region', { name: 'hotel marais' })).toBeVisible()
+    if (page.viewportSize()!.width < 1024) await expect(page).toHaveURL(/tab=map/)
+    else await expect(page.getByRole('region', { name: 'places' })).toBeVisible()
+  })
+
   test('places are searched as one list', async ({ page }) => {
     await open(page, '/trip/bcn?tab=places')
     const places = page.getByRole('region', { name: 'places' })

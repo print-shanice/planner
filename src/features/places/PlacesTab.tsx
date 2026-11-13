@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { Link, Place, Stop, Trip } from '../../lib/types'
 import { useCosts, useLinks, useSave, useStops, useTrips } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
@@ -16,6 +17,8 @@ import { newPlaceStop } from '../../lib/stops'
 import { kindOf, kindsIn, sameAs, tripPlaces, type KindFilter } from '../../lib/places'
 import { setShownPlaces } from '../../lib/shownPlaces'
 import { useLocating } from '../../lib/locating'
+import { useWide } from '../../lib/useWide'
+import { hasPoint } from '../../lib/walk'
 import { count } from '../../lib/words'
 import { EmptyState } from '../../components/EmptyState'
 import { LoadState } from '../../components/States'
@@ -67,6 +70,29 @@ function PlaceWhen({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[
   )
 }
 
+// the same mark as its pin on the map beside (a plain ring with its kind, a bed for a stay). like a numbered line in
+// the plan, it shows the place on the map: the laptop's map beside centres on it with its card, a phone opens the map
+function ShowOnMap({ stop }: { stop: Stop }) {
+  const [, setParams] = useSearchParams()
+  const wide = useWide()
+  const mark = <Chip stop={stop} quiet />
+  if (!hasPoint(stop.place)) return mark
+  const title = stopTitle(stop).toLowerCase()
+  return (
+    <button type="button" className="mark-btn" aria-label={`show ${title} on the map`} title="show on the map" onClick={() => setParams((p) => {
+      const n = new URLSearchParams(p)
+      n.set('pin', stop.id)
+      n.delete('find')
+      // a phone's map shows a planned place on its day, and one not planned yet among the ideas
+      if (!wide) {
+        n.set('tab', 'map')
+        if (stop.day) { n.set('day', stop.day); n.delete('map') } else n.set('map', 'saved')
+      }
+      return n
+    })}>{mark}</button>
+  )
+}
+
 function PlaceRow({ stop, trip, trips, links }: { stop: Stop; trip: Trip; trips: Trip[]; links: Link[] }) {
   const sheet = useStopSheet()
   // the trip's place finder is looking this one up in the background
@@ -81,8 +107,7 @@ function PlaceRow({ stop, trip, trips, links }: { stop: Stop; trip: Trip; trips:
     .filter(Boolean).join(' · ').toLowerCase()
   return (
     <li className="doc-row idea-row" data-stop={stop.id}>
-      {/* the same mark as its pin on the map beside: a plain ring with its kind (a bed for a stay) */}
-      <Chip stop={stop} quiet />
+      <ShowOnMap stop={stop} />
       <button type="button" className="doc-row-main" onClick={() => sheet?.openStop(stop.id, stop.day)}>
         <span className="doc-row-title">{stopTitle(stop)}</span>
         {looking ? <Pending label="finding the place" /> : sub && <span className="muted">{sub}</span>}

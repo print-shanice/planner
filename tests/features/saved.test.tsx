@@ -1,6 +1,6 @@
 import { act, render, screen, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
 
 const db = vi.hoisted(() => ({ costs: [] as any[], trips: [] as any[], links: [] as any[], stops: [] as any[], save: vi.fn(), remove: vi.fn(), linksQ: null as null | Record<string, unknown>, online: true }))
@@ -40,7 +40,9 @@ beforeEach(() => {
   db.costs = []; found.mockReset().mockResolvedValue([])
 })
 
+afterEach(() => { delete (window as { matchMedia?: unknown }).matchMedia })
 const show = () => render(<MemoryRouter><PlacesTab trip={lap} /></MemoryRouter>)
+function Where() { return <output data-testid="where">{useLocation().search}</output> }
 const showLinks = () => render(<MemoryRouter><LinksTab trip={lap} /></MemoryRouter>)
 
 it('places are every place in the trip, the ones in the itinerary too (stays included), in one list with no dates; notes live elsewhere', () => {
@@ -71,6 +73,34 @@ it('each place wears the same mark as its pin on the map beside: a plain ring wi
   for (const id of ['s9', 'st', 'pl']) expect(mark(id)).toHaveClass('quiet')
   const bed = render(<Icon name="bed" />).container.querySelector('path')!.getAttribute('d')
   expect(mark('st').querySelector('path')!.getAttribute('d')).toBe(bed)
+})
+
+it('a place\'s mark shows it on the map, like a numbered line in the plan; a place without a spot has nothing to show', async () => {
+  db.stops = [
+    stop({ id: 's9', trip_id: 'lap', title: 'kotisaari', day: null, place: place({ name: 'Kotisaari', lat: 66.5, lng: 25.7 }) }),
+    stop({ id: 'pl', trip_id: 'lap', title: 'planned', day: '2027-02-08', place: place({ lat: 66.4, lng: 25.6 }) }),
+    stop({ id: 'nm', trip_id: 'lap', title: 'name only', day: null, place: null }),
+  ]
+  window.matchMedia = ((q: string) => ({ matches: q.includes('1024'), media: q, addEventListener() {}, removeEventListener() {} })) as never
+  render(<MemoryRouter initialEntries={['/trip/lap?tab=places']}><PlacesTab trip={lap} /><Where /></MemoryRouter>)
+  await userEvent.click(screen.getByRole('button', { name: 'show kotisaari on the map' }))
+  expect(new URLSearchParams(screen.getByTestId('where').textContent!).get('pin')).toBe('s9')
+  await userEvent.click(screen.getByRole('button', { name: 'show planned on the map' }))
+  const after = new URLSearchParams(screen.getByTestId('where').textContent!)
+  expect(after.get('pin')).toBe('pl')
+  expect(after.get('tab')).toBe('places')
+  expect(screen.queryByRole('button', { name: 'show name only on the map' })).toBeNull()
+})
+
+it('on a phone the mark goes to the map tab, on the place', async () => {
+  window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} })) as never
+  db.stops = [stop({ id: 's9', trip_id: 'lap', title: 'kotisaari', day: null, place: place({ name: 'Kotisaari', lat: 66.5, lng: 25.7 }) })]
+  render(<MemoryRouter initialEntries={['/trip/lap?tab=places']}><PlacesTab trip={lap} /><Where /></MemoryRouter>)
+  await userEvent.click(screen.getByRole('button', { name: 'show kotisaari on the map' }))
+  const after = new URLSearchParams(screen.getByTestId('where').textContent!)
+  expect(after.get('tab')).toBe('map')
+  expect(after.get('pin')).toBe('s9')
+  expect(after.get('map')).toBe('saved')
 })
 
 it('a kind filter shows only that kind, and the map is told which places show', async () => {
@@ -345,7 +375,7 @@ it("a jotted place is left to the trip's own place finder, and its row says so w
   await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'kauppayhtiö{Enter}')
   expect(db.save).toHaveBeenCalledTimes(1)
   expect(spots).not.toHaveBeenCalled()
-  const row = screen.getByRole('button', { name: /kotisaari/ })
+  const row = screen.getByRole('button', { name: /^kotisaari/ })
   expect(within(row).queryByText('finding the place')).toBeNull()
   act(() => setLocating('s9', true))
   expect(within(row).getByText('finding the place')).toBeInTheDocument()
