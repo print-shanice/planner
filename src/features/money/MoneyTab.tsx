@@ -121,13 +121,13 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         </div>
       )}
       <div className="money-head">
-        <div className="stack-xs">
-          <div className="help-row"><p className="money-total num head" data-testid="money-total">{show(total)}</p><Help label="about the total">paid costs plus planned estimates; repayments are excluded</Help></div>
-          <p className="muted num">{budget != null ? [`of ${show(budget)}`, left != null ? `${show(left)} left` : ''].filter(Boolean).join(' · ') : 'in total'}{left != null && <Help label="about the remaining budget">budget remaining after paid and planned costs</Help>}</p>
-        </div>
-        <div className="help-row"><select aria-label="show in" className="input cur-select" value={cur} onChange={(e) => setCur(e.target.value)}>
-          {currencyList(rates).map((c) => <option key={c} value={c}>{c}</option>)}
-        </select><Help label="about display currency">show totals in this currency; individual costs keep their original currency</Help></div>
+        <div className="help-row"><p className="money-total num head" data-testid="money-total">{show(total)}</p><Help label="about the total">paid costs plus planned estimates; repayments are excluded. individual costs keep their own currency</Help></div>
+        <p className="money-sub muted num">
+          <span>{budget != null ? [`of ${show(budget)}`, left != null ? `${show(left)} left` : ''].filter(Boolean).join(' · ') : 'in total'}{left != null && <Help label="about the remaining budget">budget remaining after paid and planned costs</Help>}</span>
+          <span className="money-in">shown in <select aria-label="show in" className="cur-select" value={cur} onChange={(e) => setCur(e.target.value)}>
+            {currencyList(rates).map((c) => <option key={c} value={c}>{c}</option>)}
+          </select></span>
+        </p>
       </div>
       {total > 0 && (
         <div className="budget-bar" aria-hidden="true">

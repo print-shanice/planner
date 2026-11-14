@@ -416,7 +416,7 @@ describe('adding a cost right in money', () => {
     show(t)
     const cur = screen.getByRole('combobox', { name: 'currency' })
     expect(cur).toHaveDisplayValue('eur')
-    expect(cur).toHaveClass('input', 'cur-select')
+    expect(cur).toHaveClass('cur-select')
     // the same typing line as links: underlined fields, apart from each other, and a plain "add"
     expect(screen.getByRole('textbox', { name: 'add a cost' }).closest('form')).toHaveClass('jot', 'cost-line')
     expect(screen.getByRole('textbox', { name: 'add a cost' })).not.toHaveClass('input')
