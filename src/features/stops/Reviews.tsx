@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import type { Review, Stop } from '../../lib/types'
 import { useAuth } from '../../lib/auth'
 import { useCanEdit } from '../../lib/offline'
@@ -9,51 +9,61 @@ import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
 import { saveError } from '../../lib/errors'
 import { newId } from '../../lib/id'
+import { useSaveNote } from '../../lib/saveNote'
+import { Pending } from '../../components/Pending'
+import { Icon } from '../../components/Icon'
 
+type Draft = { rating: number | null; return_choice: Review['return_choice'] | null; outcome: Review['outcome']; comments: string }
+const draftOf = (r?: Review): Draft => ({ rating: r?.rating ?? null, return_choice: r?.return_choice ?? null, outcome: r?.outcome ?? 'planned', comments: r?.comments ?? '' })
+
+const OUTCOMES: Review['outcome'][] = ['planned', 'done', 'skipped']
+const RETURNS = ['yes', 'maybe', 'no'] as const
+
+// your visit, as rows like the rest of the card: a word tapped is picked (tapped again, unpicked), and comments
+// save when you leave them. nothing to press to save
 function ReviewForm({ stop, author, review }: { stop: Stop; author: string; review?: Review }) {
   const save = useSave('reviews')
   const [newReviewId] = useState(newId)
   const id = review?.id ?? newReviewId
-  const [dirty, setDirty] = useState(false)
-  const [rating, setRating] = useState(review?.rating?.toString() ?? '')
-  const [returnChoice, setReturn] = useState(review?.return_choice ?? '')
-  const [outcome, setOutcome] = useState(review?.outcome ?? 'planned')
-  const [comments, setComments] = useState(review?.comments ?? '')
-  const [message, setMessage] = useState('')
-  const [failed, setFailed] = useState(false)
-  useEffect(() => {
-    if (!dirty && review) {
-      setRating(review.rating?.toString() ?? ''); setReturn(review.return_choice ?? '')
-      setOutcome(review.outcome); setComments(review.comments)
-    }
-  }, [review, dirty])
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    if (save.isPending) return
-    setMessage(''); setFailed(false)
+  const [touched, setTouched] = useState(false)
+  const [d, setD] = useState(() => draftOf(review))
+  const [failed, setFailed] = useState<string | null>(null)
+  const [state, track] = useSaveNote()
+  // a review that arrives after opening shows, until you change something
+  useEffect(() => { if (!touched && review) setD(draftOf(review)) }, [review, touched])
+  async function put(x: Draft) {
+    setD(x); setTouched(true); setFailed(null)
     try {
-      await save.mutateAsync({ id, stop_id: stop.id, author_id: author, rating: rating ? Number(rating) : null,
-        return_choice: returnChoice || null, outcome, comments })
-      setMessage('review saved')
-    } catch (error) { setFailed(true); setMessage(saveError(error)) }
+      await track(save.mutateAsync({ id, stop_id: stop.id, author_id: author, ...x }))
+    } catch (error) { setFailed(saveError(error)) }
   }
-  return <form className="stack review-form" onSubmit={submit} onChange={() => { setDirty(true); setMessage('') }}>
-    <h3 className="head">your visit</h3>
-    <label className="field"><span className="label">visit</span><select aria-label="visit" value={outcome} onChange={e => setOutcome(e.target.value as Review['outcome'])}>
-      <option value="planned">planned</option><option value="done">done</option><option value="skipped">skipped</option>
-    </select></label>
-    <div className="row">
-      <label className="field"><span className="label">rating</span><select aria-label="rating" value={rating} onChange={e => setRating(e.target.value)}>
-        <option value="">not rated</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} / 5</option>)}
-      </select></label>
-      <label className="field"><span className="label">would return</span><select aria-label="would return" value={returnChoice} onChange={e => setReturn(e.target.value as typeof returnChoice)}>
-        <option value="">undecided</option><option value="yes">yes</option><option value="maybe">maybe</option><option value="no">no</option>
-      </select></label>
-    </div>
-    <label className="field"><span className="label">comments</span><textarea value={comments} onChange={e => setComments(e.target.value)} /></label>
-    {message && <p role={failed ? 'alert' : 'status'}>{message}</p>}
-    <button type="submit" className="btn primary" disabled={save.isPending}>{save.isPending ? 'saving' : failed ? 'retry' : 'save review'}</button>
-  </form>
+  const pick = <K extends keyof Draft>(k: K, v: Draft[K]) => put({ ...d, [k]: d[k] === v && k !== 'outcome' ? null : v })
+  return <>
+    <h3 className="mono-label review-head">your visit</h3>
+    <dl className="card-rows review-rows">
+      <dt className="mono-label">visit</dt>
+      <dd><span className="card-options" role="group" aria-label="visit">
+        {OUTCOMES.map((o) => <button key={o} type="button" aria-pressed={d.outcome === o} onClick={() => pick('outcome', o)}>{o}</button>)}
+      </span></dd>
+      <dt className="mono-label">rating</dt>
+      <dd><span className="card-options" role="group" aria-label="rating">
+        {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" className="num" aria-pressed={d.rating === n} aria-label={`${n} of 5`} onClick={() => pick('rating', n)}>{n}</button>)}
+      </span></dd>
+      <dt className="mono-label">return</dt>
+      <dd><span className="card-options" role="group" aria-label="would return">
+        {RETURNS.map((r) => <button key={r} type="button" aria-pressed={d.return_choice === r} onClick={() => pick('return_choice', r)}>{r}</button>)}
+      </span></dd>
+      <dt className="mono-label">comments</dt>
+      <dd><textarea data-quiet="" className="card-field" aria-label="comments" placeholder="—" rows={2} value={d.comments}
+        onChange={(e) => { setTouched(true); setD({ ...d, comments: e.target.value }) }}
+        onBlur={() => { if (d.comments !== (review?.comments ?? '')) put(d) }} /></dd>
+    </dl>
+    {failed
+      ? <p className="warn-line" role="alert">{failed} <button type="button" className="card-link" onClick={() => put(d)}>retry</button></p>
+      : state === 'saving' ? <Pending label="saving" />
+      : state === 'saved' ? <span className="mono muted card-saved" role="status"><Icon name="check" size={15} />saved</span>
+      : null}
+  </>
 }
 
 export function Reviews({ stop }: { stop: Stop }) {
@@ -71,20 +81,24 @@ export function Reviews({ stop }: { stop: Stop }) {
     const visit = stops.find(s => s.id === r.stop_id)
     return (r.stop_id === stop.id || (visit && samePlace(stop.place, visit.place))) && r.id !== mine?.id
   }).sort((a, b) => (stops.find(s => s.id === b.stop_id)?.day ?? '').localeCompare(stops.find(s => s.id === a.stop_id)?.day ?? ''))
-  return <section className="stack reviews" aria-label="reviews">
-    <h2 className="head">reviews</h2>
+  const line = (r: Review) => [r.outcome, r.rating ? `${r.rating}/5` : null, r.return_choice === 'yes' ? 'would return' : r.return_choice === 'no' ? 'wouldn’t return' : r.return_choice === 'maybe' ? 'might return' : null].filter(Boolean).join(' · ')
+  return <section className="reviews" aria-label="reviews">
     <LoadState load={load} />
     {load.state === 'ready' && <>
+      {editable && userId ? <ReviewForm key={`${stop.id}-${userId}`} stop={stop} author={userId} review={mine} />
+        : mine && <>
+          <h3 className="mono-label review-head">your visit</h3>
+          <article className="visit-review"><p>{line(mine)}</p>{mine.comments && <p className="muted">{mine.comments}</p>}</article>
+        </>}
+      {history.length > 0 && <h3 className="mono-label review-head">earlier</h3>}
       {history.map(r => {
         const date = stops.find(s => s.id === r.stop_id)?.day
         return <article key={r.id} className="visit-review">
-          <strong>{members.find(m => m.user_id === r.author_id)?.name ?? 'traveller'} · {date ? fmtDay(date, { day: 'numeric', month: 'short', year: 'numeric' }) : 'no date'}</strong>
-          <p>{[r.outcome, r.rating ? `${r.rating} / 5` : null, r.return_choice ? `would return: ${r.return_choice}` : null].filter(Boolean).join(' · ')}</p>
-          {r.comments && <p className="notes">{r.comments}</p>}
+          <p>{members.find(m => m.user_id === r.author_id)?.name ?? 'traveller'} · {date ? fmtDay(date, { day: 'numeric', month: 'short', year: 'numeric' }) : 'no date'}</p>
+          <p className="muted">{line(r)}</p>
+          {r.comments && <p className="muted">{r.comments}</p>}
         </article>
       })}
-      {editable && userId ? <ReviewForm key={`${stop.id}-${userId}`} stop={stop} author={userId} review={mine} />
-        : mine && <article className="visit-review"><strong>your visit · {mine.outcome}</strong><p>{mine.rating ? `${mine.rating} / 5` : 'not rated'} · would return: {mine.return_choice ?? 'undecided'}</p><p className="notes">{mine.comments}</p></article>}
     </>}
   </section>
 }

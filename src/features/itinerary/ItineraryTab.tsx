@@ -350,7 +350,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
     if (!other) return
     const first = document.querySelector<HTMLElement>(`[data-drop-day="${other}"] [data-drop-line]`)?.dataset.dropLine ?? null
     move(s, other, dir < 0 ? null : first)
-    const refocus = () => document.querySelector<HTMLElement>(`[data-line="${CSS.escape(s.id)}"] :is(.doc-name, .itin-main)`)?.focus()
+    const refocus = () => document.querySelector<HTMLElement>(`[data-line="${CSS.escape(s.id)}"] .itin-main`)?.focus()
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(refocus)
   }
   // ⌥↑ / ⌥↓ (alt) moves the line you're on, like moving a paragraph in a doc

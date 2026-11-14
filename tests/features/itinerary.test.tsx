@@ -108,8 +108,8 @@ it('a number means a pin: lines with no spot on the map, and getting around, hav
   show(tokyo())
   const lines = dayBox('2025-09-20').getAllByTestId('itin-line')
   expect(lines.map((l) => l.querySelector('.seq')?.textContent ?? '')).toEqual(['', '', '', '01', ''])
-  // a typed train line is plain text you type over, like a place or a note; its time isn't said twice
-  expect(screen.getByRole('textbox', { name: 'change tozai line to nakano' })).toBeInTheDocument()
+  // a typed train line has a time you type over, like a place or a note; its time isn't said twice
+  expect(screen.getByRole('textbox', { name: 'start time of tozai line to nakano' })).toBeInTheDocument()
   expect(document.querySelector('[data-line="tozai"] .itin-sub')).toBeNull()
 })
 
@@ -165,35 +165,31 @@ it('the strip names the month where it starts', () => {
   expect(screen.getByRole('navigation', { name: 'days' })).toHaveTextContent(/^sep/)
 })
 
-it('the › on a line opens its card', async () => {
+it('the name on a line opens its card, like a flight; there is no › and no name to type over', async () => {
   show(tokyo())
-  await userEvent.click(screen.getByRole('button', { name: 'open neel' }))
+  expect(screen.queryByRole('textbox', { name: /^change / })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'open neel' })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: /^neel/ }))
   expect(db.open).toHaveBeenCalledWith('neel', '2025-09-20')
 })
 
-it('a line is live text: type over its name, enter saves only what changed and moves to the next line', async () => {
-  show(tokyo())
-  const name = screen.getByRole('textbox', { name: 'change neel' })
-  expect(name).toHaveValue('neel')
-  await userEvent.clear(name)
-  await userEvent.type(name, 'neel coffee{Enter}')
-  expect(db.save).toHaveBeenCalledWith({ id: 'neel', title: 'neel coffee' })
-  expect(screen.getByRole('textbox', { name: 'change enji' })).toHaveFocus()
-})
-
-it('a changed line shows a save button, then says saving and saved', async () => {
+it('a changed time shows a save button, then says saving and saved', async () => {
   let land!: () => void
-  db.save.mockImplementationOnce(() => new Promise<unknown>((r) => { land = () => r({}) }))
+  // the time's own save waits; the day's order saves as usual
+  db.save.mockImplementation((x: { time?: string }) => 'time' in x ? new Promise<unknown>((r) => { land = () => r({}) }) : Promise.resolve({}))
   show(tokyo())
   expect(screen.queryByRole('button', { name: 'save neel' })).toBeNull()
-  await userEvent.type(screen.getByRole('textbox', { name: 'change neel' }), ' cafe')
+  const start = screen.getByRole('textbox', { name: 'start time of neel' })
+  await userEvent.clear(start)
+  await userEvent.type(start, '16')
   await userEvent.click(screen.getByRole('button', { name: 'save neel' }))
-  expect(db.save).toHaveBeenCalledWith({ id: 'neel', title: 'neel cafe' })
+  expect(db.save).toHaveBeenCalledWith({ id: 'neel', time: '16:00' })
   const line = () => within(document.querySelector('[data-line="neel"]') as HTMLElement)
   expect(line().getByRole('status')).toHaveTextContent('saving')
   await act(async () => { land() })
   expect(line().getByRole('status')).toHaveTextContent('saved')
   expect(screen.queryByRole('button', { name: 'save neel' })).toBeNull()
+  db.save.mockImplementation((r: unknown) => Promise.resolve(r))
 })
 
 it('a time typed over saves when you leave the line', async () => {
@@ -203,7 +199,7 @@ it('a time typed over saves when you leave the line', async () => {
   await userEvent.clear(start)
   await userEvent.type(start, '10')
   expect(db.save).not.toHaveBeenCalled()
-  await userEvent.click(screen.getByRole('textbox', { name: 'change neel' }))
+  await userEvent.click(screen.getByRole('textbox', { name: 'start time of neel' }))
   expect(start).toHaveValue('10:00')
   expect(db.save).toHaveBeenCalledWith({ id: 'narita', time: '10:00' })
   expect(db.save.mock.calls.filter(([r]) => 'time' in (r as object))).toHaveLength(1)
@@ -215,54 +211,44 @@ it('a changed time also stores the order the day now reads in, so the line stays
   const start = screen.getByRole('textbox', { name: 'start time of narita airport t2' })
   await userEvent.clear(start)
   await userEvent.type(start, '18')
-  await userEvent.click(screen.getByRole('textbox', { name: 'change neel' }))
+  await userEvent.click(screen.getByRole('textbox', { name: 'start time of neel' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'narita', time: '18:00' })
   // 19 sep now reads: 17:00 hair, then 18:00 narita with iyoshi cola (untimed) still under it
   expect(db.save).toHaveBeenCalledWith({ id: 'hair', position: 0 })
   expect(db.save).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'iyoshi' }))
 })
 
-it('a changed line offers cancel beside save, as words, and cancel puts it back', async () => {
+it('a changed time offers cancel beside save, as words, and cancel puts it back', async () => {
   show(tokyo())
-  const name = screen.getByRole('textbox', { name: 'change neel' })
-  await userEvent.type(name, ' later')
+  const start = screen.getByRole('textbox', { name: 'start time of neel' })
+  const was = (start as HTMLInputElement).value
+  await userEvent.clear(start)
+  await userEvent.type(start, '1')
   const cancel = screen.getByRole('button', { name: 'cancel neel' })
   expect(cancel).toHaveTextContent('cancel')
   expect(screen.getByRole('button', { name: 'save neel' })).not.toHaveClass('btn')
   await userEvent.click(cancel)
-  expect(name).toHaveValue('neel')
+  expect(start).toHaveValue(was)
   expect(screen.queryByRole('button', { name: 'cancel neel' })).toBeNull()
   expect(db.save).not.toHaveBeenCalled()
 })
 
-it('leaving a line untouched saves nothing; escape puts it back', async () => {
+it('leaving a time untouched saves nothing; escape puts it back', async () => {
   show(tokyo())
-  const name = screen.getByRole('textbox', { name: 'change neel' })
-  await userEvent.click(name)
-  await userEvent.type(name, ' later')
+  const start = screen.getByRole('textbox', { name: 'start time of neel' })
+  const was = (start as HTMLInputElement).value
+  await userEvent.clear(start)
+  await userEvent.type(start, '1')
   await userEvent.keyboard('{Escape}')
-  expect(name).toHaveValue('neel')
-  await userEvent.click(screen.getByRole('textbox', { name: 'change enji' }))
+  expect(start).toHaveValue(was)
+  await userEvent.click(screen.getByRole('textbox', { name: 'start time of enji' }))
   expect(db.save).not.toHaveBeenCalled()
-})
-
-it('emptying a line removes it, with undo; one with tickets just goes back', async () => {
-  show(tokyo())
-  await userEvent.clear(screen.getByRole('textbox', { name: 'change neel' }))
-  await userEvent.keyboard('{Enter}')
-  expect(db.remove).toHaveBeenCalledWith('neel', 'neel')
-  db.files = [{ id: 'f', stop_id: 'enji', path: 'x' }]
-  const enji = screen.getByRole('textbox', { name: 'change enji' })
-  await userEvent.clear(enji)
-  await userEvent.keyboard('{Enter}')
-  expect(db.remove).toHaveBeenCalledTimes(1)
-  expect(enji).toHaveValue('enji')
 })
 
 it('journeys and stays stay tap-to-open', async () => {
   db.stops = [stop({ id: 'fl', trip_id: 'tk', kind: 'journey', day: '2025-09-18', time: '22:00', title: 'sq 638', origin: place({ name: 'changi' }), destination: place({ name: 'narita' }) })]
   show(tokyo())
-  expect(screen.queryByRole('textbox', { name: /change changi/ })).toBeNull()
+  expect(screen.queryByRole('textbox', { name: /changi/ })).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: /^sq 638 changi to narita|changi to narita.*sq 638/ }))
   expect(db.open).toHaveBeenCalledWith('fl', '2025-09-18')
 })
@@ -336,13 +322,13 @@ it('every line moves with alt and the arrow keys, timed or not, with no handle t
   expect(db.save).toHaveBeenCalledWith({ id: 'c', day: '2025-09-20', time: null, position: 0 })
 })
 
-it('on a laptop, alt and the arrows move the line whose name you are typing in', async () => {
+it('on a laptop, alt and the arrows move the line you are on', async () => {
   db.stops = [
     stop({ id: 'p', trip_id: 'tk', day: '2025-09-19', title: 'first', position: 0 }),
     stop({ id: 'q', trip_id: 'tk', day: '2025-09-19', title: 'second', position: 1 }),
   ]
   show(tokyo())
-  await userEvent.click(screen.getByRole('textbox', { name: 'change second' }))
+  await userEvent.click(screen.getByRole('textbox', { name: 'start time of second' }))
   await userEvent.keyboard('{Alt>}{ArrowUp}{/Alt}')
   expect(db.save).toHaveBeenCalledWith({ id: 'q', position: 0 })
   expect(db.save).toHaveBeenCalledWith({ id: 'p', position: 1 })
@@ -365,7 +351,7 @@ it('a line shows what it holds: its note, booking ref, cost and tickets, and the
   expect(line.getByText('MVE5DH')).toHaveClass('keep-case')
   expect(line.getByText('2 tickets')).toBeInTheDocument()
   expect(line.getByText('€12')).toBeInTheDocument()
-  await userEvent.click(line.getByRole('button', { name: 'details of nomad coffee' }))
+  await userEvent.click(line.getByText('ask for the window table'))
   expect(db.open).toHaveBeenCalledWith('nomad', '2025-09-19')
 })
 

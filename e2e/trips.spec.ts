@@ -83,8 +83,7 @@ test.describe('moving between things', () => {
 
   test('a place\'s card keeps to itself: no trips or rest of its day, the plan beside it shows those', async ({ page }) => {
     await open(page, '/trip/par?day=2027-02-20')
-    if (phone(page)) await page.getByText('musée d’orsay').first().click()
-    else await page.getByRole('button', { name: 'open musée d’orsay' }).click()
+    await page.getByText('musée d’orsay').first().click()
     const card = page.getByRole('dialog')
     await expect(card.getByLabel('from', { exact: true })).toBeVisible()
     await expect(card.getByRole('link', { name: 'euro summer' })).toHaveCount(0)

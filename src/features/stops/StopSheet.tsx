@@ -5,7 +5,7 @@ import { useStops, useTrips } from '../../lib/queries'
 import { blankStop } from '../../lib/stops'
 import { Sheet } from '../../components/Sheet'
 import { StopForm } from './StopForm'
-import { StopView } from './StopView'
+import { CardName, StopView } from './StopView'
 import { stopTitle } from '../plan/stopText'
 import { flash } from '../itinerary/flash'
 
@@ -50,7 +50,9 @@ export function StopSheetProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      <Sheet side open={!!state && !!stop} title={title} onClose={close} page={state?.mode === 'edit'}>
+      <Sheet side open={!!state && !!stop} title={title} onClose={close} page={state?.mode === 'edit'}
+        // a place's, stay's or note's name is the card's title, typed over right there
+        heading={state?.mode === 'view' && stop && stop.kind !== 'journey' ? <CardName key={stop.id} stop={stop} /> : undefined}>
         {state && stop && (state.mode === 'edit'
           ? <StopForm key={`${state.n}-edit`} stop={stop} trip={trip} isNew={!!state.draft}
               // a save can land after its sheet was closed or another one opened; only touch this sheet

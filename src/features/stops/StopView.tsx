@@ -56,6 +56,36 @@ function TextField({ label, value, onSave, disabled, multi, mono }: { label: str
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }} />
 }
 
+// the card's title is its name: tap it and type over it; it saves when you leave it or press enter, and can't be emptied
+export function CardName({ stop }: { stop: Stop }) {
+  const canEdit = useCanEdit()
+  const save = useSave('stops')
+  const value = stopTitle(stop)
+  const [v, setV] = useState(value)
+  const [problem, setProblem] = useState<string | null>(null)
+  const ref = useRef<HTMLInputElement>(null)
+  const skip = useRef(false)
+  useEffect(() => { if (document.activeElement !== ref.current) setV(value) }, [value])
+  function done() {
+    if (skip.current) { skip.current = false; return }
+    const t = v.trim()
+    if (!t || t === value) { setV(value); return }
+    setProblem(null)
+    save.mutateAsync({ id: stop.id, title: t }).catch((e) => setProblem(saveError(e)))
+  }
+  return (
+    <>
+      <input ref={ref} type="text" data-quiet="" className="card-name head" aria-label="name" value={v} disabled={!canEdit} autoComplete="off"
+        onChange={(e) => setV(e.target.value)} onBlur={done}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() }
+          if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); skip.current = true; setV(value); e.currentTarget.blur() }
+        }} />
+      {problem && <p className="warn-line" role="alert">{problem}</p>}
+    </>
+  )
+}
+
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return <><dt className="mono-label">{label}</dt><dd>{children}</dd></>
 }

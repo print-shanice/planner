@@ -145,11 +145,11 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .add-line .line-name { margin-left: 36px; border-bottom: 1px dashed var(--line); font-size: 15px; }
 .add-line .line-go { min-height: 36px; }
 .doc mark { background: var(--found); color: inherit; border-radius: 3px; padding: 0 1px; }
-.itin-line.doc .doc-name { font-size: 16px; }
 /* a live line keeps the same level: its time and name are 30px boxes from 5px down */
 .itin-line.doc .itin-time { padding-top: 0; }
-.itin-line.doc .itin-main { padding: 5px 0 4px; }
-.itin-line.doc .doc-name { height: 30px; }
+/* the name is text that opens the card; its first line sits level with the 30px time box beside it */
+.itin-line.doc .itin-main { padding: 10px 0 8px; }
+.itin-line.doc .itin-title { font-size: 16px; line-height: 20px; }
 .itin-line.doc .doc-time { height: 30px; margin-top: 5px; padding-top: 0; padding-bottom: 0; line-height: 30px; font-size: 12px; }
 .itin-line.doc .doc-time.till { height: 22px; margin-top: 0; line-height: 22px; font-size: 11px; }
 
@@ -393,7 +393,7 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 .jot.cost-line { flex-wrap: nowrap; gap: 18px; }
 .jot.cost-line .cost-name-in { flex: 1; min-width: 0; }
 .jot.cost-line .cost-amount-in { flex: 0 0 64px; width: 64px; text-align: right; }
-.jot.cost-line .cur-select { flex: none; margin-left: -6px; }
+.jot.cost-line .cur-select { flex: none; }
 .add-cost .warn-line { margin: 6px 0 0; }
 .ideas .add-place + .link-list, .ideas .add-place + .empty { margin-top: 16px; }
 /* a place's mark in places is a button: it shows the place on the map */

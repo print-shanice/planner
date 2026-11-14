@@ -92,6 +92,13 @@
 }
 .sheet:focus { outline: none; }
 .sheet-head { display: flex; align-items: center; gap: 8px; padding: 14px 12px 6px 20px; }
+.sheet-title { flex: 1; min-width: 0; }
+/* a card's name is its title, plain until hovered or typed in, then a dashed line under it */
+.card-name { width: 100%; min-width: 0; padding: 0; border: 0; border-bottom: 1px dashed transparent; border-radius: 0; background: none; color: var(--ink);
+  font-family: var(--f-head); font-size: 26px; font-weight: 400; letter-spacing: -0.01em; text-overflow: ellipsis; }
+.card-name:not(:disabled):hover { border-bottom-color: var(--line); cursor: text; }
+.card-name:focus { outline: none; border-bottom: 1px dashed var(--ink); }
+.card-name:disabled { -webkit-text-fill-color: var(--ink); opacity: 1; }
 .sheet-head h2 { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--f-head); font-size: 26px; font-weight: 400; letter-spacing: -0.01em; }
 .sheet-body { overflow: auto; padding: 8px 20px 20px; overscroll-behavior: contain; }
 .sheet-foot:empty { display: none; }

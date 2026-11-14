@@ -174,6 +174,26 @@ it('the view offers the maps link and copy for the ref', async () => {
   expect(within(d).getByRole('button', { name: 'copy ref' })).toBeInTheDocument()
 })
 
+it("a place's name is the card's title: type over it and leave to save; emptied or escaped, it goes back", async () => {
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog', { name: 'arktikum' })
+  const name = within(d).getByRole('textbox', { name: 'name' })
+  // the card doesn't jump into typing when it opens
+  expect(name).not.toHaveFocus()
+  await userEvent.clear(name)
+  await userEvent.type(name, 'arktikum museum{Enter}')
+  expect(db.save).toHaveBeenCalledWith('stops', { id: 's1', title: 'arktikum museum' })
+  db.save.mockClear()
+  await userEvent.clear(name)
+  await userEvent.tab()
+  expect(db.save).not.toHaveBeenCalled()
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  await userEvent.type(within(screen.getByRole('dialog')).getByRole('textbox', { name: 'name' }), 'x{Escape}')
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(db.save).not.toHaveBeenCalled()
+})
+
 it('editing is disabled offline', async () => {
   db.canEdit = false
   show(<Opener id="s1" />)
@@ -181,6 +201,7 @@ it('editing is disabled offline', async () => {
   const d = screen.getByRole('dialog')
   expect(within(d).getByRole('button', { name: 'edit' })).toBeDisabled()
   expect(within(d).getByRole('button', { name: 'delete' })).toBeDisabled()
+  expect(within(d).getByRole('textbox', { name: 'name' })).toBeDisabled()
 })
 
 it('a failed save keeps the sheet open with the reason', async () => {

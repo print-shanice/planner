@@ -22,7 +22,6 @@
 
 button.itin-time { cursor: pointer; min-height: 40px; }
 .itin-time > span:first-child { color: var(--ink-2); font-size: 13.5px; }
-.itin-open { color: var(--ink-3); }
 
 /* the empty line at the end of a day, and a line being changed */
 .add-line { padding: 0 4px; }
@@ -44,23 +43,21 @@ button.itin-time { cursor: pointer; min-height: 40px; }
 .lit { animation: lit 1.6s ease-out; }
 @media (prefers-reduced-motion: reduce) { .lit { animation: none; } }
 
-/* a live line: its time and name are text you click into and type over, like a doc */
+/* a live line: its time is text you click into and type over, like a doc; its name opens its card */
 .itin-line.doc { align-items: start; }
-.itin-line.doc .itin-main { cursor: text; padding: 4px 0; }
-.doc-time, .doc-name {
+.doc-time {
   width: 100%; min-width: 0; padding: 2px 4px; margin-left: -4px; border: 0; border-radius: 6px;
   background: transparent; color: inherit; font: inherit;
 }
 .doc-time { padding-top: 7px; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .doc-time.till { padding-top: 0; font-size: 12px; color: var(--ink-3); }
-.doc-name { min-height: 30px; font-weight: 500; font-size: 15.5px; line-height: 1.3; }
-.doc-time::placeholder, .doc-name::placeholder { color: var(--ink-3); }
+.doc-time::placeholder { color: var(--ink-3); }
 /* on a day with no times, "any" only shows on the line you're on */
 .itin-line.doc:not(:hover):not(:focus-within) .doc-time.quiet::placeholder { color: transparent; }
 /* changing a line is just an underline under the words: no box, no fill (shanice, 12 nov) */
-.doc-time, .doc-name { border-radius: 0; }
-.doc-time:hover, .doc-name:hover { box-shadow: inset 0 -1px 0 var(--line); }
-.doc-time:focus, .doc-name:focus { outline: none; background: none; box-shadow: inset 0 -1px 0 var(--ink); }
+.doc-time { border-radius: 0; }
+.doc-time:hover { box-shadow: inset 0 -1px 0 var(--line); }
+.doc-time:focus { outline: none; background: none; box-shadow: inset 0 -1px 0 var(--ink); }
 .line-words { display: inline-flex; align-items: center; gap: 14px; padding-left: 6px; }
 .line-word { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .line-word.quiet { color: var(--ink-2); font-weight: 400; }

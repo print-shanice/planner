@@ -74,10 +74,13 @@
 .ticket iframe { width: 100%; height: 70dvh; border: 1px solid var(--line); background: var(--ground); }
 .clash-row strong { font-weight: 600; }
 .clash-row .notice-text span { font-weight: 500; }
-.reviews { border-top: 1px solid var(--line); padding-top: 24px; }
-.visit-review { padding: 16px 0; border-top: 1px solid var(--line); }
-.visit-review p { margin-top: 8px; }
-.review-form { padding-top: 12px; }
+.reviews { display: grid; gap: 0; }
+.review-head { margin: 22px 0 8px; }
+/* past visits: plain lines, no boxes */
+.visit-review { padding: 12px 0; border-top: 1px solid var(--line); }
+.visit-review p { margin: 0; }
+.visit-review p + p { margin-top: 2px; }
+.reviews > .card-saved, .reviews > .pending, .reviews > .warn-line { margin-top: 8px; }
 @media (max-width: 480px) { .fold { gap: 8px; } }
 
 /* ---------- the card is the form (1b): a kind · day label, the times big on top, then its own fields as hairline rows ---------- */

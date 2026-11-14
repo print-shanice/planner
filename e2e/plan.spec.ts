@@ -152,8 +152,7 @@ test.describe('the plan', () => {
   test('a line opens its card: its day and times, directions, ticket; moving it to another day is in edit', async ({ page }) => {
     await open(page, '/trip/par')
     const sat = page.getByRole('region', { name: 'saturday 20 february' })
-    if (phone(page)) await sat.getByRole('button', { name: /^musée d’orsay/ }).click()
-    else await sat.getByRole('button', { name: 'open musée d’orsay' }).click()
+    await sat.getByRole('button', { name: /^musée d’orsay/ }).click()
     const card = page.getByRole('dialog', { name: 'musée d’orsay' })
     await expect(card.getByRole('link', { name: 'directions' })).toHaveAttribute('href', /google\.com\/maps/)
     await expect(card.getByRole('button', { name: 'attach a ticket', exact: true })).toBeVisible()
@@ -174,8 +173,7 @@ test.describe('the plan', () => {
   test('"no date" in edit turns a place back into an idea', async ({ page }) => {
     await open(page, '/trip/par')
     const sun = page.getByRole('region', { name: 'sunday 21 february' })
-    if (phone(page)) await sun.getByRole('button', { name: /^montmartre walk/ }).click()
-    else await sun.getByRole('button', { name: 'open montmartre walk' }).click()
+    await sun.getByRole('button', { name: /^montmartre walk/ }).click()
     const card = page.getByRole('dialog', { name: 'montmartre walk' })
     await card.getByRole('button', { name: 'edit', exact: true }).click()
     const form = page.getByRole('dialog', { name: 'edit' })
@@ -191,8 +189,7 @@ test.describe('the plan', () => {
   test('the card edits a booking: booked, with its reference', async ({ page }) => {
     await open(page, '/trip/par')
     const sat = page.getByRole('region', { name: 'saturday 20 february' })
-    if (phone(page)) await sat.getByRole('button', { name: /^musée d’orsay/ }).click()
-    else await sat.getByRole('button', { name: 'open musée d’orsay' }).click()
+    await sat.getByRole('button', { name: /^musée d’orsay/ }).click()
     const card = page.getByRole('dialog', { name: 'musée d’orsay' })
     await expect(card).toContainText('to book')
     await card.getByRole('button', { name: 'edit' }).click()
@@ -208,8 +205,7 @@ test.describe('the plan', () => {
   test('deleting a place asks twice, then it is gone', async ({ page }) => {
     await open(page, '/trip/par')
     const sun = page.getByRole('region', { name: 'sunday 21 february' })
-    if (phone(page)) await sun.getByRole('button', { name: /^sainte-chapelle/ }).click()
-    else await sun.getByRole('button', { name: 'open sainte-chapelle' }).click()
+    await sun.getByRole('button', { name: /^sainte-chapelle/ }).click()
     const card = page.getByRole('dialog', { name: 'sainte-chapelle' })
     await card.getByRole('button', { name: 'delete' }).click()
     await card.getByRole('button', { name: /sure|confirm|delete/ }).last().click()
@@ -236,14 +232,13 @@ test.describe('the plan', () => {
     await expect(page).toHaveURL(/#\/trip\/par$/)
   })
 
-  test('laptops edit a line in place, and the edit is saved on enter', async ({ page }) => {
-    test.skip(phone(page), 'phones open the card instead')
+  test("a place is renamed on its card's title, and the line follows", async ({ page }) => {
     await open(page, '/trip/par')
-    const box = page.getByRole('textbox', { name: 'change du pain et des idées' })
-    await box.fill('du pain et des idées · the pistachio one')
-    await box.press('Enter')
-    await expect(page.getByText('saved')).toBeVisible()
-    await expect(page.getByRole('textbox', { name: 'change du pain et des idées · the pistachio one' })).toBeVisible()
+    await page.getByRole('button', { name: /^du pain et des idées/ }).first().click()
+    const name = page.getByRole('dialog').getByRole('textbox', { name: 'name' })
+    await name.fill('du pain et des idées · the pistachio one')
+    await name.press('Enter')
+    await expect(page.getByRole('button', { name: /^du pain et des idées · the pistachio one/ }).first()).toBeVisible()
   })
 })
 
@@ -257,7 +252,7 @@ test.describe('a line reads level', () => {
     expect(Math.max(...rightEdges) - Math.min(...rightEdges)).toBeLessThanOrEqual(1.5)
   })
 
-  // the middle of a line's first row: its time, its icon or number, its name, its status and its ›, all on one level
+  // the middle of a line's first row: its time, its icon or number, its name and its status, all on one level
   test('time, icon, number, name and status share one middle; the typing line starts where names do', async ({ page }) => {
     await open(page, '/trip/jp')
     for (const name of ['monday 7 october', 'tuesday 8 october']) {
@@ -286,13 +281,12 @@ test.describe('a line reads level', () => {
           mark: box(line.querySelector('.seq, .cat, .marker-finding, .marker-btn.find svg')),
           title: firstLine(line.querySelector('.itin-title, .doc-name')),
           pill: box(line.querySelector('.itin-end .pill')),
-          open: box(line.querySelector('.itin-open svg')),
           nameX: (line.querySelector('.itin-title, .doc-name') as HTMLElement).getBoundingClientRect().left,
         }))
       })
       expect(rows.length).toBeGreaterThan(0)
       for (const r of rows) {
-        for (const k of ['time', 'mark', 'pill', 'open'] as const) {
+        for (const k of ['time', 'mark', 'pill'] as const) {
           if (r[k] == null || r.time == null && k === 'time') continue
           expect(Math.abs(r[k]! - r.title!), `${r.name}: ${k} sits ${(r[k]! - r.title!).toFixed(1)}px off the name`).toBeLessThanOrEqual(1.5)
         }

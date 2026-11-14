@@ -127,21 +127,21 @@ function RemoveLine({ stop: s, info }: { stop: Stop; info: LineInfo }) {
 }
 export const careful = (s: Stop, info: LineInfo) => s.status === 'booked' || info.tickets > 0 || !!info.cost
 
-// one line of the doc: the time on the left, what it is on the right. a place or a note is live text you type over
+// one line of the doc: the time on the left, what it is on the right. the name opens its card, like a flight's;
+// a place's or a note's time is live text you type over
 export function ItinLine(props: Props) {
   const { entry, q } = props
   const canEdit = useCanEdit()
-  const [live, setLive] = useState(false)
   const s = entry.stop!
-  // a typed train or bus (no ends yet) is a line of text too; a journey with its stations opens its card
+  // a typed train or bus (no ends yet) is a line too; a journey with its stations keeps its times on its card
   const typed = s.kind === 'journey' && !s.origin && !s.destination
   const editable = canEdit && props.editing === true && entry.kind === 'stop' && (s.kind === 'place' || s.kind === 'note' || typed)
-  // while searching, lines show their matches; tapping one makes it live again
-  if (editable && (!q || live)) return <DocLine {...props} autoFocus={live} />
-  return <StaticLine {...props} onEdit={editable ? () => setLive(true) : undefined} />
+  // while searching, lines show their matches
+  if (editable && !q) return <DocLine {...props} />
+  return <StaticLine {...props} />
 }
 
-function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, info = NO_INFO, seq }: Props & { onEdit?: () => void }) {
+function StaticLine({ entry, any, q, current, day, onOpen, onLight, info = NO_INFO, seq }: Props) {
   const s = entry.stop!
   const canEdit = useCanEdit()
   const wide = useWide()
@@ -171,13 +171,12 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, info
           <span>{when.from}</span>{when.till && <span className="till">–{when.till}</span>}
         </span>
         <Marker stop={s} kind={entry.kind} seq={seq} />
-        <button type="button" className="itin-main" onClick={() => (onEdit ? onEdit() : onOpen?.(s, day))} disabled={!onEdit && !onOpen}
+        <button type="button" className="itin-main" onClick={() => onOpen?.(s, day)} disabled={!onOpen}
           onFocus={() => onLight?.(s.id)} onBlur={() => onLight?.(null)}>{words}</button>
         <span className="itin-end">
           {shows && <LineLinks info={info} />}
           {shows && <Pill status={s.status} kind={s.kind} />}
           {removable && wide && <RemoveLine stop={s} info={info} />}
-          {onEdit && onOpen && <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button>}
         </span>
       </div>
       {entry.kind !== 'staying' && entry.kind !== 'checkout' && <SaveFailed table="stops" id={s.id} />}
@@ -187,29 +186,26 @@ function StaticLine({ entry, any, q, current, day, onOpen, onLight, onEdit, info
 
 const valuesOf = (s: Stop): LineValues => ({ time: s.time ?? '', end: s.end_time ?? '', title: s.title })
 
-// the next line's name, or the day's empty line, so enter moves down the doc
+// the next line's start time, or the day's empty line, so enter moves down the doc
 function focusNext(from: HTMLElement | null) {
-  const all = [...document.querySelectorAll<HTMLInputElement>('[data-doc-name], .add-line .line-name')]
+  const all = [...document.querySelectorAll<HTMLInputElement>('[data-doc-time], .add-line .line-name')]
   all[all.indexOf(from as HTMLInputElement) + 1]?.focus()
 }
 
-function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = NO_INFO, seq }: Props & { autoFocus?: boolean }) {
+function DocLine({ entry, any, current, day, onOpen, onLight, info = NO_INFO, seq }: Props) {
   const s = entry.stop!
   const save = useSave('stops')
-  const removeLater = useUndoRemove('stops')
   const settle = useSettle()
-  const files = useFiles().data ?? []
   const [v, setV] = useState(() => valuesOf(s))
   const [problem, setProblem] = useState<string | null>(null)
   const [timeOpen, setTimeOpen] = useState(false)
   const [state, track] = useSaveNote()
   const box = useRef<HTMLDivElement>(null)
-  const nameRef = useRef<HTMLInputElement>(null)
+  const startRef = useRef<HTMLInputElement>(null)
   // what's on screen and what was last saved, read fresh from handlers that fire as focus moves
   const now = useRef(v)
   now.current = v
   const saved = useRef(valuesOf(s))
-  const gone = useRef(false)
   const put = (x: LineValues) => { now.current = x; setV(x) }
   // someone else's change shows, unless you're typing on this line
   useEffect(() => {
@@ -222,23 +218,15 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = 
   const sub = s.kind === 'journey' ? '' : stopSub(s)
   const when = timeOf(entry, any)
   const was = saved.current
-  const dirty = v.title !== was.title || v.time !== was.time || v.end !== was.end
+  const dirty = v.time !== was.time || v.end !== was.end
 
   function commit(): boolean {
-    if (gone.current) return true
-    const read = readLine(now.current)
+    const read = readLine({ ...now.current, title: s.title })
     if ('problem' in read) { setProblem(read.problem); return false }
-    const line = { ...read.line, title: read.line.title.trim() }
+    const line = read.line
     setProblem(null)
-    if (!line.title) {
-      // an emptied line goes, with undo; one holding tickets only goes from its card
-      if (files.some((f) => f.stop_id === s.id)) put(saved.current)
-      else { gone.current = true; removeLater(s.id, title.toLowerCase()) }
-      return true
-    }
     const was = saved.current
     const changed: Record<string, string | null> = {}
-    if (line.title !== was.title) changed.title = line.title
     if (line.time !== was.time) changed.time = line.time || null
     if (line.end !== was.end) changed.end_time = line.end || null
     saved.current = line
@@ -250,7 +238,7 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = 
     return true
   }
   function key(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') { e.preventDefault(); if (commit()) focusNext(nameRef.current) }
+    if (e.key === 'Enter') { e.preventDefault(); if (commit()) focusNext(startRef.current) }
     if (e.key === 'Escape') { e.preventDefault(); put(saved.current); setProblem(null); e.currentTarget.blur() }
   }
   function leave(e: FocusEvent<HTMLDivElement>) {
@@ -267,31 +255,31 @@ function DocLine({ entry, any, current, day, onOpen, onLight, autoFocus, info = 
       <div ref={box} className={`itin-line doc${current ? ' current' : ''}`} data-line={s.id} data-testid="itin-line"
         onMouseEnter={() => onLight?.(s.id)} onMouseLeave={() => onLight?.(null)} onFocus={() => onLight?.(s.id)} onBlur={leave}>
         <span className="itin-time num" onFocus={() => setTimeOpen(true)}>
-          <Tooltip text="activities with a time are ordered automatically"><input type="text" className={`doc-time${when.from === 'any' ? '' : ' quiet'}`} aria-label={`start time of ${title}`} placeholder="any" value={v.time}
+          <Tooltip text="activities with a time are ordered automatically"><input ref={startRef} type="text" data-doc-time="" className={`doc-time${when.from === 'any' ? '' : ' quiet'}`} aria-label={`start time of ${title}`} placeholder="any" value={v.time}
             inputMode="decimal" autoComplete="off" onChange={(e) => typeTime('time', e.target.value)} onBlur={() => tidy('time')} onKeyDown={key} /></Tooltip>
           {(v.end || timeOpen) && <input type="text" className="doc-time till" aria-label={`end time of ${title}`} placeholder="end" value={v.end}
             inputMode="decimal" autoComplete="off" onChange={(e) => typeTime('end', e.target.value)} onBlur={() => tidy('end')} onKeyDown={key} />}
         </span>
         <Marker stop={s} kind={entry.kind} seq={seq} />
-        <span className="itin-main">
-          <input ref={nameRef} type="text" className="doc-name" data-doc-name="" aria-label={`change ${title}`} value={v.title} autoComplete="off"
-            enterKeyHint="next" autoFocus={autoFocus} onChange={(e) => put({ ...now.current, title: e.target.value })} onKeyDown={key} />
+        {/* the rest of the line opens its card, where the name is changed */}
+        <button type="button" className="itin-main" onClick={() => onOpen?.(s, day)} disabled={!onOpen}>
+          <span className="itin-title">{title}</span>
           {sub && <span className="itin-sub muted">{sub}</span>}
-          {hasInfo(info) && <button type="button" className="itin-info" aria-label={`details of ${title}`} onClick={() => onOpen?.(s, day)}><InfoRow info={info} q="" /></button>}
+          <InfoRow info={info} q="" />
           {problem && <span className="warn-line">{problem}</span>}
-        </span>
+        </button>
         <span className="itin-end">
         <LineLinks info={info} />
         <Pill status={s.status} kind={s.kind} />
         <RemoveLine stop={s} info={info} />
         {dirty
           ? <span className="line-words">
-              <button type="button" className="line-word quiet" aria-label={`cancel ${title}`} onClick={() => { put(saved.current); setProblem(null); nameRef.current?.blur() }}>cancel</button>
-              <button type="button" className="line-word" aria-label={`save ${title}`} onClick={() => { if (commit()) nameRef.current?.blur() }}>save</button>
+              <button type="button" className="line-word quiet" aria-label={`cancel ${title}`} onClick={() => { put(saved.current); setProblem(null); startRef.current?.blur() }}>cancel</button>
+              <button type="button" className="line-word" aria-label={`save ${title}`} onClick={() => { if (commit()) startRef.current?.blur() }}>save</button>
             </span>
           : state === 'saving' ? <Pending label="saving" className="line-state" />
           : state === 'saved' ? <span className="line-state muted" role="status"><Icon name="check" size={15} />saved</span>
-          : onOpen ? <button type="button" className="icon-btn itin-open" aria-label={`open ${title}`} onClick={() => onOpen(s, day)}><Icon name="next" size={18} /></button> : <span />}
+          : null}
         </span>
       </div>
       <SaveFailed table="stops" id={s.id} />
