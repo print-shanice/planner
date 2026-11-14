@@ -104,7 +104,11 @@ export type PackingItem = {
   // a member's user id, or none for things you both pack (rows cached before owners existed have neither)
   owner?: string | null
   packed_by?: string[]
+  // checked in, carried on, or worn to the airport
+  bag?: Bag | null
 }
+
+export type Bag = 'check' | 'carry' | 'wear'
 
 export type FileRow = {
   id: string

@@ -38,44 +38,62 @@
 .link-title { font-weight: 500; overflow-wrap: anywhere; }
 .link-text .muted { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* packing: a tick and a name; packed things sink */
+/* packing: text tabs (which trips, the trip, whose list), the dates with one line of weather, then the list.
+   a thing is a hairline square, its name, and its bag in brackets; packed things move under "packed" */
+.home-packing { display: grid; gap: 14px; min-width: 0; }
+.pack-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); min-width: 0; }
+.pack-tabs button {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0; margin-bottom: -1px;
+  border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink-3); font-weight: 500; font-size: 15px; white-space: nowrap; cursor: pointer;
+}
+.pack-tabs button[aria-selected="true"] { color: var(--ink); font-weight: 650; border-bottom-color: var(--ink); }
+.pack-tabs.small button { min-height: 36px; font-size: 14px; }
+/* the trips scroll sideways on their own; a fade at the right edge says there are more */
+.pack-trips { position: relative; min-width: 0; }
+.pack-trips .pack-tabs { overflow-x: auto; scrollbar-width: none; padding-right: 28px; }
+.pack-trips .pack-tabs::-webkit-scrollbar { display: none; }
+.pack-trips::after { content: ""; position: absolute; top: 0; right: 0; bottom: 1px; width: 28px; background: linear-gradient(90deg, transparent, var(--ground)); pointer-events: none; }
+.pack-swatch { width: 8px; height: 8px; flex: none; }
+.pack-meta { display: grid; gap: 3px; }
+.pack-meta-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pack-weather { margin: 0; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pack-link, .pack-copy-to button { padding: 0; border: 0; background: none; color: var(--ink); font-size: 14px; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.pack-copy { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pack-copy-to { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.pack-copy-to button { text-decoration-color: var(--line); }
+.pack-copy-to button:hover { text-decoration-color: var(--ink); }
+.pack-status { margin: 0; font-size: 14px; color: var(--ink-2); }
+/* mono text choices: the bag filter beside the count, and the bag and whose rows when editing */
+.pack-choices { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.pack-choices button { padding: 2px 0; border: 0; border-bottom: 1px solid transparent; background: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); cursor: pointer; }
+.pack-choices button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 .pack-count { display: grid; gap: 8px; }
-.pack-count p { font-family: var(--f-mono); font-size: 12px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
-.pack-meter { height: 4px; background: var(--soft); overflow: hidden; }
+.pack-count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; }
+.pack-count p { margin: 0; font-family: var(--f-mono); font-size: 12px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.pack-meter { height: 2px; background: var(--soft); overflow: hidden; }
 .pack-meter > span { display: block; height: 100%; background: var(--ink); transition: width .2s; }
-.pack-list > li { display: flex; align-items: center; gap: 4px; min-height: 52px; padding: 0 2px 0 8px; background: var(--card); touch-action: pan-y; }
-.pack-tick { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-left: -10px; cursor: pointer; }
-.pack-tick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.pack-tick:has(input:focus-visible) .tick { outline: 2px solid var(--ink); outline-offset: 2px; }
-.tick { width: 20px; height: 20px; border-radius: 4px; border: 1.5px solid var(--ink-3); display: grid; place-items: center; color: var(--card); flex: none; }
-.packed .tick { background: var(--ink); border-color: var(--ink); }
+.pack-list > li { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 2px 0 8px; background: var(--card); touch-action: pan-y; }
+.pack-tick { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 44px; margin-left: -12px; cursor: pointer; }
+.pack-tick input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.pack-tick:has(input:focus-visible) .tick { outline: 2px solid var(--ink); outline-offset: 3px; }
+/* a hairline square, ticked with a thin stroke and never filled */
+.pack-tick .tick { position: relative; width: 14px; height: 14px; border: 1px solid var(--ink-2); border-radius: 0; background: none; }
+.pack-tick:has(input:disabled) { cursor: default; }
+.packed .pack-tick .tick { border-color: var(--ink-3); }
+.packed .pack-tick .tick::after { content: ""; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid var(--ink); border-width: 0 1.25px 1.25px 0; transform: rotate(45deg); }
 .pack-name { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 16px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
-.packed .pack-name { color: var(--ink-3); text-decoration: line-through; }
+.packed .pack-name { color: var(--ink-3); }
+.pack-bag { flex: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.packed .pack-bag { color: var(--ink-3); }
+.pack-done-head { margin: 10px 0 0; }
 .pack-add form { flex: 1; display: flex; align-items: center; gap: 12px; color: var(--ink-3); }
 .pack-add input { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; font-size: 16px; color: var(--ink); outline: none; }
 .pack-add input::placeholder, .map-search input::placeholder { color: var(--ink-3); }
 .pack-add:focus-within { box-shadow: inset 0 -1px 0 var(--ink); }
 .pack-go { flex: none; min-height: 44px; }
-.pack-edit { flex: 1; display: grid; gap: 8px; padding: 10px 0; }
+.pack-edit { flex: 1; display: grid; gap: 10px; padding: 10px 0; }
 .pack-edit .row { display: flex; align-items: center; gap: 8px; }
-/* whose things: faces to pick at the top (none picked = everything, every face at full strength), small faces on each row */
-.pack-pick { gap: 20px; padding: 0 0 4px; }
-.pack-pick .face { flex-direction: column; gap: 4px; min-height: 44px; font-size: 12px; color: var(--ink-2); }
-.pack-pick:not(:has([aria-pressed="true"])) .face { opacity: 1; }
-.pack-pick .face[aria-pressed="true"] { color: var(--ink); }
-.pack-who { flex: none; display: flex; padding-right: 4px; }
-.pack-faces-row { display: inline-flex; }
-.pack-who .avatar { position: relative; width: 22px; height: 22px; font-size: 10px; border-width: 1.5px; }
-.pack-who .avatar + .avatar { margin-left: -7px; }
-.packed .pack-who { opacity: .5; }
-/* a shared thing someone has already packed: a small ✓ on their face */
-.pack-face-tick { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 13px; height: 13px; border-radius: 50%; background: var(--ink); color: var(--card); }
-.pack-whose { padding: 2px 0 4px; }
-.pack-whose .pack-faces-row .avatar { border: 2px solid var(--card); }
-.pack-whose .pack-faces-row .avatar + .avatar { margin-left: -12px; }
-/* both: one ring round the pair, not one per face */
-.pack-whose .face .pack-faces-row .avatar { box-shadow: none; }
-.pack-whose .face[aria-pressed="true"] .pack-faces-row { border-radius: 999px; box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { .pack-meter > span { transition: none; } }
 
 .list > li:has(.save-failed) { flex-wrap: wrap; }
 .list .save-failed { padding: 0 2px 10px; }

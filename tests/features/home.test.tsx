@@ -917,19 +917,31 @@ describe('packing, one trip at a time from home', () => {
     ]
   })
 
-  it('opens on the trip coming up next', () => {
+  const trips = (name: string) => within(screen.getByRole('tablist', { name: 'trip' })).getAllByRole('tab').map((t) => [t.textContent, t.getAttribute('aria-selected')])
+  const when = (name: string) => within(screen.getByRole('tablist', { name: 'which trips' })).getByRole('tab', { name })
+
+  it('opens on the trip coming up next, with no "packing for" line', () => {
     show('/?view=packing')
-    expect(screen.getByRole('button', { name: 'packing for which trip' })).toHaveTextContent('lapland')
+    expect(trips('trip')).toEqual([['lapland', 'true'], ['greece', 'false']])
+    expect(when('coming up')).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('thermal gloves')
     expect(screen.queryByText('sunscreen')).toBeNull()
+    expect(screen.queryByText('packing for')).toBeNull()
   })
 
-  it('another trip is picked from the menu, and the address keeps it', async () => {
+  it('another trip is picked from the tabs, and the address keeps it', async () => {
     show('/?view=packing')
-    await userEvent.click(screen.getByRole('button', { name: 'packing for which trip' }))
-    await userEvent.click(within(screen.getByRole('listbox')).getByText('greece'))
+    await userEvent.click(within(screen.getByRole('tablist', { name: 'trip' })).getByRole('tab', { name: 'greece' }))
     expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('sunscreen')
-    expect(screen.getByRole('button', { name: 'packing for which trip' })).toHaveTextContent('greece')
+    expect(trips('trip')).toEqual([['lapland', 'false'], ['greece', 'true']])
+  })
+
+  it('past shows the trips that have ended, and back again', async () => {
+    show('/?view=packing')
+    await userEvent.click(when('past'))
+    expect(trips('trip')).toEqual([['lisbon', 'true']])
+    await userEvent.click(when('coming up'))
+    expect(trips('trip')).toEqual([['lapland', 'true'], ['greece', 'false']])
   })
 
   it('a trip in the address opens on it', () => {

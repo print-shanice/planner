@@ -1,4 +1,4 @@
-import { averageOf, fetchTemps, tempWords, weatherAsk, weatherUrl, yearsBack } from '../../src/lib/weather'
+import { averageOf, fetchTemps, packWeatherAsk, skyOf, tempWords, weatherAsk, weatherLine, weatherUrl, yearsBack } from '../../src/lib/weather'
 
 const TODAY = '2026-11-10'
 
@@ -48,4 +48,24 @@ it('fetches once, then answers from what it kept', async () => {
 it('says a far-off trip\'s weather as usual, not as a forecast', () => {
   expect(tempWords({ hi: 9, lo: 3, kind: 'usual', unit: 'C' })).toBe('usually 9° / 3°')
   expect(tempWords({ hi: 13, lo: 5, kind: 'forecast', unit: 'C' })).toBe('13° / 5°')
+})
+
+it('for packing, a past trip asks what its days were, and a long trip asks about its first month', () => {
+  expect(packWeatherAsk('2026-05-01', '2026-05-04', TODAY)).toEqual({ kind: 'was', from: '2026-05-01', to: '2026-05-04' })
+  expect(packWeatherAsk('2027-01-28', '2027-07-13', TODAY)).toEqual(weatherAsk('2027-01-28', '2027-02-27', TODAY))
+  expect(packWeatherAsk('2026-11-14', '2026-11-18', TODAY)).toEqual(weatherAsk('2026-11-14', '2026-11-18', TODAY))
+  expect(packWeatherAsk(null, null, TODAY)).toBeNull()
+})
+
+it('asks for rain and snow too, and says them in a few words', () => {
+  expect(new URL(weatherUrl('forecast', { lat: 1, lng: 2 }, '2026-11-14', '2026-11-18', 'C')).searchParams.get('daily')).toContain('precipitation_sum')
+  const days = (rain: number[], snow: number[] = rain.map(() => 0)) => [{ daily: { precipitation_sum: rain, snowfall_sum: snow } }]
+  expect(skyOf(days([0, 0, 0, 0]))).toBe('dry')
+  expect(skyOf(days([2, 0, 0, 0, 0]))).toBe('mostly dry')
+  expect(skyOf(days([2, 0, 3, 0]))).toBe('rain often')
+  expect(skyOf(days([2, 0, 0, 0]))).toBe('some rain')
+  expect(skyOf(days([2, 2, 2, 0], [3, 4, 0, 0]))).toBe('snow most days')
+  expect(skyOf([{ daily: {} }])).toBeUndefined()
+  expect(weatherLine({ hi: -3, lo: -11, kind: 'usual', unit: 'C', sky: 'snow most days' })).toBe('usually -3° / -11° · snow most days')
+  expect(weatherLine({ hi: 23, lo: 14, kind: 'was', unit: 'C' })).toBe('23° / 14°')
 })
