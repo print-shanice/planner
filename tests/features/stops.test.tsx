@@ -513,6 +513,20 @@ it('a stay has no separate location field: its name finds the place', async () =
   expect(within(d).getByLabelText('name')).toBeInTheDocument()
 })
 
+it('a stay shows everything without a fold: link under the booking ref, notes last, below the cost', async () => {
+  show(<Opener kind="stay" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  expect(d.querySelector('.fold-toggle')).toBeNull()
+  await userEvent.click(within(d).getByRole('switch', { name: 'booked' }))
+  const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+  const ref = within(d).getByLabelText('booking ref'), link = within(d).getByLabelText('link')
+  const amount = within(d).getByLabelText('amount'), notes = within(d).getByLabelText('notes')
+  expect(after(ref, link)).toBe(true)
+  expect(after(link, amount)).toBe(true)
+  expect(after(amount, notes)).toBe(true)
+})
+
 it('paid already sits between the amount and who paid', async () => {
   show(<Opener kind="stay" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))

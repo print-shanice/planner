@@ -238,9 +238,10 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {q('booking')}
         {bookedSwitch}
         {ref}
+        {link}
         {q('cost')}
         {money}
-        <div className="folds"><Fold label="booking, cost & notes" open={!!d.url.trim() || !!d.notes.trim()}>{link}{notes}</Fold></div>
+        {notes}
       </>)}
       {kind === 'place' && (<>
         {q('what are you doing?')}
