@@ -524,36 +524,25 @@ describe('a long trip with side trips', () => {
     ]
   })
 
-  it('is a month calendar: side trips colour their days and open from it, the trip\'s own days have dots', async () => {
-    show(eu(), '/trip/eu?day=2027-02-19', false)
-    const cal = screen.getByRole('group', { name: 'february 2027' })
-    // the same ribbons as home's calendar: the side trip's days wear its colour, the trip's own days the trip's
-    expect(cal.querySelector('[data-day="2027-02-19"]')).toHaveAttribute('data-ribbon', 'start')
-    expect((cal.querySelector('[data-day="2027-02-20"]') as HTMLElement).style.getPropertyValue('--c')).toBe('var(--g2)')
-    expect((cal.querySelector('[data-day="2027-02-18"]') as HTMLElement).style.getPropertyValue('--c')).toBe('var(--g0)')
-    // tapping a side trip's day opens that side trip on it
-    await userEvent.click(within(cal).getByRole('button', { name: 'sat 20 feb' }))
-    expect(screen.getByTestId('loc').textContent).toBe('?day=2027-02-20')
-    expect(screen.queryByText('louvre')).toBeNull()
-    // the side trips of the month, each a line that opens it
-    const list = within(screen.getByRole('list', { name: 'side trips this month' }))
-    expect(list.getByRole('link', { name: /paris.*19 – 23 feb.*1 place.*1 to do/ })).toHaveAttribute('href', '/trip/paris')
-    // no long list of every day
-    expect(screen.queryByRole('navigation', { name: 'days' })).toBeNull()
-  })
-
-  it('picking one of the trip\'s own days shows that day under the calendar', async () => {
-    show(eu(), '/trip/eu?day=2027-02-19', false)
-    await userEvent.click(screen.getByRole('button', { name: 'previous month' }))
-    const cal = screen.getByRole('group', { name: 'january 2027' })
-    expect(cal.querySelector('[data-day="2027-01-30"]')).toHaveAttribute('data-planned')
-    await userEvent.click(within(cal).getByRole('button', { name: 'sat 30 jan' }))
-    expect(screen.getByRole('heading', { level: 2, name: 'saturday 30 january' })).toBeInTheDocument()
+  it("opens on the trip's own days, with each side trip as one row that opens it, and no calendar", () => {
+    show(eu(), '/trip/eu', false)
+    expect(screen.queryByRole('group', { name: /2027$/ })).toBeNull()
     expect(screen.getByText('van abbemuseum')).toBeInTheDocument()
-    expect(linkDay()).toBe('2027-01-30')
+    expect(screen.queryByText('louvre')).toBeNull()
+    const row = screen.getByRole('link', { name: /^paris\s*19 – 23 feb →$/ })
+    expect(row).toHaveAttribute('href', '/trip/paris')
+    expect(screen.getByRole('navigation', { name: 'days' })).toBeInTheDocument()
   })
 
-  it("on a side trip's first day, only the trip's own line shows under the calendar (the train there)", () => {
+  it('a side trip\'s row sits in date order between the days around it', () => {
+    db.stops.push(stop({ id: 'later', trip_id: 'eu', day: '2027-03-02', title: 'design week' }))
+    show(eu(), '/trip/eu', false)
+    const order = [...document.querySelectorAll('.doc-day h2, .side-fold')].map((x) => x.textContent?.trim().slice(0, 14))
+    expect(order.indexOf('paris19 – 23 f')).toBeGreaterThan(order.findIndex((t) => t?.startsWith('saturday 30')))
+    expect(order.indexOf('paris19 – 23 f')).toBeLessThan(order.findIndex((t) => t?.startsWith('tuesday 2')))
+  })
+
+  it("on a side trip's first day, only the trip's own line shows (the train there)", () => {
     db.stops.push(stop({ id: 'train', trip_id: 'eu', kind: 'journey', day: '2027-02-19', title: 'thalys' }),
       stop({ id: 'arc', trip_id: 'paris', day: '2027-02-19', title: 'arc de triomphe' }))
     show(eu(), '/trip/eu?day=2027-02-19', false)
@@ -568,14 +557,6 @@ describe('a long trip with side trips', () => {
     expect(screen.getByText('louvre')).toBeInTheDocument()
   })
 
-  it('while a side trip is on, the top says so and opens it on today', () => {
-    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2027-02-21T10:00:00'))
-    try {
-      show(eu(), '/trip/eu', false)
-      const now = screen.getByRole('link', { name: /now · day 3 of 5/ })
-      expect(now).toHaveAttribute('href', '/trip/paris?day=2027-02-21')
-    } finally { vi.useRealTimers() }
-  })
 })
 
 it('a booking ref keeps its capitals', () => {

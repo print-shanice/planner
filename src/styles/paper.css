@@ -25,9 +25,9 @@ h3.mono-label { margin: 22px 0 6px; }
 /* ---------- the trip page ---------- */
 .trip-header { padding: calc(env(safe-area-inset-top) + 8px) 16px 4px; }
 .trip-title-row h1 { font-size: 32px; font-weight: 400; letter-spacing: -0.015em; line-height: 1.2; }
-.trip-people { margin-right: -6px; }
-.plus-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: var(--card); border: 0; }
-.plus-btn:hover:not(:disabled) { filter: brightness(1.35); }
+/* add is a plain + beside search, no filled circle */
+.plus-btn { flex: none; width: 44px; height: 44px; border-radius: 0; background: none; color: var(--ink); border: 0; }
+.plus-btn:hover:not(:disabled) { opacity: .7; }
 .plus-btn:disabled { opacity: .4; }
 .trip-meta { font-family: var(--f-mono); font-size: 12px; letter-spacing: .04em; color: var(--ink-2); }
 .trip-bar { position: sticky; top: 0; z-index: 15; background: var(--ground); padding-bottom: 0; }
@@ -231,7 +231,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .map-note-title { font-weight: 600; }
 .map-note .muted { font-size: 14px; }
 .map-float { display: flex; align-items: center; gap: 8px; }
-.map-float .plus-btn { margin-left: auto; box-shadow: var(--float); }
+.map-float .plus-btn { margin-left: auto; background: var(--ground); box-shadow: var(--float); }
 
 .gpin {
   position: relative; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border-radius: 50%;
@@ -259,8 +259,8 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
   background: var(--card); box-shadow: var(--float); font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2);
 }
 .map-scope select { min-height: 40px; border: 0; background: none; font-family: var(--f-body); font-size: 15px; font-weight: 500; color: var(--ink); text-transform: lowercase; letter-spacing: 0; appearance: none; padding-right: 8px; }
-.trip-phone .places-sheet { bottom: calc(env(safe-area-inset-bottom) + 72px); background: var(--ground); }
-.trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 84px); }
+.trip-phone .places-sheet { bottom: env(safe-area-inset-bottom); background: var(--ground); }
+.trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 16px); }
 .map-search { border-radius: 10px; }
 .whole-trip { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 .places-handle { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: auto; min-height: 52px; padding: 0; }
@@ -283,19 +283,17 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 /* a side trip's colour, as a bar (a side trip line without flags) */
 .side-row-bar { flex: none; width: 4px; border-radius: 0; background: var(--c); }
 .warn-text { color: var(--warn); font-weight: 600; }
-.side-now {
-  display: grid; gap: 2px; margin: 16px 0 0; padding: 12px 14px; border-radius: 0; text-decoration: none; color: inherit;
-  background: var(--paper-2); box-shadow: inset 3px 0 0 var(--c);
-}
-.side-now-name { font-family: var(--f-head); font-weight: 400; font-size: 24px; letter-spacing: -0.01em; color: var(--ink); }
+.side-fold { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: baseline; gap: 0 14px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+.side-fold + .side-fold { border-top: 0; }
+.side-fold-sq { width: 8px; height: 8px; align-self: center; }
+.side-fold-name { font-family: var(--f-head); font-size: 21px; line-height: 1.15; }
+.side-fold-when { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.side-fold:hover .side-fold-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 /* ideas: a line to jot one down, as quick as typing a note */
 .jot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .jot input { flex: 1; min-width: 0; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line); background: none; font-size: 16px; color: var(--ink); }
 .jot input:focus-visible { outline: none; border-bottom: 2px solid var(--ink); }
 
-/* a long trip's plan is its calendar; the month's side trips sit under it, then the day you picked */
-.parent-cal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding-top: 14px; }
-.parent-cal .cal { background: var(--card); border: 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line); border-radius: 0; padding: 12px 0 8px; }
 .side-list { list-style: none; margin: 10px 0 0; padding: 0; }
 .side-list li { border-bottom: 1px solid var(--line); }
 .side-line { display: flex; align-items: center; gap: 10px; min-height: 52px; color: inherit; text-decoration: none; }
@@ -304,7 +302,6 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .side-line-meta { flex: 1; min-width: 0; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-line-book { font-size: 13px; white-space: nowrap; }
 .side-line:hover .side-line-name { text-decoration: underline; text-underline-offset: 4px; }
-.parent-cal .doc-day { border-bottom: 0; }
 
 /* the header's actions: the plan's search, then the + */
 .trip-actions { flex: none; display: inline-flex; align-items: center; gap: 4px; }
@@ -353,7 +350,6 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .turn-name { max-width: 100%; font-family: var(--f-head); font-size: 22px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turn:hover .turn-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .turn-up { align-self: center; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); text-underline-offset: 3px; }
-.parent-cal .page-turn { margin-top: 20px; border-top-color: var(--line); }
 
 /* ---------- a trip's countries, as a route over its title: "es → pt" ---------- */
 .trip-route { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; margin: 2px 0 -6px; line-height: 1.2; font-family: var(--f-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }

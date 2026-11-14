@@ -160,7 +160,7 @@ export function HomePage() {
                     <button type="button" aria-pressed={shownAs === 'month'} onClick={() => showAs('month')}>month</button>
                   </div>
                 )}
-                <button type="button" className="icon-btn filled" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
+                <button type="button" className="icon-btn plus-btn" aria-label="add" disabled={!canEdit} onClick={() => setMenu(true)}>
                   <Icon name="plus" />
                 </button>
               </div>

@@ -18,7 +18,7 @@ import { LinksTab } from '../saved/SavedTab'
 import { PlacesTab } from '../places/PlacesTab'
 import { NotesTab } from '../notes/NotesTab'
 import { TripSummary } from './TripSummary'
-import { TripHeader } from './TripHeader'
+import { TripFacts, TripHeader } from './TripHeader'
 import { isPackingLink, packingHome, PHONE_TABS, readTab, WIDE_TABS, type Tab } from './tabs'
 import { tint } from '../../components/MonthCalendar'
 import { StopSheetProvider, useStopSheet } from '../stops/StopSheet'
@@ -180,12 +180,14 @@ function TripScreen() {
             <Link to={`/trip/${trip.id}${back.size ? `?${back}` : ''}`} className="chip-pill back-chip" aria-label={`back to ${trip.name}`}><Icon name="back" /><span>{trip.name}</span></Link>
             <OfflineBadge inline />
             {plus}
+            <TripSummary bar={false} tabs={PHONE_TABS} active={tab} onPick={pick} />
           </div>
         ) : (
           <><span ref={sentinel} className="trip-bar-sentinel" aria-hidden="true" />
           <div ref={bar} className={`trip-bar${stuck ? ' stuck' : ''}`}>
             <TripHeader trip={trip} add={<span className="trip-actions">{tab === 'plan' && <span ref={setSearchSlot} className="search-slot" />}{plus}</span>} onEdit={() => setEditing(true)} />
-            {wide && <TripSummary bar={false} tabs={WIDE_TABS} active={tab} onPick={pick} />}
+            {/* the sections are text tabs at the top on phones and laptops alike, like home's */}
+            <TripSummary bar={false} tabs={wide ? WIDE_TABS : PHONE_TABS} active={tab} onPick={pick} />
           </div></>
         )}
         {switching && <Loading className="section-wait" />}
@@ -198,10 +200,9 @@ function TripScreen() {
       </section>
       {wide && <SplitHandle width={planW} onChange={setPlanW} />}
       {wide && <aside className="trip-map" aria-label="map"><Suspense fallback={<MapWait />}><MapTab trip={trip} ideas={tab === 'places'} /></Suspense></aside>}
-      {!wide && <TripSummary bar tabs={PHONE_TABS} active={tab} onPick={pick} />}
       <AddSheet open={menu} title={menuTitle} onClose={() => setMenu(false)} onPick={k => { setMenu(false); setKind(k) }} />
       <AddForms kind={kind} trip={owner} day={onDay} onClose={() => setKind(null)} />
-      <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}><TripForm trip={trip} onDone={() => setEditing(false)} onDeleted={() => { setEditing(false); navigate(trip.parent_id ? `/trip/${trip.parent_id}` : '/') }} /></Sheet>
+      <Sheet page open={editing} title="edit trip" onClose={() => setEditing(false)}><TripFacts trip={trip} /><TripForm trip={trip} onDone={() => setEditing(false)} onDeleted={() => { setEditing(false); navigate(trip.parent_id ? `/trip/${trip.parent_id}` : '/') }} /></Sheet>
     </div>
     </DragProvider>
   )

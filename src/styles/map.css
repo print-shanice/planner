@@ -8,8 +8,13 @@
 .map-float > * { pointer-events: auto; }
 .back-chip { height: 44px; min-width: 0; max-width: 70%; padding: 0 14px 0 8px; color: var(--ink); text-decoration: none; }
 .back-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-phone .map-top { top: calc(env(safe-area-inset-top) + 66px); }
-.trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 80px); }
+.trip-phone .map-top { top: calc(env(safe-area-inset-top) + 116px); }
+/* phones: the back link, + and the same section tabs as everywhere else, in a plain band over the map */
+.trip-phone .map-float { top: 0; left: 0; right: 0; flex-wrap: wrap; gap: 4px 12px; padding: calc(env(safe-area-inset-top) + 8px) 16px 0; background: var(--ground); border-bottom: 1px solid var(--line); }
+.trip-phone .map-float .back-chip { padding-left: 0; box-shadow: none; background: none; }
+.trip-phone .map-float .plus-btn { background: none; box-shadow: none; }
+.trip-phone .map-float .section-tabs { flex-basis: 100%; margin: 0; border-bottom: 0; }
+.trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 16px); }
 
 /* the map's places, as a sheet you pull up above the tab bar */
 .places-sheet {

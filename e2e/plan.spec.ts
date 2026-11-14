@@ -226,14 +226,14 @@ test.describe('the plan', () => {
     await expect(page.getByRole('region', { name: 'saturday 20 february' })).toBeHidden()
   })
 
-  test('a long trip with side trips shows a calendar; its side trips open from it', async ({ page }) => {
+  test("a long trip with side trips opens on its own days; each side trip is one row that opens it", async ({ page }) => {
     await open(page, '/trip/eu')
-    await expect(page.getByRole('link', { name: /^next · in 101 days paris/ })).toBeVisible()
-    await expect(page.getByRole('group', { name: 'january 2027' })).toBeVisible()
-    await page.getByRole('button', { name: 'next month' }).click()
-    await expect(page.getByRole('group', { name: 'february 2027' })).toBeVisible()
-    await page.getByRole('button', { name: 'sat 20 feb' }).click()
-    await expect(page).toHaveURL(/#\/trip\/par\?day=2027-02-20/)
+    await expect(page.getByRole('group', { name: 'january 2027' })).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'trip sections' })).toBeVisible()
+    const paris = page.getByRole('link', { name: /^paris\s*19 – 23 feb →$/ })
+    await paris.scrollIntoViewIfNeeded()
+    await paris.click()
+    await expect(page).toHaveURL(/#\/trip\/par$/)
   })
 
   test('laptops edit a line in place, and the edit is saved on enter', async ({ page }) => {

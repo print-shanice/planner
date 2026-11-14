@@ -351,6 +351,16 @@
 /* ---------- the month view: the calendar, and beside it what's on and what's left to book ---------- */
 .home-month { display: grid; gap: 28px; min-width: 0; }
 @media (min-width: 1024px) { .home-month { grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 40px; align-items: start; } }
+/* laptops: the month and what's beside it read as one ruled sheet. both start on the same ink rule, both have a
+   52px title row ("january ‹ ›" and the tabs), and one hairline runs under both at the same height */
+@media (min-width: 1024px) {
+  .home-month .cal { padding-bottom: 0; border-bottom: 0; }
+  .home-month .cal-head { box-sizing: border-box; height: 52px; padding: 0 0 0 2px; border-bottom: 1px solid var(--line); }
+  .home-month .month-side { border-top: 1px solid var(--ink); padding-top: 14px; }
+  .home-month .cal { padding-top: 14px; }
+  .home-month .month-tabs { box-sizing: border-box; height: 52px; align-items: stretch; border-bottom-color: var(--line); }
+  .home-month .month-tabs button { min-height: 0; }
+}
 .home-month .home-cal { max-width: none; }
 .month-side { display: grid; gap: 18px; min-width: 0; align-content: start; }
 .month-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--ink); }

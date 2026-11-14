@@ -14,7 +14,8 @@ import { OfflineBadge } from '../../components/OfflineBadge'
 import { TripForm } from '../home/TripForm'
 import { TripTree } from './TripTree'
 import { CountryFlag } from '../../components/CountryFlag'
-import { Avatar, memberName } from '../../components/Avatar'
+import { memberName } from '../../components/Avatar'
+import { useAuth } from '../../lib/auth'
 import { Tooltip } from '../../components/Tooltip'
 import { hasPoint } from '../../lib/walk'
 
@@ -62,7 +63,6 @@ export function routeOrder(codes: string[], trip: Trip, trips: Trip[], stops: St
 export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode; onEdit: () => void }) {
   const trips = useTrips().data ?? []
   const stops = useStops().data ?? []
-  const members = useMembers().data ?? []
   const canEdit = useCanEdit()
   const [tree, setTree] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -71,10 +71,6 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
   // the title switches between trips of one family: the top trip and every side trip under it
   const family = descendants(path[0]?.id ?? trip.id, trips).length > 1
   const flagsOf = useTripFlags(trips, stops)
-  const countries = flagsOf(trip)
-  // the countries as a route over the title, like a departures board: where it's based first, then the rest
-  // in the order you reach them (by the first day planned there)
-  const route = routeOrder(countries, trip, trips, stops)
   const when = [fmtRange(trip.start_date, trip.end_date), nightsWord(trip.start_date, trip.end_date)].filter(Boolean).join(' · ')
   const up = parent
   const upName = up ? up.name : 'all trips'
@@ -86,17 +82,8 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
         <Link to={up ? `/trip/${up.id}` : '/'} className="back-link" aria-label={`back to ${upName}`}>
           <Icon name="back" />{up && <CountryFlag code={flagsOf(up)[0]} />}<span>{upName}</span>
         </Link>
-        {/* the people sharing the trip are also the way into its settings */}
-        <Tooltip text={`edit trip details · shared with ${members.map(memberName).join(', ')}`}><button type="button" className="avatars trip-people" aria-label="edit trip" disabled={!canEdit} onClick={onEdit}>
-          {members.map((m) => <Avatar key={m.email} member={m} />)}
-        </button></Tooltip>
+        <button type="button" className="text-link trip-edit" aria-label="edit trip" disabled={!canEdit} onClick={onEdit}>edit</button>
       </div>
-      {route.length > 0 && (
-        <p className="trip-route" aria-label={`countries: ${route.map(countryName).join(', ')}`}>
-          {route.slice(0, ROUTE_MAX).map((c, i) => <span key={c}>{i > 0 && <i aria-hidden="true">→</i>}<abbr title={countryName(c)}>{c}</abbr></span>)}
-          {route.length > ROUTE_MAX && <span className="trip-route-more">+{route.length - ROUTE_MAX}</span>}
-        </p>
-      )}
       <div className="trip-title-row">
         <h1 className="head one-line">
           {family ? (
@@ -108,12 +95,35 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
         {add}
       </div>
       {when && <p className="trip-meta muted num"><span>{when}</span></p>}
-      <TripNow trip={trip} country={countries[0]} stops={stops} />
       <Sheet open={tree} title="trips" onClose={() => setTree(false)}>
         <TripTree trips={trips} current={trip.id} flagsOf={flagsOf} onPick={() => setTree(false)} />
         <button type="button" className="btn ghost" disabled={!canEdit} onClick={() => { setTree(false); setAdding(true) }}><Icon name="plus" />add side trip</button>
       </Sheet>
       <Sheet page open={adding} title="new side trip" onClose={() => setAdding(false)}><TripForm parentId={trip.id} onDone={() => setAdding(false)} /></Sheet>
     </header>
+  )
+}
+
+// what the header used to carry, now at the top of "edit trip": the route, the time and weather there, and who it's shared with
+export function TripFacts({ trip }: { trip: Trip }) {
+  const trips = useTrips().data ?? []
+  const stops = useStops().data ?? []
+  const members = useMembers().data ?? []
+  const flagsOf = useTripFlags(trips, stops)
+  const countries = flagsOf(trip)
+  const route = routeOrder(countries, trip, trips, stops)
+  const { userId } = useAuth()
+  const people = members.filter((m) => m.user_id !== userId).map(memberName)
+  return (
+    <div className="trip-facts">
+      {route.length > 0 && (
+        <p className="trip-route" aria-label={`countries: ${route.map(countryName).join(', ')}`}>
+          {route.slice(0, ROUTE_MAX).map((c, i) => <span key={c}>{i > 0 && <i aria-hidden="true">→</i>}<abbr title={countryName(c)}>{c}</abbr></span>)}
+          {route.length > ROUTE_MAX && <span className="trip-route-more">+{route.length - ROUTE_MAX}</span>}
+        </p>
+      )}
+      <TripNow trip={trip} country={countries[0]} stops={stops} />
+      {people.length > 0 && <p className="trip-with">with {people.join(', ')}</p>}
+    </div>
   )
 }

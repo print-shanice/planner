@@ -82,7 +82,16 @@
 }
 .section-tabs button:hover { color: var(--ink); }
 .section-tabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
-.trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
+.trip-phone { padding-bottom: calc(env(safe-area-inset-bottom) + 32px); }
+/* phones: the same text tabs as laptops, scrolling sideways if they don't fit */
+.trip-phone .section-tabs { gap: 18px; overflow-x: auto; scrollbar-width: none; }
+.trip-phone .section-tabs::-webkit-scrollbar { display: none; }
+.trip-phone .section-tabs button { flex: none; }
+/* edit sits where the people's circles were; the trip's details open from it */
+.trip-edit { font-size: 15px; color: var(--ink); }
+.trip-facts { display: grid; gap: 6px; padding-bottom: 16px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.trip-facts .trip-route { margin: 0; }
+.trip-with { margin: 0; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
 .trip-title-row .icon-btn.filled { flex: none; width: 44px; height: 44px; border-radius: 50%; }
 
 .trip-bar { /* the trip's name, + and navigation stay at the top while the page scrolls */ position: sticky; top: 0; z-index: 15; background: var(--ground); padding-bottom: 8px; transition: box-shadow .15s; }

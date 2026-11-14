@@ -104,6 +104,18 @@ test.describe('home', () => {
 })
 
 test.describe('public holidays and the month at a glance', () => {
+  test('on a laptop the month and what is beside it share one top rule and one line under their titles', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) < 1024, 'laptops only: on a phone they stack')
+    await open(page)
+    await page.getByRole('button', { name: 'month', exact: true }).click()
+    const cal = (await page.locator('.home-month .cal').boundingBox())!
+    const side = (await page.locator('.home-month .month-side').boundingBox())!
+    const head = (await page.locator('.home-month .cal-head').boundingBox())!
+    const tabs = (await page.locator('.home-month .month-tabs').boundingBox())!
+    expect(side.y).toBe(cal.y)
+    expect(tabs.y + tabs.height).toBe(head.y + head.height)
+  })
+
   test('beside the month: what\'s on and what\'s to do as tabs, then the month\'s holidays, which never move', async ({ page }) => {
     test.skip(phone(page), 'the side panel sits beside the month on a laptop; on a phone it falls under it')
     await open(page)
@@ -127,7 +139,7 @@ test.describe('public holidays and the month at a glance', () => {
     const line = page.getByTestId('holiday')
     await expect(line).toContainText(/king's day/i)
     await expect(line).toContainText(/public holiday in netherlands/i)
-    await expect(page.getByRole('button', { name: /27 apr · king's day/ })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'days' }).getByRole('button', { name: /27 april · king's day/i })).toBeVisible()
   })
 })
 

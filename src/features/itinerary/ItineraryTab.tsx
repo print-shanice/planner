@@ -1,13 +1,13 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import type { Stop, Trip } from '../../lib/types'
 import { useCosts, useFiles, useLinks, useStops, useTrips } from '../../lib/queries'
 import { lineInfo, type LineInfo } from '../../lib/lineInfo'
 import { loadState } from '../../lib/load'
-import { daysBetween, fmtDay, todayISO } from '../../lib/dates'
-import { chosenDay, validDay } from '../../lib/agenda'
-import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, sideRows, type ItinDay } from '../../lib/itinerary'
+import { fmtDay, fmtRange, todayISO } from '../../lib/dates'
+import { chosenDay, ownerOn, validDay } from '../../lib/agenda'
+import { dayAreas, findMatches, foldsSideTrips, itineraryDays, normal, sideRows, type ItinDay, type SideRow as Side } from '../../lib/itinerary'
 import { dayLegs, placeIn, type Leg } from '../../lib/legs'
 import { pinNumbers } from '../../lib/pins'
 import { useMove } from './useMove'
@@ -26,17 +26,16 @@ import { useReadingDay } from '../trip/readingDay'
 import { useWalks, type WalkAnswer } from '../plan/useWalks'
 import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
-import { ParentCalendar } from './ParentCalendar'
 import { CountryFlag } from '../../components/CountryFlag'
 import { countriesOn, holidaysOn, useHolidays, type Holiday } from '../../lib/holidays'
 import { countryName, descendants, tripCountries } from '../../lib/countries'
 import { useWide } from '../../lib/useWide'
+import { colourVar } from '../../lib/colors'
 import { clashPairs, type Clash } from '../../lib/clash'
 import { ClashRow } from '../trip/ClashRow'
 import { Sheet } from '../../components/Sheet'
 import { TripForm } from '../home/TripForm'
 import { useCanEdit } from '../../lib/offline'
-import { count } from '../../lib/words'
 
 // only a fixed or sticky bar covers a scrolled day
 function coveredTop() {
@@ -92,8 +91,20 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   const query = searching ? q : ''
   // a long trip with side trips is an overview (one row per side trip); searching always looks through everything
   const fold = foldsSideTrips(trip, trips) && !query
-  // folded, the calendar is the way around; the list below is only for a trip that isn't
-  const items: ItinDay[] = fold ? [] : it.days
+  // folded, the list keeps the trip's own days and lines; each side trip is one row that opens it
+  const sides = useMemo(() => (fold ? sideRows(trip, trips, stops) : []), [fold, trip, trips, stops])
+  // a day linked to (a holiday, a day on home's calendar) is always there to read, even with nothing on it yet
+  const linked = params.get('day')
+  const items: ItinDay[] = useMemo(() => {
+    if (!fold) return it.days
+    const own = it.days
+      // inside a side trip's days, only the trip's own plans stay (the train there), not its long stay carrying on
+      .map((d) => ({ ...d, entries: d.entries.filter((e) => e.kind !== 'sidetrip' && (!e.stop || e.stop.trip_id === trip.id) && (d.owner.id === trip.id || e.kind === 'stop')) }))
+      .filter((d) => d.owner.id === trip.id || d.entries.length > 0)
+    const inTrip = validDay(linked) && !!trip.start_date && linked >= trip.start_date && linked <= (trip.end_date ?? trip.start_date)
+    if (!inTrip || own.some((d) => d.date === linked) || ownerOn(trip, trips, linked).id !== trip.id) return own
+    return [...own, { date: linked, entries: [], owner: trip }].sort((a, b) => a.date.localeCompare(b.date))
+  }, [fold, it.days, trip, trips, linked])
   const matches = useMemo(() => findMatches({ ...it, undated: [] }, query), [it, query])
   const hitDays = useMemo(() => new Set(matches.map((m) => m.date ?? '')), [matches])
   const current = matches[cur] ?? null
@@ -175,7 +186,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   // opening lands on the day you're on; a laptop/phone switch lands there again
   const landed = useRef(false)
   useLayoutEffect(() => {
-    if (landed.current || load.state !== 'ready' || !items.length || fold) return
+    if (landed.current || load.state !== 'ready' || !items.length) return
     landed.current = true
     const target = items.map((d) => d.date).find((d) => d >= (opensOn ?? ''))
     if (!target || target === items[0].date) return
@@ -227,10 +238,6 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   }, [onDay])
 
   if (load.state !== 'ready' && !it.days.length) return <LoadState load={load} />
-  // where you are (or go next) when the trip is folded: straight into that side trip
-  const sides = fold ? sideRows(trip, trips, stops) : []
-  const sideNow = sides.find((i) => i.date <= today && i.end >= today)
-  const sideNext = !sideNow ? sides.find((i) => i.date > today) : undefined
   const onOpen = sheet ? (s: Stop, day?: string | null) => sheet.openStop(s.id, day) : undefined
   const inTrip = !!trip.start_date && !!trip.end_date && today >= trip.start_date && today <= trip.end_date
 
@@ -255,8 +262,8 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
         </div>
       ) : (
         <div className="doc-strip-row">
-          {inTrip && !fold && <button type="button" className="today-chip" aria-label="jump to today" onClick={() => jumpDay(today)}>today</button>}
-          {!fold && <nav className="doc-strip" aria-label="days" ref={strip}>
+          {inTrip && <button type="button" className="today-chip" aria-label="jump to today" onClick={() => jumpDay(today)}>today</button>}
+          {<nav className="doc-strip" aria-label="days" ref={strip}>
             {items.map((d, i) => {
               const newMonth = i === 0 || monthOf(d.date) !== monthOf(items[i - 1].date)
               const month = newMonth && <span className="strip-month" aria-hidden="true">{fmtDay(d.date, { month: 'short' })}</span>
@@ -284,20 +291,13 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
       {tools}
       <LoadState load={load} />
       {clashes.map((c) => <ClashRow key={`${c.a.id}-${c.b.id}`} clash={c} canEdit={canEdit} onAdjust={adjust} />)}
-      {(sideNow || sideNext) && (
-        <Link className="side-now" to={`/trip/${(sideNow ?? sideNext)!.trip.id}${sideNow ? `?day=${today}` : ''}`} style={tint((sideNow ?? sideNext)!.trip.color)}>
-          <span className="mono-label">{sideNow ? `now · day ${daysBetween(sideNow.date, today) + 1} of ${sideNow.nights + 1}` : `next · in ${count(daysBetween(today, sideNext!.date), 'day')}`}</span>
-          <span className="side-now-name">{(sideNow ?? sideNext)!.trip.name} →</span>
-        </Link>
-      )}
-      {!fold && !items.length && load.state === 'ready' && <EmptyState title="nothing planned yet" />}
-      {fold && <ParentCalendar trip={trip} trips={trips} stops={stops} today={today} onDay={setDay} holiday={(d) => holidaysFor(d).map((h) => h.name.toLowerCase()).join(', ') || null}
-        renderDay={(d) => <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q="" hidden={false}
-          current={null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} />} />}
-      {items.map((d) => (
-        <Day key={d.date} day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
+      {!items.length && !sides.length && load.state === 'ready' && <EmptyState title="nothing planned yet" />}
+      {items.map((d, i) => (<Fragment key={d.date}>
+        {sides.filter((r) => r.date <= d.date && (i === 0 || r.date > items[i - 1].date)).map((r) => <SideRow key={r.trip.id} row={r} />)}
+        <Day day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
           hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} />
-      ))}
+      </Fragment>))}
+      {sides.filter((r) => !items.length || r.date > items[items.length - 1].date).map((r) => <SideRow key={r.trip.id} row={r} />)}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
         {adjusting && <TripForm key={adjusting.id} trip={adjusting} onDone={() => setAdjusting(null)} onDeleted={() => setAdjusting(null)} />}
       </Sheet>
@@ -425,5 +425,16 @@ function DirectionsLine({ stop, leg, answer }: { stop: Stop; leg?: Leg; answer: 
       aria-label={`${flight ? 'directions to departure airport' : 'directions to'} ${at?.name || 'this place'}${estimate ? ` · ${estimate}` : ''}`} target="_blank" rel="noopener noreferrer">
       <span>{label}{estimate && ` · ${estimate}`}</span>
     </a></Tooltip>
+  )
+}
+
+// a side trip folded into one row of its parent's plan: its colour, its name and its dates; a tap opens it
+function SideRow({ row }: { row: Side }) {
+  return (
+    <Link className="side-fold" to={`/trip/${row.trip.id}`} data-date={row.date}>
+      <span className="side-fold-sq" style={{ background: colourVar(row.trip.color) }} aria-hidden="true" />
+      <span className="side-fold-name">{row.trip.name}</span>
+      <span className="side-fold-when">{fmtRange(row.date, row.end)} →</span>
+    </Link>
   )
 }

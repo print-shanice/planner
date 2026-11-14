@@ -153,10 +153,12 @@ function wide(on: boolean) {
 }
 afterEach(() => wide(false))
 
-it('phones show six sections in a bar at the bottom', () => {
+it('phones show six sections as text tabs at the top, like home', () => {
   show('/trip/summer')
   const nav = screen.getByRole('navigation', { name: 'trip sections' })
-  expect(nav).toHaveClass('tab-bar')
+  expect(nav).toHaveClass('section-tabs')
+  expect(nav.closest('.trip-bar')).not.toBeNull()
+  expect(document.querySelector('.tab-bar')).toBeNull()
   expect(sections().getAllByRole('button').map((b) => b.textContent)).toEqual(['plan', 'map', 'places', 'notes', 'links', 'money'])
   expect(sections().getByRole('button', { name: 'plan' })).toHaveAttribute('aria-pressed', 'true')
 })
@@ -226,7 +228,10 @@ it('the countries run as a route over the title, in the order you reach them, an
   show('/trip/lap')
   const title = screen.getByRole('heading', { level: 1 })
   expect(title).toHaveTextContent(/^lapland$/)
-  const route = document.querySelector('.trip-route') as HTMLElement
+  // the route isn't on the page any more: it's in the trip's details
+  expect(document.querySelector('.trip-header .trip-route')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'edit trip' }))
+  const route = document.querySelector('.trip-facts .trip-route') as HTMLElement
   expect(route).toHaveAttribute('aria-label', 'countries: Finland, Sweden')
   expect([...route.querySelectorAll('abbr')].map((a) => a.textContent)).toEqual(['FI', 'SE'])
   expect(within(document.querySelector('.trip-meta') as HTMLElement).queryAllByRole('img')).toHaveLength(0)
@@ -236,7 +241,8 @@ it('a trip starts its route where it is based, and shows six countries, then a c
   db.trips = [trip({ id: 'europe', name: 'europe exchange', base: place({ country: 'NL' }) })]
   db.stops = ['FI', 'SE', 'FR', 'ES', 'IT', 'DE'].map((country, i) => stop({ trip_id: 'europe', day: `2027-03-0${i + 1}`, place: place({ country }) }))
   show('/trip/europe')
-  const route = document.querySelector('.trip-route') as HTMLElement
+  fireEvent.click(screen.getByRole('button', { name: 'edit trip' }))
+  const route = document.querySelector('.trip-facts .trip-route') as HTMLElement
   expect([...route.querySelectorAll('abbr')].map((a) => a.textContent)).toEqual(['NL', 'FI', 'SE', 'FR', 'ES', 'IT'])
   expect(within(route).getByText('+1')).toBeInTheDocument()
 })
@@ -248,10 +254,11 @@ it('a long name stays whole in the heading', () => {
   expect(screen.getByRole('heading', { level: 1 })).toHaveClass('one-line')
 })
 
-it('the people sharing the trip are the way into its settings', async () => {
+it('"edit" in the top right opens the trip, with no circles of people on the page', async () => {
   show('/trip/summer')
   const edit = screen.getByRole('button', { name: 'edit trip' })
-  expect(edit.querySelectorAll('.avatar')).toHaveLength(1)
+  expect(edit).toHaveTextContent(/^edit$/)
+  expect(document.querySelector('.trip-header .avatar')).toBeNull()
   await userEvent.click(edit)
   expect(screen.getByRole('dialog', { name: 'edit trip' })).toBeInTheDocument()
 })
