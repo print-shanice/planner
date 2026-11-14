@@ -32,6 +32,11 @@ const env = vi.hoisted(() => ({ online: true, signOut: vi.fn(), forget: vi.fn() 
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => env.online, forgetDevice: env.forget }))
 const keyApi = vi.hoisted(() => ({ has: vi.fn(), make: vi.fn() }))
 vi.mock('../../src/lib/saveKey', () => ({ hasSaveKey: keyApi.has, newSaveKey: keyApi.make }))
+vi.mock('../../src/lib/knownCities', async (orig) => {
+  const real = await orig<typeof import('../../src/lib/knownCities')>()
+  const known = real.knownCities([['rovaniemi', 25.72, 66.5, 0], ['paris', 2.33, 48.87, 1]])
+  return { ...real, useKnownCities: () => known }
+})
 vi.mock('../../src/lib/auth', () => ({ useAuth: () => ({ status: 'signed-in', email: 'shanice@x.com', userId: 'u1', signOut: env.signOut }) }))
 vi.mock('../../src/features/home/Globe', () => ({
   Globe: (p: { onCountry: (c: string) => void; pins: { code: string }[]; routes?: { line: [number, number][]; mode: string | null }[]; focus?: { code: string; n: number } | null }) => {
@@ -96,8 +101,10 @@ const lived = () => {
   vi.setSystemTime(new Date('2027-07-20T10:00:00'))
   db.trips = europe()
   db.stops = [
-    stop({ trip_id: 'lap', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
-    stop({ trip_id: 'par', day: '2027-03-06', place: place({ name: 'louvre', city: 'paris', country: 'FR' }) }),
+    stop({ trip_id: 'lap', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI', lat: 66.51, lng: 25.72 }) }),
+    stop({ trip_id: 'par', day: '2027-03-06', place: place({ name: 'louvre', city: 'paris', country: 'FR', lat: 48.86, lng: 2.34 }) }),
+    // a town on an address isn't a city
+    stop({ trip_id: 'par', day: '2027-03-07', place: place({ name: 'château', city: 'versailles', country: 'FR', lat: 48.8, lng: 2.12 }) }),
   ] as Stop[]
 }
 

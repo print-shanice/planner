@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { arc, aroundTheWorld, favourites, stamps, tickets, km } from '../../src/lib/travels'
+import { readFileSync } from 'node:fs'
+import { knownCities } from '../../src/lib/knownCities'
 import { place, stop, trip } from '../factories'
+
+const cities = knownCities(JSON.parse(readFileSync('public/globe/known-cities.json', 'utf8')))
 import type { Review, Stop } from '../../src/lib/types'
 
 const TODAY = '2027-03-01'
@@ -44,6 +48,54 @@ describe('tickets', () => {
     expect(r.flights).toHaveLength(1)
     expect(r.flights[0].line).toBeNull()
     expect(r.km).toBe(0)
+  })
+})
+
+describe('trains and buses between cities', () => {
+  const jp = (name: string, city: string, lat: number, lng: number) => place({ name, city, country: 'JP', lat, lng })
+  const kyotoSt = jp('kyoto station', 'Kyoto', 34.985, 135.759)
+  const inari = jp('fushimi inari', 'Kyoto', 34.967, 135.773)
+  const osakaSt = jp('osaka station', 'Osaka', 34.702, 135.496)
+  const shinjuku = jp('shinjuku', 'Shinjuku City', 35.69, 139.7)
+  const shibuya = jp('shibuya', 'Shibuya City', 35.658, 139.702)
+  const akishima = jp('akishima station', 'Akishima', 35.71, 139.35)
+  const akiruno = jp('musashi-itsukaichi', 'Akiruno', 35.73, 139.29)
+  const hachioji = jp('hachiōji station', 'Hachiōji', 35.656, 139.339)
+  const t = trip({ id: 'jp' })
+  const go = (id: string, mode: Stop['mode'], origin: typeof kyotoSt, destination: typeof kyotoSt) =>
+    journey({ id, trip_id: 'jp', day: '2027-02-10', mode, origin, destination })
+
+  it('only count when they go from one city to another', () => {
+    const r = tickets([t], [
+      go('kyoto-osaka', 'train', kyotoSt, osakaSt),
+      go('round-kyoto', 'bus', kyotoSt, inari),
+      go('metro', 'train', shinjuku, shibuya),
+      go('suburb', 'train', shinjuku, akishima),
+      go('to akiruno', 'bus', hachioji, akiruno),
+      go('far suburb', 'train', osakaSt, akiruno),
+    ], TODAY, cities)
+    expect(r.trains.map((x) => x.id)).toEqual(['kyoto-osaka'])
+    expect(r.ground).toEqual([])
+    expect(Math.round(r.km)).toBe(Math.round(km([135.759, 34.985], [135.496, 34.702])))
+  })
+
+  it('a train or bus saved without both ends is left out', () => {
+    const r = tickets([t], [
+      journey({ id: 'named', trip_id: 'jp', day: '2027-02-10', mode: 'train', origin: null, destination: null, title: 'keihan line' }),
+      journey({ id: 'half', trip_id: 'jp', day: '2027-02-10', mode: 'bus', origin: kyotoSt, destination: null }),
+    ], TODAY, cities)
+    expect(r.trains).toEqual([])
+    expect(r.ground).toEqual([])
+  })
+
+  it('ferries too; flights count however short', () => {
+    const r = tickets([t], [
+      go('hop', 'flight', shinjuku, shibuya),
+      go('river boat', 'ferry', kyotoSt, inari),
+      go('bay ferry', 'ferry', osakaSt, jp('kobe port', 'Kobe', 34.68, 135.19)),
+    ], TODAY, cities)
+    expect(r.flights).toHaveLength(1)
+    expect(r.ground.map((x) => x.id)).toEqual(['bay ferry'])
   })
 })
 

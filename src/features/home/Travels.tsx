@@ -4,6 +4,7 @@ import type { Review, Stop, Trip } from '../../lib/types'
 import { fmtDay } from '../../lib/dates'
 import { aroundTheWorld, favourites, stamps, tickets, type GlobeRoute, type Route } from '../../lib/travels'
 import { Icon } from '../../components/Icon'
+import { useKnownCities } from '../../lib/knownCities'
 import { tint } from '../../components/MonthCalendar'
 import { stopTitle } from '../plan/stopText'
 import { Stamp } from './Stamp'
@@ -20,7 +21,8 @@ const KINDS = [['flights', 'flights', 'plane'], ['trains', 'trains', 'train'], [
 // travels: the globe on top (beside, on a laptop), a scrapbook of where you've been underneath.
 // a ticket draws its routes on the globe; a stamp turns the globe to its country
 export function Travels({ trips, stops, reviews, today, globe }: Props) {
-  const t = useMemo(() => tickets(trips, stops, today), [trips, stops, today])
+  const cities = useKnownCities()
+  const t = useMemo(() => tickets(trips, stops, today, cities), [trips, stops, today, cities])
   const s = useMemo(() => stamps(trips, stops, today), [trips, stops, today])
   const f = useMemo(() => favourites(trips, stops, reviews), [trips, stops, reviews])
   const [open, setOpen] = useState<(typeof KINDS)[number][0] | null>(null)

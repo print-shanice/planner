@@ -1,6 +1,7 @@
 import type { Place, Review, Stop, Trip } from './types'
 import { countryName, firstVisits } from './countries'
 import { distanceKm } from './geo'
+import { cityKey, realCity, type KnownCities } from './knownCities'
 
 // what the travels scrapbook shows. only what has happened counts: a journey once its day has come,
 // a country once you've been (the globe's own rule)
@@ -39,10 +40,23 @@ export function arc(a: LngLat, b: LngLat, segments = 32): LngLat[] {
   return out
 }
 
-export function tickets(trips: Trip[], stops: Stop[], today: string): { flights: Route[]; trains: Route[]; ground: Route[]; km: number } {
+// a train, bus or ferry only counts between two cities: the metro across tokyo, a bus round kyoto or out to
+// akiruno isn't a journey. both ends have to be real cities (the totals' own list), and not the same one.
+// one without both ends (a ride saved by its name only) can't say it went anywhere, so it's left out too
+function withinCity(s: Stop, cities?: KnownCities): boolean {
+  if (s.mode !== 'train' && s.mode !== 'bus' && s.mode !== 'ferry') return false
+  const o = s.origin, d = s.destination
+  if (!o?.name?.trim() || !d?.name?.trim()) return true
+  // until the list has loaded, an end's own city stands in
+  const cityAt = (p: Place) => (cities ? realCity(p.city ?? p.name, p, cities) : p.city ?? null)
+  const a = cityAt(o), b = cityAt(d)
+  return !a || !b || cityKey(a) === cityKey(b)
+}
+
+export function tickets(trips: Trip[], stops: Stop[], today: string, cities?: KnownCities): { flights: Route[]; trains: Route[]; ground: Route[]; km: number } {
   const known = new Set(trips.map((t) => t.id))
   const done = stops
-    .filter((s) => s.kind === 'journey' && known.has(s.trip_id) && !!s.day && s.day <= today)
+    .filter((s) => s.kind === 'journey' && known.has(s.trip_id) && !!s.day && s.day <= today && !withinCity(s, cities))
     .sort((a, b) => (a.day ?? '').localeCompare(b.day ?? '') || (a.time ?? '').localeCompare(b.time ?? ''))
   let total = 0
   const routes: Route[] = done.map((s) => {

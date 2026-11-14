@@ -1,4 +1,5 @@
 import type { Place, Stop, Trip } from './types'
+import { cityKey, realCity, type KnownCities } from './knownCities'
 
 export function descendants(id: string, trips: Trip[]): string[] {
   const out: string[] = []
@@ -40,7 +41,8 @@ export function countryName(code: string): string {
   try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code } catch { return code }
 }
 
-type Visit = { code: string; place: Place; city: string | null; been: boolean; when: string; tripId: string }
+// slept: a trip's base or a stay, where you spent the night
+type Visit = { code: string; place: Place; city: string | null; been: boolean; when: string; tripId: string; slept: boolean }
 
 const cityOf = (p: Place, journey: boolean) => p.city ?? (journey ? p.name : null)
 
@@ -49,16 +51,16 @@ const cityOf = (p: Place, journey: boolean) => p.city ?? (journey ? p.name : nul
 function visits(trips: Trip[], stops: Stop[], today: string): Visit[] {
   const byId = new Map(trips.map((t) => [t.id, t]))
   const out: Visit[] = []
-  const add = (p: Place, city: string | null, been: boolean, when: string, tripId: string) => {
+  const add = (p: Place, city: string | null, been: boolean, when: string, tripId: string, slept: boolean) => {
     const code = cc(p)
-    if (code) out.push({ code, place: p, city, been, when, tripId })
+    if (code) out.push({ code, place: p, city, been, when, tripId, slept })
   }
-  for (const t of trips) if (t.base) add(t.base, t.base.city ?? null, !!t.start_date && t.start_date <= today, t.start_date ?? '9999', t.id)
+  for (const t of trips) if (t.base) add(t.base, t.base.city ?? null, !!t.start_date && t.start_date <= today, t.start_date ?? '9999', t.id, true)
   for (const s of stops) {
     const t = byId.get(s.trip_id)
     const been = s.day ? s.day <= today : !s.saved && !!t?.end_date && t.end_date < today
     const when = s.day ?? t?.start_date ?? '9999'
-    for (const p of placesOf(s)) add(p, cityOf(p, s.kind === 'journey'), been, when, s.trip_id)
+    for (const p of placesOf(s)) add(p, cityOf(p, s.kind === 'journey'), been, when, s.trip_id, s.kind === 'stay')
   }
   return out
 }
@@ -127,28 +129,30 @@ export function tripsInCountry(code: string, trips: Trip[], stops: Stop[]): Trip
 }
 
 // the numbers under the globe: a life lived, so only what has happened counts (the globe's own rule),
-// never a plan. a trip counts once it has started, a side trip as a trip of its own
-function lived(trips: Trip[], stops: Stop[], today: string) {
+// never a plan. a trip counts once it has started, a side trip as a trip of its own.
+// a city is a real one the globe knows (a day trip to nara counts, a walk through akiruno doesn't),
+// or anywhere you stayed the night; until the globe's list has loaded, only the stays count
+function lived(trips: Trip[], stops: Stop[], today: string, known?: KnownCities) {
   const countries = new Set<string>()
   const cities = new Map<string, string>()
   for (const v of visits(trips, stops, today)) {
     if (!v.been) continue
     countries.add(v.code)
-    const city = v.city?.trim()
-    if (city) { const key = `${city.toLowerCase()}|${v.code}`; if (!cities.has(key)) cities.set(key, city.toLowerCase()) }
+    const city = (known ? realCity(v.city, v.place, known) : null) ?? (v.slept ? v.city?.trim() || null : null)
+    if (city) { const key = `${cityKey(city)}|${v.code}`; if (!cities.has(key)) cities.set(key, city.toLowerCase()) }
   }
   const been = trips.filter((t) => !!t.start_date && t.start_date <= today)
   return { countries, cities, trips: been }
 }
 
-export function homeTotals(trips: Trip[], stops: Stop[], today: string): { countries: number; cities: number; trips: number } {
-  const l = lived(trips, stops, today)
+export function homeTotals(trips: Trip[], stops: Stop[], today: string, known?: KnownCities): { countries: number; cities: number; trips: number } {
+  const l = lived(trips, stops, today, known)
   return { countries: l.countries.size, cities: l.cities.size, trips: l.trips.length }
 }
 
 // the names behind the home totals, for their tooltips (lowercased, sorted)
-export function homeLists(trips: Trip[], stops: Stop[], today: string): { countries: string[]; cities: string[]; trips: string[] } {
-  const l = lived(trips, stops, today)
+export function homeLists(trips: Trip[], stops: Stop[], today: string, known?: KnownCities): { countries: string[]; cities: string[]; trips: string[] } {
+  const l = lived(trips, stops, today, known)
   const sorted = (xs: Iterable<string>) => [...xs].sort((a, b) => a.localeCompare(b))
   return {
     countries: sorted([...l.countries].map((c) => countryName(c).toLowerCase())),

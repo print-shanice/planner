@@ -17,6 +17,7 @@ import { Totals } from './Totals'
 import { TripRow } from './Upcoming'
 import { HomeStamp, TripFamilies, leadTrip } from './Trips'
 import { useTripFlags } from '../../lib/tripGuess'
+import { useKnownCities } from '../../lib/knownCities'
 import { Calendar } from './Calendar'
 import { MonthSide } from './MonthSide'
 import { countriesOn, holidaysOn, useHolidays } from '../../lib/holidays'
@@ -94,8 +95,9 @@ export function HomePage() {
 
   const status = useMemo(() => countryStatus(trips, stops, today), [trips, stops, today])
   const pins = useMemo(() => globePins(trips, stops, today), [trips, stops, today])
-  const totals = useMemo(() => homeTotals(trips, stops, today), [trips, stops, today])
-  const lists = useMemo(() => homeLists(trips, stops, today), [trips, stops, today])
+  const known = useKnownCities()
+  const totals = useMemo(() => homeTotals(trips, stops, today, known), [trips, stops, today, known])
+  const lists = useMemo(() => homeLists(trips, stops, today, known), [trips, stops, today, known])
 
   const top = trips.filter((t) => !t.parent_id)
   const upcoming = top.filter((t) => countdown(t, today).kind !== 'done').sort(byStart)

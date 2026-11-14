@@ -1,6 +1,11 @@
 import { clashes } from '../../src/lib/clash'
 import { countryStatus, tripsInCountry, homeTotals, homeLists, ancestors, descendants, globePins } from '../../src/lib/countries'
+import { readFileSync } from 'node:fs'
+import { cityKey, knownCities, realCity } from '../../src/lib/knownCities'
 import { trip, stop, place } from '../factories'
+
+// the list of cities, as the app loads it
+const known = knownCities(JSON.parse(readFileSync('public/globe/known-cities.json', 'utf8')))
 
 describe('clashes', () => {
   it('parent home stay does not clash with a side-trip hotel', () => {
@@ -75,18 +80,18 @@ describe('globe', () => {
   it('home totals count the countries, cities and trips that have happened', () => {
     const p = trip({ id: 'p', start_date: '2027-01-28', end_date: '2027-07-13' })
     const c = trip({ id: 'c', parent_id: 'p', start_date: '2027-02-07', end_date: '2027-02-11' })
-    const later = trip({ id: 'later', start_date: '2027-08-01', end_date: '2027-08-09', base: place({ city: 'tokyo', country: 'JP' }) })
+    const later = trip({ id: 'later', start_date: '2027-08-01', end_date: '2027-08-09', base: place({ city: 'tokyo', country: 'JP', lat: 35.68, lng: 139.77 }) })
     const someday = trip({ id: 'someday', start_date: null, end_date: null })
     const stops = [
-      stop({ trip_id: 'c', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'c', day: '2027-02-09', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'p', day: '2027-05-02', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
-      stop({ trip_id: 'later', day: '2027-08-02', place: place({ name: 'senso-ji', city: 'tokyo', country: 'JP' }) }),
+      stop({ trip_id: 'c', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI', lat: 66.51, lng: 25.72 }) }),
+      stop({ trip_id: 'c', day: '2027-02-09', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI', lat: 66.54, lng: 25.85 }) }),
+      stop({ trip_id: 'p', day: '2027-05-02', place: place({ name: 'acropolis', city: 'athens', country: 'GR', lat: 37.97, lng: 23.73 }) }),
+      stop({ trip_id: 'later', day: '2027-08-02', place: place({ name: 'senso-ji', city: 'tokyo', country: 'JP', lat: 35.71, lng: 139.8 }) }),
       stop({ trip_id: 'p', day: null, saved: true, place: place({ name: 'keukenhof', city: 'lisse', country: 'NL' }) }),
     ]
-    expect(homeTotals([p, c, later, someday], stops, '2027-03-01')).toEqual({ countries: 1, cities: 1, trips: 2 })
-    expect(homeTotals([p, c, later, someday], stops, '2027-09-01')).toEqual({ countries: 3, cities: 3, trips: 3 })
-    expect(homeTotals([p, c, later, someday], stops, '2026-12-01')).toEqual({ countries: 0, cities: 0, trips: 0 })
+    expect(homeTotals([p, c, later, someday], stops, '2027-03-01', known)).toEqual({ countries: 1, cities: 1, trips: 2 })
+    expect(homeTotals([p, c, later, someday], stops, '2027-09-01', known)).toEqual({ countries: 3, cities: 3, trips: 3 })
+    expect(homeTotals([p, c, later, someday], stops, '2026-12-01', known)).toEqual({ countries: 0, cities: 0, trips: 0 })
   })
 
   it('home lists name what the totals count', () => {
@@ -94,11 +99,51 @@ describe('globe', () => {
     const c = trip({ id: 'c', parent_id: 'p', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
     const later = trip({ id: 'later', name: 'japan', start_date: '2027-08-01', end_date: '2027-08-09' })
     expect(homeLists([p, c, later], [
-      stop({ trip_id: 'c', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'c', day: '2027-02-09', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI' }) }),
-      stop({ trip_id: 'p', day: '2027-02-20', place: place({ name: 'acropolis', city: 'athens', country: 'GR' }) }),
-      stop({ trip_id: 'later', day: '2027-08-02', place: place({ name: 'senso-ji', city: 'tokyo', country: 'JP' }) }),
-    ], '2027-03-01')).toEqual({ countries: ['finland', 'greece'], cities: ['athens', 'rovaniemi'], trips: ['exchange', 'lapland'] })
+      stop({ trip_id: 'c', day: '2027-02-08', place: place({ name: 'arktikum', city: 'rovaniemi', country: 'FI', lat: 66.51, lng: 25.72 }) }),
+      stop({ trip_id: 'c', day: '2027-02-09', place: place({ name: 'santa claus village', city: 'Rovaniemi', country: 'FI', lat: 66.54, lng: 25.85 }) }),
+      stop({ trip_id: 'p', day: '2027-02-20', place: place({ name: 'acropolis', city: 'athens', country: 'GR', lat: 37.97, lng: 23.73 }) }),
+      stop({ trip_id: 'later', day: '2027-08-02', place: place({ name: 'senso-ji', city: 'tokyo', country: 'JP', lat: 35.71, lng: 139.8 }) }),
+    ], '2027-03-01', known)).toEqual({ countries: ['finland', 'greece'], cities: ['athens', 'rovaniemi'], trips: ['exchange', 'lapland'] })
+  })
+
+  // a city is one the globe knows, not whatever town an address names
+  it('suburbs and villages are not cities; real ones are, day trips too', () => {
+    const jp = trip({ id: 'jp', start_date: '2027-04-01', end_date: '2027-04-20' })
+    const tw = trip({ id: 'tw', start_date: '2027-05-01', end_date: '2027-05-05' })
+    const at = (day: string, city: string, lat: number, lng: number, o = {}) =>
+      stop({ trip_id: 'jp', day, place: place({ name: city, city, country: 'JP', lat, lng }), ...o })
+    const stops = [
+      at('2027-04-02', 'Akiruno', 35.73, 139.29),
+      at('2027-04-03', 'Akishima', 35.71, 139.35),
+      at('2027-04-04', 'Shibuya City', 35.66, 139.7),
+      at('2027-04-05', 'Kyoto', 35.0, 135.77),
+      at('2027-04-06', 'Osaka', 34.67, 135.5),
+      at('2027-04-07', 'Nara', 34.68, 135.8),
+      at('2027-04-08', 'Kobe', 34.69, 135.19),
+      at('2027-04-09', 'Hakone', 35.23, 139.02, { kind: 'stay' }),
+      stop({ trip_id: 'tw', day: '2027-05-02', place: place({ name: 'taipei 101', city: 'Taipei City', country: 'TW', lat: 25.03, lng: 121.56 }) }),
+    ]
+    expect(homeLists([jp, tw], stops, '2027-06-01', known).cities).toEqual(['hakone', 'kobe', 'kyoto', 'nara', 'osaka', 'taipei city', 'tokyo'])
+    // before the globe's list has loaded, only where you stayed counts
+    expect(homeLists([jp, tw], stops, '2027-06-01').cities).toEqual(['hakone'])
+  })
+})
+
+describe('real cities', () => {
+  it('reads names the same with or without accents or a "city" on the end', () => {
+    expect(cityKey('Ōsaka')).toBe('osaka')
+    expect(cityKey('Taipei City')).toBe('taipei')
+    expect(cityKey('Kyoto-shi')).toBe('kyoto')
+  })
+
+  it('a copy saved in an older shape is skipped, not a crash', () => {
+    expect(knownCities([{ n: 'tokyo', z: 1.7, lng: 139.75, lat: 35.69 }] as never).size).toBe(0)
+    expect(knownCities({ features: [] } as never).size).toBe(0)
+  })
+
+  it('a name only matches the city of that name nearby', () => {
+    expect(realCity('Paris', { lat: 48.86, lng: 2.35 }, known)).toBe('Paris')
+    expect(realCity('Paris', { lat: 33.66, lng: -95.56 }, known)).toBeNull()
   })
 })
 
