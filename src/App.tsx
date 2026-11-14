@@ -8,11 +8,13 @@ import { ConfigProblem } from './features/auth/ConfigProblem'
 import { HomePage } from './features/home/HomePage'
 import { TripPage } from './features/trip/TripPage'
 import { CapturePage } from './features/capture/CapturePage'
+import { Crashed } from './components/Crashed'
 
 export function App() {
   if (configProblem) return <div className="app"><ConfigProblem problem={configProblem} /></div>
   return (
     <div className="app">
+      <Crashed>
       <AuthProvider>
         <AuthGate>
           <RealtimeBridge />
@@ -29,6 +31,7 @@ export function App() {
           </ToastProvider>
         </AuthGate>
       </AuthProvider>
+      </Crashed>
     </div>
   )
 }

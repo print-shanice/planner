@@ -468,3 +468,7 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .flight-choice > .muted { font-size: 13px; }
 .flight-choice-times { font-family: var(--f-mono); font-size: 12px; line-height: 1.6; color: var(--ink-2); }
 .form-clear { min-height: 44px; }
+
+/* a broken screen says what broke */
+.crashed-body { display: grid; gap: 14px; width: min(520px, 100%); text-align: left; }
+.crashed-error { margin: 0; padding: 12px; max-height: 40dvh; overflow: auto; background: var(--soft); font: 12.5px/1.5 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
