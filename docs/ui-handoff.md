@@ -453,7 +453,7 @@ Picked: **1b, 2b** (built 14 nov 2026, not yet pushed)
 
 - **The crash page shows what broke only while developing.** On the live site it says the page broke and offers "try again" and "reload from the server". The error goes to the browser console instead.
 
-### Money header (decided 15 nov 2026)
+### Money header (decided 15 nov 2026)okay good 
 
 - **The total has room under it.** The big total's line height is 1.15, so the tails of "jpy" no longer touch "in total" below it.
 - **"Shown in" sits on the line under the total,** after "in total" (or "of €6,000 · €894 left"). It isn't a separate box at the top right any more, so it no longer looks like it should line up with the add-a-cost picker. The note that each cost keeps its own currency moved into the total's (i).
@@ -468,3 +468,8 @@ Picked: **1b, 2b** (built 14 nov 2026, not yet pushed)
   - Comments is the same dashed typing line as notes.
   - Every pick saves at once, and comments save when you leave them. "saved" shows underneath, or the reason it failed with a retry.
   - Past visits are under "earlier" as plain lines: who and when, then "done · 4/5 · would return", then their comments.
+
+### Adding a line (decided 15 nov 2026)
+
+- **A line just added glows softly and fades.** It no longer has a black ring around it.
+- **The empty typing line at the end of a day has no box when focused.** Its dashed underline turns solid ink, like the other typing lines. The time beside it gets the same underline.

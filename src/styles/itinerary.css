@@ -18,7 +18,8 @@
 .itin-line.quiet .itin-title { font-weight: 400; color: var(--ink-2); font-size: 14.5px; }
 .itin-line:hover { background: var(--soft); }
 .itin-line.current { box-shadow: 0 0 0 1px var(--ink); }
-@keyframes lit { from { background: var(--soft); box-shadow: 0 0 0 2px var(--ink); } to { background: transparent; box-shadow: 0 0 0 2px transparent; } }
+/* a line just added glows softly and fades: no ring, no box */
+@keyframes lit { from { background: var(--soft); } to { background: transparent; } }
 
 button.itin-time { cursor: pointer; min-height: 40px; }
 .itin-time > span:first-child { color: var(--ink-2); font-size: 13.5px; }
@@ -34,7 +35,9 @@ button.itin-time { cursor: pointer; min-height: 40px; }
 }
 .line-times input::placeholder { color: var(--ink-3); }
 .line-name::placeholder { color: var(--ink-3); }
-.line-times input:focus-visible, .line-name:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 6px; }
+/* typing on the empty line: its dashed line turns solid, like the other typing lines; never a box */
+.line-times input:focus-visible { outline: none; box-shadow: inset 0 -1px 0 var(--ink); }
+.line-name:focus-visible { outline: none; border-bottom: 1px solid var(--ink); }
 .line-name {
   min-width: 0; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line); background: none;
   color: var(--ink); font: inherit; font-size: 16px;
