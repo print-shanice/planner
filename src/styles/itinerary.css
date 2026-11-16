@@ -16,10 +16,10 @@
 .itin-snippet { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .itin-line > .pill { margin-top: 8px; }
 .itin-line.quiet .itin-title { font-weight: 400; color: var(--ink-2); font-size: 14.5px; }
-.itin-line:hover { background: var(--soft); }
+@media (hover: hover) { .itin-line:hover { background: var(--soft); } }
 .itin-line.current { box-shadow: 0 0 0 1px var(--ink); }
-/* a line just added glows softly and fades: no ring, no box */
-@keyframes lit { from { background: var(--soft); } to { background: transparent; } }
+/* a line just added fades in where it lands: nothing drawn around it, no fill, no ring */
+@keyframes lit { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 button.itin-time { cursor: pointer; min-height: 40px; }
 .itin-time > span:first-child { color: var(--ink-2); font-size: 13.5px; }
@@ -43,8 +43,8 @@ button.itin-time { cursor: pointer; min-height: 40px; }
   color: var(--ink); font: inherit; font-size: 16px;
 }
 .line-problem { grid-column: 2 / -1; margin: 4px 0 0; }
-.lit { animation: lit 1.6s ease-out; }
-@media (prefers-reduced-motion: reduce) { .lit { animation: none; } }
+.lit:not(.gpin) { animation: lit .6s ease-out; }
+@media (prefers-reduced-motion: reduce) { .lit:not(.gpin) { animation: none; } }
 
 /* a live line: its time is text you click into and type over, like a doc; its name opens its card */
 .itin-line.doc { align-items: start; }

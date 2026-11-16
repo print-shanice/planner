@@ -40,7 +40,7 @@ test.describe('touch help', () => {
     await page.setViewportSize({ width: 320, height: 844 })
     await open(page, '/trip/eu?tab=money')
     const currency = page.getByRole('combobox', { name: 'show in' })
-    await page.getByRole('button', { name: 'about display currency' }).tap()
+    await page.getByRole('button', { name: 'about the total' }).tap()
     await expect(page.getByRole('tooltip')).toBeVisible()
     await expect(currency).toHaveValue('EUR')
     await page.getByTestId('money-total').tap()

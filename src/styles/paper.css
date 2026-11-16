@@ -103,7 +103,8 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .itin-end { display: flex; align-items: center; gap: 2px; min-height: 44px; margin-top: -2px; }
 /* Keep statuses at the same right edge, after each row's optional controls. */
 .itin-end .pill { order: 1; margin-right: 2px; }
-.itin-line:hover { background: var(--paper-2); }
+/* a phone keeps a tapped line "hovered"; only a mouse shades it */
+@media (hover: hover) { .itin-line:hover { background: var(--paper-2); } }
 .itin-line.quiet .itin-title { font-size: 14px; }
 .itin-line.quiet .itin-main { min-height: 40px; padding: 10px 0 6px; }
 .cat {

@@ -471,5 +471,6 @@ Picked: **1b, 2b** (built 14 nov 2026, not yet pushed)
 
 ### Adding a line (decided 15 nov 2026)
 
-- **A line just added glows softly and fades.** It no longer has a black ring around it.
+- **A line just added fades in where it lands.** Nothing is drawn around it: no ring, no grey fill. On a phone a soft grey block still read as a box.
+- **Only a mouse shades a line on hover.** A phone kept a tapped line shaded, which looked like a box.
 - **The empty typing line at the end of a day has no box when focused.** Its dashed underline turns solid ink, like the other typing lines. The time beside it gets the same underline.
