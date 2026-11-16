@@ -176,7 +176,7 @@ it('the name on a line opens its card, like a flight; there is no › and no nam
 it('a changed time shows a save button, then says saving and saved', async () => {
   let land!: () => void
   // the time's own save waits; the day's order saves as usual
-  db.save.mockImplementation((x: { time?: string }) => 'time' in x ? new Promise<unknown>((r) => { land = () => r({}) }) : Promise.resolve({}))
+  db.save.mockImplementation((x: unknown) => 'time' in (x as object) ? new Promise<unknown>((r) => { land = () => r({}) }) : Promise.resolve({}))
   show(tokyo())
   expect(screen.queryByRole('button', { name: 'save neel' })).toBeNull()
   const start = screen.getByRole('textbox', { name: 'start time of neel' })
