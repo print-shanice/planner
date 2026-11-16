@@ -115,3 +115,16 @@ it("a line's icon sits in the middle of its 44px button, level with the time and
   expect(ruleFor('.marker-btn .cat')).toMatch(/align-self:\s*center/)
   expect(ruleFor('.marker-btn')).toMatch(/width:\s*44px;\s*height:\s*44px/)
 })
+
+it('typing on a day\'s empty line underlines it in ink, never a box, however it was focused', () => {
+  const on = (sel: RegExp) => rules.filter(([s]) => sel.test(s)).map(([, b]) => b).join(';')
+  // :focus, not only :focus-visible: a tap or click counts, and it beats the dashed line's own rule
+  const name = on(/\.add-line \.line-name:focus(?!-)/)
+  expect(name).toMatch(/outline:\s*none/)
+  expect(name).toMatch(/border-bottom(-color)?:[^;]*var\(--ink\)/)
+  const time = on(/\.add-line \.line-times input:focus(?!-)/)
+  expect(time).toMatch(/outline:\s*none/)
+  // nothing rings the line or rounds it into a box while you type
+  const boxed = rules.filter(([s, b]) => /\.(line-name|line-times input|line-edit)[^,]*:focus/.test(s) && /outline:\s*(?!none\b)[^\s;]|border-radius|0 0 0 \d/.test(b))
+  expect(boxed).toEqual([])
+})

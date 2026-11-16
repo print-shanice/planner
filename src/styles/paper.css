@@ -145,6 +145,9 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .add-line .line-edit { grid-template-columns: 52px minmax(0, 1fr) auto; }
 .add-line .line-name { margin-left: 36px; border-bottom: 1px dashed var(--line); font-size: 15px; }
 .add-line .line-go { min-height: 36px; }
+/* typing on it: the dashed line turns solid ink; no ring or box, however it was focused (shanice, 16 nov) */
+.add-line .line-name:focus, .add-line .line-name:focus-visible { outline: none; border-bottom: 1px solid var(--ink); }
+.add-line .line-times input:focus, .add-line .line-times input:focus-visible { outline: none; box-shadow: inset 0 -1px 0 var(--ink); }
 .doc mark { background: var(--found); color: inherit; border-radius: 3px; padding: 0 1px; }
 /* a live line keeps the same level: its time and name are 30px boxes from 5px down */
 .itin-line.doc .itin-time { padding-top: 0; }
