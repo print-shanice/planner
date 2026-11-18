@@ -333,7 +333,8 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .page-form .route { display: grid; gap: 4px; padding-left: 14px; border-left: 1px dashed var(--ink-3); }
 
 /* colours: six dots */
-.page-form .swatches { gap: 12px 12px; }
+/* the colours sit inside a row like every other field: room above and below, its hairline under it */
+.page-form .swatches { gap: 12px 12px; padding: 14px 4px; border-bottom: 1px solid var(--line); }
 
 /* extras: one quiet "more" at the bottom */
 .page-form .folds { margin-top: 28px; border: 0; border-radius: 0; }
