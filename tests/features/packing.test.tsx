@@ -1,3 +1,4 @@
+import type { PackingItem } from '../../src/lib/types'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { trip } from '../factories'
@@ -288,7 +289,7 @@ it('one bag at a time: the filter sits under the meter, the count follows it, an
   render(<PackingTab trip={trip({ id: 'lap' })} />)
   const filter = screen.getByRole('group', { name: 'show bag' })
   expect(within(filter).getAllByRole('button').map((b) => b.textContent)).toEqual(['all', 'check-in', 'carry-on', 'wear'])
-  expect(document.querySelector('.pack-meter')!.nextElementSibling).toBe(filter)
+  expect(document.querySelector('.pack-meter')!.nextElementSibling).toBe(filter.closest('.pack-filter-row'))
   expect(names()).toEqual(['boots', 'charger', 'passport'])
   expect(screen.getByText('1 of 3 packed')).toBeInTheDocument()
   await userEvent.click(within(filter).getByRole('button', { name: 'carry-on' }))
@@ -312,7 +313,7 @@ it('copies the open list to another trip, unticked, with bags, and nothing twice
   await userEvent.click(screen.getByRole('button', { name: 'copy this list to…' }))
   await userEvent.click(within(screen.getByRole('group', { name: 'copy to' })).getByRole('button', { name: 'greece' }))
   expect(db.save).toHaveBeenCalledTimes(1)
-  expect(db.save).toHaveBeenCalledWith({ trip_id: 'gr', text: 'passport', owner: S, packed_by: [], position: 6, bag: 'carry' })
+  expect(db.save).toHaveBeenCalledWith({ id: expect.any(String), trip_id: 'gr', text: 'passport', owner: S, packed_by: [], position: 6, bag: 'carry' })
   expect(screen.getByRole('status')).toHaveTextContent('1 copied to greece')
 })
 
@@ -368,4 +369,180 @@ it("a copy that fails says so beside the copy link, at the end", async () => {
   const alert = await screen.findByRole('alert')
   expect(alert).toHaveTextContent("couldn't copy")
   expect(alert.closest('.pack-copy-wrap')).not.toBeNull()
+})
+
+describe('packs', () => {
+  const pk = (over: Partial<PackingItem>): PackingItem => ({ id: 'x', text: 'x', position: 0, trip_id: 'lap', done: false, packed_by: [], owner: null, ...over })
+  const packs = () => [
+    pk({ id: 'sh', text: 'shirts', is_pack: true, position: 0, bag: 'check' }),
+    pk({ id: 't1', text: 'white tee', parent_id: 'sh', position: 0 }),
+    pk({ id: 't2', text: 'black tees', parent_id: 'sh', position: 1, qty: 3 }),
+    pk({ id: 't3', text: 'striped shirt', parent_id: 'sh', position: 2, qty: 2, packed_by: [S, K] }),
+    pk({ id: 'wa', text: 'toiletries bag', is_pack: true, position: 1, bag: 'carry' }),
+    pk({ id: 'b1', text: 'toothbrush', parent_id: 'wa', position: 0 }),
+    pk({ id: 's1', text: 'socks', position: 2, qty: 7, bag: 'check' }),
+  ]
+  const exactly = (name: string) => new RegExp(`^${name}$`)
+  const head = (name: string) => screen.getByRole('button', { name: exactly(name) })
+
+  it('packs start folded: name, bag, count and a grey line of what is inside; loose things after them', () => {
+    db.packing = packs()
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    const shirts = head('shirts')
+    expect(shirts).toHaveAttribute('aria-expanded', 'false')
+    expect(shirts).toHaveTextContent('check-in')
+    expect(shirts.querySelector('.pack-n')).toHaveTextContent('2 of 6')
+    expect(shirts.querySelector('.pack-peek')).toHaveTextContent('white tee · black tees ×3 · striped shirt ×2')
+    expect(screen.queryByRole('checkbox', { name: 'white tee' })).toBeNull()
+    const list = screen.getByRole('list', { name: 'packing' })
+    expect([...list.children].map((li) => li.textContent?.split(/check-in|carry-on/)[0])).toEqual(['shirts', 'toiletries bag', 'socks×7'])
+    // the count adds up how many: 6 shirts, a toothbrush and 7 socks; 2 striped shirts packed
+    expect(screen.getByText('2 of 14 packed')).toBeInTheDocument()
+  })
+
+  it('a tap opens a pack, its things listed with packed ones last and its own add line; one pack open at a time', async () => {
+    db.packing = packs()
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.click(head('shirts'))
+    expect(head('shirts')).toHaveAttribute('aria-expanded', 'true')
+    const inside = screen.getByRole('list', { name: 'shirts' })
+    expect(within(inside).getAllByRole('checkbox').map((c) => c.getAttribute('aria-label'))).toEqual(['white tee', 'black tees', 'striped shirt'])
+    expect(within(inside).getByRole('textbox', { name: 'add to shirts' })).toBeInTheDocument()
+    expect(head('shirts').querySelector('.pack-peek')).toBeNull()
+    await userEvent.click(head('toiletries bag'))
+    expect(head('shirts')).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('textbox', { name: 'add to shirts' })).toBeNull()
+    expect(screen.getByRole('textbox', { name: 'add to toiletries bag' })).toBeInTheDocument()
+    await userEvent.click(head('toiletries bag'))
+    expect(screen.queryByRole('textbox', { name: 'add to toiletries bag' })).toBeNull()
+  })
+
+  it("adding into a pack puts it at the pack's end, whose the pack is, with how many", async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.click(head('shirts'))
+    await userEvent.type(screen.getByRole('textbox', { name: 'add to shirts' }), '2 grey tees{Enter}')
+    expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'grey tees', qty: 2, owner: null, packed_by: [], position: 3, parent_id: 'sh' })
+    expect(screen.getByRole('textbox', { name: 'add to shirts' })).toHaveValue('')
+  })
+
+  it('the main add line reads how many too', async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'socks x5{Enter}')
+    expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'socks', qty: 5 }))
+    expect(db.save.mock.calls.at(-1)![0]).not.toHaveProperty('parent_id')
+  })
+
+  it('a pack with everything packed sits under packed, folded', () => {
+    db.packing = packs().map((p) => (p.parent_id === 'wa' ? { ...p, packed_by: [S, K] } : p))
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    expect(within(screen.getByRole('list', { name: 'packed' })).getByRole('button', { name: exactly('toiletries bag') })).toHaveAttribute('aria-expanded', 'false')
+    expect(within(screen.getByRole('list', { name: 'packing' })).queryByRole('button', { name: exactly('toiletries bag') })).toBeNull()
+  })
+
+  it("the bag filter shows packs in that bag with all they hold; things inside follow their pack's bag", async () => {
+    db.packing = packs()
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.click(within(screen.getByRole('group', { name: 'show bag' })).getByRole('button', { name: 'carry-on' }))
+    expect(screen.queryByRole('button', { name: exactly('shirts') })).toBeNull()
+    expect(head('toiletries bag')).toBeInTheDocument()
+    expect(screen.getByText('0 of 1 packed')).toBeInTheDocument()
+  })
+
+  it('things inside an open pack show how many, but not a bag', async () => {
+    db.packing = packs()
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.click(head('shirts'))
+    const row = screen.getByRole('checkbox', { name: 'black tees' }).closest('li')!
+    expect(row).toHaveTextContent(/^black tees×3$/)
+  })
+
+  it('new pack: a named pack with its bag is made at the top and opens with the cursor in its add line', async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    const filterRow = document.querySelector('.pack-filter-row')!
+    await userEvent.click(within(filterRow as HTMLElement).getByRole('button', { name: 'new pack' }))
+    const name = screen.getByRole('textbox', { name: 'pack name' })
+    expect(name).toHaveFocus()
+    expect(screen.getByRole('list', { name: 'packing' }).firstElementChild).toContainElement(name)
+    await userEvent.type(name, 'electronics')
+    await userEvent.click(screen.getByRole('button', { name: 'which bag for the pack' }))
+    await userEvent.click(screen.getByRole('option', { name: 'carry-on' }))
+    await userEvent.click(screen.getByRole('button', { name: 'make pack' }))
+    expect(db.save).toHaveBeenCalledWith({ id: expect.any(String), trip_id: 'lap', text: 'electronics', is_pack: true, owner: S, packed_by: [], position: -1, bag: 'carry' })
+  })
+
+  it('a new pack left without a name goes away on escape, and nothing is saved', async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.click(screen.getByRole('button', { name: 'new pack' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('textbox', { name: 'pack name' })).toBeNull()
+    expect(db.save).not.toHaveBeenCalled()
+  })
+
+  it("an open pack's edit renames it or changes its bag; removing it takes what's inside, with one undo", async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<ToastProvider><PackingTab trip={trip({ id: 'lap' })} /></ToastProvider>)
+    await userEvent.click(head('shirts'))
+    await userEvent.click(screen.getByRole('button', { name: 'edit shirts' }))
+    const field = screen.getByRole('textbox', { name: 'pack name' })
+    expect(field).toHaveValue('shirts')
+    expect(screen.queryByRole('group', { name: 'in' })).toBeNull()
+    await userEvent.clear(field)
+    await userEvent.type(field, 'tops')
+    await userEvent.click(within(screen.getByRole('group', { name: 'bag' })).getByRole('button', { name: 'carry-on' }))
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith({ id: 'sh', text: 'tops', bag: 'carry' })
+    await userEvent.click(screen.getByRole('button', { name: 'edit shirts' }))
+    await userEvent.click(screen.getByRole('button', { name: 'remove' }))
+    expect(await screen.findByText('removed shirts')).toBeInTheDocument()
+  })
+
+  it('a loose thing moves into a pack from "in", and its bag goes with the pack', async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.click(screen.getByRole('button', { name: 'edit socks' }))
+    expect(screen.getByRole('textbox', { name: 'packing item' })).toHaveValue('7 socks')
+    const into = screen.getByRole('group', { name: 'in' })
+    expect(within(into).getAllByRole('button').map((b) => b.textContent)).toEqual(['no pack', 'shirts', 'toiletries bag'])
+    expect(screen.getByRole('group', { name: 'bag' })).toBeInTheDocument()
+    await userEvent.click(within(into).getByRole('button', { name: 'shirts' }))
+    // inside a pack there's no bag to pick: it's the pack's
+    expect(screen.queryByRole('group', { name: 'bag' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith({ id: 's1', parent_id: 'sh', position: 3 })
+  })
+
+  it('a thing in a pack moves out to the top of the list', async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<PackingTab trip={trip({ id: 'lap' })} />)
+    await userEvent.click(head('shirts'))
+    await userEvent.click(screen.getByRole('button', { name: 'edit white tee' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'in' })).getByRole('button', { name: 'no pack' }))
+    await userEvent.click(screen.getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith({ id: 't1', parent_id: null, position: -1 })
+  })
+
+  it('copying a list copies its packs with their things inside', async () => {
+    db.packing = packs()
+    db.save.mockReset().mockResolvedValue({})
+    render(<PackingTab trip={trip({ id: 'lap' })} copyTo={[trip({ id: 'gr', name: 'Greece' })]} />)
+    await userEvent.click(screen.getByRole('button', { name: 'copy this list to…' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'copy to' })).getByRole('button', { name: 'greece' }))
+    const calls = db.save.mock.calls.map((c) => c[0])
+    const shirts = calls.find((c) => c.text === 'shirts')
+    expect(shirts).toMatchObject({ trip_id: 'gr', is_pack: true, bag: 'check' })
+    expect(calls.find((c) => c.text === 'black tees')).toMatchObject({ trip_id: 'gr', parent_id: shirts.id, qty: 3 })
+    expect(calls.find((c) => c.text === 'black tees')).not.toHaveProperty('bag')
+    expect(screen.getByRole('status')).toHaveTextContent('7 copied to greece')
+  })
 })

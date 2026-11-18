@@ -78,7 +78,14 @@
 .pack-count { margin-left: auto; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
 .pack-who + .pack-meter { margin-top: -10px; }
 /* the bag filter: small mono words just under the meter, about the list below */
-.pack-meter + .pack-choices { margin-top: -8px; }
+.pack-meter + .pack-filter-row { margin-top: -8px; }
+/* the bag filter on the left, "new pack" on the right, one baseline */
+.pack-filter-row { display: flex; align-items: baseline; gap: 12px; min-height: 28px; }
+.pack-new { margin-left: auto; min-height: 44px; margin-block: -10px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 14px; font-weight: 650; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
+.pack-new:hover { text-decoration-color: var(--ink); }
+.pack-new:active { filter: brightness(.85); }
+.pack-new:disabled { color: var(--ink-3); cursor: default; }
 /* the weather wraps as one piece, never leaving a lone "3°" */
 .pack-meta [aria-label="weather"] { white-space: nowrap; }
 .pack-link, .pack-copy-to button { padding: 0; border: 0; background: none; color: var(--ink); font-size: 14px; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
@@ -98,8 +105,10 @@
 .pack-meter { height: 2px; background: var(--soft); overflow: hidden; }
 .pack-meter > span { display: block; height: 100%; background: var(--ink); transition: width .2s; }
 .pack-list { border-top: 0; }
-.pack-list > li { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 2px 0 8px; background: var(--card); touch-action: pan-y; }
-.pack-tick { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 44px; margin-left: -12px; cursor: pointer; }
+.pack-list > li, .pack-inside > li { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0; background: var(--card); touch-action: pan-y; }
+/* one grid for the whole list: tick boxes and pack names start at the page's left edge, names of things at 31px;
+   inside an open pack the ticks sit on that 31px column, under a thin line at 6px; bags and counts end at the right edge */
+.pack-tick { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 44px; margin-left: -13px; cursor: pointer; }
 .pack-tick input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .pack-tick:has(input:focus-visible) .tick { outline: 2px solid var(--ink); outline-offset: 3px; }
 /* a hairline square, ticked with a thin stroke and never filled */
@@ -109,11 +118,45 @@
 .packed .pack-tick .tick::after { content: ""; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid var(--ink); border-width: 0 1.25px 1.25px 0; transform: rotate(45deg); }
 .pack-name { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 16px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
 .packed .pack-name { color: var(--ink-3); }
-.pack-bag { flex: none; padding-right: 2px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
+.pack-bag { flex: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
+.pack-qty { margin-left: 6px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.packed .pack-qty { color: var(--ink-3); }
 .packed .pack-bag { color: var(--ink-3); }
 .pack-done-head { margin: 10px 0 0; }
 .map-search input::placeholder { color: var(--ink-3); }
 .packing .pack-add { margin-top: 0; }
+.jot.pack-add input { padding-left: 0; }
+.jot.pack-add .line-go { padding-right: 0; text-align: right; }
+
+/* a pack: the whole head is the fold button (name, bag, count, then a grey line of what's in it) */
+.pack-list > li.pack-group { display: block; min-height: 0; }
+.pack-head { position: relative; }
+.pack-toggle { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; min-height: 48px; padding: 13px 0 12px; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
+.pack-toggle:active { filter: brightness(.85); }
+.pack-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.pack-group-name { min-width: 0; font-size: 16px; font-weight: 650; overflow-wrap: anywhere; }
+.pack-title .pack-bag { margin-left: auto; }
+.pack-n { flex: none; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.pack-title .pack-group-name + .pack-n { margin-left: auto; }
+.pack-peek { font-size: 14px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pack-edit-over { position: absolute; top: 13px; left: 0; right: 150px; display: flex; align-items: baseline; gap: 12px; white-space: nowrap; overflow: hidden; pointer-events: none; }
+.pack-ghost { visibility: hidden; }
+.pack-edit-link { pointer-events: auto; min-height: 44px; margin-block: -12px; padding: 0 2px; border: 0; background: none; color: var(--ink-2); font-size: 14px; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
+.pack-edit-link:hover { color: var(--ink); text-decoration-color: var(--ink); }
+.pack-group.packed .pack-group-name, .pack-group.packed .pack-n { color: var(--ink-3); font-weight: 500; }
+/* what's inside an open pack hangs off a thin line; its own add line closes it */
+.pack-inside { list-style: none; margin: -4px 0 12px 6px; padding: 0 0 0 24px; border-left: 1px solid var(--line); }
+.pack-inside > li { min-height: 44px; }
+.pack-inside > li.pack-inside-add { display: block; min-height: 0; }
+.pack-inside .jot.pack-add { margin: 0; }
+.pack-inside .jot.pack-add input { min-height: 44px; font-size: 15px; }
+/* a new pack: its name line at the top of the list, bold like a pack's name */
+.pack-list > li.pack-draft { padding: 4px 0 0; }
+/* the new pack's ink underline is the line between it and the next row */
+.pack-list > li.pack-draft + li { border-top-color: transparent; }
+.pack-name-line.jot { margin: 0; }
+.pack-name-line input { font-weight: 650; }
 /* the add line (shared .jot look in paper.css): the field, the bag and "add" on one baseline over one underline */
 /* the bag new things go in: the planner's own dropdown as a quiet mono word on the line, ink once a bag is picked */
 .pack-add .pack-add-bag {
@@ -123,8 +166,18 @@
 .pack-add .pack-add-bag.set { color: var(--ink); text-decoration-color: var(--ink); }
 .pack-add .pack-add-bag:hover, .pack-add .pack-add-bag[aria-expanded="true"] { color: var(--ink); text-decoration-color: var(--ink); }
 .pack-add .pack-add-bag:active { filter: brightness(.85); }
-.pack-edit { flex: 1; display: grid; gap: 10px; padding: 10px 0; }
-.pack-edit .row { display: flex; align-items: center; gap: 8px; }
+.pack-edit { flex: 1; display: grid; gap: 12px; padding: 6px 0 12px; }
+/* editing a thing or a pack: its name on an ink underline, a labelled row of words per choice, and words to finish */
+.pack-edit .input { min-height: 44px; padding: 0; border: 0; border-bottom: 1px solid var(--ink); border-radius: 0; background: none; box-shadow: none; font-size: 16px; color: var(--ink); }
+.pack-edit .input:focus, .pack-edit .input:focus-visible { outline: none; box-shadow: none; border-bottom-width: 2px; }
+.pack-edit .pack-choices { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: baseline; }
+.pack-edit .pack-choices-words { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.pack-choices-k { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.pack-edit .row { display: flex; align-items: center; gap: 18px; }
+.pack-edit .row .btn { min-height: 44px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 14px; color: var(--ink-2); }
+.pack-edit .row .btn.primary { color: var(--ink); font-weight: 650; }
+.pack-edit .row .btn:disabled { color: var(--ink-3); }
+.pack-edit .row .btn:active { filter: brightness(.85); }
 @media (prefers-reduced-motion: reduce) { .pack-meter > span { transition: none; } }
 
 .list > li:has(.save-failed) { flex-wrap: wrap; }

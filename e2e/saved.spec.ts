@@ -152,6 +152,27 @@ test.describe('packing', () => {
     await expect(pack).toContainText('2 of 3 packed')
   })
 
+  test('a pack: make it, fill it, fold it, and its count adds up how many', async ({ page }) => {
+    await open(page, '/?view=packing&trip=eu')
+    const pack = page.getByRole('region', { name: 'packing' })
+    await pack.getByRole('button', { name: 'new pack' }).click()
+    await pack.getByRole('textbox', { name: 'pack name' }).fill('shirts')
+    await pack.getByRole('button', { name: 'make pack' }).click()
+    const into = pack.getByRole('textbox', { name: 'add to shirts' })
+    await expect(into).toBeFocused()
+    await into.fill('3 black tees')
+    await into.press('Enter')
+    await expect(into).toHaveValue('')
+    await into.fill('white tee')
+    await into.press('Enter')
+    await expect(pack.getByRole('list', { name: 'shirts' })).toContainText('black tees×3')
+    const head = pack.getByRole('button', { name: 'shirts', exact: true })
+    await head.click()
+    await expect(head).toHaveAttribute('aria-expanded', 'false')
+    await expect(head).toContainText('0 of 4')
+    await expect(head).toContainText('black tees ×3 · white tee')
+  })
+
   test("maya's list has her things and the shared ones; a shared tick is hers alone", async ({ page }) => {
     await open(page, '/?view=packing&trip=eu')
     const pack = page.getByRole('region', { name: 'packing' })
