@@ -924,31 +924,49 @@ describe('packing, one trip at a time from home', () => {
     ]
   })
 
-  const trips = (name: string) => within(screen.getByRole('tablist', { name: 'trip' })).getAllByRole('tab').map((t) => [t.textContent, t.getAttribute('aria-selected')])
-  const when = (name: string) => within(screen.getByRole('tablist', { name: 'which trips' })).getByRole('tab', { name })
+  const menu = () => screen.getByRole('button', { name: 'packing for which trip' })
+  const heads = () => within(screen.getByRole('listbox')).getAllByRole('presentation').map((h) => h.textContent)
 
-  it('opens on the trip coming up next, with no "packing for" line', () => {
+  it('opens on the trip coming up next, named on one "packing for" line', () => {
     show('/?view=packing')
-    expect(trips('trip')).toEqual([['lapland', 'true'], ['greece', 'false']])
-    expect(when('coming up')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText(/packing for/)).toBeInTheDocument()
+    expect(menu()).toHaveTextContent('lapland')
     expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('thermal gloves')
     expect(screen.queryByText('sunscreen')).toBeNull()
-    expect(screen.queryByText('packing for')).toBeNull()
+    expect(screen.queryByRole('tablist', { name: 'which trips' })).toBeNull()
+    expect(screen.queryByRole('tablist', { name: 'trip' })).toBeNull()
   })
 
-  it('another trip is picked from the tabs, and the address keeps it', async () => {
+  it('another trip is picked from the menu, and the address keeps it', async () => {
     show('/?view=packing')
-    await userEvent.click(within(screen.getByRole('tablist', { name: 'trip' })).getByRole('tab', { name: 'greece' }))
+    await userEvent.click(menu())
+    await userEvent.click(screen.getByRole('option', { name: 'greece' }))
     expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('sunscreen')
-    expect(trips('trip')).toEqual([['lapland', 'false'], ['greece', 'true']])
+    expect(menu()).toHaveTextContent('greece')
   })
 
-  it('past shows the trips that have ended, and back again', async () => {
+  it('the menu has the trips coming up, then the past ones', async () => {
     show('/?view=packing')
-    await userEvent.click(when('past'))
-    expect(trips('trip')).toEqual([['lisbon', 'true']])
-    await userEvent.click(when('coming up'))
-    expect(trips('trip')).toEqual([['lapland', 'true'], ['greece', 'false']])
+    await userEvent.click(menu())
+    expect(heads()).toEqual(['coming up', 'past'])
+    expect(within(screen.getByRole('listbox')).getAllByRole('option').map((o) => o.textContent)).toEqual(['lapland', 'greece', 'lisbon'])
+    expect(screen.getByRole('option', { name: 'lapland' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('with nothing past there is no past heading', async () => {
+    db.trips = [gr, lap]
+    show('/?view=packing')
+    await userEvent.click(menu())
+    expect(heads()).toEqual(['coming up'])
+  })
+
+  it('a side trip sits under its parent in the menu, and can be packed for', async () => {
+    db.trips = [gr, lap, old, trip({ id: 'ab', parent_id: 'lap', name: 'abisko', start_date: '2027-02-08', end_date: '2027-02-09' })]
+    show('/?view=packing&trip=ab')
+    expect(menu()).toHaveTextContent('abisko')
+    await userEvent.click(menu())
+    expect(screen.getByRole('option', { name: 'abisko' })).toHaveAttribute('data-depth', '1')
+    expect(heads()).toEqual(['coming up', 'past'])
   })
 
   it('a trip in the address opens on it', () => {

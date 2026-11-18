@@ -126,7 +126,7 @@ test.describe('packing', () => {
   test('add, tick, bag, rename and remove; packed things move under "packed"', async ({ page }) => {
     await open(page, '/trip/eu?tab=packing')
     const pack = page.getByRole('region', { name: 'packing' })
-    await expect(pack).not.toContainText('packing for')
+    await expect(pack).toContainText('packing for')
     // my list: my things and the shared ones
     await expect(pack).toContainText('2 of 3 packed')
     await pack.getByRole('textbox', { name: 'add to pack' }).fill('sunglasses')

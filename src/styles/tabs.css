@@ -49,8 +49,9 @@
 .link-title { font-weight: 500; overflow-wrap: anywhere; }
 .link-text .muted { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* packing: text tabs (which trips, the trip, whose list), the dates with one line of weather, then the list.
-   a thing is a hairline square, its name, and its bag in brackets; packed things move under "packed" */
+/* packing: "packing for <trip>" (the name opens a menu), one mono line of dates and weather, whose list with the count
+   over a full-width meter, the add line, then the list. a thing is a hairline square, its name, and its bag as a quiet
+   word; packed things move under "packed"; copying the list sits at the end */
 .home-packing { display: grid; gap: 14px; min-width: 0; }
 .pack-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); min-width: 0; }
 .pack-tabs button {
@@ -59,12 +60,13 @@
 }
 .pack-tabs button[aria-selected="true"] { color: var(--ink); font-weight: 650; border-bottom-color: var(--ink); }
 .pack-tabs.small button { min-height: 36px; font-size: 14px; }
-/* the trips scroll sideways on their own; a fade at the right edge says there are more */
-.pack-trips { position: relative; min-width: 0; }
-.pack-trips .pack-tabs { overflow-x: auto; scrollbar-width: none; padding-right: 28px; }
-.pack-trips .pack-tabs::-webkit-scrollbar { display: none; }
-.pack-trips::after { content: ""; position: absolute; top: 0; right: 0; bottom: 1px; width: 28px; background: linear-gradient(90deg, transparent, var(--ground)); pointer-events: none; }
-.pack-swatch { width: 8px; height: 8px; flex: none; }
+.pack-for { margin: 0; font-size: 17px; color: var(--ink-2); }
+.pack-for .pack-for-pick {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none;
+  max-width: 100%; color: var(--ink); font: inherit; font-weight: 650; text-align: left; cursor: pointer;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+}
+.pack-for .pack-for-pick:active { filter: brightness(.85); }
 .pack-meta { display: grid; gap: 3px; }
 .pack-meta-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .pack-weather { margin: 0; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
