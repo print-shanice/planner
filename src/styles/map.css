@@ -84,12 +84,15 @@
 /* planning a place from its card: which day (a dropdown), a time, one button that says what it will do */
 .place-card-plan { display: grid; gap: 8px; flex: 1 1 100%; }
 .place-card-when { display: flex; gap: 8px; }
+.place-card-when { align-items: center; }
+/* the day reads like every other dropdown: an underlined word that opens the planner's own list (shanice, 18 nov) */
 .day-menu {
-  flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 12px;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: 15px; cursor: pointer;
+  flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; border: 0; background: none; color: var(--ink);
+  font: inherit; font-size: 15px; font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
-.day-menu:hover { filter: brightness(.97); }
-.place-card-time { width: 88px; flex: none; min-height: 44px; font-family: var(--f-mono); }
+.day-menu:active { filter: brightness(.85); }
+.place-card-time { width: 72px; flex: none; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; background: none; font-family: var(--f-mono); }
+.place-card-time:focus { outline: none; border-bottom: 1px solid var(--ink); }
 .day-list {
   z-index: 80; max-height: 340px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
   background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .08);

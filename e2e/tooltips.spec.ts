@@ -16,12 +16,12 @@ test('help remains readable across the hover gap and Escape leaves the page in p
   await expect(page.getByTestId('money-total')).toBeVisible()
 })
 
-test('keyboard help in a form dismisses before the form and preserves the switch action', async ({ page }) => {
+test('keyboard help in a form dismisses before the form and keeps what it was about to pick', async ({ page }) => {
   await open(page, '/trip/par?tab=money')
   await page.getByRole('button', { name: 'add', exact: true }).click()
   await page.getByRole('button', { name: 'cost', exact: true }).click()
   const form = page.getByRole('dialog', { name: 'new cost' })
-  const help = form.getByRole('button', { name: 'about paid already' })
+  const help = form.getByRole('button', { name: 'about paid' })
   await help.focus()
   await expect(page.getByRole('tooltip')).toBeVisible()
   await expect(help).toHaveAccessibleDescription(/paid spending and shared balances/)
@@ -29,8 +29,8 @@ test('keyboard help in a form dismisses before the form and preserves the switch
   await expect(page.getByRole('tooltip')).toBeHidden()
   await expect(form).toBeVisible()
   await expect(help).toBeFocused()
-  await form.getByRole('switch', { name: 'paid already' }).click()
-  await expect(form.getByRole('switch', { name: 'paid already' })).toHaveAttribute('aria-checked', 'true')
+  await form.getByRole('button', { name: 'paid', exact: true }).click()
+  await expect(form.getByRole('button', { name: 'paid', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(form.getByRole('group', { name: 'paid by' })).toBeVisible()
 })
 
@@ -39,10 +39,10 @@ test.describe('touch help', () => {
   test('a tap opens explanatory help without changing money filters or currency', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 844 })
     await open(page, '/trip/eu?tab=money')
-    const currency = page.getByRole('combobox', { name: 'show in' })
+    const currency = page.getByRole('button', { name: 'show in' })
     await page.getByRole('button', { name: 'about the total' }).tap()
     await expect(page.getByRole('tooltip')).toBeVisible()
-    await expect(currency).toHaveValue('EUR')
+    await expect(currency).toHaveText('eur')
     await page.getByTestId('money-total').tap()
     await expect(page.getByRole('tooltip')).toBeHidden()
     await page.getByRole('button', { name: 'about settling up' }).tap()

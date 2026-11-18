@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import type { Link, Trip } from '../../lib/types'
-import { useRemove, useSave, useStops } from '../../lib/queries'
+import { useRemove, useStops } from '../../lib/queries'
 import { useCanEdit } from '../../lib/offline'
 import { hostOf, safeUrl } from '../../lib/embed'
 import { linkName } from '../../lib/capture'
 import { Icon } from '../../components/Icon'
-import { TwoTapDelete } from '../../components/TwoTapDelete'
-import { ItemMenu } from './ItemMenu'
 import { SaveFailed } from '../../components/SaveFailed'
 import { Sheet } from '../../components/Sheet'
 import { CaptureForm } from '../capture/CaptureForm'
@@ -24,7 +22,6 @@ export function SiteIcon({ url }: { url: string }) {
 export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
   const [editing, setEditing] = useState(false)
   const href = safeUrl(link.url) ?? undefined
-  const save = useSave('links')
   const remove = useRemove('links')
   const canEdit = useCanEdit()
   const name = linkName(link)
@@ -42,25 +39,13 @@ export function LinkCard({ link, trips }: { link: Link; trips: Trip[] }) {
             {name.sub && <span className="muted">{name.sub}</span>}
           </span>
         </a>
-        {place && <button type="button" className="text-select link-place" onClick={() => sheet?.openStop(place.id)}>{stopTitle(place).toLowerCase()} →</button>}
-        {canEdit && (
-          <ItemMenu title={title}>
-            {(close) => (<>
-              <button type="button" className="btn ghost" onClick={() => { close(); setEditing(true) }}>edit link</button>
-              <label className="field">
-                <span className="label">move to trip</span>
-                <select value={link.trip_id ?? ''} onChange={(ev) => save.mutate({ id: link.id, trip_id: ev.target.value || null })}>
-                  {!link.trip_id && <option value="">unsorted</option>}
-                  {[...trips].sort((a, b) => a.name.localeCompare(b.name)).map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
-                </select>
-              </label>
-              <div className="row"><TwoTapDelete label="remove" onConfirm={() => remove.mutate(link.id)} /></div>
-            </>)}
-          </ItemMenu>
-        )}
+        {place && <button type="button" className="text-select link-place" onClick={() => sheet?.openStop(place.id)}>{stopTitle(place).toLowerCase()}</button>}
+        {/* a row's actions are one "edit" word, like packing (shanice, 18 nov): the form moves it to another trip or removes it */}
+        {canEdit && <button type="button" className="row-edit" aria-label={`edit ${title}`} onClick={() => setEditing(true)}>edit</button>}
       </div>
       <Sheet page open={editing} title="edit link" onClose={() => setEditing(false)}>
-        <CaptureForm initial={null} tripId={link.trip_id} link={link} onDone={() => setEditing(false)} />
+        <CaptureForm initial={null} tripId={link.trip_id} link={link} onDone={() => setEditing(false)}
+          onRemove={() => { setEditing(false); remove.mutate(link.id) }} />
       </Sheet>
       <SaveFailed table="links" id={link.id} />
     </article>

@@ -49,6 +49,7 @@ import { HomePage } from '../../src/features/home/HomePage'
 import { TripForm } from '../../src/features/home/TripForm'
 import { ToastProvider } from '../../src/components/Toast'
 import { colourVar } from '../../src/lib/colors'
+import { choose } from '../choose'
 
 function Where() {
   const l = useLocation()
@@ -137,7 +138,8 @@ it('trip form saves dates and currency', async () => {
   await userEvent.type(within(dialog).getByLabelText('name'), 'lapland')
   fireEvent.change(within(dialog).getByLabelText('starts'), { target: { value: '2027-02-07' } })
   fireEvent.change(within(dialog).getByLabelText('ends'), { target: { value: '2027-02-11' } })
-  await userEvent.selectOptions(within(dialog).getByLabelText('currency'), 'SGD')
+  await userEvent.click(within(dialog).getByRole('button', { name: /budget, notes/ }))
+  await choose(within(dialog).getByRole('button', { name: 'currency' }), 'SGD')
   await userEvent.click(within(dialog).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({
     name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11', currency: 'SGD', parent_id: null,
@@ -193,7 +195,8 @@ it('a deleted trip is really deleted when its toast ends', async () => {
 it('part of excludes the trip itself and its side trips', () => {
   db.trips = europe()
   render(<MemoryRouter><TripForm trip={db.trips[2] as Trip} onDone={() => {}} /></MemoryRouter>)
-  const opts = within(screen.getByLabelText('part of')).getAllByRole('option', { hidden: true }).map((o) => o.textContent)
+  fireEvent.click(screen.getByRole('button', { name: 'part of', hidden: true }))
+  const opts = screen.getAllByRole('option', { hidden: true }).map((o) => o.textContent)
   expect(opts).toEqual(['none', 'summer'])
 })
 

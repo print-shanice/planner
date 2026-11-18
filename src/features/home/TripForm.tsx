@@ -9,6 +9,7 @@ import { Fold } from '../../components/Fold'
 import { Pick } from '../../components/Pick'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
+import { FieldMenu } from '../../components/FieldMenu'
 import { PlaceField } from '../stops/PlaceField'
 import { COLOUR_NAMES, PICKER_ORDER, colourIndex, colourVar } from '../../lib/colors'
 
@@ -95,21 +96,11 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
               <span className="label">budget</span>
               <input type="number" inputMode="decimal" min="0" step="any" value={budget} onChange={(e) => setBudget(e.target.value)} />
             </label>
-            <label className="field currency-field">
-              <span className="label">currency</span>
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </label>
+            <FieldMenu className="currency-field" label="currency" value={currency} onPick={setCurrency} options={currencies.map((c) => ({ value: c, label: c }))} />
           </div>
           {trip && (
-            <label className="field">
-              <span className="label">part of</span>
-              <select value={parent ?? ''} onChange={(e) => setParent(e.target.value || null)}>
-                <option value="">none</option>
-                {parentChoices.map((t) => <option key={t.id} value={t.id}>{t.name.toLowerCase()}</option>)}
-              </select>
-            </label>
+            <FieldMenu label="part of" value={parent ?? ''} onPick={(v) => setParent(v || null)}
+              options={[{ value: '', label: 'none' }, ...parentChoices.map((t) => ({ value: t.id, label: t.name.toLowerCase(), color: t.color }))]} />
           )}
           <label className="field">
             <span className="label">notes</span>

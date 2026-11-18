@@ -33,6 +33,7 @@ import { useHighlight } from '../trip/highlight'
 import { Icon } from '../../components/Icon'
 import { Tooltip } from '../../components/Tooltip'
 import { count } from '../../lib/words'
+import { ChoiceMenu } from '../../components/ChoiceMenu'
 
 type Card = { place: Place; stopId?: string; seq: number; looking?: boolean }
 
@@ -220,11 +221,10 @@ export const MapTab = memo(function MapTab({ trip, phone = false, ideas = false 
             ? <FindPanel key={finding.id} stop={finding} near={biasFor(trip, trips, stops, finding.day)} onDone={doneFinding} />
             : <AddPlaceField alwaysOpen label="search" near={view ?? middleOf(data) ?? (hasPoint(trip.base) ? { lat: trip.base.lat!, lng: trip.base.lng! } : null)} onPick={(p) => setCard({ place: p, seq: ++seq.current })} onGrab={grabHit} />}
         </div>
-        {phone ? <label className="map-scope"><span>show</span><select aria-label="map scope" value={filter} onChange={e => setFilter(e.target.value)}>
-          <option value="all">whole trip</option>
-          {[...new Set([...days, ...(isDay ? [filter] : [])])].sort().map(d => <option key={d} value={d}>{dayLabel(d)}</option>)}
-          <option value="saved">ideas</option>
-        </select></label> : null}
+        {phone ? (() => {
+          const scopes = [{ value: 'all', label: 'whole trip' }, ...[...new Set([...days, ...(isDay ? [filter] : [])])].sort().map(d => ({ value: d, label: dayLabel(d) })), { value: 'saved', label: 'ideas' }]
+          return <span className="map-scope"><span aria-hidden="true">show</span><ChoiceMenu label={scopes.find((o) => o.value === filter)?.label ?? filter} ariaLabel="map scope" align="left" selected={filter} options={scopes} onPick={setFilter} /></span>
+        })() : null}
         {load.state === 'loading' && <span className="chip-pill quiet" role="status" aria-label="loading">loading</span>}
         {(load.state === 'failed' || load.stale) && <LoadNotice onRetry={load.retry} />}
       </div>

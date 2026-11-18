@@ -10,6 +10,8 @@ import { byStart } from '../../lib/dates'
 import { useCanEdit } from '../../lib/offline'
 import { useToast } from '../../components/Toast'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
+import { FieldMenu } from '../../components/FieldMenu'
+import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { SiteIcon } from '../saved/LinkCard'
 import { stopTitle } from '../plan/stopText'
 
@@ -22,7 +24,7 @@ function tripLabel(t: Trip, trips: Trip[]): string {
 
 // one way to keep a link (a reel, a video, a page): pasted, shared in, or opened from the shortcut.
 // only the link is needed; title, note, trip and place are all optional, and no date is ever asked for
-export function CaptureForm({ initial, tripId, stopId, link, onDone }: { initial: Incoming | null; tripId: string | null; stopId?: string | null; link?: Link; onDone: (saved?: Link) => void }) {
+export function CaptureForm({ initial, tripId, stopId, link, onDone, onRemove }: { initial: Incoming | null; tripId: string | null; stopId?: string | null; link?: Link; onDone: (saved?: Link) => void; onRemove?: () => void }) {
   const save = useSave<Link>('links')
   const links = useLinks().data ?? []
   const trips = useTrips().data ?? []
@@ -87,24 +89,16 @@ export function CaptureForm({ initial, tripId, stopId, link, onDone }: { initial
       {already && <p className="note-line" role="status">already saved in {where}{already.title ? ` · ${already.title}` : ''}</p>}
       <label className="field"><span className="label">title</span><input value={form.title} placeholder={url ? linkTitle(url) : ''} onChange={(e) => set({ title: e.target.value })} /></label>
       <label className="field"><span className="label">note</span><textarea value={form.note} onChange={(e) => set({ note: e.target.value })} /></label>
-      <label className="field">
-        <span className="label">trip</span>
-        <select value={form.trip} onChange={(e) => set({ trip: e.target.value, stop: '' })}>
-          <option value="">inbox</option>
-          {ordered.map((t) => <option key={t.id} value={t.id}>{tripLabel(t, trips)}</option>)}
-        </select>
-      </label>
+      <FieldMenu label="trip" value={form.trip} onPick={(v) => set({ trip: v, stop: '' })}
+        options={[{ value: '', label: 'inbox' }, ...ordered.map((t) => ({ value: t.id, label: tripLabel(t, trips), color: t.color }))]} />
       {places.length > 0 && (
-        <label className="field">
-          <span className="label">for a place</span>
-          <select value={form.stop} onChange={(e) => set({ stop: e.target.value })}>
-            <option value="">none</option>
-            {places.map((s) => <option key={s.id} value={s.id}>{stopTitle(s).toLowerCase()}</option>)}
-          </select>
-        </label>
+        <FieldMenu label="for a place" value={form.stop} onPick={(v) => set({ stop: v })}
+          options={[{ value: '', label: 'none' }, ...places.map((s) => ({ value: s.id, label: stopTitle(s).toLowerCase() }))]} />
       )}
       <FormFooter form={formId} problem={problem ?? failure ?? (!canEdit ? 'offline · not saved yet' : null)} saving={saving} failed={!!failure}
-        onClear={draft.dirty ? () => { draft.clear(); setProblem(null) } : undefined} />
+        onClear={draft.dirty ? () => { draft.clear(); setProblem(null) } : undefined}>
+        {onRemove && <TwoTapDelete label="remove" disabled={!canEdit} onConfirm={onRemove} />}
+      </FormFooter>
     </form>
   )
 }

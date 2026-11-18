@@ -191,13 +191,12 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .note-day-h { margin: 0; padding: 18px 0 8px; }
 
 /* ---------- forms ---------- */
-.category-pick { display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
-.category-pick::-webkit-scrollbar { display: none; }
-.cat-chip {
-  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: 1px solid var(--line);
-  border-radius: 8px; background: var(--card); color: var(--ink); font-size: 14px; cursor: pointer;
-}
-.cat-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--card); }
+/* what kind of place: words like the card's "how", the picked one ink and bold (shanice, 18 nov) */
+.category-pick { display: flex; flex-wrap: wrap; gap: 0 18px; }
+.cat-chip { flex: none; min-height: 40px; padding: 0; border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px; cursor: pointer; }
+.cat-chip .icon { display: none; }
+.cat-chip:hover { color: var(--ink); }
+.cat-chip[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
 .capture-url { display: flex; align-items: center; gap: 10px; }
 .capture-url input { flex: 1; min-width: 0; }
 /* google's attribution under its search results, as its rules ask: roboto 400, 12px, #5e5e5e, never lowercased or translated */
@@ -265,7 +264,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
   justify-self: start; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 14px; border-radius: 8px;
   background: var(--card); box-shadow: var(--float); font-family: var(--f-mono); font-size: 12px; color: var(--ink-2);
 }
-.map-scope select { min-height: 40px; border: 0; background: none; font-family: var(--f-body); font-size: 15px; font-weight: 500; color: var(--ink); text-transform: lowercase; letter-spacing: 0; appearance: none; padding-right: 8px; }
+.map-scope .choice-menu { min-height: 40px; max-width: 60vw; padding: 0 8px 0 0; font-family: var(--f-body); font-size: 15px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-phone .places-sheet { bottom: env(safe-area-inset-bottom); background: var(--ground); }
 .trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 16px); }
 .map-search { border-radius: 10px; }
@@ -420,3 +419,18 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 .mark-btn:hover, .mark-btn:focus-visible { filter: brightness(.94); }
 .mark-btn:hover .cat, .mark-btn:focus-visible .cat { box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); }
 .mark-btn .cat { margin-top: 0; }
+
+/* a row's one action: a quiet "edit" word, the same on every list as packing's (shanice, 18 nov) */
+.row-edit {
+  flex: none; min-height: 44px; margin-left: 10px; padding: 0 2px; border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px;
+}
+.row-edit:hover, .row-edit:focus-visible { color: var(--ink); text-decoration-color: var(--ink); }
+.row-edit:active { filter: brightness(.85); }
+
+/* a form's pick-from-a-list: its label above, the planner's own dropdown as an underlined word */
+.field-menu { display: grid; justify-items: start; gap: 2px; }
+.field-menu .choice-menu { max-width: 100%; font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* an inline currency: the same underlined word, in the sentence's own size */
+.cur-menu.choice-menu { min-height: 32px; padding: 0 2px; font: inherit; font-weight: 500; color: var(--ink); }
+.jot .cur-menu.choice-menu { min-height: 44px; flex: none; }

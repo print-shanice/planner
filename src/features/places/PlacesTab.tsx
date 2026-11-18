@@ -31,6 +31,7 @@ import { useMove } from '../itinerary/useMove'
 import { flash } from '../itinerary/flash'
 import { stopTitle } from '../plan/stopText'
 import { SearchResults, usePlaceField } from '../plan/usePlaceSearch'
+import { ChoiceMenu } from '../../components/ChoiceMenu'
 
 // a place not planned yet goes onto a day of the trip from its row (one inside a side trip joins that side trip),
 // or onto another trip of the family. a trip without dates takes any date. planned places are moved in the plan
@@ -62,11 +63,10 @@ function PlaceWhen({ stop, trip, trips }: { stop: Stop; trip: Trip; trips: Trip[
   const side = (d: string) => { const o = ownerOn(trip, trips, d); return o.id === trip.id ? '' : ` · ${o.name}` }
   const others = family.filter((t) => t.id !== stop.trip_id)
   return (
-    <select className="text-select" aria-label={label} value="" onChange={(e) => pick(e.target.value)}>
-      <option value="">add to day</option>
-      <optgroup label="days">{days.map((d) => <option key={d} value={`day:${d}`}>{dayLabel(d)}{side(d)}</option>)}</optgroup>
-      {others.length > 0 && <optgroup label="trip">{others.map((t) => <option key={t.id} value={`trip:${t.id}`}>{t.name}</option>)}</optgroup>}
-    </select>
+    <ChoiceMenu label="add to day" ariaLabel={label} onPick={pick} options={[
+      ...days.map((d) => ({ value: `day:${d}`, label: `${dayLabel(d)}${side(d)}`, section: 'days' })),
+      ...others.map((t) => ({ value: `trip:${t.id}`, label: t.name.toLowerCase(), color: t.color, section: 'trip' })),
+    ]} />
   )
 }
 

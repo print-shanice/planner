@@ -21,6 +21,7 @@ import { MoneyTab } from '../../src/features/money/MoneyTab'
 import { CostForm } from '../../src/features/money/CostForm'
 import userEvent from '@testing-library/user-event'
 import { failSave, forgetPending } from '../../src/lib/pending'
+import { choose } from '../choose'
 
 const show = (t: any) => render(<MemoryRouter><MoneyTab trip={t} /></MemoryRouter>)
 
@@ -119,7 +120,7 @@ it('the cost form uses the same paid switch and keeps a new draft', async () => 
   render(<CostForm trip={t} onDone={vi.fn()} />)
   expect(screen.getByLabelText('name')).toHaveValue('sauna')
   await userEvent.type(screen.getByLabelText('amount'), '80')
-  await userEvent.click(screen.getByRole('switch', { name: 'paid already' }))
+  await userEvent.click(screen.getByRole('button', { name: 'paid' }))
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'sauna', amount: 80, status: 'paid', paid_by: 'u1' }))
 })
@@ -147,7 +148,7 @@ it('editing a cost keeps no draft', async () => {
 it('the cost form asks how much first, then paid, then what it was for', () => {
   render(<CostForm trip={trip({ id: 'lap' })} onDone={vi.fn()} />)
   const amount = screen.getByLabelText('amount')
-  const paid = screen.getByRole('switch', { name: 'paid already' })
+  const paid = screen.getByRole('button', { name: 'paid' })
   const name = screen.getByLabelText('name')
   expect(amount).toHaveFocus()
   expect(amount.compareDocumentPosition(paid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -414,18 +415,18 @@ describe('adding a cost right in money', () => {
 
   it('the currency is picked like the "show in" one above, starting on the trip\'s; the line reads like links', async () => {
     show(t)
-    const cur = screen.getByRole('combobox', { name: 'currency' })
-    expect(cur).toHaveDisplayValue('eur')
-    expect(cur).toHaveClass('cur-select')
+    const cur = screen.getByRole('button', { name: 'currency' })
+    expect(cur).toHaveTextContent('eur')
+    expect(cur).toHaveAttribute('aria-haspopup', 'listbox')
     // the same typing line as links: underlined fields, apart from each other, and a plain "add"
     expect(screen.getByRole('textbox', { name: 'add a cost' }).closest('form')).toHaveClass('jot', 'cost-line')
     expect(screen.getByRole('textbox', { name: 'add a cost' })).not.toHaveClass('input')
     expect(screen.getByRole('textbox', { name: 'amount' })).not.toHaveClass('input')
-    await userEvent.selectOptions(cur, 'GBP')
+    await choose(cur, 'gbp')
     await userEvent.type(screen.getByRole('textbox', { name: 'add a cost' }), 'tea')
     await userEvent.type(screen.getByRole('textbox', { name: 'amount' }), '4{Enter}')
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'tea', amount: 4, currency: 'GBP' }))
-    expect(cur).toHaveDisplayValue('gbp')
+    expect(cur).toHaveTextContent('gbp')
   })
 
   it('a missing or wrong amount says so and saves nothing', async () => {

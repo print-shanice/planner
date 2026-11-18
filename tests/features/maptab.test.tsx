@@ -32,6 +32,7 @@ vi.mock('../../src/features/map/TripMap', () => ({
 import { MapTab } from '../../src/features/map/MapTab'
 import { DragProvider } from '../../src/features/itinerary/drag'
 import { ReadingDayProvider, useReadingDay } from '../../src/features/trip/readingDay'
+import { choose } from '../choose'
 
 const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
 
@@ -146,8 +147,8 @@ it('a pin opens its card with one primary action', async () => {
 
 it('on a phone, filter chips list all days, each busy day and saved', () => {
   show('/', true)
-  const scope = screen.getByRole('combobox', { name: 'map scope' })
-  expect(within(scope).getAllByRole('option').map(o => (o as HTMLOptionElement).value)).toEqual(['all', '2027-02-08', 'saved'])
+  fireEvent.click(screen.getByRole('button', { name: 'map scope' }))
+  expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['whole trip', 'mon 8 feb', 'ideas'])
 })
 
 const loading = { data: undefined, status: 'pending', fetchStatus: 'fetching' }
@@ -260,7 +261,7 @@ it('on a phone a new view is fitted with its own sheet height, not the last view
     render(<MemoryRouter initialEntries={['/trip/ex?tab=map&day=2027-02-01']}><MapTab trip={parent} phone /></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'places list' }))
     const dayBottom = db.fits.filter(([k]) => k === 'ex|2027-02-01').at(-1)![1]!
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'map scope' }), 'all')
+    await choose(screen.getByRole('button', { name: 'map scope' }), 'whole trip')
     const whole = db.fits.filter(([k]) => k === 'ex|all')
     expect(whole[0][1]).toBeGreaterThan(dayBottom)
     expect(whole[0][1]).toBe(whole.at(-1)![1])
@@ -421,8 +422,8 @@ describe('whole trip with side trips', () => {
   it("a day chip's dot is the colour of the trip that owns the day", () => {
     db.trips = [{ ...parent, color: 0 }, { ...lap, parent_id: 'ex', color: 3 }]
     showParent(true)
-    const scope = screen.getByRole('combobox', { name: 'map scope' })
-    expect(within(scope).getByRole('option', { name: /8/ })).toHaveValue('2027-02-08')
+    fireEvent.click(screen.getByRole('button', { name: 'map scope' }))
+    expect(screen.getByRole('option', { name: /8 feb/ })).toBeInTheDocument()
   })
 
   describe('on a laptop', () => {

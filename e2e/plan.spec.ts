@@ -194,7 +194,7 @@ test.describe('the plan', () => {
     await expect(card).toContainText('to book')
     await card.getByRole('button', { name: 'edit' }).click()
     const form = page.getByRole('dialog', { name: 'edit' })
-    await form.getByRole('switch', { name: 'booked' }).click()
+    await form.getByRole('button', { name: 'booked' }).click()
     await form.getByRole('textbox', { name: 'booking ref' }).fill('ORS-2211')
     await form.getByRole('button', { name: 'save' }).click()
     const after = page.getByRole('dialog', { name: 'musée d’orsay' })

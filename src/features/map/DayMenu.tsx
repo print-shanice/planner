@@ -1,7 +1,6 @@
 import { useId, useRef, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { dayLabel, fmtDay } from '../../lib/dates'
-import { Icon } from '../../components/Icon'
 import { usePopupList } from '../../components/usePopupList'
 
 export type DayChoice = { date: string; sub: string }
@@ -37,7 +36,7 @@ export function DayMenu({ days, value, onPick }: { days: DayChoice[]; value: str
     <>
       <button ref={menu.button} type="button" className="day-menu" aria-label={`day: ${label}`} aria-haspopup="listbox" aria-expanded={menu.open}
         aria-controls={menu.open ? id : undefined} onClick={() => menu.setOpen(!menu.open)}>
-        <span>{label}</span><Icon name="chevron" size={16} />
+        <span>{label}</span>
       </button>
       {menu.open && createPortal(
         <ul ref={menu.list} id={id} role="listbox" aria-label="day" className="day-list" onKeyDown={keys} style={menu.style}>

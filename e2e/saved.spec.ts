@@ -8,8 +8,9 @@ test.describe('places', () => {
     await places.getByRole('combobox', { name: 'add a place' }).fill('tibidabo at sunset')
     await places.getByRole('button', { name: 'add place' }).click()
     await expect(places.getByRole('list', { name: 'places', exact: true })).toContainText('tibidabo at sunset')
-    await places.getByRole('combobox', { name: 'add to day: tibidabo at sunset' }).selectOption('day:2027-04-16')
-    await expect(places.getByRole('combobox', { name: 'add to day: tibidabo at sunset' })).toHaveCount(0)
+    await places.getByRole('button', { name: 'add to day: tibidabo at sunset' }).click()
+    await page.getByRole('option', { name: /16 apr/ }).click()
+    await expect(places.getByRole('button', { name: 'add to day: tibidabo at sunset' })).toHaveCount(0)
     await expect(places.getByRole('list', { name: 'places', exact: true })).toContainText('tibidabo at sunset')
     await open(page, '/trip/bcn?day=2027-04-16')
     await expectLine(page.getByRole('region', { name: 'friday 16 april' }), 'tibidabo at sunset')
@@ -105,7 +106,7 @@ test.describe('links', () => {
     // nothing scrolls sideways: not the page (phone) and not the plan column (laptop)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
     const edge = await links.evaluate((el) => el.getBoundingClientRect().right)
-    for (const more of await links.getByRole('button', { name: 'more' }).all()) {
+    for (const more of await links.getByRole('button', { name: /^edit / }).all()) {
       const box = (await more.boundingBox())!
       expect(box.x + box.width).toBeLessThanOrEqual(edge)
     }
@@ -115,7 +116,8 @@ test.describe('links', () => {
     await open(page, '/save?url=https%3A%2F%2Fyoutu.be%2Fshared1')
     const form = page.getByRole('main')
     await expect(form.getByRole('textbox', { name: 'link' })).toHaveValue('https://youtu.be/shared1')
-    await form.getByLabel('trip').selectOption({ label: 'euro summer · lapland' })
+    await form.getByRole('button', { name: 'trip' }).click()
+    await page.getByRole('option', { name: 'euro summer · lapland' }).click()
     await form.getByRole('button', { name: 'save' }).click()
     await open(page, '/trip/lap?tab=links')
     await expect(page.getByRole('region', { name: 'links' })).toContainText('youtu.be')

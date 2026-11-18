@@ -1,19 +1,16 @@
-/* buttons */
+/* buttons are words (shanice, 18 nov): the main one bold ink, the rest grey; no boxes, no black blocks */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 44px; padding: 0 18px; border-radius: 8px;
-  border: 1px solid var(--line); background: var(--card); color: var(--ink);
-  font-weight: 500; text-decoration: none; white-space: nowrap;
-  transition: background .15s, border-color .15s, transform .1s;
+  min-height: 44px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink-2);
+  font-weight: 400; text-decoration: none; white-space: nowrap; cursor: pointer;
 }
-.btn:active { transform: scale(.98); }
+.btn:hover:not(:disabled) { color: var(--ink); }
+.btn:active:not(:disabled) { filter: brightness(.85); }
 .btn:disabled { opacity: .5; cursor: default; }
-.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--card); }
-.btn:hover:not(:disabled) { border-color: var(--ink-3); }
-.btn.ghost:hover { background: var(--soft); }
-.btn.danger.armed { background: var(--warn-bg); border-color: var(--warn-bg); color: var(--warn); }
-.btn.small { min-height: 34px; padding: 0 12px; font-size: 14px; }
-.btn.block { width: 100%; }
+.btn.primary { color: var(--ink); font-weight: 650; }
+.btn.danger.armed { color: var(--warn); }
+.btn.small { font-size: 14px; }
+.btn.block { justify-content: flex-start; }
 
 .icon-btn {
   display: inline-grid; place-items: center; width: 44px; height: 44px;
@@ -28,8 +25,8 @@
   display: inline-flex; align-items: center; min-height: 22px; padding: 0; border-radius: 0;
   font-family: var(--f-mono); font-size: 11px; font-weight: 500; letter-spacing: .02em; white-space: nowrap;
 }
-.pill::before { content: '['; }
-.pill::after { content: ']'; }
+.pill::before { content: '['; content: '[' / ''; }
+.pill::after { content: ']'; content: ']' / ''; }
 .pill.ok { color: var(--ok); }
 .pill.warn { color: var(--warn); }
 .warn-line { color: var(--warn); font-size: 14px; }
@@ -125,7 +122,7 @@
   border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 14px; font-weight: 500;
 }
 .notice-text { flex: 1; min-width: 0; display: grid; }
-.notice .btn { background: transparent; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.notice .btn { color: var(--warn); }
 
 .save-failed { display: flex; align-items: center; gap: 10px; flex-basis: 100%; padding: 2px 0 6px; color: var(--warn); font-size: 14px; font-weight: 600; }
 .save-failed .btn { color: var(--warn); }
@@ -225,7 +222,7 @@ body:has(.trip-wide) .toast-region { right: auto; width: calc(var(--plan-w, 600p
 
 /* everything you can press answers as you press it */
 button:not(:disabled):active, a:active { filter: brightness(0.94); }
-.icon-btn.filled:not(:disabled):active, .btn.primary:not(:disabled):active { filter: brightness(1.25); }
+.icon-btn.filled:not(:disabled):active { filter: brightness(1.25); }
 
 /* the + menu: one row per kind of thing */
 .add-options { list-style: none; margin: 0 -4px; padding: 0; }
@@ -262,7 +259,7 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .sheet.page .sheet-x { position: absolute; left: 8px; bottom: 4px; }
 .sheet.page .sheet-body { flex: 1; padding: 8px 22px 40px; }
 .sheet.page .sheet-foot { border: 0; padding: 0; }
-.sheet.page .form-foot .btn.primary { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 14px; min-height: 40px; padding: 0 18px; }
+.sheet.page .form-foot .btn.primary { position: absolute; top: calc(env(safe-area-inset-top) + 8px); right: 18px; min-height: 44px; padding: 0 4px; }
 .sheet.page .form-foot:has(> .warn-line, > :not(.spacer):not(.btn.primary)) { padding: 10px 22px calc(env(safe-area-inset-bottom) + 12px); border-top: 1px solid var(--line); }
 
 .page-form { gap: 0 !important; }
@@ -298,17 +295,9 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .pick-open::after { content: ''; position: absolute; inset: 0; }
 .pick.date { position: relative; }
 
-/* yes or no */
-.switch-row {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0;
-  border: 0; background: none; color: var(--ink); font-size: 16px; font-weight: 500; text-align: left; cursor: pointer;
-}
-.switch { position: relative; width: 50px; height: 30px; border-radius: 999px; background: var(--line); flex: none; transition: background .15s; }
-.switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--card); box-shadow: 0 0 0 .5px rgba(0, 0, 0, .12), 0 1px 2px rgba(0, 0, 0, .12); transition: transform .15s; }
-.switch-row[aria-checked="true"] .switch { background: var(--ink); }
-.switch-row[aria-checked="true"] .switch::after { transform: translateX(20px); }
-.switch-row:disabled { opacity: .5; }
-@media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+/* a status in a form, as the card says it: its label, then [idea] [to book] [booked] */
+.status-field { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 0 12px; }
+.status-words { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; }
 
 /* plain fields: label above, quiet underline */
 .page-form .field { display: grid; gap: 4px; margin-top: 12px; }
@@ -441,7 +430,6 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .help-btn:hover { color: var(--ink); background: var(--soft); }
 .help-label { display: inline-flex; align-items: center; gap: 4px; }
 .help-row { display: flex; align-items: center; gap: 4px; }
-.help-row > .switch-row { flex: 1; }
 @media (pointer: coarse) { .help-btn { width: 44px; height: 44px; } }
 @keyframes choice-in { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
 .choice {

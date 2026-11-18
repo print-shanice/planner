@@ -4,10 +4,11 @@ import { currencyList } from '../../lib/rates'
 import { exactShares, namedSharers } from '../../lib/settle'
 import { useAuth } from '../../lib/auth'
 import type { CSSProperties, ReactNode } from 'react'
-import { Switch } from '../../components/Switch'
+import { StatusWords } from '../../components/StatusWords'
 import { colourVar } from '../../lib/colors'
 import { Help, Tooltip } from '../../components/Tooltip'
 import { Avatar, memberName } from '../../components/Avatar'
+import { FieldMenu } from '../../components/FieldMenu'
 
 export type SplitMode = 'even' | 'some' | 'amounts'
 export type CostDraft = {
@@ -86,7 +87,13 @@ export function PaymentChoice({ value: d, onChange, members }: PaymentProps) {
   const pay = (paid: boolean) => onChange(paid
     ? { ...d, paid, paid_by: d.paid_by || (people.some((m) => m.user_id === me) ? me! : people[0]?.user_id ?? '') }
     : { ...d, paid })
-  return <Switch label="paid already" checked={d.paid} onChange={pay} help="include this cost in paid spending and shared balances" />
+  // the card's words, not a switch (shanice, 18 nov): [planned] [paid]
+  return (
+    <div className="field status-field"><span className="label">paid</span>
+      <StatusWords label="paid" value={d.paid ? 'paid' : 'planned'} options={[['planned', 'planned'], ['paid', 'paid', 'ok']]} onPick={(v) => pay(v === 'paid')}
+        help={<Help label="about paid">include this cost in paid spending and shared balances</Help>} />
+    </div>
+  )
 }
 
 const MODES: [SplitMode, string][] = [['even', 'everyone'], ['some', 'some people'], ['amounts', 'amounts']]
@@ -110,13 +117,9 @@ export function CostFields({ value: d, onChange, members, rates, payment, autoFo
           <span className="label">amount</span>
           <input inputMode="decimal" placeholder="0" autoFocus={autoFocus} value={d.amount} onChange={(e) => set({ amount: e.target.value })} />
         </label>
-        <label className="field currency-field">
-          <span className="label">currency</span>
-          <select value={d.other ? 'other' : d.currency} onChange={(e) => (e.target.value === 'other' ? set({ other: true, currency: 'other' }) : set({ other: false, currency: e.target.value }))}>
-            {currencyList(rates).map((c) => <option key={c} value={c}>{c}</option>)}
-            <option value="other">other…</option>
-          </select>
-        </label>
+        <FieldMenu className="currency-field" label="currency" value={d.other ? 'other' : d.currency}
+          onPick={(v) => (v === 'other' ? set({ other: true, currency: 'other' }) : set({ other: false, currency: v }))}
+          options={[...currencyList(rates).map((c) => ({ value: c, label: c })), { value: 'other', label: 'other…' }]} />
       </div>
       {d.other && (
         <div className="row">

@@ -239,13 +239,10 @@
 /* "to a trip" sits against the right edge, however long the trip names in its list are */
 .inbox-row .text-select { margin-left: auto; field-sizing: content; text-align: right; text-align-last: right; }
 /* a tick before each link's icon picks it; "select all" above the list picks them all */
-.inbox-tools { display: flex; margin-bottom: -10px; }
-/* "select all" is a quiet pill above the ticks it works on, so it never reads like a row's "add to a trip" */
-.select-all {
-  display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--card); color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s, background .15s;
-}
-.select-all:hover { border-color: var(--ink-3); color: var(--ink); }
+.inbox-tools { display: flex; margin-bottom: -4px; }
+/* "select all" is a quiet grey word above the ticks it works on (shanice, 18 nov: buttons are words), never underlined like a row's "add to a trip" */
+.select-all { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink-2); font-size: 14px; cursor: pointer; }
+.select-all:hover { color: var(--ink); }
 .select-all:disabled { opacity: .5; cursor: default; }
 .inbox-pick { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-left: -8px; cursor: pointer; }
 .pick-box { position: absolute; opacity: 0; width: 1px; height: 1px; }

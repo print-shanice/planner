@@ -7,6 +7,7 @@ import { formatMoney } from '../../lib/money'
 import { currencyList } from '../../lib/rates'
 import { useToast } from '../../components/Toast'
 import { checkCost, costDraft, costValues } from '../stops/CostFields'
+import { ChoiceMenu } from '../../components/ChoiceMenu'
 
 // a cost typed straight into money: a name, an amount and its currency (the trip's to start with, kept for the next one)
 // make an estimate shared by everyone. who paid, the split and the kind are set by tapping it in the list
@@ -48,9 +49,8 @@ export function AddCost({ trip }: { trip: Trip }) {
           onChange={(e) => { setProblem(null); setTitle(e.target.value) }} />
         <input type="text" className="cost-amount-in num" aria-label="amount" placeholder="0" value={amount} inputMode="decimal" autoComplete="off" enterKeyHint="done"
           onChange={(e) => { setProblem(null); setAmount(e.target.value) }} />
-        <select className="cur-select" aria-label="currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-          {choices.map((c) => <option key={c} value={c}>{c.toLowerCase()}</option>)}
-        </select>
+        <ChoiceMenu label={currency.toLowerCase()} ariaLabel="currency" className="cur-menu" selected={currency}
+          options={choices.map((c) => ({ value: c, label: c.toLowerCase() }))} onPick={setCurrency} />
         <button type="submit" className="btn small line-go" aria-label="add cost" disabled={!title.trim() && !amount.trim()}>add</button>
       </form>
       {problem && <p role="alert" className="warn-line">{problem}</p>}

@@ -35,6 +35,7 @@ vi.mock('../../src/lib/supabase', () => ({
 }))
 
 import { StopSheetProvider, useStopSheet } from '../../src/features/stops/StopSheet'
+import { choose } from '../choose'
 
 let qc: QueryClient
 function Opener({ id, kind }: { id?: string; kind?: 'stay' | 'place' | 'journey' | 'note' }) {
@@ -125,7 +126,7 @@ it('price writes one linked cost; clearing it removes the cost', async () => {
   let d = await openEdit()
   await userEvent.click(within(d).getByRole('button', { name: 'booking, cost & notes' }))
   await userEvent.type(within(d).getByLabelText('amount'), '120')
-  await userEvent.click(within(d).getByRole('switch', { name: 'paid already' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'paid' }))
   await userEvent.click(within(d).getByRole('button', { name: 'kai' }))
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({
@@ -146,7 +147,7 @@ it('price writes one linked cost; clearing it removes the cost', async () => {
 it('another currency needs a 3-letter code', async () => {
   const d = await openEdit()
   await userEvent.type(within(d).getByLabelText('amount'), '50')
-  await userEvent.selectOptions(within(d).getByLabelText('currency'), 'other')
+  await choose(within(d).getByRole('button', { name: 'currency' }), 'other…')
   await userEvent.type(within(d).getByLabelText('currency code'), 'ab')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(within(d).getByText('enter a 3-letter currency code')).toBeInTheDocument()
@@ -242,7 +243,7 @@ describe('a booking\'s costs on its card', () => {
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /balance/ }))
     const form = screen.getByRole('dialog', { name: 'edit cost' })
     expect(within(form).getByLabelText('amount')).toHaveValue('30')
-    await userEvent.click(within(form).getByRole('switch', { name: 'paid already' }))
+    await userEvent.click(within(form).getByRole('button', { name: 'paid' }))
     await userEvent.click(within(form).getByRole('button', { name: 'kai' }))
     await userEvent.click(within(form).getByRole('button', { name: 'save' }))
     expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ id: 'c2', amount: 30, status: 'paid', paid_by: 'u2' }))
@@ -321,12 +322,12 @@ it('not paid saves no payer, and paid presets a payer', async () => {
   const d = await openEdit()
   await userEvent.click(within(d).getByRole('button', { name: 'booking, cost & notes' }))
   await userEvent.type(within(d).getByLabelText('amount'), '30')
-  const paid = within(d).getByRole('switch', { name: 'paid already' })
-  expect(paid).toHaveAttribute('aria-checked', 'false')
+  const paid = within(d).getByRole('button', { name: 'paid' })
+  expect(paid).toHaveAttribute('aria-pressed', 'false')
   expect(within(d).queryByRole('group', { name: 'paid by' })).toBeNull()
   await userEvent.click(paid)
   expect(within(d).getByRole('button', { name: 'shanice' })).toHaveAttribute('aria-pressed', 'true')
-  await userEvent.click(paid)
+  await userEvent.click(within(d).getByRole('button', { name: 'planned' }))
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ amount: 30, status: 'estimate', paid_by: null }))
 })
@@ -334,7 +335,7 @@ it('not paid saves no payer, and paid presets a payer', async () => {
 it('an older paid cost with no payer asks who paid', async () => {
   db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'paid', paid_by: null })]
   const d = await openEdit()
-  expect(within(d).getByRole('switch', { name: 'paid already' })).toHaveAttribute('aria-checked', 'true')
+  expect(within(d).getByRole('button', { name: 'paid' })).toHaveAttribute('aria-pressed', 'true')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(within(d).getByText('pick who paid')).toBeInTheDocument()
   expect(db.save).not.toHaveBeenCalled()
@@ -343,7 +344,7 @@ it('an older paid cost with no payer asks who paid', async () => {
 it('an older estimate with a payer saves as not paid with no payer', async () => {
   db.costs = [cost({ id: 'c1', trip_id: 'lap', stop_id: 's1', amount: 50, status: 'estimate', paid_by: 'u2' })]
   const d = await openEdit()
-  expect(within(d).getByRole('switch', { name: 'paid already' })).toHaveAttribute('aria-checked', 'false')
+  expect(within(d).getByRole('button', { name: 'paid' })).toHaveAttribute('aria-pressed', 'false')
   await userEvent.click(within(d).getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenCalledWith('costs', expect.objectContaining({ id: 'c1', status: 'estimate', paid_by: null }))
 })
@@ -376,16 +377,17 @@ it('a new journey shows its essentials and keeps the rest under "more", with sav
   expect(within(d).getByRole('button', { name: 'save' }).closest('.sheet-foot')).not.toBeNull()
 })
 
-it('a place asks "needs booking", then "booked", as switches', async () => {
+it("a place's status is the card's words: [idea] [to book] [booked], no switches", async () => {
   show(<Opener kind="place" />)
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = within(screen.getByRole('dialog'))
-  const needs = d.getByRole('switch', { name: 'needs booking' })
-  expect(needs).toHaveAttribute('aria-checked', 'false')
-  expect(d.queryByRole('switch', { name: 'booked' })).toBeNull()
-  await userEvent.click(needs)
-  expect(d.getByRole('switch', { name: 'booked' })).toHaveAttribute('aria-checked', 'false')
-  await userEvent.click(d.getByRole('switch', { name: 'booked' }))
+  expect(d.queryByRole('switch')).toBeNull()
+  const status = within(d.getByRole('group', { name: 'status' }))
+  expect(status.getAllByRole('button').map((b) => b.textContent)).toEqual(['idea', 'to book', 'booked'])
+  expect(status.getByRole('button', { name: 'idea' })).toHaveAttribute('aria-pressed', 'true')
+  expect(d.queryByLabelText('booking ref')).toBeNull()
+  await userEvent.click(status.getByRole('button', { name: 'booked' }))
+  expect(status.getByRole('button', { name: 'booked' })).toHaveAttribute('aria-pressed', 'true')
   expect(d.getByLabelText('booking ref')).toBeInTheDocument()
 })
 
@@ -395,7 +397,7 @@ it('once a journey is booked it asks for its carrier and ref', async () => {
   const d = screen.getByRole('dialog')
   expect(within(d).queryByLabelText('booking ref')).toBeNull()
   expect(within(d).queryByLabelText('carrier / number')).toBeNull()
-  await userEvent.click(within(d).getByRole('switch', { name: 'booked' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'booked' }))
   expect(within(d).getByLabelText('carrier / number')).toBeInTheDocument()
   expect(within(d).getByLabelText('booking ref')).toBeInTheDocument()
 })
@@ -539,7 +541,7 @@ it('a stay shows everything without a fold: link under the booking ref, notes la
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog')
   expect(d.querySelector('.fold-toggle')).toBeNull()
-  await userEvent.click(within(d).getByRole('switch', { name: 'booked' }))
+  await userEvent.click(within(d).getByRole('button', { name: 'booked' }))
   const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
   const ref = within(d).getByLabelText('booking ref'), link = within(d).getByLabelText('link')
   const amount = within(d).getByLabelText('amount'), notes = within(d).getByLabelText('notes')
@@ -553,7 +555,7 @@ it('paid already sits between the amount and who paid', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'open' }))
   const d = screen.getByRole('dialog')
   const amount = within(d).getByLabelText('amount')
-  const paid = within(d).getByRole('switch', { name: 'paid already' })
+  const paid = within(d).getByRole('button', { name: 'paid' })
   await userEvent.click(paid)
   const faces = within(d).getByRole('group', { name: 'paid by' })
   expect(amount.compareDocumentPosition(paid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -770,20 +772,23 @@ describe('forms are calm full pages', () => {
   it('a stay asks only where, when, booking and cost, in that order, with no pills', async () => {
     const d = await newStay()
     expect([...screen.getByRole('dialog').querySelectorAll('.form-q')].map((q) => q.textContent)).toEqual(['where are you staying?', 'when', 'booking', 'cost'])
-    expect(d.queryByRole('group', { name: 'status' })).toBeNull()
+    // its status is the card's words (shanice, 18 nov), never a switch
+    expect(d.getByRole('group', { name: 'status' })).toBeInTheDocument()
+    expect(d.queryByRole('switch')).toBeNull()
     expect(d.queryByRole('group', { name: 'payment' })).toBeNull()
     expect(screen.getByRole('dialog').querySelector('.choice-chip')).toBeNull()
   })
 
-  it('"booked" is a switch; once on, the booking ref appears, and off means to book', async () => {
+  it("a stay picks its status from the card's words; [booked] shows the booking ref, and [to book] takes it back", async () => {
     const d = await newStay()
-    const booked = d.getByRole('switch', { name: 'booked' })
-    expect(booked).toHaveAttribute('aria-checked', 'false')
+    const booked = d.getByRole('button', { name: 'booked' })
+    expect(d.getByRole('button', { name: 'idea' })).toHaveAttribute('aria-pressed', 'true')
+    expect(booked).toHaveAttribute('aria-pressed', 'false')
     expect(d.queryByLabelText('booking ref')).toBeNull()
     await userEvent.click(booked)
-    expect(booked).toHaveAttribute('aria-checked', 'true')
+    expect(booked).toHaveAttribute('aria-pressed', 'true')
     expect(d.getByLabelText('booking ref')).toBeInTheDocument()
-    await userEvent.click(booked)
+    await userEvent.click(d.getByRole('button', { name: 'to book' }))
     await userEvent.type(d.getByLabelText('name'), 'glass igloo')
     await userEvent.click(screen.getByRole('button', { name: 'save' }))
     expect(db.save).toHaveBeenCalledWith('stops', expect.objectContaining({ status: 'to_book' }))
@@ -792,7 +797,7 @@ describe('forms are calm full pages', () => {
   it('who paid is your faces, once it is paid', async () => {
     const d = await newStay()
     expect(d.queryByRole('group', { name: 'paid by' })).toBeNull()
-    await userEvent.click(d.getByRole('switch', { name: 'paid already' }))
+    await userEvent.click(d.getByRole('button', { name: 'paid' }))
     const faces = within(d.getByRole('group', { name: 'paid by' }))
     expect(faces.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['shanice', 'kai'])
     await userEvent.click(faces.getByRole('button', { name: 'kai' }))
@@ -925,7 +930,7 @@ describe('a flight looks itself up by its number', () => {
   it('asks for the flight number whether booked or not; other journeys keep "carrier / number" once booked', async () => {
     const d = await newFlight()
     expect(within(d).getByLabelText('flight number')).toBeInTheDocument()
-    await userEvent.click(within(d).getByRole('switch', { name: 'booked' }))
+    await userEvent.click(within(d).getByRole('button', { name: 'booked' }))
     expect(within(d).queryByLabelText('carrier / number')).toBeNull()
     await userEvent.click(within(d).getByRole('button', { name: 'train' }))
     expect(within(d).queryByLabelText('flight number')).toBeNull()

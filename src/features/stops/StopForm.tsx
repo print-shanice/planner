@@ -5,7 +5,7 @@ import { newId } from '../../lib/id'
 import { nextPosition } from '../../lib/schedule'
 import { hasPoint } from '../../lib/walk'
 import { Fold } from '../../components/Fold'
-import { Switch } from '../../components/Switch'
+import { StatusWords, STOP_WORDS, NOTE_WORDS } from '../../components/StatusWords'
 import { Pick } from '../../components/Pick'
 import { Icon } from '../../components/Icon'
 import { FormFooter, useSubmit } from '../../components/FormFooter'
@@ -222,8 +222,14 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
   const ref = booked || !!d.ref.trim()
     ? <label className="field"><span className="label">booking ref</span><input value={d.ref} autoCapitalize="characters" onChange={(e) => set({ ref: e.target.value })} /></label>
     : null
-  // booked or not: a switch; off means it still needs booking
-  const bookedSwitch = <Switch label="booked" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} help="your reservation is confirmed; payment is tracked separately" />
+  // the status as the card says it: [idea] [to book] [booked] (a note: [to do] [done], the pressed one again makes it plain)
+  const status = (
+    <div className="field status-field"><span className="label">status</span>
+      {kind === 'note'
+        ? <StatusWords label="status" value={d.status} options={NOTE_WORDS} onPick={(s) => set({ status: d.status === s ? 'idea' : s })} />
+        : <StatusWords label="status" value={d.status} options={STOP_WORDS} onPick={(s) => set({ status: s })} />}
+    </div>
+  )
   const money = <CostFields value={cost} onChange={setCost} members={members} rates={rates}
     payment={<PaymentChoice value={cost} onChange={setCost} members={members} />} />
 
@@ -236,7 +242,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {q('when')}
         {when([['check-in', 'day', 'time'], ['check-out', 'end_date', 'end_time']])}
         {q('booking')}
-        {bookedSwitch}
+        {status}
         {ref}
         {link}
         {q('cost')}
@@ -250,8 +256,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {q('when')}
         {when([['day', 'day', 'time']])}
         {q('tickets')}
-        <Switch label="needs booking" checked={d.status !== 'idea'} onChange={(v) => set({ status: v ? (booked ? 'booked' : 'to_book') : 'idea' })} />
-        {d.status !== 'idea' && bookedSwitch}
+        {status}
         {ref}
         <div className="folds">
           <Fold label="booking, cost & notes" open={!!cost.amount.trim() || cost.paid || !!d.url.trim() || !!d.notes.trim() || !!d.end_time} reveal={costReveal}>
@@ -296,7 +301,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         {q('when')}
         {when([['depart', d.mode === 'flight' ? null : 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
         {q('booking')}
-        {bookedSwitch}
+        {status}
         {booked && d.mode !== 'flight' && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
         {ref}
         <div className="folds">
@@ -308,8 +313,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         <textarea className="note-text" aria-label="notes" placeholder="write it down" value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
         {q('when')}
         {when([['day', 'day', 'time']])}
-        <Switch label="to do" checked={d.status !== 'idea'} onChange={(v) => set({ status: v ? (booked ? 'booked' : 'to_book') : 'idea' })} />
-        {d.status !== 'idea' && <Switch label="done" checked={booked} onChange={(v) => set({ status: v ? 'booked' : 'to_book' })} />}
+        {status}
         <div className="folds"><Fold label="booking, cost & notes" open={!!d.url.trim() || !!d.end_time}>
           <Pick type="time" label="end time" value={d.end_time} onChange={v => set({ end_time: v })} />{link}
         </Fold></div>

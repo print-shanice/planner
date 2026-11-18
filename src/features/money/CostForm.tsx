@@ -9,6 +9,7 @@ import { FormFooter, useSubmit } from '../../components/FormFooter'
 import { TwoTapDelete } from '../../components/TwoTapDelete'
 import { Pick } from '../../components/Pick'
 import { checkCost, costDraft, CostFields, costValues, PaymentChoice, type CostDraft } from '../stops/CostFields'
+import { FieldMenu } from '../../components/FieldMenu'
 
 // stopId: a new cost attached to a booking (named after it unless told otherwise); edits keep the cost's own stop
 type Props = { trip: Trip; cost?: Cost; day?: string | null; stopId?: string | null; defaults?: { title?: string; category?: string }; onDone: () => void }
@@ -57,12 +58,7 @@ export function CostForm({ trip, cost, day, stopId = null, defaults, onDone }: P
       <p className="form-q">for</p>
       <input className="title-input" aria-label="name" placeholder="what was it?" value={title} onChange={(e) => set({ title: e.target.value })} />
       <p className="form-q">kind and day</p>
-      <label className="field">
-        <span className="label">category</span>
-        <select value={category} onChange={(e) => set({ category: e.target.value })}>
-          {CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
-      </label>
+      <FieldMenu label="category" value={category} onPick={(v) => set({ category: v })} options={CATEGORIES.map(([v, l]) => ({ value: v, label: l }))} />
       <div className="when">
         <div className="when-row"><span className="when-label">date</span><Pick type="date" label="date" value={date} onChange={(v) => set({ date: v })} /></div>
       </div>

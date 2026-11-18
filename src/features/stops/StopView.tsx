@@ -28,6 +28,7 @@ import { CardTimes } from './CardTimes'
 import { useSaveNote } from '../../lib/saveNote'
 import { hasPoint } from '../../lib/walk'
 import { MODES, modeWord } from '../../lib/lineKind'
+import { StatusWords, STOP_WORDS, NOTE_WORDS } from '../../components/StatusWords'
 import { dayLabel } from '../../lib/dates'
 
 function costLine(c: Cost, members: Member[]) {
@@ -141,9 +142,6 @@ export function StopView({ stop, onEdit, onClose }: Props) {
 
   const what = stop.kind === 'journey' ? modeWord(stop.mode) : stop.kind === 'place' ? stop.category ?? 'place' : stop.kind
   const kicker = `${what} · ${stop.day ? dayLabel(stop.day) : 'no date'}`
-  const statuses: [StopStatus, string][] = stop.kind === 'note'
-    ? [['to_book', 'to do'], ['booked', 'done']]
-    : [['idea', 'idea'], ['to_book', 'to book'], ['booked', 'booked']]
   // a to-do tapped again goes back to being a plain note
   const pickStatus = (s: StopStatus) => {
     const to = stop.kind === 'note' && stop.status === s ? 'idea' : s
@@ -193,12 +191,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
           </Row>
         )}
         <Row label="status">
-          <span className="card-options status" role="group" aria-label="status">
-            {statuses.map(([s, word]) => (
-              <button key={s} type="button" className={s === 'booked' ? 'ok' : s === 'to_book' ? 'warn' : ''} aria-pressed={stop.status === s}
-                disabled={!canEdit} onClick={() => pickStatus(s)}>{word}</button>
-            ))}
-          </span>
+          <StatusWords label="status" value={stop.status} options={stop.kind === 'note' ? NOTE_WORDS : STOP_WORDS} disabled={!canEdit} onPick={pickStatus} />
         </Row>
         {stop.kind !== 'note' && (
           <Row label="ref">

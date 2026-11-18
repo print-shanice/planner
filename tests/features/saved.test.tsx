@@ -24,6 +24,7 @@ import { Icon } from '../../src/components/Icon'
 import { CaptureForm } from '../../src/features/capture/CaptureForm'
 import { failSave } from '../../src/lib/pending'
 import { setLocating } from '../../src/lib/locating'
+import { choose } from '../choose'
 
 const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
 
@@ -59,8 +60,8 @@ it('places are every place in the trip, the ones in the itinerary too (stays inc
   // a planned place shows no day and nothing to pick; one not planned yet can go onto a day
   expect(rows[1]).not.toMatch(/feb/)
   expect(rows[2]).not.toMatch(/feb/)
-  expect(screen.queryByRole('combobox', { name: /planned|glass igloo/ })).toBeNull()
-  expect(screen.getByRole('combobox', { name: 'add to day: kotisaari' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /add to day: (planned|glass igloo)/ })).toBeNull()
+  expect(screen.getByRole('button', { name: 'add to day: kotisaari' })).toBeInTheDocument()
   expect(screen.queryByText('buy wool socks')).toBeNull()
   expect(screen.queryByText('flight in')).toBeNull()
   expect(screen.queryAllByTestId('link-card')).toHaveLength(0)
@@ -145,7 +146,7 @@ it('on a trip with side trips, a place can go to a side trip, its costs with it'
   db.trips.push(trip({ id: 'ivalo', parent_id: 'lap', name: 'ivalo', start_date: null, end_date: null }))
   db.costs = [{ id: 'c', trip_id: 'lap', stop_id: 's9' }]
   show()
-  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'add to day: kotisaari' }), 'trip:ivalo')
+  await choose(screen.getByRole('button', { name: 'add to day: kotisaari' }), 'ivalo')
   expect(db.save).toHaveBeenCalledWith({ id: 's9', trip_id: 'ivalo' })
   expect(db.save).toHaveBeenCalledWith({ id: 'c', trip_id: 'ivalo' })
 })
@@ -181,7 +182,7 @@ it('places and links each search their own list', async () => {
 
 it('a place goes onto a day straight from its row, as the same stop', async () => {
   show()
-  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'add to day: kotisaari' }), 'day:2027-02-09')
+  await choose(screen.getByRole('button', { name: 'add to day: kotisaari' }), /9 feb/)
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 's9', day: '2027-02-09', saved: false }))
 })
 
@@ -231,15 +232,18 @@ it('something that is not a link says so', async () => {
 
 it('a link can move to another trip', async () => {
   showLinks()
-  await userEvent.click(within(screen.getAllByTestId('link-card')[0]).getByRole('button', { name: 'more' }))
-  await userEvent.selectOptions(screen.getByLabelText('move to trip'), 'par')
-  expect(db.save).toHaveBeenCalledWith({ id: 'l2', trip_id: 'par' })
+  // a row's one action is "edit" (shanice, 18 nov); its form moves it
+  const card = screen.getAllByTestId('link-card')[0]
+  await userEvent.click(within(card).getByRole('button', { name: /^edit / }))
+  await choose(screen.getByRole('button', { name: 'trip' }), /paris/)
+  await userEvent.click(screen.getByRole('button', { name: 'save' }))
+  expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'l2', trip_id: 'par' }))
 })
 
 it('a link for a place says which, and the place says it has one', () => {
   db.links[1].stop_id = 's9'
   const r = showLinks()
-  expect(within(screen.getAllByTestId('link-card')[0]).getByRole('button', { name: 'kotisaari →' })).toBeInTheDocument()
+  expect(within(screen.getAllByTestId('link-card')[0]).getByRole('button', { name: 'kotisaari' })).toBeInTheDocument()
   r.unmount()
   show()
   expect(screen.getByText(/1 link/)).toBeInTheDocument()
@@ -303,7 +307,7 @@ describe('saving a link', () => {
   it('a link saved before is recognised, and saving moves it instead of adding a second', async () => {
     form({ initial: { url: 'https://youtube.com/watch?v=abc&si=x', title: '', text: '' }, tripId: null })
     expect(screen.getByRole('status')).toHaveTextContent('already saved in lapland')
-    await userEvent.selectOptions(screen.getByLabelText('trip'), 'par')
+    await choose(screen.getByRole('button', { name: 'trip' }), /paris/)
     await userEvent.click(screen.getByRole('button', { name: 'save' }))
     expect(db.save).toHaveBeenCalledTimes(1)
     expect(db.save.mock.calls[0][0]).toMatchObject({ id: 'l2', trip_id: 'par' })
@@ -313,7 +317,7 @@ describe('saving a link', () => {
     db.stops.push(stop({ id: 'cafe', trip_id: 'lap', title: 'kahvila', day: '2027-02-08' }))
     form()
     await userEvent.type(screen.getByLabelText('link'), 'https://a.com')
-    await userEvent.selectOptions(screen.getByLabelText('for a place'), 'cafe')
+    await choose(screen.getByRole('button', { name: 'for a place' }), 'kahvila')
     await userEvent.click(screen.getByRole('button', { name: 'save' }))
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ stop_id: 'cafe' }))
   })

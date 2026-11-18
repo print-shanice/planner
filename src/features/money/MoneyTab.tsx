@@ -24,6 +24,7 @@ import { useSubmit } from '../../components/FormFooter'
 import { colourVar } from '../../lib/colors'
 import { Avatar } from '../../components/Avatar'
 import { Help, Tooltip } from '../../components/Tooltip'
+import { ChoiceMenu } from '../../components/ChoiceMenu'
 
 const LABEL = Object.fromEntries(CATEGORIES)
 
@@ -124,9 +125,8 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         <div className="help-row"><p className="money-total num head" data-testid="money-total">{show(total)}</p><Help label="about the total">paid costs plus planned estimates; repayments are excluded. individual costs keep their own currency</Help></div>
         <p className="money-sub muted num">
           <span>{budget != null ? [`of ${show(budget)}`, left != null ? `${show(left)} left` : ''].filter(Boolean).join(' · ') : 'in total'}{left != null && <Help label="about the remaining budget">budget remaining after paid and planned costs</Help>}</span>
-          <span className="money-in">shown in <select aria-label="show in" className="cur-select" value={cur} onChange={(e) => setCur(e.target.value)}>
-            {currencyList(rates).map((c) => <option key={c} value={c}>{c}</option>)}
-          </select></span>
+          <span className="money-in">shown in <ChoiceMenu label={cur.toLowerCase()} ariaLabel="show in" className="cur-menu" align="left" selected={cur}
+            options={currencyList(rates).map((c) => ({ value: c, label: c.toLowerCase() }))} onPick={setCur} /></span>
         </p>
       </div>
       {total > 0 && (

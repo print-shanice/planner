@@ -13,6 +13,7 @@ vi.mock('../../src/lib/queries', () => ({
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => true, useOnline: () => true }))
 import { CapturePage } from '../../src/features/capture/CapturePage'
 import { keepPending, peekPending } from '../../src/lib/capture'
+import { choose } from '../choose'
 
 const show = (path: string) => render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/save" element={<CapturePage />} /><Route path="/" element={<p>home</p>} /></Routes></MemoryRouter>)
 
@@ -31,7 +32,7 @@ it('a link kept from before signing in is picked up, and forgotten once saved', 
   show('/save')
   expect(screen.getByLabelText('link')).toHaveValue('https://vm.tiktok.com/ZM1/')
   expect(screen.getByLabelText('title')).toHaveValue('cafe reel')
-  await userEvent.selectOptions(screen.getByLabelText('trip'), 'eu')
+  await choose(screen.getByRole('button', { name: 'trip' }), 'euro summer')
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(await screen.findByRole('link', { name: 'open euro summer' })).toHaveAttribute('href', '/trip/eu?tab=links')
   expect(peekPending()).toBeNull()
