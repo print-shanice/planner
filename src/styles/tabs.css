@@ -91,7 +91,7 @@
 .pack-copy-to button { text-decoration-color: var(--line); }
 .pack-copy-to button:hover { text-decoration-color: var(--ink); }
 .pack-status { margin: 0; font-size: 14px; color: var(--ink-2); }
-/* mono text choices: the bag filter under the meter, the bag on the add line, and the bag and whose rows when editing */
+/* mono text choices: the bag filter under the meter, and the bag and whose rows when editing */
 .pack-choices { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .pack-choices button { padding: 2px 0; border: 0; border-bottom: 1px solid transparent; background: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); cursor: pointer; }
 .pack-choices button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
@@ -117,8 +117,15 @@
 /* "add" is a word at the end of the line, not a box */
 .pack-add .line-go { min-width: 44px; padding: 0 2px 0 10px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font-size: 15px; font-weight: 650; }
 .pack-add .line-go:disabled { color: var(--ink-3); }
-.pack-add .pack-choices { flex-basis: 100%; padding: 2px 2px 0; }
-.pack-add:has(.pack-choices) { margin-bottom: 14px; }
+/* the bag new things go in: the planner's own dropdown as a quiet mono word on the line, ink once a bag is picked */
+.pack-add { flex-wrap: nowrap; }
+.pack-add .pack-add-bag {
+  max-width: none; min-width: 44px; padding: 0 4px; font-family: var(--f-mono); font-size: 12px; font-weight: 400;
+  color: var(--ink-3); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; white-space: nowrap;
+}
+.pack-add .pack-add-bag.set { color: var(--ink); text-decoration-color: var(--ink); }
+.pack-add .pack-add-bag:hover, .pack-add .pack-add-bag[aria-expanded="true"] { color: var(--ink); text-decoration-color: var(--ink); }
+.pack-add .pack-add-bag:active { filter: brightness(.85); }
 .pack-edit { flex: 1; display: grid; gap: 10px; padding: 10px 0; }
 .pack-edit .row { display: flex; align-items: center; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { .pack-meter > span { transition: none; } }

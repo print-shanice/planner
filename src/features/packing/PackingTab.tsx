@@ -8,6 +8,7 @@ import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
 import { SaveFailed } from '../../components/SaveFailed'
+import { ChoiceMenu } from '../../components/ChoiceMenu'
 import { memberName } from '../../components/Avatar'
 import { useSwipeAway } from '../../lib/swipe'
 
@@ -67,7 +68,7 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
   const removeLater = useUndoRemove('packing')
   const canEdit = useCanEdit()
   const [text, setText] = useState('')
-  // the bag new things go in: stays picked so a run of carry-on things is quick
+  // the bag new things go in, picked from the dropdown on the add line: stays picked so a run of carry-on things is quick
   const [addBag, setAddBag] = useState<Bag | ''>('')
   const addField = useRef<HTMLInputElement>(null)
   const [editing, setEditing] = useState<{ id: string; text: string; owner: string | null; bag: Bag | null } | null>(null)
@@ -158,9 +159,10 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
       </>}
       {canEdit && !editing && <form className="jot pack-add" onSubmit={e => { e.preventDefault(); void submit() }}>
         <input ref={addField} aria-label="add to pack" placeholder="add to pack…" value={text} disabled={busy} autoComplete="off" enterKeyHint="done" onChange={e => setText(e.target.value)} />
+        <ChoiceMenu label={addBag ? BAGS[addBag] : 'no bag'} ariaLabel="which bag" className={`pack-add-bag${addBag ? ' set' : ''}`} disabled={busy}
+          selected={addBag} options={[...BAG_KEYS.map((k) => ({ value: k, label: BAGS[k] })), { value: '', label: 'no bag' }]}
+          onPick={(v) => { setAddBag(v as Bag | ''); addField.current?.focus() }} />
         <button type="submit" className="btn small line-go" aria-label="add to pack" disabled={busy || !text.trim()}>add</button>
-        {text.trim() && <Choices label="bag" value={addBag} disabled={busy} onPick={(v) => { setAddBag(v); addField.current?.focus() }}
-          options={[...BAG_KEYS.map((k): [Bag, string] => [k, BAGS[k]]), ['', 'no bag']]} />}
       </form>}
       {problem && <p role="alert" className="warn-line">{problem}</p>}
       {toPack.length > 0 && <ul className="list pack-list" aria-label="packing">

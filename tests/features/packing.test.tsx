@@ -47,23 +47,29 @@ it('the add row has a visible add button that adds, like enter', async () => {
   expect(screen.getByRole('textbox', { name: 'add to pack' })).toHaveValue('')
 })
 
-it('typing shows the bags to put it in, and the picked bag stays for the next thing', async () => {
+it('the add line has a bag dropdown beside it, and the picked bag stays for the next thing', async () => {
   db.packing = []
   db.save.mockReset().mockResolvedValue({})
   render(<PackingTab trip={trip({ id: 'lap' })} />)
-  expect(screen.queryByRole('group', { name: 'bag' })).toBeNull()
   const field = screen.getByRole('textbox', { name: 'add to pack' })
+  const which = screen.getByRole('button', { name: 'which bag' })
+  // the planner's own dropdown, on the add line, not a row of words under it
+  expect(which.closest('form')).toBe(field.closest('form'))
+  expect(which).toHaveAttribute('aria-haspopup', 'listbox')
+  expect(which).toHaveTextContent(/^no bag$/)
+  expect(screen.queryByRole('group', { name: 'bag' })).toBeNull()
   await userEvent.type(field, 'adapter')
-  const bag = screen.getByRole('group', { name: 'bag' })
-  expect(within(bag).getAllByRole('button').map((b) => b.textContent)).toEqual(['check-in', 'carry-on', 'wear', 'no bag'])
-  expect(within(bag).getByRole('button', { name: 'no bag' })).toHaveAttribute('aria-pressed', 'true')
-  await userEvent.click(within(bag).getByRole('button', { name: 'carry-on' }))
+  expect(screen.queryByRole('group', { name: 'bag' })).toBeNull()
+  await userEvent.click(which)
+  expect(within(screen.getByRole('listbox', { name: 'which bag' })).getAllByRole('option').map((o) => o.textContent)).toEqual(['check-in', 'carry-on', 'wear', 'no bag'])
+  expect(screen.getByRole('option', { name: 'no bag' })).toHaveAttribute('aria-selected', 'true')
+  await userEvent.click(screen.getByRole('option', { name: 'carry-on' }))
+  expect(which).toHaveTextContent(/^carry-on$/)
   // the field takes focus back, so enter adds
   expect(field).toHaveFocus()
   await userEvent.keyboard('{Enter}')
   expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'adapter', bag: 'carry' }))
-  await userEvent.type(field, 'charger')
-  expect(within(screen.getByRole('group', { name: 'bag' })).getByRole('button', { name: 'carry-on' })).toHaveAttribute('aria-pressed', 'true')
+  expect(which).toHaveTextContent(/^carry-on$/)
 })
 
 it('an empty list shows just the field', () => {
@@ -288,8 +294,8 @@ it('one bag at a time: the filter sits under the meter, the count follows it, an
   await userEvent.click(within(filter).getByRole('button', { name: 'carry-on' }))
   expect(names()).toEqual(['charger', 'passport'])
   expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'which bag' })).toHaveTextContent(/^carry-on$/)
   await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'book')
-  expect(within(screen.getByRole('group', { name: 'bag' })).getByRole('button', { name: 'carry-on' })).toHaveAttribute('aria-pressed', 'true')
   await userEvent.keyboard('{Enter}')
   expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'book', owner: S, bag: 'carry' }))
 })
