@@ -110,7 +110,7 @@
 .map-search input::placeholder { color: var(--ink-3); }
 .packing .pack-add { margin-top: 0; }
 /* "add" is a word at the end of the line, not a box */
-.pack-add .line-go { padding: 0 2px 0 10px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font-size: 15px; font-weight: 650; }
+.pack-add .line-go { min-width: 44px; padding: 0 2px 0 10px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font-size: 15px; font-weight: 650; }
 .pack-add .line-go:disabled { color: var(--ink-3); }
 .pack-add .pack-choices { flex-basis: 100%; padding: 2px 2px 0; }
 .pack-add:has(.pack-choices) { margin-bottom: 14px; }

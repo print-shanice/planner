@@ -73,6 +73,8 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
   const [problem, setProblem] = useState('')
   const [copying, setCopying] = useState(false)
   const [copied, setCopied] = useState('')
+  // a failed copy is told beside the copy link, at the end, where the person tapped
+  const [copyProblem, setCopyProblem] = useState('')
   if (load.state !== 'ready') return <LoadState load={load} />
 
   async function submit() {
@@ -106,11 +108,11 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
     const have = new Set(there.map(key))
     const fresh = mine.filter((p) => !have.has(key(p))).sort((a, b) => a.position - b.position)
     let position = Math.max(-1, ...there.map((p) => p.position)) + 1
-    setBusy(true); setProblem(''); setCopying(false)
+    setBusy(true); setCopyProblem(''); setCopying(false)
     try {
       for (const p of fresh) await save.mutateAsync({ trip_id: to.id, text: p.text, owner: p.owner ?? null, packed_by: [], position: position++, ...(p.bag ? { bag: p.bag } : {}) })
       setCopied(`${fresh.length} copied to ${to.name.toLowerCase()}`)
-    } catch { setProblem("couldn't copy") }
+    } catch { setCopyProblem("couldn't copy") }
     finally { setBusy(false) }
   }
 
@@ -165,12 +167,13 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
         <ul className="list pack-list" aria-label="packed">{done.map(row)}</ul>
       </>}
       {canEdit && mine.length > 0 && copyTo.length > 0 && <div className="pack-copy-wrap">
-        <button type="button" className="pack-link" aria-expanded={copying} disabled={busy} onClick={() => { setCopying(!copying); setCopied('') }}>copy this list to…</button>
+        <button type="button" className="pack-link" aria-expanded={copying} disabled={busy} onClick={() => { setCopying(!copying); setCopied(''); setCopyProblem('') }}>copy this list to…</button>
         {copying && <div className="pack-copy" role="group" aria-label="copy to">
           <span className="mono-label">copy to</span>
           <div className="pack-copy-to">{copyTo.map((t) => <button key={t.id} type="button" disabled={busy} onClick={() => void copyInto(t)}>{t.name.toLowerCase()}</button>)}</div>
         </div>}
         {copied && <p className="pack-status" role="status">{copied}</p>}
+        {copyProblem && <p role="alert" className="warn-line">{copyProblem}</p>}
       </div>}
     </div>
   )

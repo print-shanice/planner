@@ -347,3 +347,14 @@ it('with only one person signed up there are no faces to pick', () => {
   expect(screen.queryByRole('tablist', { name: 'whose list' })).toBeNull()
   db.members = [{ email: 's@x.com', user_id: 'u-s', name: 'Shanice', color: 0 }, { email: 'k@x.com', user_id: 'u-k', name: 'Kiahna', color: 1 }]
 })
+
+it("a copy that fails says so beside the copy link, at the end", async () => {
+  db.packing = mixed()
+  db.save.mockReset().mockRejectedValue(new Error('down'))
+  render(<PackingTab trip={trip({ id: 'lap' })} copyTo={[trip({ id: 'gr', name: 'Greece' })]} />)
+  await userEvent.click(screen.getByRole('button', { name: 'copy this list to…' }))
+  await userEvent.click(within(screen.getByRole('group', { name: 'copy to' })).getByRole('button', { name: 'greece' }))
+  const alert = await screen.findByRole('alert')
+  expect(alert).toHaveTextContent("couldn't copy")
+  expect(alert.closest('.pack-copy-wrap')).not.toBeNull()
+})
