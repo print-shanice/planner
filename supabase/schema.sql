@@ -122,6 +122,10 @@ alter table public.packing add column if not exists owner uuid;
 alter table public.packing add column if not exists packed_by uuid[] not null default '{}';
 -- which bag a thing goes in: checked in, carried on, or worn to the airport (none = not decided)
 alter table public.packing add column if not exists bag text check (bag in ('check', 'carry', 'wear'));
+-- how many of a thing (3 black tees), and packs: a thing that holds things ("shirts", "toiletries bag"), one level deep
+alter table public.packing add column if not exists qty integer not null default 1 check (qty between 1 and 99);
+alter table public.packing add column if not exists is_pack boolean not null default false;
+alter table public.packing add column if not exists parent_id uuid references public.packing(id) on delete cascade;
 -- older ticks were for everyone; they move into packed_by once, so running this again changes nothing
 update public.packing set packed_by = (select coalesce(array_agg(m.user_id order by m.email), '{}') from public.members m where m.user_id is not null), done = false
   where done;

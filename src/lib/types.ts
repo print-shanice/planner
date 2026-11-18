@@ -106,6 +106,11 @@ export type PackingItem = {
   packed_by?: string[]
   // checked in, carried on, or worn to the airport
   bag?: Bag | null
+  // how many (3 black tees); one when missing
+  qty?: number | null
+  // a pack holds things ("shirts", "toiletries bag"); a thing in one has its pack's id
+  is_pack?: boolean | null
+  parent_id?: string | null
 }
 
 export type Bag = 'check' | 'carry' | 'wear'
