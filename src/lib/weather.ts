@@ -92,7 +92,37 @@ export function unitHere(): Unit {
 // a forecast is good for a few hours; what a place is usually like doesn't change
 const KEEP = { forecast: 6 * 3_600_000, usual: 30 * 86_400_000, was: 30 * 86_400_000 }
 
+// kept weather is only cleared once it's far past use: an old forecast (2 days) or old usual weather (60 days).
+// newer ones stay, so the plan still has something to show offline. each range asked is its own key, so
+// without this every day's new forecast would leave yesterday's behind for good
+const PRUNE = { forecast: 2 * 86_400_000, usual: 60 * 86_400_000, was: 60 * 86_400_000 }
+const PREFIXES = ['weather2:', 'dayweather:']
+
+export function pruneWeather(now = Date.now()) {
+  try {
+    const gone: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key || !PREFIXES.some((p) => key.startsWith(p))) continue
+      const kind = key.split(':')[2] as keyof typeof PRUNE
+      let at = NaN
+      try { at = JSON.parse(localStorage.getItem(key) ?? 'null')?.at } catch { /* unreadable: clear it */ }
+      if (!(kind in PRUNE) || !Number.isFinite(at) || now - at > PRUNE[kind]) gone.push(key)
+    }
+    for (const key of gone) localStorage.removeItem(key)
+  } catch { /* no storage: nothing kept */ }
+}
+
+// once per visit, before the first answer is looked up
+let pruned = false
+export function pruneOnce() {
+  if (pruned) return
+  pruned = true
+  pruneWeather()
+}
+
 export async function fetchTemps(at: { lat: number; lng: number }, ask: WeatherAsk, unit: Unit): Promise<Temps | null> {
+  pruneOnce()
   const spans = ask.kind === 'usual' ? ask.spans : [{ from: ask.from, to: ask.to }]
   const key = `weather2:${round2(at.lat)},${round2(at.lng)}:${ask.kind}:${spans.map((s) => `${s.from}_${s.to}`).join(',')}:${unit}`
   let cached: { at: number; value: Temps | null } | null = null

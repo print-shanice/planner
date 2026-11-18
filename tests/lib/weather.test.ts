@@ -1,4 +1,4 @@
-import { averageOf, fetchTemps, packWeatherAsk, skyOf, tempWords, weatherAsk, weatherLine, weatherUrl, yearsBack } from '../../src/lib/weather'
+import { averageOf, fetchTemps, packWeatherAsk, pruneWeather, skyOf, tempWords, weatherAsk, weatherLine, weatherUrl, yearsBack } from '../../src/lib/weather'
 
 const TODAY = '2026-11-10'
 
@@ -68,4 +68,22 @@ it('asks for rain and snow too, and says them in a few words', () => {
   expect(skyOf([{ daily: {} }])).toBeUndefined()
   expect(weatherLine({ hi: -3, lo: -11, kind: 'usual', unit: 'C', sky: 'snow most days' })).toBe('usually -3° / -11° · snow most days')
   expect(weatherLine({ hi: 23, lo: 14, kind: 'was', unit: 'C' })).toBe('23° / 14°')
+})
+
+it('clears weather kept too long ago to matter, keeping fresh answers and everything else', () => {
+  const now = Date.parse('2026-11-18T12:00:00Z')
+  const keep = (key: string, hoursAgo: number) => localStorage.setItem(key, JSON.stringify({ at: now - hoursAgo * 3_600_000, value: null }))
+  keep('weather2:48.85,2.35:forecast:2026-11-14_2026-11-18:C', 72)
+  keep('weather2:48.85,2.35:forecast:2026-11-18_2026-11-20:C', 3)
+  keep('dayweather:48.9,2.4:forecast:2026-11-10_2026-11-12:C', 49)
+  keep('dayweather:48.9,2.4:usual:2027-02-19_2027-02-23:C', 24 * 59)
+  keep('dayweather:48.9,2.4:was:2025-02-19_2025-02-23:C', 24 * 61)
+  localStorage.setItem('dayweather:48.9,2.4:forecast:broken', '{not json')
+  localStorage.setItem('planner.split', '0.4')
+  pruneWeather(now)
+  expect(Object.keys(localStorage).sort()).toEqual([
+    'dayweather:48.9,2.4:usual:2027-02-19_2027-02-23:C',
+    'planner.split',
+    'weather2:48.85,2.35:forecast:2026-11-18_2026-11-20:C',
+  ])
 })

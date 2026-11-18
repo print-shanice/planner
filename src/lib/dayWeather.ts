@@ -1,7 +1,7 @@
 import { useQueries } from '@tanstack/react-query'
 import { addDays } from './dates'
 import type { Point } from './geo'
-import { unitHere, weatherUrl, yearsBack, type Unit } from './weather'
+import { pruneOnce, unitHere, weatherUrl, yearsBack, type Unit } from './weather'
 
 // each day's low and high where that day happens, from open-meteo (free, no key).
 // days the forecast reaches get the forecast, past days what they were, days further off what those dates
@@ -84,6 +84,7 @@ async function get(url: string): Promise<Daily> {
 }
 
 export async function fetchDayTemps(ask: DayAsk, unit: Unit): Promise<Record<string, DayTemp>> {
+  pruneOnce()
   const key = `dayweather:${ask.at.lat},${ask.at.lng}:${ask.kind}:${ask.from}_${ask.to}:${unit}`
   let cached: { at: number; value: Record<string, DayTemp> } | null = null
   try { cached = JSON.parse(localStorage.getItem(key) ?? 'null') } catch { /* unreadable: ask again */ }
