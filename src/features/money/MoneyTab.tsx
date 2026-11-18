@@ -249,7 +249,6 @@ export function MoneyTab({ trip }: { trip: Trip }) {
         {repayment && <div className="stack">
           <p>{name(repayment.from)} paid {name(repayment.to)} {debt(repayment.eur)}</p>
           <p className="muted">{top.name} · with side trips</p>
-          <p className="muted">record money you’ve already paid back; this does not send a payment</p>
           {failure && <p className="warn-line" role="alert">{failure}</p>}
           <button type="button" className="btn primary" disabled={saving || !canEdit} onClick={() => void run(async () => {
             const current = settle?.moves.find(x => x.from === repayment.from && x.to === repayment.to)

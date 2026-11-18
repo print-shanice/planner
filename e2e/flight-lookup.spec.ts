@@ -20,7 +20,7 @@ test('choose a dated departure, save it, and reopen its local times', async ({ p
   const choices = form.getByRole('group', { name: 'choose a departure' })
   await expect(choices.getByRole('button')).toHaveCount(3)
   await expect(form.getByRole('button', { name: 'clear from', exact: true })).toHaveCount(0)
-  await expect(choices).toContainText('times are local to each airport')
+  await expect(choices).toContainText('local times')
   await choices.getByRole('button', { name: /18:30/ }).focus()
   await page.screenshot({ path: test.info().outputPath('departure-choices.png'), animations: 'disabled' })
   await page.keyboard.press('Enter')

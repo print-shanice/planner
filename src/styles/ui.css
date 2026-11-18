@@ -333,8 +333,9 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .page-form .route { display: grid; gap: 4px; padding-left: 14px; border-left: 1px dashed var(--ink-3); }
 
 /* colours: six dots */
-/* the colours sit inside a row like every other field: room above and below, its hairline under it */
-.page-form .swatches { gap: 12px 12px; padding: 14px 4px; border-bottom: 1px solid var(--line); }
+/* the colours sit on their row like every other field, wrapping to fit beside the label */
+.page-form .colour-field .swatches { grid-template-columns: repeat(auto-fill, 32px); gap: 10px; padding: 12px 4px; }
+.page-form .colour-field .swatch { width: 32px; height: 32px; }
 
 /* extras: one quiet "more" at the bottom */
 .page-form .folds { margin-top: 28px; border: 0; border-radius: 0; }

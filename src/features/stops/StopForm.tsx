@@ -211,7 +211,6 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       ))}
     </div>
   )
-  const q = (text: string) => <p className="form-q">{text}</p>
   const named = (label: string) => (
     <NamePlace label={label} name={d.title} place={d.place} near={near} autoFocus={isNew}
       onName={(title) => set({ title })} onPlace={(p) => set(p ? { place: p, title: keptName(d.title, p.name), ...(!d.category && p.category ? { category: p.category } : {}) } : { place: null })} />
@@ -237,25 +236,18 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
     <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
       {trip && <p className="form-context">{trip.name}{d.day ? ` · ${dayLabel(d.day)}` : stop.saved ? ' · saved for later' : ' · no date yet'}</p>}
       {kind === 'stay' && (<>
-        {q('where are you staying?')}
         {named('name')}
-        {q('when')}
         {when([['check-in', 'day', 'time'], ['check-out', 'end_date', 'end_time']])}
-        {q('booking')}
         {status}
         {ref}
         {link}
-        {q('cost')}
         {money}
         {notes}
       </>)}
       {kind === 'place' && (<>
-        {q('what are you doing?')}
         {named('name')}
         <CategoryPick value={d.category} onChange={(category) => set({ category })} />
-        {q('when')}
         {when([['day', 'day', 'time']])}
-        {q('tickets')}
         {status}
         {ref}
         <div className="folds">
@@ -266,9 +258,10 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
         </div>
       </>)}
       {kind === 'journey' && (<>
-        {q('how')}
-        <div className="segmented modes" role="group" aria-label="mode">
-          {MODES.map((m) => <button key={modeWord(m)} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={modeIcon(m)} size={20} /><span>{modeWord(m)}</span></button>)}
+        <div className="field mode-field"><span className="label">how</span>
+          <div className="segmented modes" role="group" aria-label="mode">
+            {MODES.map((m) => <button key={modeWord(m)} type="button" aria-pressed={d.mode === m} onClick={() => set({ mode: m })}><Icon name={modeIcon(m)} size={20} /><span>{modeWord(m)}</span></button>)}
+          </div>
         </div>
         {d.mode === 'flight' && (<>
           <div className="flight-find" role="group" aria-label="flight lookup">
@@ -282,8 +275,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
           </div>
           {lookNote && <p className="warn-line" role="status">{lookNote}</p>}
           {candidates && <div className="flight-choices" role="group" aria-label="choose a departure">
-            <p className="form-q">choose your flight</p>
-            <p className="muted" role="status">{candidates.length} departures found · times are local to each airport</p>
+            <p className="muted" role="status">{candidates.length} departures · local times</p>
             <ul>{candidates.map((f) => <li key={JSON.stringify([f.dep.iata || f.dep.airport, f.arr.iata || f.arr.airport, f.dep.scheduled, f.arr.scheduled])}>
               <button type="button" className="flight-choice" onClick={() => chooseFlight(f)}>
                 <span className="flight-choice-route">{f.dep.iata || f.dep.airport} to {f.arr.iata || f.arr.airport}<Icon name="next" size={18} /></span>
@@ -293,14 +285,11 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
             </li>)}</ul>
           </div>}
         </>)}
-        {q('route')}
         <div className="route">
           <PlaceField id={`from-${id}`} label="from" value={d.origin} near={near} onChange={(p) => set({ origin: p })} />
           <PlaceField id={`to-${id}`} label="to" value={d.destination} near={near} onChange={(p) => set({ destination: p })} />
         </div>
-        {q('when')}
         {when([['depart', d.mode === 'flight' ? null : 'day', 'time'], ['arrive', 'end_date', 'end_time']])}
-        {q('booking')}
         {status}
         {booked && d.mode !== 'flight' && <label className="field"><span className="label">carrier / number</span><input value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>}
         {ref}
@@ -310,8 +299,7 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
       </>)}
       {kind === 'note' && (<>
         <input className="title-input" aria-label="title" placeholder="title" value={d.title} onChange={(e) => set({ title: e.target.value })} autoFocus={isNew} />
-        <textarea className="note-text" aria-label="notes" placeholder="write it down" value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
-        {q('when')}
+        <textarea className="note-text" aria-label="notes" placeholder="notes" value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
         {when([['day', 'day', 'time']])}
         {status}
         <div className="folds"><Fold label="booking, cost & notes" open={!!d.url.trim() || !!d.end_time}>

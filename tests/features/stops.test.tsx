@@ -771,7 +771,8 @@ describe('forms are calm full pages', () => {
 
   it('a stay asks only where, when, booking and cost, in that order, with no pills', async () => {
     const d = await newStay()
-    expect([...screen.getByRole('dialog').querySelectorAll('.form-q')].map((q) => q.textContent)).toEqual(['where are you staying?', 'when', 'booking', 'cost'])
+    // no questions or group headings over the rows (shanice, 18 nov: filler)
+    expect(screen.getByRole('dialog').querySelector('.form-q')).toBeNull()
     // its status is the card's words (shanice, 18 nov), never a switch
     expect(d.getByRole('group', { name: 'status' })).toBeInTheDocument()
     expect(d.queryByRole('switch')).toBeNull()
@@ -846,7 +847,7 @@ describe('a flight looks itself up by its number', () => {
     await userEvent.click(within(d).getByRole('button', { name: 'look up' }))
     const choices = await within(d).findByRole('group', { name: 'choose a departure' })
     expect(within(choices).getAllByRole('button')).toHaveLength(2)
-    expect(within(choices).getByRole('status')).toHaveTextContent('2 departures found')
+    expect(within(choices).getByRole('status')).toHaveTextContent('2 departures · local times')
     expect(within(d).queryByRole('button', { name: 'clear from' })).toBeNull()
     await userEvent.click(within(d).getByRole('button', { name: 'save' }))
     expect(within(d).getByRole('alert')).toHaveTextContent('choose a departure first')

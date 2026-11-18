@@ -52,12 +52,9 @@ export function CostForm({ trip, cost, day, stopId = null, defaults, onDone }: P
 
   return (
     <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
-      <p className="form-q">how much?</p>
       <CostFields value={money} onChange={(m) => set({ money: m })} members={members} rates={rates} autoFocus={!cost}
         payment={<PaymentChoice value={money} onChange={(m) => set({ money: m })} members={members} />} />
-      <p className="form-q">for</p>
-      <input className="title-input" aria-label="name" placeholder="what was it?" value={title} onChange={(e) => set({ title: e.target.value })} />
-      <p className="form-q">kind and day</p>
+      <input className="title-input" aria-label="name" placeholder="name" value={title} onChange={(e) => set({ title: e.target.value })} />
       <FieldMenu label="category" value={category} onPick={(v) => set({ category: v })} options={CATEGORIES.map(([v, l]) => ({ value: v, label: l }))} />
       <div className="when">
         <div className="when-row"><span className="when-label">date</span><Pick type="date" label="date" value={date} onChange={(v) => set({ date: v })} /></div>

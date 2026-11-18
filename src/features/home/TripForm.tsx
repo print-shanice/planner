@@ -74,20 +74,19 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
 
   return (
     <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
-      <input className="title-input" aria-label="name" placeholder="name the trip" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
-      <p className="form-q">when</p>
+      <input className="title-input" aria-label="name" placeholder="name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
       <div className="when">
         <div className="when-row"><span className="when-label">starts</span><Pick type="date" label="starts" value={start} onChange={setStart} /></div>
         <div className="when-row"><span className="when-label">ends</span><Pick type="date" label="ends" value={end} min={start || undefined} onChange={setEnd} /></div>
       </div>
-      <p className="form-q">based in</p>
       <PlaceField id={`base-${id}`} label="home base" value={base} onChange={setBase} />
-      <p className="form-q">colour</p>
-      <div className="swatches" role="radiogroup" aria-label="colour">
-        {PICKER_ORDER.map((i) => (
-          <button key={i} type="button" role="radio" aria-checked={colourIndex(color) === i} aria-label={COLOUR_NAMES[i]}
-            className="swatch" style={{ background: colourVar(i) }} onClick={() => setColor(i)} />
-        ))}
+      <div className="field colour-field"><span className="label" aria-hidden="true">colour</span>
+        <div className="swatches" role="radiogroup" aria-label="colour">
+          {PICKER_ORDER.map((i) => (
+            <button key={i} type="button" role="radio" aria-checked={colourIndex(color) === i} aria-label={COLOUR_NAMES[i]}
+              className="swatch" style={{ background: colourVar(i) }} onClick={() => setColor(i)} />
+          ))}
+        </div>
       </div>
       <div className="folds">
         <Fold label="budget, notes & trip details" open={budget.trim() !== '' || !!notes.trim()}>
