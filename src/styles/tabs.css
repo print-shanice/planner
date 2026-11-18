@@ -114,14 +114,7 @@
 .pack-done-head { margin: 10px 0 0; }
 .map-search input::placeholder { color: var(--ink-3); }
 .packing .pack-add { margin-top: 0; }
-/* "add" is a word at the end of the line, not a box */
-.pack-add .line-go { min-width: 44px; padding: 0 2px 0 10px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font-size: 15px; font-weight: 650; }
-.pack-add .line-go:disabled { color: var(--ink-3); }
-/* the add line is one row on one line: the field, the bag and "add" share a baseline over a single underline
-   (dashed, ink while typing) that runs under all three */
-.jot.pack-add { flex-wrap: nowrap; align-items: baseline; border-bottom: 1px dashed var(--line); }
-.jot.pack-add:focus-within { border-bottom: 1px solid var(--ink); }
-.jot.pack-add input, .jot.pack-add input:focus-visible { border-bottom: 0; }
+/* the add line (shared .jot look in paper.css): the field, the bag and "add" on one baseline over one underline */
 /* the bag new things go in: the planner's own dropdown as a quiet mono word on the line, ink once a bag is picked */
 .pack-add .pack-add-bag {
   max-width: none; min-width: 44px; padding: 0 4px; font-family: var(--f-mono); font-size: 12px; font-weight: 400;

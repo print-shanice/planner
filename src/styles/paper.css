@@ -297,6 +297,15 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .jot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .jot input { flex: 1; min-width: 0; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line); background: none; font-size: 16px; color: var(--ink); }
 .jot input:focus-visible { outline: none; border-bottom: 2px solid var(--ink); }
+/* every add line (places, notes, links, money, packing) ends in "add" as a bold word, never a box; the line's words share a baseline */
+.jot { align-items: baseline; }
+.jot .line-go { min-width: 44px; padding: 0 2px 0 10px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font-size: 15px; font-weight: 650; }
+.jot .line-go:disabled { color: var(--ink-3); }
+/* a one-field line is underlined as a whole, under the field and "add" alike (dashed, ink while typing);
+   money's line keeps its name and amount underlined apart */
+.jot:not(.cost-line) { flex-wrap: nowrap; border-bottom: 1px dashed var(--line); }
+.jot:not(.cost-line):focus-within { border-bottom-style: solid; border-bottom-color: var(--ink); }
+.jot:not(.cost-line) input, .jot:not(.cost-line) input:focus-visible { border-bottom: 0; }
 
 .side-list { list-style: none; margin: 10px 0 0; padding: 0; }
 .side-list li { border-bottom: 1px solid var(--line); }
@@ -385,7 +394,7 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 .trip-phone .itin-line { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 
 /* ---------- places: add by search, filter by kind ---------- */
-.add-place { display: grid; }
+.add-place { display: grid; padding: 0; } /* the wrapper of places' and links' add lines: flush with the search above, like notes and money */
 .add-place .warn-line { margin: 6px 0 0; }
 .kind-filter { display: flex; gap: 18px; overflow-x: auto; margin: 10px -16px 0; padding: 0 16px; scrollbar-width: none; }
 .kind-filter::-webkit-scrollbar { display: none; }
