@@ -80,3 +80,27 @@ it('scrolling its own list of trips keeps it open; the page scrolling under it c
   fireEvent.scroll(window)
   expect(screen.queryByRole('listbox')).toBeNull()
 })
+
+it('names its sections, and the keys skip the names', async () => {
+  const sectioned = [
+    { value: 'eu', label: 'euro summer', color: 0, section: 'coming up' },
+    { value: 'par', label: 'paris', color: 2, depth: 1, section: 'coming up' },
+    { value: 'gr', label: 'greek islands', color: 4, section: 'past' },
+  ]
+  render(<ChoiceMenu label="euro summer" ariaLabel="packing for which trip" options={sectioned} onPick={vi.fn()} align="left" />)
+  await userEvent.click(screen.getByRole('button', { name: 'packing for which trip' }))
+  const list = screen.getByRole('listbox')
+  expect(within(list).getAllByRole('presentation').map((h) => h.textContent)).toEqual(['coming up', 'past'])
+  expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual(['euro summer', 'paris', 'greek islands'])
+  expect(list).toHaveClass('left')
+  await userEvent.keyboard('{End}{ArrowUp}')
+  expect(screen.getByRole('option', { name: 'paris' })).toHaveFocus()
+})
+
+it('opens on the selected choice', async () => {
+  render(<ChoiceMenu label="greek islands" ariaLabel="packing for which trip" options={options} selected="gr" onPick={vi.fn()} />)
+  await userEvent.click(screen.getByRole('button', { name: 'packing for which trip' }))
+  expect(screen.getByRole('option', { name: 'greek islands' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('option', { name: 'greek islands' })).toHaveFocus()
+  expect(screen.getByRole('option', { name: 'paris' })).toHaveAttribute('aria-selected', 'false')
+})

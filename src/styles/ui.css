@@ -420,6 +420,11 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
   text-transform: lowercase; font-family: var(--f-body); animation: choice-in .16s ease-out; transform-origin: top right;
 }
 .choice-list.up { transform-origin: bottom right; }
+.choice-list.left { transform-origin: top left; }
+.choice-list.left.up { transform-origin: bottom left; }
+/* a section's name: a quiet mono label; the ones after the first start under a hairline */
+.choice-head { padding: 10px 12px 4px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.choice + .choice-head { margin-top: 4px; border-top: 1px solid var(--line); }
 
 /* Short contextual help floats above sheets, with the same ink and paper as the app. */
 .context-tip {
