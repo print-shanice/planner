@@ -48,6 +48,7 @@ vi.mock('../../src/features/home/Globe', () => ({
 import { HomePage } from '../../src/features/home/HomePage'
 import { TripForm } from '../../src/features/home/TripForm'
 import { ToastProvider } from '../../src/components/Toast'
+import { colourVar } from '../../src/lib/colors'
 
 function Where() {
   const l = useLocation()
@@ -932,6 +933,8 @@ describe('packing, one trip at a time from home', () => {
     expect(screen.getByText(/packing for/)).toBeInTheDocument()
     expect(menu()).toHaveTextContent('lapland')
     expect(screen.getByRole('list', { name: 'packing' })).toHaveTextContent('thermal gloves')
+    // the trip's own colour sits before its name
+    expect((menu().querySelector('.pack-swatch') as HTMLElement).style.background).toBe(colourVar(lap.color))
     expect(screen.queryByText('sunscreen')).toBeNull()
     expect(screen.queryByRole('tablist', { name: 'which trips' })).toBeNull()
     expect(screen.queryByRole('tablist', { name: 'trip' })).toBeNull()

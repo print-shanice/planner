@@ -1,4 +1,4 @@
-import { Fragment, useId } from 'react'
+import { Fragment, useId, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { tint } from './MonthCalendar'
 import { Icon, type IconName } from './Icon'
@@ -9,7 +9,7 @@ import { usePopupList } from './usePopupList'
 export type Choice = { value: string; label: string; color?: number; depth?: number; icon?: IconName; section?: string }
 
 type Props = {
-  label: string; ariaLabel: string; options: Choice[]; onPick: (value: string) => void; disabled?: boolean; className?: string
+  label: ReactNode; ariaLabel: string; options: Choice[]; onPick: (value: string) => void; disabled?: boolean; className?: string
   // which edge the list lines up with (the button's right by default); selected is marked and opened on
   align?: 'left' | 'right'; selected?: string
 }

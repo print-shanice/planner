@@ -3,6 +3,7 @@ import type { Trip } from '../../lib/types'
 import { countdown, fmtRange, todayISO } from '../../lib/dates'
 import { hasPoint } from '../../lib/walk'
 import { packWeatherAsk, useTemps, weatherLine } from '../../lib/weather'
+import { colourVar } from '../../lib/colors'
 import { EmptyState } from '../../components/EmptyState'
 import { ChoiceMenu, type Choice } from '../../components/ChoiceMenu'
 import { tripChoices } from '../home/Inbox'
@@ -10,7 +11,7 @@ import { leadTrip, when } from '../home/Trips'
 import { PackingTab } from './PackingTab'
 
 // packing is for one trip at a time: the one on now or coming next, unless another is picked (kept in the address).
-// one line names it, "packing for <trip>", and the name opens a menu of the trips coming up, then the past ones
+// one line names it, "packing for <trip>" with the trip's colour before its name, and the name opens a menu of the trips coming up, then the past ones
 export function HomePacking({ trips }: { trips: Trip[] }) {
   const [params, setParams] = useSearchParams()
   const today = todayISO()
@@ -38,7 +39,7 @@ export function HomePacking({ trips }: { trips: Trip[] }) {
   return (
     <div className="home-packing">
       <p className="pack-for">
-        packing for <ChoiceMenu label={trip.name.toLowerCase()} ariaLabel="packing for which trip" options={choices} selected={trip.id} align="left" onPick={pick} className="pack-for-pick" />
+        packing for <ChoiceMenu label={<><span className="pack-swatch" style={{ background: colourVar(trip.color) }} aria-hidden="true" />{trip.name.toLowerCase()}</>} ariaLabel="packing for which trip" options={choices} selected={trip.id} align="left" onPick={pick} className="pack-for-pick" />
       </p>
       <PackingTab key={trip.id} trip={trip} dates={dates} weather={temps ? weatherLine(temps) : null}
         copyTo={coming.filter((t) => t.id !== trip.id)} />

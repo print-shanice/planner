@@ -56,10 +56,12 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
   // whose list is open: always one person's when there are two or more of you (shared things are on every list)
   const [picked, setPicked] = useState<string | null>(null)
   const view = ids.length > 1 ? (picked && ids.includes(picked) ? picked : ids[0]) : null
+  // one bag at a time, or all of them; the count follows it
+  const [bag, setBag] = useState<Bag | null>(null)
   const all = (pq.data ?? []).filter((p) => p.trip_id === trip.id)
   const packed = (p: PackingItem) => isPacked(p, view, ids)
   const mine = all.filter((p) => shows(p, view))
-  const items = [...mine].sort((a, b) => a.position - b.position)
+  const items = (bag ? mine.filter((p) => p.bag === bag) : mine).sort((a, b) => a.position - b.position)
   const toPack = items.filter((p) => !packed(p)), done = items.filter(packed)
   const save = useSave('packing')
   const removeLater = useUndoRemove('packing')
@@ -151,6 +153,8 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
           {mine.length > 0 && <span className="pack-count num">{done.length} of {items.length} packed</span>}
         </div>
         <div className="pack-meter" aria-hidden="true"><span style={{ width: `${items.length ? Math.round((done.length / items.length) * 100) : 0}%` }} /></div>
+        {mine.length > 0 && <Choices label="show bag" value={bag ?? ''} onPick={(v) => { setBag(v || null); setAddBag(v) }}
+          options={[['', 'all'], ...BAG_KEYS.map((k): [Bag, string] => [k, BAGS[k]])]} />}
       </>}
       {canEdit && !editing && <form className="jot pack-add" onSubmit={e => { e.preventDefault(); void submit() }}>
         <input ref={addField} aria-label="add to pack" placeholder="add to pack…" value={text} disabled={busy} autoComplete="off" enterKeyHint="done" onChange={e => setText(e.target.value)} />

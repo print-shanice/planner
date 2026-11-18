@@ -272,7 +272,7 @@ it('editing a thing can change whose it is and its bag', async () => {
   expect(db.save).toHaveBeenCalledWith({ id: 'a', owner: null, bag: 'wear' })
 })
 
-it('there is no bag filter: every bag is listed, and adding takes the bag picked on the add line', async () => {
+it('one bag at a time: the filter sits under the meter, the count follows it, and adding puts things in it', async () => {
   db.packing = [
     { id: 'a', trip_id: 'lap', text: 'passport', position: 0, owner: S, packed_by: [S], bag: 'carry' },
     { id: 'b', trip_id: 'lap', text: 'boots', position: 1, owner: S, packed_by: [], bag: 'wear' },
@@ -280,11 +280,16 @@ it('there is no bag filter: every bag is listed, and adding takes the bag picked
   ]
   db.save.mockReset().mockResolvedValue({})
   render(<PackingTab trip={trip({ id: 'lap' })} />)
-  expect(screen.queryByRole('group', { name: 'show bag' })).toBeNull()
+  const filter = screen.getByRole('group', { name: 'show bag' })
+  expect(within(filter).getAllByRole('button').map((b) => b.textContent)).toEqual(['all', 'check-in', 'carry-on', 'wear'])
+  expect(document.querySelector('.pack-meter')!.nextElementSibling).toBe(filter)
   expect(names()).toEqual(['boots', 'charger', 'passport'])
   expect(screen.getByText('1 of 3 packed')).toBeInTheDocument()
+  await userEvent.click(within(filter).getByRole('button', { name: 'carry-on' }))
+  expect(names()).toEqual(['charger', 'passport'])
+  expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
   await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'book')
-  await userEvent.click(within(screen.getByRole('group', { name: 'bag' })).getByRole('button', { name: 'carry-on' }))
+  expect(within(screen.getByRole('group', { name: 'bag' })).getByRole('button', { name: 'carry-on' })).toHaveAttribute('aria-pressed', 'true')
   await userEvent.keyboard('{Enter}')
   expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'book', owner: S, bag: 'carry' }))
 })

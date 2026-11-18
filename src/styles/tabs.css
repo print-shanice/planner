@@ -67,6 +67,9 @@
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
 }
 .pack-for .pack-for-pick:active { filter: brightness(.85); }
+/* the trip's colour, a small square before its name (as on the home calendar's trips) */
+.pack-for .pack-swatch { width: 9px; height: 9px; flex: none; margin: 0 8px 0 2px; }
+.pack-for .pack-for-pick { gap: 0; }
 .pack-meta { margin: 0 0 6px; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 /* whose list on the left, the count on the right; the meter under them is the row's only line */
 .pack-who { display: flex; align-items: center; gap: 16px; min-height: 36px; }
@@ -74,6 +77,8 @@
 .pack-who .pack-tabs button, .pack-who .pack-tabs button[aria-selected="true"] { border-bottom-color: transparent; }
 .pack-count { margin-left: auto; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
 .pack-who + .pack-meter { margin-top: -10px; }
+/* the bag filter: small mono words just under the meter, about the list below */
+.pack-meter + .pack-choices { margin-top: -8px; }
 /* the weather wraps as one piece, never leaving a lone "3°" */
 .pack-meta [aria-label="weather"] { white-space: nowrap; }
 .pack-link, .pack-copy-to button { padding: 0; border: 0; background: none; color: var(--ink); font-size: 14px; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
@@ -86,7 +91,7 @@
 .pack-copy-to button { text-decoration-color: var(--line); }
 .pack-copy-to button:hover { text-decoration-color: var(--ink); }
 .pack-status { margin: 0; font-size: 14px; color: var(--ink-2); }
-/* mono text choices: the bag on the add line, and the bag and whose rows when editing */
+/* mono text choices: the bag filter under the meter, the bag on the add line, and the bag and whose rows when editing */
 .pack-choices { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .pack-choices button { padding: 2px 0; border: 0; border-bottom: 1px solid transparent; background: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); cursor: pointer; }
 .pack-choices button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
