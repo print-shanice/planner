@@ -598,3 +598,34 @@ describe('removing a line', () => {
     expect(db.remove).toHaveBeenCalledTimes(1)
   })
 })
+
+// each day's weather as open-meteo would give it: one low and high per date asked
+function weatherBy(hi: number, lo: number) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const u = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
+    const days: string[] = []
+    for (let d = u.searchParams.get('start_date')!; d <= u.searchParams.get('end_date')!; d = new Date(Date.parse(`${d}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10)) days.push(d)
+    return Promise.resolve(new Response(JSON.stringify({ daily: { time: days, temperature_2m_max: days.map(() => hi), temperature_2m_min: days.map(() => lo) } })))
+  })
+}
+
+it('each day with a spot gives its low and high beside the date, outside the heading', async () => {
+  const spy = weatherBy(12, 4)
+  show(tokyo())
+  expect(await dayBox('2025-09-19').findByText('4°–12°')).toHaveClass('doc-temp')
+  expect(head(/friday 19 september/).textContent).toBe('friday 19 september')
+  // a day with nowhere to place it, and no base, shows none
+  expect(dayBox('2025-09-18').queryByText(/°/)).toBeNull()
+  spy.mockRestore()
+})
+
+it('a far-off day says it is what that date is usually like, not a forecast', async () => {
+  const spy = weatherBy(9, -2)
+  const far = trip({ id: 'tk', name: 'eindhoven', start_date: '2031-02-07', end_date: '2031-02-08' })
+  db.trips = [far]
+  db.stops = [stop({ id: 'a', trip_id: 'tk', day: '2031-02-07', title: 'markt', place: place() })]
+  show(far)
+  const temp = await dayBox('2031-02-07').findByText((_, el) => !!el?.classList.contains('doc-temp'))
+  expect(temp).toHaveTextContent('~usually −2°–9°')
+  spy.mockRestore()
+})

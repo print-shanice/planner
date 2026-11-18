@@ -83,7 +83,10 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 
 .doc-day { padding: 18px 0 10px; border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--bar-h, 0px) + 2px); }
 .doc-day.folded-out { padding: 0; border: 0; }
-.doc-day-head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin-bottom: 8px; }
+.doc-day-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
+.doc-day-head > :not(.doc-date, .doc-temp) { grid-column: 1 / -1; }
+/* the day's low and high: one quiet mono word at the heading's right, on its baseline */
+.doc-temp { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .doc-date { font-family: var(--f-head); font-weight: 400; font-size: 20px; line-height: 1.25; letter-spacing: -0.01em; }
 .doc-day-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; overflow-wrap: anywhere; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .today-tag { padding: 1px 6px; border-radius: 4px; background: var(--mark); color: var(--mark-ink); }
