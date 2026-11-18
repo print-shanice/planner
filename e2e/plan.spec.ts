@@ -226,7 +226,7 @@ test.describe('the plan', () => {
     await open(page, '/trip/eu')
     await expect(page.getByRole('group', { name: 'january 2027' })).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'trip sections' })).toBeVisible()
-    const paris = page.getByRole('link', { name: /^paris\s*19 – 23 feb →$/ })
+    const paris = page.getByRole('link', { name: /^paris\s*19 – 23 feb$/ })
     await paris.scrollIntoViewIfNeeded()
     await paris.click()
     await expect(page).toHaveURL(/#\/trip\/par$/)

@@ -4,7 +4,7 @@ import { Icon } from '../../components/Icon'
 export type AddKind = 'place' | 'stay' | 'journey' | 'note' | 'cost' | 'link' | 'side trip'
 
 const OPTIONS: [AddKind, string][] = [
-  ['place', 'pin'], ['stay', 'bed'], ['journey', 'arrow'], ['note', 'note'], ['cost', 'money'], ['link', 'link'], ['side trip', 'calendar'],
+  ['place', 'pin'], ['stay', 'bed'], ['journey', 'train'], ['note', 'note'], ['cost', 'money'], ['link', 'link'], ['side trip', 'calendar'],
 ]
 
 // the one way to add anything to a trip

@@ -59,12 +59,14 @@
 .center { text-align: center; justify-items: center; }
 .spacer { flex: 1; }
 
-.segmented { display: flex; gap: 2px; padding: 3px; background: var(--soft); border-radius: 8px; }
+/* picking one of a few: plain words, the picked one ink and bold, like the card's "how" (shanice, 18 nov: no grey segmented box) */
+.segmented { display: flex; flex-wrap: wrap; gap: 0 18px; }
 .segmented button {
-  flex: 1; min-height: 36px; border: 0; border-radius: 6px; background: transparent;
-  font-size: 14px; font-weight: 500; color: var(--ink-2);
+  flex: none; min-height: 44px; padding: 0; border: 0; background: none;
+  font: inherit; font-size: 15px; font-weight: 400; color: var(--ink-2); cursor: pointer;
 }
-.segmented button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+.segmented button:hover { color: var(--ink); }
+.segmented button[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
 
 /* empty */
 .empty { padding: 40px 16px; text-align: center; color: var(--ink-2); }
@@ -233,7 +235,7 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
   border: 0; background: none; color: var(--ink); font-size: 16px; font-weight: 500; text-align: left; cursor: pointer; border-radius: 0;
 }
 .add-option:hover { background: var(--paper-2); }
-.add-icon { flex: none; width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center; border: 1px solid var(--line); }
+.add-icon { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
 
 /* waiting: a soft pulse, and a short word saying what for */
 @keyframes pulse { 50% { opacity: 0.55; } }
@@ -336,11 +338,9 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 .face[aria-pressed="true"] .avatar { box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--c); }
 
 /* how you travel: icons, not pills */
-.page-form .modes { display: flex; gap: 16px; padding: 0; background: none; border-radius: 0; }
-.page-form .modes button { flex: none; display: grid; justify-items: center; gap: 4px; min-width: 52px; padding: 0; border: 0; background: none; box-shadow: none; font-size: 12px; font-weight: 500; color: var(--ink-2); }
-.page-form .modes button .icon { width: 48px; height: 48px; padding: 13px; border-radius: 8px; border: 1px solid var(--line); background: none; color: var(--ink-2); box-sizing: border-box; }
-.page-form .modes button[aria-pressed="true"] { color: var(--ink); background: none; box-shadow: none; }
-.page-form .modes button[aria-pressed="true"] .icon { background: var(--ink); border-color: var(--ink); color: var(--card); }
+/* a journey's mode in the form reads like the card's "how": words, the picked one ink and bold */
+.page-form .modes { display: flex; flex-wrap: wrap; gap: 0 18px; }
+.page-form .modes button .icon { display: none; }
 .page-form .route { display: grid; gap: 4px; padding-left: 14px; border-left: 1px dashed var(--ink-3); }
 
 /* colours: six dots */
@@ -410,7 +410,7 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 
 /* who a cost is for: everyone, some people, or exact amounts */
 .split-for { display: grid; gap: 8px; min-width: 0; }
-.split-for .segmented button { flex: 1; }
+.split-for .segmented button { flex: none; }
 .shares { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
 
 /* the planner's own dropdown list (ChoiceMenu): floats above the page, one row per choice, side trips indented */

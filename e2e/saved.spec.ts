@@ -59,7 +59,7 @@ test.describe('notes', () => {
     await open(page, '/trip/bcn?tab=notes')
     const notes = page.getByRole('region', { name: 'notes' })
     await expect(notes.getByRole('list', { name: 'no date' })).toContainText('gifts to bring back')
-    const day = notes.getByRole('list', { name: 'thu 15 apr' })
+    const day = notes.getByRole('list', { name: 'thursday 15 april' })
     await expect(day).toContainText('one cabin bag only')
     await expect(day).toContainText('key box code comes by email')
     await expect(day).toContainText('buy t-casual card')

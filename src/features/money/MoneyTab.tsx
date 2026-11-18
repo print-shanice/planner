@@ -146,7 +146,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
 
       {settle && (
         <section className="settle-box" aria-label="settle up">
-          <p className="label help-label">settle up<Help label="about settling up">{`balances cover ${top.name} and all its side trips, regardless of the spending filter above`}</Help></p>
+          <h3 className="head help-label settle-h">settle up<Help label="about settling up">{`balances cover ${top.name} and all its side trips, regardless of the spending filter above`}</Help></h3>
           <p className="settle-scope muted">{top.name} · with side trips</p>
           <ul className="bal-list">
             {settle.people.map((p) => {
@@ -174,7 +174,7 @@ export function MoneyTab({ trip }: { trip: Trip }) {
             const line = `${name(x.from)} ${owes(x.from)} ${name(x.to)} ${debt(x.eur)}`
             return (
               <div key={`${x.from}-${x.to}`} className="settle-move">
-                <span className="settle-faces" aria-hidden="true"><Face id={x.from} /><span className="settle-arrow">→</span><Face id={x.to} /></span>
+                <span className="settle-faces" aria-hidden="true"><Face id={x.from} /><Face id={x.to} /></span>
                 <p className="settle-line num">{line}</p>
                 {canEdit && <Tooltip text="record money you’ve already paid back; this does not send a payment"><button type="button" className="btn ghost small" aria-label={`paid back: ${line}`} onClick={() => setRepayment(x)}>record repayment</button></Tooltip>}
               </div>

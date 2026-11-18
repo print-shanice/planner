@@ -30,7 +30,7 @@
   border: 0; border-top: 1px solid var(--line); background: none; color: inherit; text-align: left; cursor: pointer;
 }
 .places-mark { width: 24px; height: 24px; flex: none; display: grid; place-items: center; color: var(--ink-2); }
-.places-mark .dot { display: block; width: 10px; height: 10px; border-radius: 50%; }
+.places-mark .dot { display: block; width: 10px; height: 10px; }
 .places-name { font-weight: 500; }
 .places-row .muted { font-size: 13px; }
 .map-tab { position: relative; height: 100%; min-height: 320px; overflow: hidden; background: var(--map-land); }
@@ -76,7 +76,7 @@
 .side-pin.home { cursor: default; font-weight: 500; }
 .side-pin:active { filter: brightness(.92); }
 .side-pin:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.side-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.side-dot { width: 10px; height: 10px; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); }
 .side-text { display: flex; flex-direction: column; line-height: 1.25; }
 .side-name { color: var(--ink); }
 .side-dates { color: var(--ink-2); font-family: var(--f-mono); font-size: 11px; }
@@ -113,3 +113,4 @@
 .find-foot .text-link { min-height: 36px; }
 /* while something is carried off the map, its search and card step back so the plan can take the drop */
 body.carrying .map-top, body.carrying .map-bottom { opacity: .35; pointer-events: none; transition: opacity .15s; }
+.place-card-x { flex: none; margin: -10px -10px 0 0; }

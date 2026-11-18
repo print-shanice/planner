@@ -80,7 +80,7 @@ export function TripHeader({ trip, add, onEdit }: { trip: Trip; add?: ReactNode;
       <OfflineBadge />
       <div className="trip-top">
         <Link to={up ? `/trip/${up.id}` : '/'} className="back-link" aria-label={`back to ${upName}`}>
-          <Icon name="back" />{up && <CountryFlag code={flagsOf(up)[0]} />}<span>{upName}</span>
+          <Icon name="back" /><span>{upName}</span>{up && <CountryFlag code={flagsOf(up)[0]} />}
         </Link>
         <button type="button" className="text-link trip-edit" aria-label="edit trip" disabled={!canEdit} onClick={onEdit}>edit</button>
       </div>
@@ -118,7 +118,7 @@ export function TripFacts({ trip }: { trip: Trip }) {
     <div className="trip-facts">
       {route.length > 0 && (
         <p className="trip-route" aria-label={`countries: ${route.map(countryName).join(', ')}`}>
-          {route.slice(0, ROUTE_MAX).map((c, i) => <span key={c}>{i > 0 && <i aria-hidden="true">→</i>}<abbr title={countryName(c)}>{c}</abbr></span>)}
+          {route.slice(0, ROUTE_MAX).map((c, i) => <span key={c}>{i > 0 && <i aria-hidden="true">·</i>}<abbr title={countryName(c)}>{c}</abbr></span>)}
           {route.length > ROUTE_MAX && <span className="trip-route-more">+{route.length - ROUTE_MAX}</span>}
         </p>
       )}

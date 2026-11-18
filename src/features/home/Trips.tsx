@@ -45,8 +45,8 @@ export function HomeStamp({ trips, today, flagsOf }: { trips: Trip[]; today: str
   const next = on ? null : leadTrip(trips, today)
   return (
     <div className="home-stamp" aria-label="where and when">
-      {on && <><span>now in</span><span className="stamp-time">{on.name}</span>{zone && <span>{placeCode(on.base?.city || on.base?.name || on.name)} {clockIn(zone, now)}</span>}</>}
-      {next && <><span>next</span><span className="stamp-time">{next.name}</span><span>{[when(next, today), next.start_date ? fmtDay(next.start_date, { day: 'numeric', month: 'short' }) : ''].filter(Boolean).join(' · ')}</span></>}
+      {on && <><span className="stamp-k">now in</span><span className="stamp-time">{on.name}</span>{zone && <span>{placeCode(on.base?.city || on.base?.name || on.name)} {clockIn(zone, now)}</span>}</>}
+      {next && <><span className="stamp-k">next</span><span className="stamp-time">{next.name}</span><span>{[when(next, today), next.start_date ? fmtDay(next.start_date, { day: 'numeric', month: 'short' }) : ''].filter(Boolean).join(' · ')}</span></>}
       <span className="stamp-gap" aria-hidden="true" />
       <span className="stamp-time" aria-label="local time">{here ? `${here} ` : ''}{mine}</span>
     </div>
@@ -76,6 +76,7 @@ function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, hrefOf }: { 
       <Link to={hrefOf?.(t) ?? `/trip/${t.id}`} className="trip-item family-head" data-testid="trip-item" data-depth={0}>
         <span className="swatch-sq" aria-hidden="true" />
         <span className="trip-item-name">{t.name}</span>
+        {/* read out as "euro summer 28 jan – 13 jul", then its country; drawn with the country right after the name */}
         <span className="fam-when num">{fmtRange(t.start_date, t.end_date) || 'no dates yet'}</span>
         <TripMark codes={flagsOf(t)} max={1} />
         {meta && <span className="fam-meta num">{meta}</span>}

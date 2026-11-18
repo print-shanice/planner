@@ -3,6 +3,8 @@
 
 .mono, .mono-label, .itin-time, .doc-time, .line-times input, .strip-n, .strip-month, .walk, .match-count { font-family: var(--f-mono); }
 .mono-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); font-weight: 400; }
+/* capitals only for labels that name a group; facts (dates, counts, areas, km) stay lowercase (shanice, 18 nov) */
+.mono-label.fact { text-transform: none; letter-spacing: 0; }
 h3.mono-label { margin: 22px 0 6px; }
 .text-link {
   display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; border: 0; background: none;
@@ -74,7 +76,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .strip-day[aria-current="true"] .strip-wd, .strip-day[aria-current="true"] .strip-n { color: var(--card); }
 .today-chip {
   flex: none; min-height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: var(--mark); color: var(--mark-ink);
-  font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer;
+  font-family: var(--f-mono); font-size: 12px; cursor: pointer;
 }
 .doc-search { display: flex; align-items: center; gap: 2px; }
 .doc-search .search-box { flex: 1; min-width: 0; background: var(--soft); border: 0; }
@@ -88,7 +90,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 /* the day's low and high: one quiet mono word at the heading's right, on its baseline */
 .doc-temp { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .doc-date { font-family: var(--f-head); font-weight: 400; font-size: 20px; line-height: 1.25; letter-spacing: -0.01em; }
-.doc-day-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; overflow-wrap: anywhere; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.doc-day-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; overflow-wrap: anywhere; font-size: 12px; color: var(--ink-2); }
 .today-tag { padding: 1px 6px; border-radius: 4px; background: var(--mark); color: var(--mark-ink); }
 .side-tag { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; text-decoration: none; }
 .side-tag .dot { width: 8px; height: 8px; background: var(--c); }
@@ -110,11 +112,11 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 @media (hover: hover) { .itin-line:hover { background: var(--paper-2); } }
 .itin-line.quiet .itin-title { font-size: 14px; }
 .itin-line.quiet .itin-main { min-height: 40px; padding: 10px 0 6px; }
+/* what a thing is: its icon in a quiet ring, the same everywhere (plan, places, notes, the + menu, its pin) (shanice, 18 nov) */
 .cat {
   align-self: start; margin-top: 7px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
-  background: var(--c, var(--soft)); color: var(--ink); flex: none;
+  background: none; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); flex: none;
 }
-.cat.quiet { background: none; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
 /* the slot before a line's name: what the line is, and (when it isn't on the map) a way to say so */
 .itin-line > .cat, .itin-line > .seq, .itin-line > .marker-finding { justify-self: center; }
 .marker { position: relative; align-self: start; display: grid; }
@@ -132,10 +134,6 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .marker-opt:hover, .marker-opt:focus-visible { background: var(--paper-2); }
 .marker-opt.on { font-weight: 600; }
 .marker-opt .muted { margin-left: auto; font-size: 12.5px; font-weight: 400; }
-.cat.bed { border-radius: 6px; }
-.cat.bed:not(.quiet) { background: var(--ink); color: var(--card); }
-/* in places, a stay's mark is round like every other pin on the map */
-.places-list .cat.bed { border-radius: 50%; }
 .dragging { position: relative; z-index: 3; background: var(--ground); box-shadow: 0 0 0 1px var(--ink); border-radius: 6px; }
 .walk {
   display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: 0 0 2px 90px; padding: 0 4px;
@@ -189,6 +187,8 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .note-row.note .note-title { font-size: 16px; font-weight: 500; color: var(--ink); }
 .note-row.note .note-words { font-size: 14px; color: var(--ink-2); }
 .note-trip { color: var(--ink-3); }
+/* notes' days are headed like the plan's (shanice, 18 nov) */
+.note-day-h { margin: 0; padding: 18px 0 8px; }
 
 /* ---------- forms ---------- */
 .category-pick { display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
@@ -263,13 +263,16 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 /* the phone map's one choice: which day, the whole trip or the ideas */
 .map-scope {
   justify-self: start; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 14px; border-radius: 8px;
-  background: var(--card); box-shadow: var(--float); font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2);
+  background: var(--card); box-shadow: var(--float); font-family: var(--f-mono); font-size: 12px; color: var(--ink-2);
 }
 .map-scope select { min-height: 40px; border: 0; background: none; font-family: var(--f-body); font-size: 15px; font-weight: 500; color: var(--ink); text-transform: lowercase; letter-spacing: 0; appearance: none; padding-right: 8px; }
 .trip-phone .places-sheet { bottom: env(safe-area-inset-bottom); background: var(--ground); }
 .trip-phone .map-bottom { bottom: calc(env(safe-area-inset-bottom) + 16px); }
 .map-search { border-radius: 10px; }
-.whole-trip { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.whole-trip { font-family: var(--f-mono); font-size: 12px; }
+.places-fold { display: inline-flex; transition: transform .15s; }
+.places-fold.up { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .places-fold { transition: none; } }
 .places-handle { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: auto; min-height: 52px; padding: 0; }
 .places-title { padding: 0; font-size: 22px; font-weight: 400; }
 .trip-phone .places-sheet { border-top: 1px solid var(--line); box-shadow: none; }
@@ -315,7 +318,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .side-line { display: flex; align-items: center; gap: 10px; min-height: 52px; color: inherit; text-decoration: none; }
 .side-line .side-row-bar { align-self: stretch; margin: 10px 0; width: 3px; }
 .side-line-name { font-family: var(--f-head); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; color: var(--ink); }
-.side-line-meta { flex: 1; min-width: 0; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-line-meta { flex: 1; min-width: 0; font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-line-book { font-size: 13px; white-space: nowrap; }
 .side-line:hover .side-line-name { text-decoration: underline; text-underline-offset: 4px; }
 
@@ -349,7 +352,7 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .gpin-bed { border-radius: 2px; }
 
 /* ---------- the clock where the trip is ---------- */
-.trip-clock { display: flex; flex-wrap: wrap; gap: 2px 12px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.trip-clock { display: flex; flex-wrap: wrap; gap: 2px 12px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
 .trip-clock-time { color: var(--ink); font-weight: 500; }
 
 /* ---------- the foot of a page: the one before, the way up, the one after ---------- */
@@ -399,11 +402,11 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 /* ---------- places: add by search, filter by kind ---------- */
 .add-place { display: grid; padding: 0; } /* the wrapper of places' and links' add lines: flush with the search above, like notes and money */
 .add-place .warn-line { margin: 6px 0 0; }
-.kind-filter { display: flex; gap: 18px; overflow-x: auto; margin: 10px -16px 0; padding: 0 16px; scrollbar-width: none; }
-.kind-filter::-webkit-scrollbar { display: none; }
-.kind-filter button { flex: none; min-height: 44px; padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink-3); font-size: 14px; cursor: pointer; white-space: nowrap; }
+.kind-filter { display: flex; flex-wrap: wrap; gap: 0 14px; margin: 10px 0 2px; }
+/* a filter over a list: small mono words, the picked one underlined, like packing's bags (shanice, 18 nov) */
+.kind-filter button { flex: none; min-height: 30px; padding: 0; border: 0; background: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); cursor: pointer; white-space: nowrap; }
 .kind-filter button:hover { color: var(--ink); }
-.kind-filter button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.kind-filter button[aria-pressed="true"] { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
 
 /* money: links' typing line with a name and an amount, a clear gap between their underlines, and the "show in" picker */
 .jot.cost-line { flex-wrap: nowrap; gap: 18px; }

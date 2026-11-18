@@ -73,7 +73,7 @@ test.describe('home', () => {
     await flights.click()
     const list = page.getByRole('list', { name: 'flights' })
     await expect(list.getByRole('listitem')).toHaveCount(3)
-    await expect(list).toContainText('singapore → tokyo')
+    await expect(list).toContainText('singapore to tokyo')
     await flights.click()
     await expect(list).toBeHidden()
     await expect(page.getByRole('button', { name: /first stamped/ })).toHaveCount(5)

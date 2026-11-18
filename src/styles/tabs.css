@@ -1,6 +1,7 @@
 /* shared list blocks */
 .block { display: grid; gap: 8px; }
-.block h3 { font-family: var(--f-head); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; }
+.block h3, .settle-h { font-family: var(--f-head); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; }
+.settle-h { margin: 0 0 4px; }
 .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line); }
 .list > li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 2px; border-top: 1px solid var(--line); }
 .list > li:first-child { border-top: 0; }
@@ -58,7 +59,8 @@
   flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0; margin-bottom: -1px;
   border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink-3); font-weight: 500; font-size: 15px; white-space: nowrap; cursor: pointer;
 }
-.pack-tabs button[aria-selected="true"] { color: var(--ink); font-weight: 650; border-bottom-color: var(--ink); }
+.pack-tabs button:hover { color: var(--ink); }
+.pack-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 .pack-tabs.small button { min-height: 36px; font-size: 14px; }
 .pack-for { margin: 0; font-size: 17px; color: var(--ink-2); }
 .pack-for .pack-for-pick {
@@ -70,13 +72,12 @@
 /* the trip's colour, a small square before its name (as on the home calendar's trips) */
 .pack-for .pack-swatch { width: 9px; height: 9px; flex: none; margin: 0 8px 0 2px; }
 .pack-for .pack-for-pick { gap: 0; }
-.pack-meta { margin: 0 0 6px; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pack-meta { margin: 0 0 6px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 /* whose list on the left, the count on the right; the meter under them is the row's only line */
 .pack-who { display: flex; align-items: center; gap: 16px; min-height: 36px; }
 .pack-who .pack-tabs { border-bottom: 0; }
-.pack-who .pack-tabs button, .pack-who .pack-tabs button[aria-selected="true"] { border-bottom-color: transparent; }
-.pack-count { margin-left: auto; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
-.pack-who + .pack-meter { margin-top: -10px; }
+.pack-count { margin-left: auto; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.pack-who + .pack-meter { margin-top: 6px; }
 /* the bag filter: small mono words just under the meter, about the list below */
 .pack-meter + .pack-filter-row { margin-top: -8px; }
 /* the bag filter on the left, "new pack" on the right, one baseline */
@@ -144,7 +145,7 @@
   text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
 .pack-edit-link:hover { color: var(--ink); text-decoration-color: var(--ink); }
 .pack-meta-r { grid-column: 4; grid-row: 1; justify-self: end; display: flex; align-items: baseline; gap: 10px; min-height: 44px; align-items: center; padding-left: 12px; cursor: pointer; }
-.pack-n { flex: none; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.pack-n { flex: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
 .pack-head .save-failed { grid-column: 2 / -1; }
 .pack-group.packed > .pack-head .pack-toggle { color: var(--ink-3); font-weight: 500; }
 .pack-group.packed > .pack-head .pack-n { color: var(--ink-3); }
@@ -180,7 +181,10 @@
 .pack-edit .input { min-height: 44px; padding: 0; border: 0; border-bottom: 1px solid var(--ink); border-radius: 0; background: none; box-shadow: none; font-size: 16px; color: var(--ink); }
 .pack-edit .input:focus, .pack-edit .input:focus-visible { outline: none; box-shadow: none; border-bottom-width: 2px; }
 .pack-edit .pack-choices { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: baseline; }
-.pack-edit .pack-choices-words { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.pack-edit .pack-choices-words { display: flex; flex-wrap: wrap; gap: 0 18px; }
+/* in the edit, bag and whose are picks, not filters: plain words, the picked one ink and bold, like the card's "how" */
+.pack-edit .pack-choices button { min-height: 36px; padding: 0; border: 0; font-family: var(--f-body); font-size: 14px; color: var(--ink-2); }
+.pack-edit .pack-choices button[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
 .pack-choices-k { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
 .pack-edit .row { display: flex; align-items: center; gap: 18px; }
 .pack-edit .row .btn { min-height: 44px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 14px; color: var(--ink-2); }
@@ -222,8 +226,9 @@
 .bal-amount { min-width: 68px; text-align: right; font-family: var(--f-mono); font-weight: 400; font-size: 13px; white-space: nowrap; }
 .settle-move { border-top: 1px solid var(--line); padding-top: 6px; flex-wrap: wrap; }
 .settle-move .settle-line { flex: 1; min-width: 120px; }
-.settle-faces { display: inline-flex; align-items: center; gap: 4px; }
-.settle-arrow { color: var(--ink-2); }
+.settle-faces { display: inline-flex; align-items: center; }
+/* who pays whom: the two faces overlap, no arrow (shanice, 18 nov) */
+.settle-faces .avatar + .avatar { margin-left: -6px; box-shadow: 0 0 0 2px var(--ground); }
 
 /* a breakdown: name and amount over a bar measured against the biggest row */
 .list.breakdown > li.share-row { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; align-items: stretch; gap: 6px; padding: 10px 2px 12px; }

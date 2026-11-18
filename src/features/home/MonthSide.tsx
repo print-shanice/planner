@@ -42,10 +42,10 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
     <aside className="month-side" aria-label={`${name} at a glance`}>
       <div className="month-tabs" role="tablist" aria-label={`${name} at a glance`}>
         <button type="button" role="tab" id="tab-on" aria-controls="pane-on" aria-selected={tab === 'on'} onClick={() => setTab('on')}>
-          on in {name}<span className="tab-count">{on.length}</span>
+          on in {name} · {on.length}
         </button>
         <button type="button" role="tab" id="tab-todo" aria-controls="pane-todo" aria-selected={tab === 'todo'} onClick={() => setTab('todo')}>
-          to do<span className="tab-count">{todo.length}</span>
+          to do · {todo.length}
         </button>
       </div>
       <div className="month-panes">
@@ -57,9 +57,11 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
             return (
               <Link key={t.id} to={`/trip/${t.id}`} className="side-row" style={tint(t.color)}>
                 <span className="swatch-sq" aria-hidden="true" />
-                <span className="side-row-name">{t.name}</span>
+                <span className="side-row-title">
+                  <span className="side-row-name">{t.name}</span>
+                  <TripMark codes={flagsOf(t)} max={1} />
+                </span>
                 <span className="side-row-when num">{all ? `all ${name}` : fmtRange(t.start_date, t.end_date)}</span>
-                <TripMark codes={flagsOf(t)} max={1} />
                 {parent && <span className="side-row-of">side trip of {parent.name}</span>}
               </Link>
             )
@@ -81,7 +83,7 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
       </div>
       {hols.length > 0 && (
         <section className="month-hols" aria-label={`public holidays in ${name}`}>
-          <h3 className="mono-label">public holidays in {name}</h3>
+          <h3 className="month-hols-h">public holidays in {name}</h3>
           {hols.map((h) => (
             <div key={`${h.date}-${h.country}-${h.name}`} className="hol-row">
               <span className="num">{dayLabel(h.date)}</span>

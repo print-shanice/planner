@@ -86,9 +86,11 @@ it('a time it cannot read says so and saves nothing', async () => {
   expect(db.save).not.toHaveBeenCalled()
 })
 
-it('a visible add button adds the line, like enter', async () => {
+it('a visible add button adds the line, like enter; it waits (grey) until there is a name', async () => {
   show(tk())
   expect(screen.getByRole('button', { name: 'add line' })).toHaveTextContent('add')
+  expect(screen.getByRole('button', { name: 'add line' })).toBeDisabled()
+  expect(name()).toHaveAttribute('placeholder', 'add to this day…')
   await userEvent.type(name(), 'kura sushi')
   await userEvent.click(screen.getByRole('button', { name: 'add line' }))
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'kura sushi' }))

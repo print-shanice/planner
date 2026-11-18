@@ -100,7 +100,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
           {sub && <p className="muted">{sub}</p>}
           {!looking && place.gid && <PlaceDetails place={place} day={opened ?? stop?.day ?? null} compact />}
         </div>
-        <button type="button" className="text-link" onClick={onClose}>close</button>
+        <button type="button" className="icon-btn place-card-x" aria-label="close" onClick={onClose}><Icon name="close" size={18} /></button>
       </div>
       {!looking && (
         <div className="place-card-actions">
@@ -127,7 +127,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
               )}
             </div>
           )}
-          {maps && <a className="text-link" href={maps} target="_blank" rel="noopener noreferrer">google maps →</a>}
+          {maps && <a className="text-link" href={maps} target="_blank" rel="noopener noreferrer">google maps</a>}
         </div>
       )}
       {problem && <p className="warn-line">{problem}</p>}

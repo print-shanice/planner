@@ -36,11 +36,11 @@ const show = () => render(<MemoryRouter><NotesTab trip={eu} /></MemoryRouter>)
 it('follows the trip: no date first, then each day, each note saying what it is on', () => {
   show()
   const groups = screen.getAllByRole('list').map((l) => l.getAttribute('aria-label'))
-  expect(groups).toEqual(['no date', 'sat 5 jun'])
+  expect(groups).toEqual(['no date', 'saturday 5 june'])
   const undated = within(screen.getByRole('list', { name: 'no date' }))
   expect(undated.getByText('things to ask the landlord')).toBeInTheDocument()
   expect(undated.getByText('read on the train')).toBeInTheDocument()
-  const day = within(screen.getByRole('list', { name: 'sat 5 jun' }))
+  const day = within(screen.getByRole('list', { name: 'saturday 5 june' }))
   expect(day.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
     expect.stringMatching(/ams to prg.*bring the visa printout/),
     expect.stringMatching(/hotel u zlatého.*late check-in, call ahead/),
@@ -50,7 +50,7 @@ it('follows the trip: no date first, then each day, each note saying what it is 
 
 it('a day inside a side trip says which', () => {
   show()
-  expect(screen.getByRole('heading', { name: /sat 5 jun/ })).toHaveTextContent('prague')
+  expect(screen.getByRole('heading', { name: /saturday 5 june/ })).toHaveTextContent('prague')
 })
 
 it('search keeps only the notes that match, and marks the words', async () => {

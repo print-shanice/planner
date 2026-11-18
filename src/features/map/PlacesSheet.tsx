@@ -10,7 +10,7 @@ export function PlacesSheet({ items, title, open, onToggle, onPick }: {
   return (
     <section className="places-sheet" aria-label="places">
       <button type="button" className="places-handle" aria-label="places list" aria-expanded={open} onClick={onToggle}>
-        <span className="places-title head">{title}</span><Icon name={open ? 'down' : 'up'} size={18} />
+        <span className="places-title head">{title}</span><span className={`places-fold${open ? '' : ' up'}`}><Icon name="chevron" size={18} /></span>
       </button>
       {open && items.length > 0 && (
         <ul className="places-list">

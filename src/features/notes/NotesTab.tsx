@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Trip } from '../../lib/types'
 import { useLinks, useStops, useTrips } from '../../lib/queries'
 import { loadState } from '../../lib/load'
-import { dayLabel } from '../../lib/dates'
+import { fmtDay } from '../../lib/dates'
 import { ownerOn } from '../../lib/agenda'
 import { safeUrl } from '../../lib/embed'
 import { tripNotes, type NoteItem } from '../../lib/notes'
@@ -18,7 +18,7 @@ function NoteRow({ item, q }: { item: NoteItem; q: string }) {
   const body = (
     <>
       <span className="note-on">
-        {item.stop && item.kind === 'stop' ? <Chip stop={item.stop} quiet /> : <Icon name={item.kind === 'link' ? 'link' : 'note'} size={15} />}
+        {item.stop && item.kind === 'stop' ? <Chip stop={item.stop} quiet /> : <span className="cat"><Icon name={item.kind === 'link' ? 'link' : 'note'} size={15} /></span>}
         <span className="note-title"><Marked text={item.title} q={q} /></span>
       </span>
       {item.text.trim() && <span className="note-words"><Marked text={item.text} q={q} /></span>}
@@ -60,16 +60,16 @@ export function NotesTab({ trip }: { trip: Trip }) {
       {nothing && <EmptyState title={q ? 'nothing found' : 'no notes yet'} />}
       {notes.undated.length > 0 && (
         <section className="note-day">
-          <h3 className="mono-label">no date</h3>
+          <h3 className="doc-date note-day-h">no date</h3>
           <ul className="doc-list" aria-label="no date">{notes.undated.map((n) => <NoteRow key={n.key} item={n} q={q} />)}</ul>
         </section>
       )}
       {notes.days.map((d) => {
         const owner = ownerOn(trip, trips, d.date)
-        const label = dayLabel(d.date)
+        const label = fmtDay(d.date, { weekday: 'long', day: 'numeric', month: 'long' })
         return (
           <section key={d.date} className="note-day">
-            <h3 className="mono-label">{label}{owner.id !== trip.id && <span className="note-trip"> · {owner.name}</span>}</h3>
+            <h3 className="doc-date note-day-h">{label}{owner.id !== trip.id && <span className="note-trip"> · {owner.name}</span>}</h3>
             <ul className="doc-list" aria-label={label}>{d.items.map((n) => <NoteRow key={n.key} item={n} q={q} />)}</ul>
           </section>
         )

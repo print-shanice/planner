@@ -281,8 +281,8 @@ export function StopForm({ stop, trip, isNew, onDone }: Props) {
             <p className="muted" role="status">{candidates.length} departures found · times are local to each airport</p>
             <ul>{candidates.map((f) => <li key={JSON.stringify([f.dep.iata || f.dep.airport, f.arr.iata || f.arr.airport, f.dep.scheduled, f.arr.scheduled])}>
               <button type="button" className="flight-choice" onClick={() => chooseFlight(f)}>
-                <span className="flight-choice-route">{f.dep.iata || f.dep.airport} → {f.arr.iata || f.arr.airport}<Icon name="next" size={18} /></span>
-                <span className="muted">{f.dep.airport} → {f.arr.airport}</span>
+                <span className="flight-choice-route">{f.dep.iata || f.dep.airport} to {f.arr.iata || f.arr.airport}<Icon name="next" size={18} /></span>
+                <span className="muted">{f.dep.airport} to {f.arr.airport}</span>
                 <span className="flight-choice-times">depart {dayLabel(f.dep.scheduled.slice(0, 10))} · {f.dep.scheduled.slice(11, 16)}<br />arrive {dayLabel(f.arr.scheduled.slice(0, 10))} · {f.arr.scheduled.slice(11, 16)}</span>
               </button>
             </li>)}</ul>

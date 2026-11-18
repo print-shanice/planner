@@ -264,9 +264,9 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); goMatch(cur + (e.shiftKey ? -1 : 1)) } if (e.key === 'Escape') { setSearching(false); setQ('') } }} />
             {normal(q.trim()) && <span className="mono match-count" data-testid="match-count">{matches.length ? `${cur + 1} of ${matches.length}` : '0'}</span>}
           </label>
-          <button type="button" className="icon-btn" aria-label="previous match" disabled={!matches.length} onClick={() => goMatch(cur - 1)}><Icon name="up" size={18} /></button>
-          <button type="button" className="icon-btn" aria-label="next match" disabled={!matches.length} onClick={() => goMatch(cur + 1)}><Icon name="down" size={18} /></button>
-          <button type="button" className="text-link" onClick={() => { setSearching(false); setQ('') }}>done</button>
+          <button type="button" className="icon-btn" aria-label="previous match" disabled={!matches.length} onClick={() => goMatch(cur - 1)}><Icon name="back" size={18} /></button>
+          <button type="button" className="icon-btn" aria-label="next match" disabled={!matches.length} onClick={() => goMatch(cur + 1)}><Icon name="next" size={18} /></button>
+          <button type="button" className="icon-btn" aria-label="close the search" onClick={() => { setSearching(false); setQ('') }}><Icon name="close" size={18} /></button>
         </div>
       ) : (
         <div className="doc-strip-row">
@@ -444,7 +444,7 @@ function SideRow({ row }: { row: Side }) {
     <Link className="side-fold" to={`/trip/${row.trip.id}`} data-date={row.date}>
       <span className="side-fold-sq" style={{ background: colourVar(row.trip.color) }} aria-hidden="true" />
       <span className="side-fold-name">{row.trip.name}</span>
-      <span className="side-fold-when">{fmtRange(row.date, row.end)} →</span>
+      <span className="side-fold-when">{fmtRange(row.date, row.end)}</span>
     </Link>
   )
 }

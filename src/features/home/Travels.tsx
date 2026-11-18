@@ -47,7 +47,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
           <section className="scrap" aria-labelledby="scrap-around">
             <div className="scrap-head">
               <h2 id="scrap-around" className="head">getting around</h2>
-              {t.km > 0 && <span className="mono-label help-label">{Math.round(t.km).toLocaleString('en-GB')} km<Help label="about journey distance">estimated from distances between journey endpoints, rather than actual routes travelled</Help></span>}
+              {t.km > 0 && <span className="mono-label fact help-label">{Math.round(t.km).toLocaleString('en-GB')} km<Help label="about journey distance">estimated from distances between journey endpoints, rather than actual routes travelled</Help></span>}
             </div>
             {t.km > 0 && (
               <div className="world-line">
@@ -68,7 +68,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
           <section className="scrap" aria-labelledby="scrap-passport">
             <div className="scrap-head">
               <h2 id="scrap-passport" className="head">passport</h2>
-              <span className="mono-label">{count(s.length, 'stamp')}</span>
+              <span className="mono-label fact">{count(s.length, 'stamp')}</span>
             </div>
             <div className="passport">
               {s.map((st, i) => {
@@ -88,7 +88,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
           <section className="scrap" aria-labelledby="scrap-favourites">
             <div className="scrap-head">
               <h2 id="scrap-favourites" className="head">favourites</h2>
-              <span className="mono-label">★ {f.length}</span>
+              <span className="mono-label fact">★ {f.length}</span>
             </div>
             <div className="polaroids">
               {f.map((fav, i) => {
@@ -102,7 +102,7 @@ export function Travels({ trips, stops, reviews, today, globe }: Props) {
                     <span className="polaroid-name">{stopTitle(fav.stop)}</span>
                     {p?.city && <span className="muted polaroid-city">{p.city.toLowerCase()}</span>}
                     <span className="polaroid-stars" role="img" aria-label={`${fav.rating} stars`}>{'★'.repeat(fav.rating)}</span>
-                    {fav.back && <span className="mono-label">would go back</span>}
+                    {fav.back && <span className="mono-label fact">would go back</span>}
                   </Link>
                 )
               })}
@@ -128,7 +128,7 @@ function Way({ label, icon, routes, open, onToggle, style }: { label: string; ic
         <ul className="way-routes" aria-label={label}>
           {routes.map((r) => (
             <li key={r.id}>
-              <span className="way-route">{r.from || '?'} <span className="way-arrow">→</span> {r.to || '?'}</span>
+              <span className="way-route">{r.from || '?'} <span className="way-arrow">to</span> {r.to || '?'}</span>
               <span className="muted num">{fmtDay(r.day)}</span>
             </li>
           ))}

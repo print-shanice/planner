@@ -874,7 +874,7 @@ describe('travels, the scrapbook under the globe', () => {
     expect(flights).toHaveAttribute('aria-expanded', 'true')
     const list = screen.getByRole('list', { name: 'flights' })
     expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      expect.stringMatching(/eindhoven → rovaniemi.*7 feb/), expect.stringMatching(/rovaniemi → eindhoven.*11 feb/),
+      expect.stringMatching(/eindhoven to rovaniemi.*7 feb/), expect.stringMatching(/rovaniemi to eindhoven.*11 feb/),
     ])
     await screen.findByRole('button', { name: 'globe' })
     expect(db.globe!.routes).toEqual([{ line: [[5.48, 51.44], [25.73, 66.5]], mode: 'flight' }, { line: [[25.73, 66.5], [5.48, 51.44]], mode: 'flight' }])

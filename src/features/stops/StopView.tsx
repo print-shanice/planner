@@ -155,7 +155,7 @@ export function StopView({ stop, onEdit, onClose }: Props) {
 
   return (
     <div className="stack stop-view card">
-      <p className="card-kicker mono-label">{kicker}{word && <> · <span className={word.warn ? 'warn-line' : undefined}>{word.text}</span></>}</p>
+      <p className="card-kicker mono-label fact">{kicker}{word && <> · <span className={word.warn ? 'warn-line' : undefined}>{word.text}</span></>}</p>
       {stop.place?.gid && <PlaceDetails place={stop.place} day={stop.day} />}
       <CardTimes stop={stop} canEdit={canEdit} put={put} />
 

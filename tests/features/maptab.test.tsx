@@ -141,7 +141,7 @@ it('a pin opens its card with one primary action', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'tap pin' }))
   const card = screen.getByRole('region', { name: 'arktikum' })
   expect(card.querySelectorAll('.btn.primary')).toHaveLength(1)
-  expect(within(card).getByRole('link', { name: 'google maps →' })).toBeInTheDocument()
+  expect(within(card).getByRole('link', { name: 'google maps' })).toBeInTheDocument()
 })
 
 it('on a phone, filter chips list all days, each busy day and saved', () => {

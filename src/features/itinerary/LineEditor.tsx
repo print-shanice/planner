@@ -51,9 +51,9 @@ export function LineEditor({ label, onSubmit }: Props) {
           inputMode="decimal"
           onChange={(e) => typeTime('end', e.target.value)} onBlur={() => tidy('end')} onKeyDown={key} />}
       </span>
-      <input type="text" className="line-name" aria-label={label} placeholder="name" value={v.title} autoComplete="off" enterKeyHint="done"
+      <input type="text" className="line-name" aria-label={label} placeholder="add to this day…" value={v.title} autoComplete="off" enterKeyHint="done"
         onChange={(e) => set({ title: e.target.value })} onKeyDown={key} />
-      <button type="button" className="btn small line-go" aria-label="add line" onClick={submit}>add</button>
+      <button type="button" className="btn small line-go" aria-label="add line" disabled={!v.title.trim()} onClick={submit}>add</button>
       {problem && <p className="warn-line line-problem">{problem}</p>}
     </div>
   )

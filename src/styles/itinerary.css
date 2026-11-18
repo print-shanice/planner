@@ -70,3 +70,4 @@ button.itin-time { cursor: pointer; min-height: 40px; }
 .line-state { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-size: 13px; white-space: nowrap; }
 /* "add" at the end of a day is a word, like save and cancel: no box (shanice, 12 nov) */
 .add-line .line-go { min-height: 44px; padding: 0 2px 0 8px; border: 0; border-radius: 0; background: none; color: var(--ink); font-weight: 600; box-shadow: none; }
+.add-line .line-go:disabled { color: var(--ink-3); cursor: default; }

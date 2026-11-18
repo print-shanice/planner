@@ -195,7 +195,7 @@ export function HomePage() {
               <Link className="resume-plan waiting" to="/save">
                 <span className="mono-label">not saved yet</span>
                 <span className="head resume-name">{waiting.url || waiting.text || 'a link'}</span>
-                <span className="text-link">save it →</span>
+                <span className="text-link">save it</span>
               </Link>
             )}
             {inbox.length > 0 && <Inbox links={inbox} trips={trips} />}
