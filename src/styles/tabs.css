@@ -35,7 +35,8 @@
 .key.planned { background: repeating-linear-gradient(135deg, var(--soft) 0 2px, color-mix(in srgb, var(--ink-2) 40%, var(--soft)) 2px 4px); }
 .list.costs > li { padding: 0; }
 .cost-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 8px 2px; border: 0; background: none; text-align: left; }
-.cost-row:hover { background: var(--paper-2); }
+.cost-row .cost-name { flex: 1; min-width: 0; }
+.cost-row .row-edit { margin-left: 0; }
 .cost-name { flex: 1; min-width: 0; display: grid; }
 .cost-name > :first-child { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cost-name .muted { font-size: 13px; }

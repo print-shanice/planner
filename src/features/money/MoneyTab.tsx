@@ -222,14 +222,16 @@ export function MoneyTab({ trip }: { trip: Trip }) {
               </li>
             ) : (
               <li key={c.id}>
-                <button type="button" className="cost-row" onClick={() => (c.stop_id && sheet ? sheet.openStop(c.stop_id) : setEditing(c))}>
+                {/* a row's one action is its "edit" word, like packing (shanice, 18 nov) */}
+                <div className="cost-row">
                   <span className="cost-name">
                     <span>{c.title || LABEL[c.category] || c.category}</span>
                     <span className="muted">{[c.date ? fmtDay(c.date) : null, LABEL[c.category] ?? c.category, c.status === 'paid' && c.paid_by ? `paid by ${name(c.paid_by)}` : null].filter(Boolean).join(' · ')}</span>
                   </span>
                   {c.status === 'paid' && <Pill status="paid" />}
                   <span className="num">{formatMoney(c.amount, c.currency)}</span>
-                </button>
+                  <button type="button" className="row-edit" aria-label={`edit ${c.title || LABEL[c.category] || c.category}`} onClick={() => (c.stop_id && sheet ? sheet.openStop(c.stop_id) : setEditing(c))}>edit</button>
+                </div>
                 <SaveFailed table="costs" id={c.id} />
               </li>
             ))}

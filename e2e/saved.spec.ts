@@ -8,8 +8,11 @@ test.describe('places', () => {
     await places.getByRole('combobox', { name: 'add a place' }).fill('tibidabo at sunset')
     await places.getByRole('button', { name: 'add place' }).click()
     await expect(places.getByRole('list', { name: 'places', exact: true })).toContainText('tibidabo at sunset')
-    await places.getByRole('button', { name: 'add to day: tibidabo at sunset' }).click()
-    await page.getByRole('option', { name: /16 apr/ }).click()
+    // the new row can still be settling (the list scrolls it into view), which closes an open menu: open it once it's still
+    await expect(async () => {
+      await places.getByRole('button', { name: 'add to day: tibidabo at sunset' }).click()
+      await page.getByRole('option', { name: /16 apr/ }).click({ timeout: 1000 })
+    }).toPass({ timeout: 8000 })
     await expect(places.getByRole('button', { name: 'add to day: tibidabo at sunset' })).toHaveCount(0)
     await expect(places.getByRole('list', { name: 'places', exact: true })).toContainText('tibidabo at sunset')
     await open(page, '/trip/bcn?day=2027-04-16')
@@ -69,13 +72,13 @@ test.describe('notes', () => {
     await expect(notes).not.toContainText('gifts to bring back')
   })
 
-  test('a jotted note lands under no date, and a tap opens its card', async ({ page }) => {
+  test('a jotted note lands under no date, and its "edit" opens its card', async ({ page }) => {
     await open(page, '/trip/bcn?tab=notes')
     const notes = page.getByRole('region', { name: 'notes' })
     await notes.getByRole('textbox', { name: 'jot a note' }).fill('ask about the late check-out')
     await notes.getByRole('button', { name: 'add note' }).click()
     await expect(notes.getByRole('list', { name: 'no date' })).toContainText('ask about the late check-out')
-    await notes.getByRole('button', { name: /key box code/ }).click()
+    await notes.getByRole('listitem').filter({ hasText: 'key box code' }).getByRole('button', { name: /^edit / }).click()
     await expect(page.getByRole('dialog', { name: /flat in gràcia/ })).toBeVisible()
   })
 })

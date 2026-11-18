@@ -379,7 +379,7 @@ it("a jotted place is left to the trip's own place finder, and its row says so w
   await userEvent.type(screen.getByRole('combobox', { name: 'add a place' }), 'kauppayhtiö{Enter}')
   expect(db.save).toHaveBeenCalledTimes(1)
   expect(spots).not.toHaveBeenCalled()
-  const row = screen.getByRole('button', { name: /^kotisaari/ })
+  const row = screen.getByRole('button', { name: 'edit kotisaari' }).closest('li') as HTMLElement
   expect(within(row).queryByText('finding the place')).toBeNull()
   act(() => setLocating('s9', true))
   expect(within(row).getByText('finding the place')).toBeInTheDocument()

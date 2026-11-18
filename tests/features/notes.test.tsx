@@ -9,6 +9,7 @@ vi.mock('../../src/lib/queries', () => ({
   useLinks: () => ({ data: db.links }),
   useStops: () => ({ data: db.stops }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
+  useRemove: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.online, useOnline: () => db.online }))
 vi.mock('../../src/features/stops/StopSheet', () => ({ useStopSheet: () => ({ openStop: db.open }) }))
@@ -80,9 +81,10 @@ it('jotting makes an undated note', async () => {
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'eu', kind: 'note', title: 'gift for mum', day: null }))
 })
 
-it('tapping a note opens the card it belongs to', async () => {
+it("a note's 'edit' opens the card it belongs to (its name alone does nothing, like packing)", async () => {
   show()
-  await userEvent.click(screen.getByRole('button', { name: /hotel u zlatého/ }))
+  expect(screen.queryByRole('button', { name: /^hotel u zlatého/ })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: /^edit hotel u zlatého/ }))
   expect(db.open).toHaveBeenCalledWith('h1', '2027-06-05')
 })
 

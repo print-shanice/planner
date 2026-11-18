@@ -474,3 +474,52 @@ button:not(:disabled):active, a:active { filter: brightness(0.94); }
 /* a broken screen says what broke */
 .crashed-body { display: grid; gap: 14px; width: min(520px, 100%); text-align: left; }
 .crashed-error { margin: 0; padding: 12px; max-height: 40dvh; overflow: auto; background: var(--soft); font: 12.5px/1.5 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* the card is the form (shanice, 18 nov): every page form reads like a stop's card. each field is a hairline row,
+   its mono label on the left and its value on the right; no grey boxes, the row's hairline is the only line */
+.page-form .row:not(.amount-row) { display: contents; }
+.page-form .field:not(.amount-row .field):not(.flight-find .field),
+.page-form .when-row,
+.page-form .status-field {
+  display: grid; grid-template-columns: 112px minmax(0, 1fr); grid-template-areas: none; align-items: center; gap: 0 12px;
+  min-height: 48px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none;
+}
+@media (max-width: 480px) {
+  .page-form .field:not(.amount-row .field):not(.flight-find .field), .page-form .when-row, .page-form .status-field { grid-template-columns: 92px minmax(0, 1fr); }
+}
+.page-form .field:not(.amount-row .field):not(.flight-find .field) > .label, .page-form .status-field > .label { align-self: center; }
+.page-form .field:not(.amount-row .field) input, .page-form .field:not(.amount-row .field) select { border-bottom: 0; min-width: 0; }
+.page-form .field:has(textarea) { align-items: start; }
+.page-form .field:has(textarea) > .label { padding-top: 16px; }
+.page-form .field textarea { min-height: 88px; padding: 13px 0; border-radius: 0; background: none; }
+.page-form .field textarea:focus { outline: none; }
+.page-form .field .search-box { border-bottom: 0; min-height: 46px; }
+/* a row's label is the card's mono label */
+.page-form .field > .label, .page-form .when-label { font-family: var(--f-mono); font-size: 11px; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+/* dates: the day and time on the row, no card behind them */
+.page-form .when { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.page-form .when-row { grid-template-columns: 112px minmax(0, 1fr) auto; }
+.page-form .when-row > .when-label { grid-column: 1; grid-row: 1; }
+.page-form .when-row > .pick.date { grid-column: 2; grid-row: 1; }
+.page-form .when-row > .pick.time { grid-column: 3; grid-row: 1; justify-self: end; }
+.page-form .when-row.time-only > .pick.time { grid-column: 2 / -1; justify-self: start; }
+.page-form .pick.date .pick-text { font-family: var(--f-body); font-size: 16px; font-weight: 500; letter-spacing: 0; }
+@media (max-width: 480px) { .page-form .when-row { grid-template-columns: 92px minmax(0, 1fr) auto; } }
+/* the questions name the groups of rows */
+.page-form .form-q { margin: 26px 0 0; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.page-form .form-q + .when > .when-row:first-child, .page-form .form-q + * { border-top: 0; }
+/* a picked place sits on its row like the card's "where": its label on the left, the place, then ✕ */
+.page-form .field > .place-chip, .page-form .field > .search-box, .page-form .field > .results, .page-form .field > .search-note { grid-column: 1 / -1; }
+.page-form .place-chip { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 0 12px; padding: 0; border-radius: 0; background: none; color: var(--ink); }
+.page-form .place-chip > .icon { display: none; }
+.page-form .place-chip .result-text { display: contents; }
+.page-form .place-chip .chip-label { grid-column: 1; font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.page-form .place-chip .result-text > :not(.chip-label) { grid-column: 2; }
+.page-form .place-chip .result-text > .muted { font-size: 13px; }
+.page-form .place-chip > .icon-btn { grid-column: 3; grid-row: 1; }
+@media (max-width: 480px) { .page-form .place-chip { grid-template-columns: 92px minmax(0, 1fr) auto; } }
+/* split: its label and words on one row, who's in it under them */
+.page-form .split-for { grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 0 12px; border-bottom: 1px solid var(--line); }
+.page-form .split-for > .label { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.page-form .split-for > :not(.label):not(.segmented) { grid-column: 1 / -1; }
+@media (max-width: 480px) { .page-form .split-for { grid-template-columns: 92px minmax(0, 1fr); } }

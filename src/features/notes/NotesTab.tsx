@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Trip } from '../../lib/types'
-import { useLinks, useStops, useTrips } from '../../lib/queries'
+import { useLinks, useRemove, useStops, useTrips } from '../../lib/queries'
 import { loadState } from '../../lib/load'
 import { fmtDay } from '../../lib/dates'
 import { ownerOn } from '../../lib/agenda'
@@ -12,6 +12,9 @@ import { Icon } from '../../components/Icon'
 import { useStopSheet } from '../stops/StopSheet'
 import { Chip, Marked } from '../itinerary/ItinLine'
 import { JotLine } from '../saved/JotLine'
+import { Sheet } from '../../components/Sheet'
+import { CaptureForm } from '../capture/CaptureForm'
+import { useCanEdit } from '../../lib/offline'
 
 function NoteRow({ item, q }: { item: NoteItem; q: string }) {
   const sheet = useStopSheet()
@@ -25,13 +28,21 @@ function NoteRow({ item, q }: { item: NoteItem; q: string }) {
     </>
   )
   const href = item.link ? safeUrl(item.link.url) : null
+  const [editing, setEditing] = useState(false)
+  const remove = useRemove('links')
+  const canEdit = useCanEdit()
+  // a row's one action is its "edit" word, like packing (shanice, 18 nov); a link's note still opens the link
   return (
     <li className={`note-row ${item.kind}`}>
-      {item.stop ? (
-        <button type="button" className="note-main" onClick={() => sheet?.openStop(item.stop!.id, item.date)}>{body}</button>
-      ) : href ? (
-        <a className="note-main" href={href} target="_blank" rel="noreferrer">{body}</a>
-      ) : <div className="note-main">{body}</div>}
+      {href && !item.stop ? <a className="note-main" href={href} target="_blank" rel="noreferrer">{body}</a> : <div className="note-main">{body}</div>}
+      {item.stop && <button type="button" className="row-edit" aria-label={`edit ${item.title}`} onClick={() => sheet?.openStop(item.stop!.id, item.date)}>edit</button>}
+      {!item.stop && item.link && canEdit && <>
+        <button type="button" className="row-edit" aria-label={`edit ${item.title}`} onClick={() => setEditing(true)}>edit</button>
+        <Sheet page open={editing} title="edit link" onClose={() => setEditing(false)}>
+          <CaptureForm initial={null} tripId={item.link.trip_id} link={item.link} onDone={() => setEditing(false)}
+            onRemove={() => { setEditing(false); remove.mutate(item.link!.id) }} />
+        </Sheet>
+      </>}
     </li>
   )
 }

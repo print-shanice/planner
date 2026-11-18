@@ -8,7 +8,7 @@ test.describe('money', () => {
     await expect(money).toContainText('paid €480')
     await expect(money).toContainText('planned €200')
     await expect(page.getByRole('region', { name: 'by category' })).toContainText(/food & drink\s*€200/)
-    await expect(page.getByRole('region', { name: 'all costs' }).getByRole('button', { name: /hotel marais/ })).toContainText('paid by maya')
+    await expect(page.getByRole('region', { name: 'all costs' }).getByRole('listitem').filter({ hasText: 'hotel marais' })).toContainText('paid by maya')
   })
 
   test('settle up says who owes who across the whole trip, and a repayment squares it', async ({ page }) => {

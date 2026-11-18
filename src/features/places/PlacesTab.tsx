@@ -108,11 +108,13 @@ function PlaceRow({ stop, trip, trips, links }: { stop: Stop; trip: Trip; trips:
   return (
     <li className="doc-row idea-row" data-stop={stop.id}>
       <ShowOnMap stop={stop} />
-      <button type="button" className="doc-row-main" onClick={() => sheet?.openStop(stop.id, stop.day)}>
+      <span className="doc-row-main">
         <span className="doc-row-title">{stopTitle(stop)}</span>
         {looking ? <Pending label="finding the place" /> : sub && <span className="muted">{sub}</span>}
-      </button>
+      </span>
       <PlaceWhen stop={stop} trip={trip} trips={trips} />
+      {/* a row's one action is its "edit" word, like packing (shanice, 18 nov) */}
+      <button type="button" className="row-edit" aria-label={`edit ${stopTitle(stop)}`} onClick={() => sheet?.openStop(stop.id, stop.day)}>edit</button>
       <SaveFailed table="stops" id={stop.id} />
     </li>
   )
