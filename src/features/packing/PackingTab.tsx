@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Bag, PackingItem, Trip } from '../../lib/types'
 import { useMembers, usePacking, useSave } from '../../lib/queries'
 import { useAuth } from '../../lib/auth'
@@ -7,7 +7,6 @@ import { useUndoRemove } from '../../lib/undo'
 import { useCanEdit } from '../../lib/offline'
 import { loadState } from '../../lib/load'
 import { LoadState } from '../../components/States'
-import { Icon } from '../../components/Icon'
 import { SaveFailed } from '../../components/SaveFailed'
 import { memberName } from '../../components/Avatar'
 import { useSwipeAway } from '../../lib/swipe'
@@ -67,6 +66,9 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
   const removeLater = useUndoRemove('packing')
   const canEdit = useCanEdit()
   const [text, setText] = useState('')
+  // the bag new things go in: stays picked so a run of carry-on things is quick
+  const [addBag, setAddBag] = useState<Bag | ''>('')
+  const addField = useRef<HTMLInputElement>(null)
   const [editing, setEditing] = useState<{ id: string; text: string; owner: string | null; bag: Bag | null } | null>(null)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
@@ -88,9 +90,9 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
     if (change && Object.keys(change).length === 1) { setEditing(null); return }
     setBusy(true); setProblem('')
     try {
-      // a new thing goes on the open list, and in the bag being looked at
+      // a new thing goes on the open list, at the top under the add line, in the bag picked there
       await save.mutateAsync(change ?? {
-        trip_id: trip.id, text: value, owner: view, packed_by: [], position: Math.max(-1, ...all.map(p => p.position)) + 1, ...(bag ? { bag } : {}),
+        trip_id: trip.id, text: value, owner: view, packed_by: [], position: Math.min(1, ...all.map(p => p.position)) - 1, ...(addBag ? { bag: addBag } : {}),
       })
       if (editing) setEditing(null)
       else setText('')
@@ -154,23 +156,22 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
       {people.length > 1 && <div className="pack-tabs small" role="tablist" aria-label="whose list">
         {ids.map((id) => <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => { setPicked(id); setEditing(null) }}>{listName(id)}</button>)}
       </div>}
+      {canEdit && !editing && <form className="jot pack-add" onSubmit={e => { e.preventDefault(); void submit() }}>
+        <input ref={addField} aria-label="add to pack" placeholder="add to pack…" value={text} disabled={busy} autoComplete="off" enterKeyHint="done" onChange={e => setText(e.target.value)} />
+        <button type="submit" className="btn small line-go" aria-label="add to pack" disabled={busy || !text.trim()}>add</button>
+        {text.trim() && <Choices label="bag" value={addBag} disabled={busy} onPick={(v) => { setAddBag(v); addField.current?.focus() }}
+          options={[...BAG_KEYS.map((k): [Bag, string] => [k, BAGS[k]]), ['', 'no bag']]} />}
+      </form>}
       {mine.length > 0 && <div className="pack-count">
         <div className="pack-count-row">
           <p className="head num">{done.length} of {items.length} packed</p>
-          <Choices label="show bag" value={bag ?? ''} onPick={(v) => setBag(v || null)} options={[['', 'all'], ...BAG_KEYS.map((k): [Bag, string] => [k, BAGS[k]])]} />
+          <Choices label="show bag" value={bag ?? ''} onPick={(v) => { setBag(v || null); setAddBag(v) }} options={[['', 'all'], ...BAG_KEYS.map((k): [Bag, string] => [k, BAGS[k]])]} />
         </div>
         <div className="pack-meter" aria-hidden="true"><span style={{ width: `${items.length ? Math.round((done.length / items.length) * 100) : 0}%` }} /></div>
       </div>}
       {problem && <p role="alert" className="warn-line">{problem}</p>}
-      {(toPack.length > 0 || canEdit) && <ul className="list pack-list" aria-label="packing">
+      {toPack.length > 0 && <ul className="list pack-list" aria-label="packing">
         {toPack.map(row)}
-        {canEdit && !editing && <li className="pack-add">
-          <form onSubmit={e => { e.preventDefault(); void submit() }}>
-            <Icon name="plus" size={18} />
-            <input aria-label="add to pack" placeholder="add to pack" value={text} disabled={busy} enterKeyHint="done" onChange={e => setText(e.target.value)} />
-            <button type="submit" className="btn small pack-go" aria-label="add to pack" disabled={busy}>add</button>
-          </form>
-        </li>}
       </ul>}
       {done.length > 0 && <>
         <p className="mono-label pack-done-head">packed</p>

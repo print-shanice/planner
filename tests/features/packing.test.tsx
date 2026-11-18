@@ -28,7 +28,8 @@ it('packing: add, tick, count', async () => {
   expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
   expect(screen.queryByText('sunscreen')).toBeNull()
   await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'wool socks{Enter}')
-  expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'wool socks', owner: 'u-s', packed_by: [], position: 4 })
+  // new things go to the top, under the add line
+  expect(db.save).toHaveBeenCalledWith({ trip_id: 'lap', text: 'wool socks', owner: 'u-s', packed_by: [], position: -1 })
   expect(screen.getByRole('textbox', { name: 'add to pack' })).toHaveValue('')
   await userEvent.click(screen.getByRole('checkbox', { name: 'passport' }))
   expect(db.save).toHaveBeenCalledWith({ id: 'p2', packed_by: ['u-s'] })
@@ -44,6 +45,25 @@ it('the add row has a visible add button that adds, like enter', async () => {
   await userEvent.click(add)
   expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ trip_id: 'lap', text: 'adapter' }))
   expect(screen.getByRole('textbox', { name: 'add to pack' })).toHaveValue('')
+})
+
+it('typing shows the bags to put it in, and the picked bag stays for the next thing', async () => {
+  db.packing = []
+  db.save.mockReset().mockResolvedValue({})
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.queryByRole('group', { name: 'bag' })).toBeNull()
+  const field = screen.getByRole('textbox', { name: 'add to pack' })
+  await userEvent.type(field, 'adapter')
+  const bag = screen.getByRole('group', { name: 'bag' })
+  expect(within(bag).getAllByRole('button').map((b) => b.textContent)).toEqual(['check-in', 'carry-on', 'wear', 'no bag'])
+  expect(within(bag).getByRole('button', { name: 'no bag' })).toHaveAttribute('aria-pressed', 'true')
+  await userEvent.click(within(bag).getByRole('button', { name: 'carry-on' }))
+  // the field takes focus back, so enter adds
+  expect(field).toHaveFocus()
+  await userEvent.keyboard('{Enter}')
+  expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'adapter', bag: 'carry' }))
+  await userEvent.type(field, 'charger')
+  expect(within(screen.getByRole('group', { name: 'bag' })).getByRole('button', { name: 'carry-on' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 it('an empty list shows just the field', () => {
@@ -154,11 +174,13 @@ it('a long swipe right does nothing (only left removes)', () => {
   expect(screen.getByRole('status')).not.toHaveTextContent('removed')
 })
 
-it('adding sits as the last row of the list', () => {
+it('adding sits above the list, like links, not inside it', () => {
   db.packing = [{ id: 'p1', trip_id: 'lap', text: 'gloves', done: false, position: 0 }]
   render(<PackingTab trip={trip({ id: 'lap' })} />)
-  const items = screen.getByRole('list', { name: 'packing' }).querySelectorAll('li')
-  expect(within(items[items.length - 1]).getByRole('textbox', { name: 'add to pack' })).toBeInTheDocument()
+  const list = screen.getByRole('list', { name: 'packing' })
+  const field = screen.getByRole('textbox', { name: 'add to pack' })
+  expect(list).not.toContainElement(field)
+  expect(field.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 it('offline nothing in packing can be changed', () => {
