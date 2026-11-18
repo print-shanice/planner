@@ -105,7 +105,7 @@
 .pack-meter { height: 2px; background: var(--soft); overflow: hidden; }
 .pack-meter > span { display: block; height: 100%; background: var(--ink); transition: width .2s; }
 .pack-list { border-top: 0; }
-.pack-list > li, .pack-inside > li { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0; background: var(--card); touch-action: pan-y; }
+.pack-list > li, .pack-inside > li { display: flex; align-items: center; justify-content: flex-start; gap: 4px; min-height: 48px; padding: 0; background: var(--card); touch-action: pan-y; }
 /* one grid for the whole list: tick boxes and pack names start at the page's left edge, names of things at 31px;
    inside an open pack the ticks sit on that 31px column, under a thin line at 6px; bags and counts end at the right edge */
 .pack-tick { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 44px; margin-left: -13px; cursor: pointer; }
@@ -116,7 +116,7 @@
 .pack-tick:has(input:disabled) { cursor: default; }
 .packed .pack-tick .tick { border-color: var(--ink-3); }
 .packed .pack-tick .tick::after { content: ""; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid var(--ink); border-width: 0 1.25px 1.25px 0; transform: rotate(45deg); }
-.pack-name { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 16px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.pack-name { flex: 0 1 auto; min-width: 0; color: var(--ink); font-size: 16px; overflow-wrap: anywhere; }
 .packed .pack-name { color: var(--ink-3); }
 .pack-bag { flex: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
 .pack-qty { margin-left: 6px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
@@ -128,25 +128,34 @@
 .jot.pack-add input { padding-left: 0; }
 .jot.pack-add .line-go { padding-right: 0; text-align: right; }
 
-/* a pack: the whole head is the fold button (name, bag, count, then a grey line of what's in it) */
+/* a pack's head, on the same grid as a thing: its tick at the edge (it packs everything inside), its name and chevron on the
+   31px column (the fold button), "edit" beside the name when open, its bag (when everything shares one) and count on the right edge */
 .pack-list > li.pack-group { display: block; min-height: 0; }
-.pack-head { position: relative; }
-.pack-toggle { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; min-height: 48px; padding: 13px 0 12px; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
-.pack-toggle:active { filter: brightness(.85); }
-.pack-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.pack-group-name { min-width: 0; font-size: 16px; font-weight: 650; overflow-wrap: anywhere; }
-.pack-title .pack-bag { margin-left: auto; }
-.pack-n { flex: none; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
-.pack-title .pack-group-name + .pack-n { margin-left: auto; }
-.pack-peek { font-size: 14px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pack-edit-over { position: absolute; top: 13px; left: 0; right: 150px; display: flex; align-items: baseline; gap: 12px; white-space: nowrap; overflow: hidden; pointer-events: none; }
-.pack-ghost { visibility: hidden; }
-.pack-edit-link { pointer-events: auto; min-height: 44px; margin-block: -12px; padding: 0 2px; border: 0; background: none; color: var(--ink-2); font-size: 14px; cursor: pointer;
+.pack-head { display: grid; grid-template-columns: auto minmax(0, max-content) auto minmax(0, 1fr); align-items: center; column-gap: 4px; padding: 2px 0; }
+.pack-head > .pack-tick { grid-column: 1; grid-row: 1; }
+.pack-toggle { grid-column: 2; grid-row: 1; display: inline-flex; align-items: center; gap: 6px; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 16px; font-weight: 650; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+/* the same chevron the trips' list folds with: right while folded, down when open */
+.pack-toggle .icon { flex: none; color: var(--ink-3); transition: transform .15s, color .12s; }
+.pack-toggle[aria-expanded="false"] .icon { transform: rotate(-90deg); }
+.pack-toggle:hover .icon { color: var(--ink); }
+.pack-toggle .pack-qty { margin-left: 0; font-weight: 400; }
+.pack-toggle:active, .pack-meta-r:active { filter: brightness(.85); }
+.pack-edit-link { grid-column: 3; grid-row: 1; min-height: 44px; margin-left: 10px; padding: 0 2px; border: 0; background: none; color: var(--ink-2); font-size: 14px; cursor: pointer;
   text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
 .pack-edit-link:hover { color: var(--ink); text-decoration-color: var(--ink); }
-.pack-group.packed .pack-group-name, .pack-group.packed .pack-n { color: var(--ink-3); font-weight: 500; }
+.pack-meta-r { grid-column: 4; grid-row: 1; justify-self: end; display: flex; align-items: baseline; gap: 10px; min-height: 44px; align-items: center; padding-left: 12px; cursor: pointer; }
+.pack-n { flex: none; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.pack-head .save-failed { grid-column: 2 / -1; }
+.pack-group.packed > .pack-head .pack-toggle { color: var(--ink-3); font-weight: 500; }
+.pack-group.packed > .pack-head .pack-n { color: var(--ink-3); }
+/* some things packed: the pack's tick shows a dash */
+.pack-group.partial > .pack-head .pack-tick .tick::after { content: ""; position: absolute; left: 3px; right: 3px; top: 6px; height: 1.25px; background: var(--ink); }
+/* every thing: its name, then "edit" (as on a pack's head), then its bag alone on the right edge */
+.pack-row-edit { flex: none; margin-left: 10px; }
+.pack-list .pack-bag, .pack-inside .pack-bag { margin-left: auto; padding-left: 12px; }
+.pack-meta-r .pack-bag { margin-left: 0; padding-left: 0; }
 /* what's inside an open pack hangs off a thin line; its own add line closes it */
-.pack-inside { list-style: none; margin: -4px 0 12px 6px; padding: 0 0 0 24px; border-left: 1px solid var(--line); }
+.pack-inside { list-style: none; margin: -6px 0 12px 6px; padding: 0 0 0 24px; border-left: 1px solid var(--line); }
 .pack-inside > li { min-height: 44px; }
 .pack-inside > li.pack-inside-add { display: block; min-height: 0; }
 .pack-inside .jot.pack-add { margin: 0; }
@@ -178,7 +187,7 @@
 .pack-edit .row .btn.primary { color: var(--ink); font-weight: 650; }
 .pack-edit .row .btn:disabled { color: var(--ink-3); }
 .pack-edit .row .btn:active { filter: brightness(.85); }
-@media (prefers-reduced-motion: reduce) { .pack-meter > span { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pack-meter > span, .pack-toggle .icon { transition: none; } }
 
 .list > li:has(.save-failed) { flex-wrap: wrap; }
 .list .save-failed { padding: 0 2px 10px; }

@@ -1,5 +1,5 @@
 import type { PackingItem } from '../../src/lib/types'
-import { arrange, bagOf, isPacked, packedBy, parseQty, qtyLabel, qtyOf, shows, tally, tickFor, toggled } from '../../src/lib/packing'
+import { arrange, bagOf, packBags, isPacked, packedBy, parseQty, qtyLabel, qtyOf, shows, tally, tickFor, toggled } from '../../src/lib/packing'
 
 const S = 'u-s', K = 'u-k'
 const people = [S, K]
@@ -59,7 +59,8 @@ describe('how many', () => {
     expect(parseQty('socks ×7')).toEqual({ text: 'socks', qty: 7 })
     expect(parseQty('socks x7')).toEqual({ text: 'socks', qty: 7 })
     expect(parseQty('socks x 2')).toEqual({ text: 'socks', qty: 2 })
-    expect(parseQty('  1 passport ')).toEqual({ text: 'passport', qty: 1 })
+    expect(parseQty('  2 passports ')).toEqual({ text: 'passports', qty: 2 })
+    expect(parseQty('socks*3')).toEqual({ text: 'socks', qty: 3 })
   })
   it('numbers that are part of the name stay in it', () => {
     expect(parseQty('24h adapter')).toEqual({ text: '24h adapter', qty: 1 })
@@ -68,6 +69,13 @@ describe('how many', () => {
     expect(parseQty('3')).toEqual({ text: '3', qty: 1 })
     expect(parseQty('0 socks')).toEqual({ text: '0 socks', qty: 1 })
     expect(parseQty('150 socks')).toEqual({ text: '150 socks', qty: 1 })
+    // a word ending in x, a size, a 2-in-1 and a lone 1 are names, not counts
+    expect(parseQty('box 2')).toEqual({ text: 'box 2', qty: 1 })
+    expect(parseQty('max 2')).toEqual({ text: 'max 2', qty: 1 })
+    expect(parseQty('lens 18x55')).toEqual({ text: 'lens 18x55', qty: 1 })
+    expect(parseQty('2 in 1 charger')).toEqual({ text: '2 in 1 charger', qty: 1 })
+    expect(parseQty('3 x 5 cards')).toEqual({ text: '3 x 5 cards', qty: 1 })
+    expect(parseQty('1 pair of shoes')).toEqual({ text: '1 pair of shoes', qty: 1 })
   })
   it('one is the default, and only more than one is shown', () => {
     expect(qtyOf(item())).toBe(1)
@@ -100,9 +108,12 @@ describe('packs', () => {
     expect(tally([tee, tees, socks], (p) => p.id === 't2')).toEqual({ done: 3, total: 11 })
   })
 
-  it("a thing inside a pack goes in the pack's bag", () => {
+  it("a thing inside a pack goes in the pack's bag, unless it has its own", () => {
     const byId = new Map([shirts, wash, tee, brush].map((p) => [p.id, p]))
-    expect(bagOf(brush, byId)).toBe('carry')
+    expect(bagOf(brush, byId)).toBe('check')
+    expect(packBags(wash, [brush, item({ id: 'b2', parent_id: 'wa' })], byId)).toEqual(['check', 'carry'])
+    expect(packBags(shirts, [tee], byId)).toEqual(['check'])
+    expect(packBags(wash, [], byId)).toEqual(['carry'])
     expect(bagOf(tee, byId)).toBe('check')
     expect(bagOf(socks, byId)).toBeNull()
     expect(bagOf(shirts, byId)).toBe('check')

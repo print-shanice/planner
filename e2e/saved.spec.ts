@@ -169,8 +169,12 @@ test.describe('packing', () => {
     const head = pack.getByRole('button', { name: 'shirts', exact: true })
     await head.click()
     await expect(head).toHaveAttribute('aria-expanded', 'false')
-    await expect(head).toContainText('0 of 4')
-    await expect(head).toContainText('black tees ×3 · white tee')
+    const group = pack.locator('li.pack-group').filter({ has: page.getByRole('button', { name: 'shirts', exact: true }) })
+    await expect(group).toContainText('0 of 4')
+    await expect(group).not.toContainText('white tee')
+    // the pack's own tick packs everything in it
+    await pack.getByRole('checkbox', { name: 'everything in shirts' }).click()
+    await expect(group).toContainText('4 of 4')
   })
 
   test("maya's list has her things and the shared ones; a shared tick is hers alone", async ({ page }) => {

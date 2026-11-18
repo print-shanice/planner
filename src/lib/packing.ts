@@ -28,14 +28,15 @@ export function toggled(p: PackingItem, who: string | null, people: string[]): s
   return by.includes(who) ? by.filter((x) => x !== who) : [...by, who]
 }
 
-// how many: a number in front ("3 black tees") or a ×n at the end ("socks ×7", "socks x7"); 1 to 99.
-// a number that's part of the name ("24h adapter", "cable 2m") stays in it
+// how many: a number of 2 or more in front ("3 black tees"), or a ×n at the end ("socks ×7", "socks x7", "socks*3"); up to 99.
+// a number that's part of the name stays in it: "box 2", "lens 18x55", "2 in 1 charger", "3 x 5 cards", "1 pair of shoes"
 export function parseQty(typed: string): { text: string; qty: number } {
   const t = typed.trim()
   const front = /^(\d{1,2})\s+(\S.*)$/.exec(t)
-  const back = /^(.*\S)\s*[×x*]\s*(\d{1,2})$/i.exec(t)
-  const m = front ? { n: +front[1], rest: front[2] } : back ? { n: +back[2], rest: back[1] } : null
-  return m && m.n >= 1 ? { text: m.rest.trim(), qty: m.n } : { text: t, qty: 1 }
+  if (front && +front[1] >= 2 && !/^(in|x|×|by|-)(\s|$)/i.test(front[2])) return { text: front[2].trim(), qty: +front[1] }
+  const back = /^(.*\S)\s*×\s*(\d{1,2})$/.exec(t) ?? /^(.*\S)\s+[x*]\s?(\d{1,2})$/i.exec(t) ?? /^(.*\S)\*(\d{1,2})$/.exec(t)
+  if (back && +back[2] >= 1) return { text: back[1].trim(), qty: +back[2] }
+  return { text: t, qty: 1 }
 }
 
 export const qtyOf = (p: PackingItem) => p.qty ?? 1
@@ -56,8 +57,15 @@ export function tally(things: PackingItem[], packed: (p: PackingItem) => boolean
   return things.reduce((n, p) => ({ done: n.done + (packed(p) ? qtyOf(p) : 0), total: n.total + qtyOf(p) }), { done: 0, total: 0 })
 }
 
-// the bag a thing goes in: a thing inside a pack goes in its pack's
+// the bag a thing goes in: its own, else its pack's (a pack's bag is where its things go unless one says otherwise)
 export function bagOf(p: PackingItem, byId: Map<string, PackingItem>): Bag | null {
   const pack = p.parent_id ? byId.get(p.parent_id) : null
-  return (pack ? pack.bag : p.bag) ?? null
+  return p.bag ?? pack?.bag ?? null
+}
+
+// the bags a pack's things go in, in bag order ("check-in · carry-on" when it depends); an empty pack, its own
+export function packBags(pack: PackingItem, things: PackingItem[], byId: Map<string, PackingItem>): Bag[] {
+  const used = new Set(things.map((t) => bagOf(t, byId)).filter((b): b is Bag => !!b))
+  if (!things.length && pack.bag) used.add(pack.bag)
+  return (['check', 'carry', 'wear'] as Bag[]).filter((b) => used.has(b))
 }
