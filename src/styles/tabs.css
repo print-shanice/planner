@@ -52,7 +52,7 @@
 /* packing: "packing for <trip>" (the name opens a menu), one mono line of dates and weather, whose list with the count
    over a full-width meter, the add line, then the list. a thing is a hairline square, its name, and its bag as a quiet
    word; packed things move under "packed"; copying the list sits at the end */
-.home-packing { display: grid; gap: 14px; min-width: 0; }
+.home-packing { display: grid; gap: 0; min-width: 0; }
 .pack-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); min-width: 0; }
 .pack-tabs button {
   flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0; margin-bottom: -1px;
@@ -67,22 +67,29 @@
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
 }
 .pack-for .pack-for-pick:active { filter: brightness(.85); }
-.pack-meta { display: grid; gap: 3px; }
-.pack-meta-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.pack-weather { margin: 0; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pack-meta { margin: 0 0 6px; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+/* whose list on the left, the count on the right; the meter under them is the row's only line */
+.pack-who { display: flex; align-items: center; gap: 16px; min-height: 36px; }
+.pack-who .pack-tabs { border-bottom: 0; }
+.pack-who .pack-tabs button, .pack-who .pack-tabs button[aria-selected="true"] { border-bottom-color: transparent; }
+.pack-count { margin-left: auto; font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.pack-who + .pack-meter { margin-top: -10px; }
+/* the weather wraps as one piece, never leaving a lone "3°" */
+.pack-meta [aria-label="weather"] { white-space: nowrap; }
 .pack-link, .pack-copy-to button { padding: 0; border: 0; background: none; color: var(--ink); font-size: 14px; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.pack-copy-wrap { display: grid; gap: 10px; justify-items: start; margin-top: 8px; }
+.pack-copy-wrap .pack-link { min-height: 44px; color: var(--ink-2); text-decoration-color: var(--line); }
+.pack-copy-wrap .pack-link:hover, .pack-copy-wrap .pack-link[aria-expanded="true"] { color: var(--ink); text-decoration-color: var(--ink); }
+.pack-copy-wrap .pack-copy { justify-self: stretch; }
 .pack-copy { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
 .pack-copy-to { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .pack-copy-to button { text-decoration-color: var(--line); }
 .pack-copy-to button:hover { text-decoration-color: var(--ink); }
 .pack-status { margin: 0; font-size: 14px; color: var(--ink-2); }
-/* mono text choices: the bag filter beside the count, and the bag and whose rows when editing */
+/* mono text choices: the bag on the add line, and the bag and whose rows when editing */
 .pack-choices { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .pack-choices button { padding: 2px 0; border: 0; border-bottom: 1px solid transparent; background: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); cursor: pointer; }
 .pack-choices button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
-.pack-count { display: grid; gap: 8px; }
-.pack-count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; }
-.pack-count p { margin: 0; font-family: var(--f-mono); font-size: 12px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
 .pack-meter { height: 2px; background: var(--soft); overflow: hidden; }
 .pack-meter > span { display: block; height: 100%; background: var(--ink); transition: width .2s; }
 .pack-list { border-top: 0; }
@@ -97,11 +104,14 @@
 .packed .pack-tick .tick::after { content: ""; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid var(--ink); border-width: 0 1.25px 1.25px 0; transform: rotate(45deg); }
 .pack-name { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 16px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
 .packed .pack-name { color: var(--ink-3); }
-.pack-bag { flex: none; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.pack-bag { flex: none; padding-right: 2px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
 .packed .pack-bag { color: var(--ink-3); }
 .pack-done-head { margin: 10px 0 0; }
 .map-search input::placeholder { color: var(--ink-3); }
 .packing .pack-add { margin-top: 0; }
+/* "add" is a word at the end of the line, not a box */
+.pack-add .line-go { padding: 0 2px 0 10px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font-size: 15px; font-weight: 650; }
+.pack-add .line-go:disabled { color: var(--ink-3); }
 .pack-add .pack-choices { flex-basis: 100%; padding: 2px 2px 0; }
 .pack-add:has(.pack-choices) { margin-bottom: 14px; }
 .pack-edit { flex: 1; display: grid; gap: 10px; padding: 10px 0; }

@@ -24,7 +24,7 @@ function Row({ p, packed, canEdit, onTick, onEdit, onRemove }: { p: PackingItem;
         <span className="tick" aria-hidden="true" />
       </label>
       <button type="button" className="pack-name" aria-label={`edit ${p.text}`} disabled={!canEdit} onClick={onEdit}>{p.text}</button>
-      {p.bag && <span className="pack-bag">[{BAGS[p.bag]}]</span>}
+      {p.bag && <span className="pack-bag">{BAGS[p.bag]}</span>}
       <SaveFailed table="packing" id={p.id} />
     </li>
   )
@@ -56,11 +56,10 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
   // whose list is open: always one person's when there are two or more of you (shared things are on every list)
   const [picked, setPicked] = useState<string | null>(null)
   const view = ids.length > 1 ? (picked && ids.includes(picked) ? picked : ids[0]) : null
-  const [bag, setBag] = useState<Bag | null>(null)
   const all = (pq.data ?? []).filter((p) => p.trip_id === trip.id)
   const packed = (p: PackingItem) => isPacked(p, view, ids)
   const mine = all.filter((p) => shows(p, view))
-  const items = (bag ? mine.filter((p) => p.bag === bag) : mine).sort((a, b) => a.position - b.position)
+  const items = [...mine].sort((a, b) => a.position - b.position)
   const toPack = items.filter((p) => !packed(p)), done = items.filter(packed)
   const save = useSave('packing')
   const removeLater = useUndoRemove('packing')
@@ -139,36 +138,24 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
 
   return (
     <div className="packing stack">
-      {(dates || weather || copyTo.length > 0) && <div className="pack-meta">
-        <div className="pack-meta-top">
-          <span className="mono-label">{dates}</span>
-          {canEdit && mine.length > 0 && copyTo.length > 0 && (
-            <button type="button" className="pack-link" aria-expanded={copying} disabled={busy} onClick={() => { setCopying(!copying); setCopied('') }}>copy this list to…</button>
-          )}
+      {(dates || weather) && <p className="pack-meta">
+        {dates}{dates && weather && ' · '}{weather && <span aria-label="weather">{weather}</span>}
+      </p>}
+      {(people.length > 1 || mine.length > 0) && <>
+        <div className="pack-who">
+          {people.length > 1 && <div className="pack-tabs small" role="tablist" aria-label="whose list">
+            {ids.map((id) => <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => { setPicked(id); setEditing(null) }}>{listName(id)}</button>)}
+          </div>}
+          {mine.length > 0 && <span className="pack-count num">{done.length} of {items.length} packed</span>}
         </div>
-        {weather && <p className="pack-weather" aria-label="weather">{weather}</p>}
-      </div>}
-      {copying && <div className="pack-copy" role="group" aria-label="copy to">
-        <span className="mono-label">copy to</span>
-        <div className="pack-copy-to">{copyTo.map((t) => <button key={t.id} type="button" disabled={busy} onClick={() => void copyInto(t)}>{t.name.toLowerCase()}</button>)}</div>
-      </div>}
-      {copied && <p className="pack-status" role="status">{copied}</p>}
-      {people.length > 1 && <div className="pack-tabs small" role="tablist" aria-label="whose list">
-        {ids.map((id) => <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => { setPicked(id); setEditing(null) }}>{listName(id)}</button>)}
-      </div>}
+        <div className="pack-meter" aria-hidden="true"><span style={{ width: `${items.length ? Math.round((done.length / items.length) * 100) : 0}%` }} /></div>
+      </>}
       {canEdit && !editing && <form className="jot pack-add" onSubmit={e => { e.preventDefault(); void submit() }}>
         <input ref={addField} aria-label="add to pack" placeholder="add to pack…" value={text} disabled={busy} autoComplete="off" enterKeyHint="done" onChange={e => setText(e.target.value)} />
         <button type="submit" className="btn small line-go" aria-label="add to pack" disabled={busy || !text.trim()}>add</button>
         {text.trim() && <Choices label="bag" value={addBag} disabled={busy} onPick={(v) => { setAddBag(v); addField.current?.focus() }}
           options={[...BAG_KEYS.map((k): [Bag, string] => [k, BAGS[k]]), ['', 'no bag']]} />}
       </form>}
-      {mine.length > 0 && <div className="pack-count">
-        <div className="pack-count-row">
-          <p className="head num">{done.length} of {items.length} packed</p>
-          <Choices label="show bag" value={bag ?? ''} onPick={(v) => { setBag(v || null); setAddBag(v) }} options={[['', 'all'], ...BAG_KEYS.map((k): [Bag, string] => [k, BAGS[k]])]} />
-        </div>
-        <div className="pack-meter" aria-hidden="true"><span style={{ width: `${items.length ? Math.round((done.length / items.length) * 100) : 0}%` }} /></div>
-      </div>}
       {problem && <p role="alert" className="warn-line">{problem}</p>}
       {toPack.length > 0 && <ul className="list pack-list" aria-label="packing">
         {toPack.map(row)}
@@ -177,6 +164,14 @@ export function PackingTab({ trip, dates, weather, copyTo = [] }: Props) {
         <p className="mono-label pack-done-head">packed</p>
         <ul className="list pack-list" aria-label="packed">{done.map(row)}</ul>
       </>}
+      {canEdit && mine.length > 0 && copyTo.length > 0 && <div className="pack-copy-wrap">
+        <button type="button" className="pack-link" aria-expanded={copying} disabled={busy} onClick={() => { setCopying(!copying); setCopied('') }}>copy this list to…</button>
+        {copying && <div className="pack-copy" role="group" aria-label="copy to">
+          <span className="mono-label">copy to</span>
+          <div className="pack-copy-to">{copyTo.map((t) => <button key={t.id} type="button" disabled={busy} onClick={() => void copyInto(t)}>{t.name.toLowerCase()}</button>)}</div>
+        </div>}
+        {copied && <p className="pack-status" role="status">{copied}</p>}
+      </div>}
     </div>
   )
 }

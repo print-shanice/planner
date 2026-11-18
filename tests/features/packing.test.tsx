@@ -224,11 +224,12 @@ it("a shared thing kiahna packed is packed on kiahna's list only", async () => {
   expect(within(screen.getByRole('list', { name: 'packed' })).getByText('sunscreen')).toBeInTheDocument()
 })
 
-it('rows have no faces, only the bag in brackets', () => {
+it('rows have no faces; the bag is a quiet word at the end', () => {
   db.packing = [{ ...mixed()[0], bag: 'carry' }, mixed()[2]]
   render(<PackingTab trip={trip({ id: 'lap' })} />)
   const rows = [...screen.getByRole('list', { name: 'packing' }).querySelectorAll('li')]
-  expect(rows[0]).toHaveTextContent('yellow shirt[carry-on]')
+  expect(rows[0]).toHaveTextContent(/^yellow shirtcarry-on$/)
+  expect(rows[0].querySelector('.pack-bag')).toHaveTextContent(/^carry-on$/)
   expect(rows[1]).toHaveTextContent(/^sunscreen$/)
   expect(document.querySelector('.avatar')).toBeNull()
 })
@@ -271,7 +272,7 @@ it('editing a thing can change whose it is and its bag', async () => {
   expect(db.save).toHaveBeenCalledWith({ id: 'a', owner: null, bag: 'wear' })
 })
 
-it('one bag at a time: the count follows it, and adding puts things in it', async () => {
+it('there is no bag filter: every bag is listed, and adding takes the bag picked on the add line', async () => {
   db.packing = [
     { id: 'a', trip_id: 'lap', text: 'passport', position: 0, owner: S, packed_by: [S], bag: 'carry' },
     { id: 'b', trip_id: 'lap', text: 'boots', position: 1, owner: S, packed_by: [], bag: 'wear' },
@@ -279,11 +280,12 @@ it('one bag at a time: the count follows it, and adding puts things in it', asyn
   ]
   db.save.mockReset().mockResolvedValue({})
   render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.queryByRole('group', { name: 'show bag' })).toBeNull()
+  expect(names()).toEqual(['boots', 'charger', 'passport'])
   expect(screen.getByText('1 of 3 packed')).toBeInTheDocument()
-  await userEvent.click(within(screen.getByRole('group', { name: 'show bag' })).getByRole('button', { name: 'carry-on' }))
-  expect(names()).toEqual(['charger', 'passport'])
-  expect(screen.getByText('1 of 2 packed')).toBeInTheDocument()
-  await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'book{Enter}')
+  await userEvent.type(screen.getByRole('textbox', { name: 'add to pack' }), 'book')
+  await userEvent.click(within(screen.getByRole('group', { name: 'bag' })).getByRole('button', { name: 'carry-on' }))
+  await userEvent.keyboard('{Enter}')
   expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'book', owner: S, bag: 'carry' }))
 })
 
@@ -303,12 +305,39 @@ it('copies the open list to another trip, unticked, with bags, and nothing twice
   expect(screen.getByRole('status')).toHaveTextContent('1 copied to greece')
 })
 
-it('the dates and one line of weather sit above the list; no copy without another trip', () => {
+it('dates and weather share one line; no copy without another trip', () => {
   db.packing = mixed()
   render(<PackingTab trip={trip({ id: 'lap' })} dates="7 – 11 feb · in 85 days" weather="usually −3° / −11° · snow most days" />)
-  expect(screen.getByText('7 – 11 feb · in 85 days')).toBeInTheDocument()
-  expect(screen.getByLabelText('weather')).toHaveTextContent('usually −3° / −11° · snow most days')
+  const weather = screen.getByLabelText('weather')
+  expect(weather).toHaveTextContent('usually −3° / −11° · snow most days')
+  expect(weather.closest('.pack-meta')).toHaveTextContent('7 – 11 feb · in 85 days · usually −3° / −11° · snow most days')
   expect(screen.queryByRole('button', { name: 'copy this list to…' })).toBeNull()
+})
+
+it('the count sits on the row of whose list, with the meter under it', () => {
+  db.packing = mixed()
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  const row = screen.getByRole('tablist', { name: 'whose list' }).closest('.pack-who')!
+  expect(row).toHaveTextContent(/\d+ of \d+ packed/)
+  expect(row.nextElementSibling).toHaveClass('pack-meter')
+})
+
+it('with one person the count and meter still show', () => {
+  const both = db.members
+  db.members = [both[0]]
+  db.packing = mixed()
+  render(<PackingTab trip={trip({ id: 'lap' })} />)
+  expect(screen.queryByRole('tablist')).toBeNull()
+  expect(screen.getByText(/\d+ of \d+ packed/)).toBeInTheDocument()
+  expect(document.querySelector('.pack-meter')).not.toBeNull()
+  db.members = both
+})
+
+it('copying the list sits after the lists', () => {
+  db.packing = mixed()
+  render(<PackingTab trip={trip({ id: 'lap' })} copyTo={[trip({ id: 'gr', name: 'Greece' })]} />)
+  const copy = screen.getByRole('button', { name: 'copy this list to…' })
+  expect(screen.getByRole('list', { name: 'packing' }).compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 it('with only one person signed up there are no faces to pick', () => {

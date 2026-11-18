@@ -140,7 +140,7 @@ test.describe('packing', () => {
     await pack.getByRole('button', { name: 'edit residence letter' }).click()
     await pack.getByRole('group', { name: 'bag', exact: true }).getByRole('button', { name: 'carry-on' }).click()
     await pack.getByRole('button', { name: 'save' }).click()
-    await expect(pack).toContainText('[carry-on]')
+    await expect(pack.getByRole('listitem').filter({ hasText: 'residence letter' })).toContainText('carry-on')
     await pack.getByRole('tab', { name: "maya's" }).click()
     await pack.getByRole('button', { name: 'edit rain jacket' }).click()
     await pack.getByRole('textbox', { name: 'packing item' }).fill('rain jacket (the yellow one)')
