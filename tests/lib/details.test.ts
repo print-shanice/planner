@@ -29,6 +29,14 @@ describe('google place details, kept to one request', () => {
   })
 })
 
+describe('links google gives back', () => {
+  it('keeps only web links, so a website or maps link that isn\'t http(s) never becomes a link', () => {
+    expect(toDetails({ websiteURI: 'javascript:alert(1)', googleMapsURI: 'data:text/html,hi' })).toMatchObject({ website: null, maps: null })
+    expect(toDetails({ websiteURI: 'https://cafe.example/', googleMapsURI: 'https://maps.google.com/?cid=1' }))
+      .toMatchObject({ website: 'https://cafe.example/', maps: 'https://maps.google.com/?cid=1' })
+  })
+})
+
 describe('hours on a day', () => {
   it('picks the day\'s line, drops the day name and reads it in 24-hour time like the plan', () => {
     expect(hoursOn(weekdays, '2027-02-06')).toBe('sat 10:00–14:00')

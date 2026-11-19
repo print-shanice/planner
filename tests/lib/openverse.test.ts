@@ -63,4 +63,10 @@ describe('a place\'s photo from openverse (open licence photos, mostly flickr)',
     vi.stubGlobal('fetch', vi.fn(async () => new Response('slow down', { status: 429 })))
     await expect(openversePhoto(bakery)).rejects.toThrow()
   })
+
+  it('skips a photo whose page isn\'t a web link, so the credit can never run code', async () => {
+    const bad = { ...result('Du Pain et des Idées', 'flickr', 'bad'), foreign_landing_url: 'javascript:alert(1)' }
+    vi.stubGlobal('fetch', answers([bad, result('Du Pain et des Idées', 'flickr', 'ok')]))
+    expect(await openversePhoto(bakery)).toMatchObject({ page: 'https://www.flickr.com/photos/x/ok' })
+  })
 })

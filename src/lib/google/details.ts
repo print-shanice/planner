@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { lib } from './loader'
 import { googleConfigured } from './config'
 import { useOnline } from '../offline'
+import { safeUrl } from '../embed'
 
 // what google says about a place, as the card shows it: one request per place, kept on the device for 30 days
 // (google's limit on keeping its answers). the fields stop at the "enterprise" price: no google reviews,
@@ -39,8 +40,9 @@ export function toDetails(f: Fields): Details {
     ratings: f.userRatingCount ?? null,
     kind: f.primaryTypeDisplayName ? f.primaryTypeDisplayName.toLowerCase() : null,
     weekdays,
-    website: f.websiteURI || null,
-    maps: f.googleMapsURI || null,
+    // only web links ever become links
+    website: safeUrl(f.websiteURI),
+    maps: safeUrl(f.googleMapsURI),
   }
 }
 
@@ -97,6 +99,8 @@ export function useDetails(gid: string | null | undefined) {
   const q = useQuery<Details>({
     queryKey: ['gplace', gid],
     queryFn: () => fetchDetails(gid!),
+    // answers kept from before toDetails checked links still only give web links
+    select: (d) => ({ ...d, website: safeUrl(d.website), maps: safeUrl(d.maps) }),
     enabled,
     staleTime: KEEP,
     retry: 0,

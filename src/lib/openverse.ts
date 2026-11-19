@@ -1,5 +1,6 @@
 import { normal } from './itinerary'
 import { wikiMatch } from './wiki'
+import { safeUrl } from './embed'
 
 // a place's photo from openverse (wordpress's free search over open licence photos, mostly flickr), for the cafés,
 // restaurants and shops wikipedia has no page for. no key, no account: 20 searches a minute and 200 a day per phone,
@@ -23,7 +24,7 @@ export async function openversePhoto(place: { name: string; city?: string | null
   const city = place.city?.trim()
   const asks = city && !normal(name).includes(normal(city)) ? [`${name} ${city}`, name] : [name]
   for (const q of asks) {
-    const hit = (await search(q)).find((r) => r.title && r.thumbnail && r.foreign_landing_url && wikiMatch(name, r.title))
+    const hit = (await search(q)).find((r) => r.title && r.thumbnail && safeUrl(r.foreign_landing_url) && wikiMatch(name, r.title))
     if (hit) return { src: hit.thumbnail!, page: hit.foreign_landing_url!, source: (hit.source || 'openverse').toLowerCase().replace(/_/g, ' ') }
   }
   return null

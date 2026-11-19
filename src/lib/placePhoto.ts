@@ -5,6 +5,7 @@ import { useOnline } from './offline'
 import { hasPoint } from './walk'
 import { wikiPhoto } from './wiki'
 import { openversePhoto } from './openverse'
+import { safeUrl } from './embed'
 
 // a place's one photo, from free sources only (never google): wikipedia's page photo for sights and famous places,
 // else an open licence photo from openverse (mostly flickr) for cafés, restaurants and shops, else none.
@@ -13,6 +14,12 @@ export type PlacePhoto = { src: string | null; credit: { label: string; href: st
 
 const KEEP = 30 * 24 * 60 * 60 * 1000
 const keep = { staleTime: KEEP, gcTime: KEEP, retry: 0 } as const
+
+// only a web link is ever a credit link (a kept answer may be older than the check in openverse.ts)
+function credit(label: string, page: string): PlacePhoto['credit'] {
+  const href = safeUrl(page)
+  return href ? { label, href } : null
+}
 
 export function usePlacePhoto(place: Place | null | undefined): PlacePhoto {
   const online = useOnline()
@@ -31,8 +38,8 @@ export function usePlacePhoto(place: Place | null | undefined): PlacePhoto {
     enabled: named && wikiDone && !wiki.data,
     ...keep,
   })
-  if (named && wiki.data) return { src: wiki.data.src, credit: { label: 'wikimedia', href: wiki.data.page }, waiting: false }
-  if (named && verse.data) return { src: verse.data.src, credit: { label: verse.data.source, href: verse.data.page }, waiting: false }
+  if (named && wiki.data) return { src: wiki.data.src, credit: credit('wikimedia', wiki.data.page), waiting: false }
+  if (named && verse.data) return { src: verse.data.src, credit: credit(verse.data.source, verse.data.page), waiting: false }
   return { src: null, credit: null, waiting: named && (wiki.isLoading || verse.isLoading) }
 }
 
