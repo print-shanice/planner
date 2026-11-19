@@ -111,7 +111,12 @@ function nameLayers(): LayerSpecification[] {
 
 // a round ink dot with a white ring, drawn here so it needs no image file (pixel ratio 2)
 function dot(radius: number) {
-  const rgb = (name: string) => { const v = css(name).replace('#', ''); return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16)) }
+  // a token as red, green, blue; the built css shortens colours where it can (white becomes #fff)
+  const rgb = (name: string) => {
+    const v = css(name).replace('#', '')
+    const hex = v.length === 3 ? [...v].map((c) => c + c).join('') : v
+    return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16))
+  }
   const ink = rgb('--ink'), card = rgb('--card')
   const edge = radius + 2, size = Math.ceil(edge) * 2 + 2, mid = size / 2
   const data = new Uint8Array(size * size * 4)

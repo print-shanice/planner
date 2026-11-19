@@ -392,6 +392,22 @@ describe('names', () => {
     expect(m.addImage).toHaveBeenCalledTimes(1)
   })
 
+  it('the dot is ink with a white ring however the colours are written (the built css shortens white to #fff)', () => {
+    document.documentElement.style.setProperty('--card', '#fff')
+    document.documentElement.style.setProperty('--ink', '#1c1c1c')
+    const { m } = show()
+    act(() => m.fire('styleimagemissing', { id: 'city-dot' }))
+    const [, img] = m.addImage.mock.calls[0]
+    const px = (x: number, y: number) => Array.from(img.data.slice((y * img.width + x) * 4, (y * img.width + x) * 4 + 4))
+    const mid = Math.floor(img.width / 2)
+    expect(px(mid, mid)).toEqual([28, 28, 28, 255])
+    // the ring, just outside the ink
+    const ring = px(mid + 6, mid)
+    expect(ring.slice(0, 3)).toEqual([255, 255, 255])
+    document.documentElement.style.removeProperty('--card')
+    document.documentElement.style.removeProperty('--ink')
+  })
+
   it('fetches nothing extra while zoomed out', () => {
     const { m } = show(undefined, OUT)
     expect(m.opts.style.sources['cities'].data.features).toEqual([])
