@@ -6,7 +6,7 @@ import { MonthCalendar } from '../../components/MonthCalendar'
 import { ancestors } from '../../lib/countries'
 import { busyIn, holidaysIn, offOn, pickDays, type Picked } from '../../lib/daysOff'
 import { useCanEdit } from '../../lib/offline'
-import { MarkLine } from './MarkLine'
+import { MarkLine, MarkPrompt } from './MarkLine'
 
 const spans = (ts: Trip[]) => ts.map(tripSpan).filter((x): x is Span => !!x)
 
@@ -55,7 +55,9 @@ export function Calendar({ trips, flagsOf = none, today, holiday, aside, daysOff
             const t = owner(d)
             if (t) navigate(`/trip/${t.id}?day=${d}`)
           }} />
-        {marking && picked?.[1] && <MarkLine key={`${picked[0]}-${picked[1]}`} from={picked[0]} to={picked[1]} onDone={stopMarking} />}
+        {marking && (picked?.[1]
+          ? <MarkLine key={`${picked[0]}-${picked[1]}`} from={picked[0]} to={picked[1]} onDone={stopMarking} />
+          : <MarkPrompt first={picked?.[0] ?? null} onDone={stopMarking} />)}
       </div>
       {aside?.(m)}
     </div>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useSave } from '../../lib/queries'
 import { spanWords } from '../../lib/daysOff'
+import { dayLabel } from '../../lib/dates'
 
 // under the month while marking: the picked days in words, which kind they are (a holiday, or days you can't travel),
 // then a name for them. adding saves them as one row
@@ -29,6 +30,18 @@ export function MarkLine({ from, to, onDone }: { from: string; to: string; onDon
           onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') onDone() }} />
         <button type="submit" className="btn small line-go" aria-label={busy ? "add days you can't travel" : 'add holiday'} disabled={!name.trim()}>add</button>
       </form>
+    </div>
+  )
+}
+
+// while marking, before both ends are picked: what to tap next, so the underlined word never leaves you guessing
+export function MarkPrompt({ first, onDone }: { first: string | null; onDone: () => void }) {
+  return (
+    <div className="mark-line">
+      <p className="mark-line-top mono" role="status">
+        <span>{first ? `${dayLabel(first)} · tap the last day` : 'tap the first day'}</span>
+        <button type="button" className="icon-btn mark-stop" aria-label="stop marking" onClick={onDone}>✕</button>
+      </p>
     </div>
   )
 }

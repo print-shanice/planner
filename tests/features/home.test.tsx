@@ -1018,6 +1018,22 @@ describe('your own holidays on the month', () => {
     expect(screen.queryByRole('textbox', { name: 'name these days' })).toBeNull()
   })
 
+  it('"add a holiday" says what to tap at once: the first day, then the last', async () => {
+    const user = userEvent.setup()
+    db.trips = exchange()
+    asMonth()
+    show()
+    const cal = screen.getByTestId('calendar')
+    await user.click(within(cal).getByRole('button', { name: 'add a holiday' }))
+    expect(screen.getByText('tap the first day')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'name these days' })).toBeNull()
+    await user.click(within(cal).getByRole('button', { name: /^fri 9 apr/ }))
+    expect(screen.getByText('fri 9 apr · tap the last day')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'stop marking' }))
+    expect(within(cal).getByRole('button', { name: 'add a holiday' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText(/tap the/)).toBeNull()
+  })
+
   it('✕ stops marking without saving', async () => {
     const user = userEvent.setup()
     db.trips = exchange()
