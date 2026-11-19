@@ -50,6 +50,8 @@ test.describe('the map', () => {
     }
     const card = page.getByRole('region', { name: 'musée d’orsay' })
     await expect(card.getByRole('img', { name: 'musée d’orsay' })).toBeVisible()
+    // shown for real once it has arrived, not left see-through
+    await expect(card.getByRole('img', { name: 'musée d’orsay' })).toHaveCSS('opacity', '1')
     await expect(card.getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/File:Musee_d_Orsay.jpg')
   })
 
@@ -63,6 +65,10 @@ test.describe('the map', () => {
     }
     const card = page.getByRole('region', { name: 'du pain et des idées' })
     await expect(card.getByRole('img', { name: 'du pain et des idées' })).toBeVisible()
+    await expect(card.getByRole('img', { name: 'du pain et des idées' })).toHaveCSS('opacity', '1')
+    await card.getByRole('button', { name: 'details' }).click()
+    const full = page.getByRole('dialog', { name: 'du pain et des idées' })
+    await expect(full.getByRole('img', { name: 'du pain et des idées' })).toHaveCSS('opacity', '1')
     await expect(card.getByRole('link', { name: 'photo · flickr' })).toHaveAttribute('href', 'https://www.flickr.com/photos/x/du-pain')
   })
 

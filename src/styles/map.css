@@ -63,8 +63,8 @@
 .place-card-photo { position: relative; margin: 0 -16px; aspect-ratio: 2 / 1; background: var(--card); }
 /* (more specific than the map's own loading rule, which would cover the card's ✕) */
 .place-card .place-card-photo .totoro { position: absolute; inset: 0; z-index: 0; padding: 0; background: none; }
-.place-card-photo img:not(.totoro img) { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; }
-.place-card-photo img.in { opacity: 1; }
+.place-card-img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; }
+.place-card-img.in { opacity: 1; }
 .place-card.has-photo .place-card-x { background: var(--card); box-shadow: var(--float); }
 .place-card.has-photo .place-card-x:hover { background: var(--card); filter: brightness(.95); }
 /* a borrowed photo's credit, quiet under its right edge */
@@ -87,7 +87,7 @@
 .place-card-link span { text-decoration: underline; text-underline-offset: 3px; }
 .place-card-link:hover { color: var(--ink); }
 .place-card-link img, .place-card-link .icon { flex: none; width: 16px; height: 16px; }
-@media (prefers-reduced-motion: reduce) { .place-card-photo img { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .place-card-img { transition: none; } }
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
 /* laptops: the map follows the plan's day; this zooms out to every place */
 .whole-trip { position: absolute; left: 12px; bottom: 12px; z-index: 2; color: var(--ink-2); }

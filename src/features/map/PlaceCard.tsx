@@ -127,7 +127,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
         <div className="place-card-photo">
           {/* totoro, the planner's one loading look, until the photo is found and has arrived */}
           {!img.loaded && <Loading size="small" label="loading photo" />}
-          {photo && handle(<img src={photo} alt={title} className={`${img.loaded ? 'in' : ''}${carry ? ' grab' : ''}`.trim() || undefined} onPointerDown={carry} onLoad={img.onLoad} onError={img.onError} draggable={false} />)}
+          {photo && handle(<img src={photo} alt={title} className={`place-card-img${img.loaded ? ' in' : ''}${carry ? ' grab' : ''}`} onPointerDown={carry} onLoad={img.onLoad} onError={img.onError} draggable={false} />)}
         </div>
       )}
       {img.loaded && shot.credit && <a className="place-card-credit" href={shot.credit.href} target="_blank" rel="noopener noreferrer">photo · {shot.credit.label}</a>}
