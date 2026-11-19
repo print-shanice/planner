@@ -61,7 +61,7 @@ export function HomePage() {
   const sq = useStops()
   const trips = tq.data ?? []
   const stops = sq.data ?? []
-  // your own holidays (school breaks, free days), hatched on the month and listed beside it
+  // your own holidays (school breaks, free days), underlined on the month like public ones and listed beside it
   const daysOff = useDaysOff().data ?? []
   const flagsOf = useTripFlags(trips, stops)
   const reviews = useReviews().data ?? []

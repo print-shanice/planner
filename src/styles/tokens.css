@@ -20,8 +20,6 @@
   --warn: #8A5200;
   --warn-bg: #F8EEDA;
   --idle: #6B6B6B;
-  /* your own holidays (a school break, a free day): fine ink lines over the day, so a trip's colour still shows */
-  --hatch: repeating-linear-gradient(135deg, rgba(28, 28, 28, .28) 0 1px, transparent 1px 5px);
   /* a search match, and nothing else */
   --found: #D5F0CF;
 

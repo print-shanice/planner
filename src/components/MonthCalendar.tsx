@@ -28,11 +28,11 @@ type Props = {
   flag?: (s: Span) => string | null | undefined
   // a public holiday that day where you'll be: a short amber rule under the day, and its name read out
   holiday?: (d: string) => string | null | undefined
-  // one of your own holidays that day: the day is hatched, and its name read out
+  // one of your own holidays that day: the same amber rule as a public one, and its name read out
   off?: (d: string) => string | null | undefined
   // days being marked: the first and (once tapped) the last, outlined as one stretch
   picked?: [string, string | null] | null
-  // words before the month's arrows ("mark days")
+  // words before the month's arrows ("add a holiday")
   tools?: ReactNode
 }
 
@@ -67,7 +67,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           style: { gridColumn: i + 1, ...(t ? tint(t.color) : {}) },
         }
         const code = t && edge.includes('l') ? p.flag?.(t) : null
-        const n = <>{off && <span className="cal-off" aria-hidden="true" />}{inPick && <span className="cal-pick" aria-hidden="true" />}<span className="cal-n num">{+d.slice(8)}</span>{code && <span className="cal-flag"><CountryFlag code={code} /></span>}</>
+        const n = <>{inPick && <span className="cal-pick" aria-hidden="true" />}<span className="cal-n num">{+d.slice(8)}</span>{code && <span className="cal-flag"><CountryFlag code={code} /></span>}</>
         const pickable = p.canPick?.(d) ?? true
         if (p.onDay && pickable) {
           return (

@@ -86,7 +86,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   const flagsOf = (t: Trip) => tripCountries(t, trips, stops)
   const holidayDays = useHolidays(flagsOf(trip), trip.start_date, trip.end_date ?? trip.start_date)
   const holidaysFor = (date: string) => holidaysOn(holidayDays, date, countriesOn(trip, trips, stops, date, flagsOf))
-  // your own holidays (a school break, a free day): a quiet word under the day's heading, a hatched day in the strip
+  // your own holidays (a school break, a free day): a quiet word under the day's heading, the amber mark in the strip like a public one
   const daysOff = useDaysOff().data ?? []
   const offFor = (date: string) => { const o = offOn(daysOff, date); return o ? offWords(o, date) : null }
 
@@ -385,7 +385,7 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
         {(day.date === today || side || off || areas.length > 0) && <p className="doc-day-meta mono">
           {day.date === today && <span className="today-tag">today</span>}
           {side && <Link className="side-tag" to={`/trip/${side.id}`}><span className="dot" />{side.name}</Link>}
-          {off && <span className="off-tag"><span className="off-mark" aria-hidden="true" />{off}</span>}
+          {off && <span className="off-tag"><span className="hol-rule" aria-hidden="true" />{off}</span>}
           {areas.slice(0, 3).map((a) => <span key={a}>{a.toLowerCase()}</span>)}
         </p>}
       </header>

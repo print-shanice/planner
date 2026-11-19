@@ -60,13 +60,7 @@ button.cal-day:hover .cal-n { background: color-mix(in srgb, var(--ink) 6%, tran
 .cal-flag { position: absolute; top: 3px; left: 6px; z-index: 2; display: inline-flex; line-height: 1; pointer-events: none; }
 .cal-flag .flag { height: 13px; min-width: 0; padding: 0 2px; font-size: 8px; background: var(--card); color: var(--ink-2); }
 
-/* your own holidays: the day hatched, with a clear spot round its number so it still reads */
-.cal-off {
-  position: absolute; inset: 0; background: var(--hatch); pointer-events: none;
-  -webkit-mask: radial-gradient(circle 12px at 50% 50%, transparent 98%, #000 100%);
-  mask: radial-gradient(circle 12px at 50% 50%, transparent 98%, #000 100%);
-}
-/* "mark days": a grey word before the arrows, underlined while it's on */
+/* "add a holiday": a grey word before the arrows, underlined while it's on */
 .cal-mark {
   min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--ink-2); font-size: 14px; white-space: nowrap; cursor: pointer;
 }

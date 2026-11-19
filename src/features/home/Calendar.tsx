@@ -16,7 +16,7 @@ const none = () => [] as string[]
 
 type Props = {
   trips: Trip[]; flagsOf?: (t: Trip) => string[]; today: string; holiday?: (d: string) => string | null; aside?: (month: string) => ReactNode
-  // your own holidays: hatched on the month; "mark days" adds one
+  // your own holidays: the amber rule on the month like public ones; "add a holiday" adds one
   daysOff?: DayOff[]
 }
 
@@ -44,7 +44,7 @@ export function Calendar({ trips, flagsOf = none, today, holiday, aside, daysOff
         <MonthCalendar month={m} onPrev={() => setMonth(shiftMonth(m, -1))} onNext={() => setMonth(shiftMonth(m, 1))}
           today={today} ribbon={(d) => innermostDay(d, all, depth)} flag={flag} holiday={holiday} off={off} picked={marking ? picked : null}
           tools={<button type="button" className="cal-mark" aria-pressed={marking} disabled={!canEdit && !marking}
-            onClick={() => (marking ? stopMarking() : setMarking(true))}>mark days</button>}
+            onClick={() => (marking ? stopMarking() : setMarking(true))}>add a holiday</button>}
           canPick={(d) => marking || !!owner(d)}
           onDay={(d) => {
             if (marking) { setPicked((p) => pickDays(p, d)); return }

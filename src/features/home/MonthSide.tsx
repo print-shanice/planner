@@ -12,7 +12,7 @@ import { offBetween } from '../../lib/daysOff'
 import { DayOffForm } from './DayOffForm'
 
 // beside the month on home: what's on in it and what's still to do in it (two tabs: bookings to make and to-dos), then its holidays:
-// your own (hatched, like their days) and the public ones (an amber rule, like theirs), in one list by date.
+// your own and the public ones, each with the amber rule its days wear, in one list by date.
 // both tabs share one space sized to the taller, so switching never moves the holidays below
 type Props = {
   month: string
@@ -96,7 +96,7 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays, daysOff = []
           <h3 className="month-hols-h">holidays in {name}</h3>
           {hols.map(({ key, off, pub }) => (off ? (
             <div key={key} className="hol-row" data-testid="hol-row">
-              <span className="off-mark" aria-hidden="true" />
+              <span className="hol-rule" aria-hidden="true" />
               <span className="num">{off.start_date === off.end_date ? dayLabel(off.start_date) : fmtRange(off.start_date, off.end_date)}</span>
               <span className="hol-name">{off.name}</span>
               <button type="button" className="row-edit" aria-label={`edit ${off.name.toLowerCase()}`} onClick={() => setEditing(off)}>edit</button>

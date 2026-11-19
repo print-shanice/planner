@@ -992,13 +992,13 @@ describe('packing, one trip at a time from home', () => {
 describe('your own holidays on the month', () => {
   const exchange = () => [trip({ id: 'ex', name: 'exchange', start_date: '2027-04-01', end_date: '2027-07-13', base: place({ country: 'NL' }) })] as Trip[]
 
-  it('"mark days" picks a first and last day instead of opening trips, and the line under the month names them', async () => {
+  it('"add a holiday" picks a first and last day instead of opening trips, and the line under the month names them', async () => {
     const user = userEvent.setup()
     db.trips = exchange()
     asMonth()
     show()
     const cal = screen.getByTestId('calendar')
-    const mark = within(cal).getByRole('button', { name: 'mark days' })
+    const mark = within(cal).getByRole('button', { name: 'add a holiday' })
     expect(mark).toHaveAttribute('aria-pressed', 'false')
     await user.click(mark)
     expect(mark).toHaveAttribute('aria-pressed', 'true')
@@ -1024,7 +1024,7 @@ describe('your own holidays on the month', () => {
     asMonth()
     show()
     const cal = screen.getByTestId('calendar')
-    await user.click(within(cal).getByRole('button', { name: 'mark days' }))
+    await user.click(within(cal).getByRole('button', { name: 'add a holiday' }))
     await user.click(within(cal).getByRole('button', { name: /^fri 9 apr/ }))
     await user.click(within(cal).getByRole('button', { name: /^fri 9 apr/ }))
     expect(screen.getByText('fri 9 apr · 1 day')).toBeInTheDocument()
@@ -1033,7 +1033,7 @@ describe('your own holidays on the month', () => {
     expect(db.save).not.toHaveBeenCalled()
   })
 
-  it('your holidays are hatched on the month and listed beside it with the public ones, by date', async () => {
+  it('your holidays wear the same amber rule as public ones on the month and are listed beside it with them, by date', async () => {
     db.trips = exchange()
     db.daysOff = [
       { id: 'sb', name: 'spring break', start_date: '2027-04-24', end_date: '2027-04-30' },
@@ -1053,6 +1053,8 @@ describe('your own holidays on the month', () => {
       expect.stringContaining('no classes'), expect.stringContaining('spring break'), expect.stringMatching(/king's day/i),
     ])
     expect(within(list).getAllByRole('button', { name: /^edit/ })).toHaveLength(2)
+    // the same mark as a public holiday, yours too
+    expect(within(list).getAllByTestId('hol-row').every((r) => r.querySelector('.hol-rule'))).toBe(true)
   })
 
   it('"edit" opens the holiday to rename, move or delete', async () => {

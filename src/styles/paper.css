@@ -371,17 +371,14 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .trip-route i { font-style: normal; margin: 0 8px; color: var(--ink-3); font-weight: 400; }
 .trip-route-more { margin-left: 8px; color: var(--ink-2); }
 
-/* ---------- your own holidays: a hatched square and its words under the day, a hatched day in the strip ---------- */
-.off-mark { flex: none; display: inline-block; width: 11px; height: 11px; background: var(--hatch); box-shadow: inset 0 0 0 1px var(--ink-2); }
+/* ---------- your own holidays look like public ones: the amber rule before their words under the day ---------- */
+.hol-rule { flex: none; display: inline-block; width: 11px; height: 2px; background: var(--warn); }
 .off-tag { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); }
-.strip-day[data-off]::before { content: ''; position: absolute; inset: 0; border-radius: 6px; background: var(--hatch); opacity: .5; pointer-events: none; }
-.strip-day[data-off][aria-current="true"]::before { display: none; }
-.strip-day[data-off] > span { position: relative; }
 
-/* ---------- public holidays: an amber mark on the day, and a line at the top of it ---------- */
+/* ---------- public holidays (and your own): an amber mark on the day, and a line at the top of it ---------- */
 .strip-day { position: relative; }
-.strip-day[data-holiday]::after { content: ''; position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
-.cal-day[data-holiday] .cal-n::after { content: ''; position: absolute; left: 50%; bottom: 6px; width: 12px; height: 2px; margin-left: -6px; background: var(--warn); }
+.strip-day:is([data-holiday], [data-off])::after { content: ''; position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+.cal-day:is([data-holiday], [data-off]) .cal-n::after { content: ''; position: absolute; left: 50%; bottom: 6px; width: 12px; height: 2px; margin-left: -6px; background: var(--warn); }
 .holiday-line .holiday-mark { background: none; box-shadow: none; }
 .holiday-line .holiday-mark .flag { height: 22px; min-width: 26px; font-size: 10px; }
 .itin-line.quiet.holiday-line .itin-title { font-weight: 500; color: var(--ink); font-size: 15.5px; }

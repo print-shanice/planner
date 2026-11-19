@@ -134,11 +134,11 @@ test.describe('public holidays and the month at a glance', () => {
     expect((await hols.boundingBox())!.y).toBe(before!.y)
   })
 
-  test('"mark days" on the month makes your own holiday: hatched, listed beside the month, and named in the plan', async ({ page }) => {
+  test('"add a holiday" on the month makes your own holiday: underlined, listed beside the month, and named in the plan', async ({ page }) => {
     await open(page)
     await page.getByRole('button', { name: 'month', exact: true }).click()
     await page.getByRole('button', { name: 'next month' }).click()
-    await page.getByRole('button', { name: 'mark days' }).click()
+    await page.getByRole('button', { name: 'add a holiday' }).click()
     await page.getByRole('button', { name: /^tue 2 feb/ }).click()
     await page.getByRole('button', { name: /^thu 4 feb/ }).click()
     await expect(page.getByText('tue 2 – thu 4 feb · 3 days')).toBeVisible()

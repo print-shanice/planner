@@ -398,9 +398,8 @@
 .month-hols { display: grid; }
 .month-hols h3 { margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--ink); font-family: var(--f-head); font-size: 20px; font-weight: 400; line-height: 1.25; letter-spacing: -0.01em; }
 .hol-row { display: grid; grid-template-columns: 11px 92px minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
-/* each row starts with the mark its days wear on the month: hatched for yours, the amber rule for public ones */
-.hol-row > .off-mark, .hol-row > .hol-rule { align-self: center; }
-.hol-rule { width: 11px; height: 2px; background: var(--warn); }
+/* each row starts with the amber rule its days wear on the month, yours and public ones alike */
+.hol-row > .hol-rule { align-self: center; }
 .hol-row > .row-edit { margin: -12px 0; }
 /* under the month while marking: the picked days, then the line that names them */
 .mark-line { display: grid; gap: 2px; padding: 10px 0 4px; }
