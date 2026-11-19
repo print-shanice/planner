@@ -130,3 +130,18 @@ it('your own holidays: members share them, strangers see none, and one can\'t en
   expect((await d.q('select * from days_off')).rows).toHaveLength(0)
   await expect(d.q("insert into days_off(name, start_date, end_date) values ('x', '2027-04-01', '2027-04-01')")).rejects.toThrow(/row-level security/)
 })
+
+it('the tickets bucket only takes pdfs and photos, up to 20 mb, even when sent straight to the api', async () => {
+  const b = (await d.q("select file_size_limit, allowed_mime_types from storage.buckets where id = 'files'")).rows[0]
+  expect(Number(b.file_size_limit)).toBe(20 * 1024 * 1024)
+  expect(b.allowed_mime_types).toEqual(['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic', 'image/heif', 'image/bmp'])
+})
+
+it('signed out, the membership functions can\'t be called; signed in they still work', async () => {
+  await d.anon()
+  await expect(d.q('select public.is_member()')).rejects.toThrow(/permission denied/)
+  await expect(d.q('select public.claim_member()')).rejects.toThrow(/permission denied/)
+  await d.as('shanice@x.com')
+  expect((await d.q('select public.is_member() as m')).rows[0].m).toBe(true)
+  await d.q('select public.claim_member()')
+})

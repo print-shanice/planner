@@ -184,11 +184,17 @@ revoke all on public.members from anon, authenticated;
 grant select on public.members to authenticated;
 grant select, insert, update, delete on public.trips, public.stops, public.costs, public.links, public.packing, public.files, public.days_off to authenticated;
 revoke all on public.trips, public.stops, public.costs, public.links, public.packing, public.files, public.days_off from anon;
+-- functions are open to everyone by default; these two are only for people signed in
+revoke execute on function public.is_member(), public.claim_member() from public, anon;
 grant execute on function public.is_member() to authenticated;
 grant execute on function public.claim_member() to authenticated;
 
 -- private bucket for tickets
 insert into storage.buckets (id, name, public) values ('files', 'files', false) on conflict (id) do nothing;
+-- only pdfs and photos (what the ticket viewer shows), up to 20 mb, however the file is sent
+update storage.buckets set file_size_limit = 20971520,
+  allowed_mime_types = array['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic', 'image/heif', 'image/bmp']
+  where id = 'files';
 drop policy if exists files_members on storage.objects;
 create policy files_members on storage.objects for all to authenticated
   using (bucket_id = 'files' and public.is_member())
