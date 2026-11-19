@@ -120,3 +120,13 @@ it('packing things have an owner (none = both) and who packed them; old ticks co
   await d.db.exec(readFileSync('supabase/schema.sql', 'utf8'))
   expect((await d.q("select packed_by from packing where text = 'adapter'")).rows[0].packed_by).toHaveLength(2)
 })
+
+it('your own holidays: members share them, strangers see none, and one can\'t end before it starts', async () => {
+  await d.as('shanice@x.com')
+  await d.q("insert into days_off(name, start_date, end_date) values ('spring break', '2027-04-24', '2027-04-30')")
+  await expect(d.q("insert into days_off(name, start_date, end_date) values ('x', '2027-04-30', '2027-04-24')")).rejects.toThrow(/check/)
+  expect((await d.q('select * from days_off')).rows).toHaveLength(1)
+  await d.as('stranger@x.com')
+  expect((await d.q('select * from days_off')).rows).toHaveLength(0)
+  await expect(d.q("insert into days_off(name, start_date, end_date) values ('x', '2027-04-01', '2027-04-01')")).rejects.toThrow(/row-level security/)
+})

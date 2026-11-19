@@ -1,9 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Trip } from '../../lib/types'
+import type { DayOff, Trip } from '../../lib/types'
 import { innermostDay, openingMonth, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { MonthCalendar } from '../../components/MonthCalendar'
 import { ancestors } from '../../lib/countries'
+import { offOn, pickDays, type Picked } from '../../lib/daysOff'
+import { useCanEdit } from '../../lib/offline'
+import { MarkLine } from './MarkLine'
 
 const spans = (ts: Trip[]) => ts.map(tripSpan).filter((x): x is Span => !!x)
 
@@ -11,7 +14,13 @@ const spans = (ts: Trip[]) => ts.map(tripSpan).filter((x): x is Span => !!x)
 // opens on this month while a trip is on, else the month the soonest one starts. a day with a trip opens that day in it
 const none = () => [] as string[]
 
-export function Calendar({ trips, flagsOf = none, today, holiday, aside }: { trips: Trip[]; flagsOf?: (t: Trip) => string[]; today: string; holiday?: (d: string) => string | null; aside?: (month: string) => ReactNode }) {
+type Props = {
+  trips: Trip[]; flagsOf?: (t: Trip) => string[]; today: string; holiday?: (d: string) => string | null; aside?: (month: string) => ReactNode
+  // your own holidays: hatched on the month; "mark days" adds one
+  daysOff?: DayOff[]
+}
+
+export function Calendar({ trips, flagsOf = none, today, holiday, aside, daysOff = [] }: Props) {
   const [month, setMonth] = useState(() => openingMonth(trips, today))
   // a first trip added while home is open gives the calendar a month
   const m = month ?? openingMonth(trips, today)
@@ -21,14 +30,28 @@ export function Calendar({ trips, flagsOf = none, today, holiday, aside }: { tri
   const owner = (d: string) => innermostDay(d, all, depth)?.trip
   // every stretch of a trip's colour on the month starts with that trip's flag
   const flag = (s: Span) => (s.trip ? flagsOf(s.trip)[0] ?? null : null)
+  const canEdit = useCanEdit()
+  // marking your own holiday: taps pick the first and last day instead of opening trips
+  const [marking, setMarking] = useState(false)
+  const [picked, setPicked] = useState<Picked>(null)
+  const stopMarking = () => { setMarking(false); setPicked(null) }
+  const off = (d: string) => offOn(daysOff, d)?.name.toLowerCase() ?? null
   if (!m) return null
   // the month on the left; beside it, whatever home shows for that month
   return (
     <div className="home-month">
       <div className="home-cal">
         <MonthCalendar month={m} onPrev={() => setMonth(shiftMonth(m, -1))} onNext={() => setMonth(shiftMonth(m, 1))}
-          today={today} ribbon={(d) => innermostDay(d, all, depth)} flag={flag} holiday={holiday}
-          canPick={(d) => !!owner(d)} onDay={(d) => { const t = owner(d); if (t) navigate(`/trip/${t.id}?day=${d}`) }} />
+          today={today} ribbon={(d) => innermostDay(d, all, depth)} flag={flag} holiday={holiday} off={off} picked={marking ? picked : null}
+          tools={<button type="button" className="cal-mark" aria-pressed={marking} disabled={!canEdit && !marking}
+            onClick={() => (marking ? stopMarking() : setMarking(true))}>mark days</button>}
+          canPick={(d) => marking || !!owner(d)}
+          onDay={(d) => {
+            if (marking) { setPicked((p) => pickDays(p, d)); return }
+            const t = owner(d)
+            if (t) navigate(`/trip/${t.id}?day=${d}`)
+          }} />
+        {marking && picked?.[1] && <MarkLine key={`${picked[0]}-${picked[1]}`} from={picked[0]} to={picked[1]} onDone={stopMarking} />}
       </div>
       {aside?.(m)}
     </div>

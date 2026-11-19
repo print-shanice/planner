@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
 import type { Trip } from '../../src/lib/types'
 
-const db = vi.hoisted(() => ({ trips: [] as unknown[], stops: [] as unknown[], files: [] as unknown[], links: [] as unknown[], costs: [] as unknown[], open: vi.fn(), remove: vi.fn(), save: vi.fn((r: unknown) => Promise.resolve(r)) }))
+const db = vi.hoisted(() => ({ daysOff: [] as unknown[], trips: [] as unknown[], stops: [] as unknown[], files: [] as unknown[], links: [] as unknown[], costs: [] as unknown[], open: vi.fn(), remove: vi.fn(), save: vi.fn((r: unknown) => Promise.resolve(r)) }))
 vi.mock('../../src/lib/queries', () => ({
   useTrips: () => ({ data: db.trips }),
   useLinks: () => ({ data: db.links }),
@@ -14,6 +14,7 @@ vi.mock('../../src/lib/queries', () => ({
   useFiles: () => ({ data: db.files }),
   useRates: () => ({ data: null }),
   useMembers: () => ({ data: [] }),
+  useDaysOff: () => ({ data: db.daysOff }),
   useRemove: () => ({ mutateAsync: vi.fn(), mutate: vi.fn() }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
 }))
@@ -68,6 +69,7 @@ beforeEach(() => {
   db.files = []
   db.links = []
   db.costs = []
+  db.daysOff = []
   const t = tokyo()
   db.trips = [t]
   db.stops = [
@@ -628,4 +630,15 @@ it('a far-off day says it is what that date is usually like, not a forecast', as
   const temp = await dayBox('2031-02-07').findByText((_, el) => !!el?.classList.contains('doc-temp'))
   expect(temp).toHaveTextContent('~usually −2°–9°')
   spy.mockRestore()
+})
+
+it('a day in one of your own holidays says so under its heading, and its day in the strip is hatched', () => {
+  db.daysOff = [{ id: 'o1', name: 'Autumn Break', start_date: '2025-09-17', end_date: '2025-09-19' }]
+  show(tokyo())
+  expect(meta('2025-09-18')).toHaveTextContent('autumn break · day 2 of 3')
+  expect(meta('2025-09-19')).toHaveTextContent('autumn break · day 3 of 3')
+  expect(screen.getByTestId('itin-2025-09-20').querySelector('.off-tag')).toBeNull()
+  expect(strip().getByRole('button', { name: /thursday 18 september/ })).toHaveAttribute('data-off')
+  expect(strip().getByRole('button', { name: /thursday 18 september/ })).toHaveAccessibleName(/autumn break/)
+  expect(strip().getByRole('button', { name: /saturday 20 september/ })).not.toHaveAttribute('data-off')
 })

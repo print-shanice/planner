@@ -141,4 +141,13 @@ export type Review = {
   created_at?: string
 }
 
-export type TableName = 'trips' | 'stops' | 'costs' | 'links' | 'packing' | 'files' | 'members' | 'reviews'
+// your own holidays (a school break, a free day): days the public holiday service doesn't know, shared by both of you
+export type DayOff = {
+  id: string
+  name: string
+  start_date: string
+  end_date: string
+  created_at?: string
+}
+
+export type TableName = 'trips' | 'stops' | 'costs' | 'links' | 'packing' | 'files' | 'members' | 'reviews' | 'days_off'

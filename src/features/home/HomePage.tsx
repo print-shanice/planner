@@ -1,6 +1,6 @@
 import { lazy, Suspense, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useLinks, useReviews, useStops, useTrips } from '../../lib/queries'
+import { useDaysOff, useLinks, useReviews, useStops, useTrips } from '../../lib/queries'
 import { countryName, countryStatus, globePins, homeLists, homeTotals, tripsInCountry } from '../../lib/countries'
 import { addDays, byStart, countdown, fmtDay, todayISO } from '../../lib/dates'
 import { resumePlan } from '../../lib/resume'
@@ -61,6 +61,8 @@ export function HomePage() {
   const sq = useStops()
   const trips = tq.data ?? []
   const stops = sq.data ?? []
+  // your own holidays (school breaks, free days), hatched on the month and listed beside it
+  const daysOff = useDaysOff().data ?? []
   const flagsOf = useTripFlags(trips, stops)
   const reviews = useReviews().data ?? []
   const load = loadState(tq, sq)
@@ -169,8 +171,8 @@ export function HomePage() {
               {load.state === 'ready' && trips.length === 0 && <EmptyState title="no trips yet" />}
               {load.state === 'ready' && trips.length > 0 && upcoming.length === 0 && <EmptyState title="nothing coming up" />}
               {upcoming.length > 0 && shownAs === 'month' && (
-                <Calendar trips={trips} flagsOf={flagsOf} today={today} holiday={holidayName}
-                  aside={(m) => <MonthSide month={m} trips={trips} stops={stops} flagsOf={flagsOf} holidays={holidaysBetween} />} />
+                <Calendar trips={trips} flagsOf={flagsOf} today={today} holiday={holidayName} daysOff={daysOff}
+                  aside={(m) => <MonthSide month={m} trips={trips} stops={stops} flagsOf={flagsOf} holidays={holidaysBetween} daysOff={daysOff} />} />
               )}
               {upcoming.length > 0 && shownAs === 'list' && byMonth(upcoming).map(([label, group]) => (
                 <div key={label} className="month-group">

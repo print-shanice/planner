@@ -2,7 +2,7 @@ import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, 
 import { Link, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import type { Stop, Trip } from '../../lib/types'
-import { useCosts, useFiles, useLinks, useStops, useTrips } from '../../lib/queries'
+import { useCosts, useDaysOff, useFiles, useLinks, useStops, useTrips } from '../../lib/queries'
 import { lineInfo, type LineInfo } from '../../lib/lineInfo'
 import { loadState } from '../../lib/load'
 import { fmtDay, fmtRange, todayISO } from '../../lib/dates'
@@ -28,6 +28,7 @@ import { ItinLine } from './ItinLine'
 import { AddLine } from './AddLine'
 import { CountryFlag } from '../../components/CountryFlag'
 import { countriesOn, holidaysOn, useHolidays, type Holiday } from '../../lib/holidays'
+import { offOn, offWords } from '../../lib/daysOff'
 import { countryName, descendants, tripCountries } from '../../lib/countries'
 import { useWide } from '../../lib/useWide'
 import { colourVar } from '../../lib/colors'
@@ -85,6 +86,9 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
   const flagsOf = (t: Trip) => tripCountries(t, trips, stops)
   const holidayDays = useHolidays(flagsOf(trip), trip.start_date, trip.end_date ?? trip.start_date)
   const holidaysFor = (date: string) => holidaysOn(holidayDays, date, countriesOn(trip, trips, stops, date, flagsOf))
+  // your own holidays (a school break, a free day): a quiet word under the day's heading, a hatched day in the strip
+  const daysOff = useDaysOff().data ?? []
+  const offFor = (date: string) => { const o = offOn(daysOff, date); return o ? offWords(o, date) : null }
 
   const it = useMemo(() => itineraryDays(trip, trips, stops, today), [trip, trips, stops, today])
   const [searching, setSearching] = useState(false)
@@ -280,8 +284,8 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
                 <span key={d.date} className="strip-item">
                   {month}
                   <button type="button" className={`strip-day${side ? ' side' : ''}`} style={side ? tint(side.color) : undefined}
-                    data-holiday={holidaysFor(d.date).length ? '' : undefined}
-                    aria-label={[fmtDay(d.date, { weekday: 'long', day: 'numeric', month: 'long' }), ...holidaysFor(d.date).map((h) => h.name.toLowerCase())].join(' · ')} aria-current={onDay === d.date ? 'true' : undefined} onClick={() => jumpDay(d.date)}>
+                    data-holiday={holidaysFor(d.date).length ? '' : undefined} data-off={offFor(d.date) ? '' : undefined}
+                    aria-label={[fmtDay(d.date, { weekday: 'long', day: 'numeric', month: 'long' }), ...holidaysFor(d.date).map((h) => h.name.toLowerCase()), offFor(d.date)].filter(Boolean).join(' · ')} aria-current={onDay === d.date ? 'true' : undefined} onClick={() => jumpDay(d.date)}>
                     <span className="strip-wd">{fmtDay(d.date, { weekday: 'narrow' })}</span><span className="strip-n">{+d.date.slice(8)}</span>
                   </button>
                 </span>
@@ -303,7 +307,7 @@ export const ItineraryTab = memo(function ItineraryTab({ trip, searchSlot }: { t
       {items.map((d, i) => (<Fragment key={d.date}>
         {sides.filter((r) => r.date <= d.date && (i === 0 || r.date > items[i - 1].date)).map((r) => <SideRow key={r.trip.id} row={r} />)}
         <Day day={d} trip={trip} today={today} editing={wide && canEdit} canEdit={canEdit} q={query}
-          hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} temp={temps.get(d.date)} />
+          hidden={!!query && !hitDays.has(d.date)} current={current?.id ?? null} onOpen={onOpen} onLight={lit.set} infoOf={infoOf} holidays={holidaysFor(d.date)} off={offFor(d.date)} temp={temps.get(d.date)} />
       </Fragment>))}
       {sides.filter((r) => !items.length || r.date > items[items.length - 1].date).map((r) => <SideRow key={r.trip.id} row={r} />)}
       <Sheet page open={!!adjusting} title="edit trip" onClose={() => setAdjusting(null)}>
@@ -317,6 +321,8 @@ type DayProps = {
   day: ItinDay; trip: Trip; today: string; editing: boolean; canEdit: boolean; q: string; hidden: boolean; current: string | null
   onOpen?: (s: Stop, day?: string | null) => void; onLight: (id: string | null) => void; infoOf: (s: Stop) => LineInfo
   holidays?: Holiday[]
+  // the day's own holiday in words: "spring break · day 4 of 7"
+  off?: string | null
   temp?: DayShown
 }
 
@@ -335,7 +341,7 @@ function useOnScreen<T extends Element>(): [React.RefObject<T>, boolean] {
   return [ref, on]
 }
 
-function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, infoOf, holidays = [], temp }: DayProps) {
+function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, onLight, infoOf, holidays = [], off = null, temp }: DayProps) {
   const [box, onScreen] = useOnScreen<HTMLElement>()
   const move = useMove(trip)
   const drag = useDrag()
@@ -376,9 +382,10 @@ function Day({ day, trip, today, editing, canEdit, q, hidden, current, onOpen, o
       <header className="doc-day-head">
         <h2 className="doc-date" id={`h-${day.date}`}>{fmtDay(day.date, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
         {temp && <span className="doc-temp mono">{temp.kind === 'usual' && <><span aria-hidden="true">~</span><span className="sr-only">usually </span></>}{dayTempWords(temp)}</span>}
-        {(day.date === today || side || areas.length > 0) && <p className="doc-day-meta mono">
+        {(day.date === today || side || off || areas.length > 0) && <p className="doc-day-meta mono">
           {day.date === today && <span className="today-tag">today</span>}
           {side && <Link className="side-tag" to={`/trip/${side.id}`}><span className="dot" />{side.name}</Link>}
+          {off && <span className="off-tag"><span className="off-mark" aria-hidden="true" />{off}</span>}
           {areas.slice(0, 3).map((a) => <span key={a}>{a.toLowerCase()}</span>)}
         </p>}
       </header>

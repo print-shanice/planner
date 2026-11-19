@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { monthWeeks, type Span } from '../lib/calendar'
 import { dayLabel, fmtDay } from '../lib/dates'
 import { Icon } from './Icon'
@@ -28,6 +28,12 @@ type Props = {
   flag?: (s: Span) => string | null | undefined
   // a public holiday that day where you'll be: a short amber rule under the day, and its name read out
   holiday?: (d: string) => string | null | undefined
+  // one of your own holidays that day: the day is hatched, and its name read out
+  off?: (d: string) => string | null | undefined
+  // days being marked: the first and (once tapped) the last, outlined as one stretch
+  picked?: [string, string | null] | null
+  // words before the month's arrows ("mark days")
+  tools?: ReactNode
 }
 
 function Week({ week, p }: { week: (string | null)[]; p: Props }) {
@@ -46,21 +52,27 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
           if (owners[i - 1] !== t) edge += 'l'
           if (owners[i + 1] !== t) edge += 'r'
         }
+        const [from, to] = p.picked ?? []
+        const inPick = !!from && (to ? d >= from && d <= to : d === from)
+        const pickEdge = inPick ? `${i === 0 || d === from ? 'l' : ''}${i === 6 || d === (to ?? from) ? 'r' : ''}` : ''
+        const off = p.off?.(d)
         const attrs = {
           'data-day': d, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
           'aria-current': d === p.today ? ('date' as const) : undefined,
           'data-planned': p.marked?.(d) || undefined,
           'data-holiday': p.holiday?.(d) ? '' : undefined,
-          title: p.holiday?.(d) || undefined,
+          'data-off': off ? '' : undefined,
+          'data-picked': inPick ? pickEdge || '-' : undefined,
+          title: [p.holiday?.(d), off].filter(Boolean).join(' · ') || undefined,
           style: { gridColumn: i + 1, ...(t ? tint(t.color) : {}) },
         }
         const code = t && edge.includes('l') ? p.flag?.(t) : null
-        const n = <><span className="cal-n num">{+d.slice(8)}</span>{code && <span className="cal-flag"><CountryFlag code={code} /></span>}</>
+        const n = <>{off && <span className="cal-off" aria-hidden="true" />}{inPick && <span className="cal-pick" aria-hidden="true" />}<span className="cal-n num">{+d.slice(8)}</span>{code && <span className="cal-flag"><CountryFlag code={code} /></span>}</>
         const pickable = p.canPick?.(d) ?? true
         if (p.onDay && pickable) {
           return (
-            <button key={d} type="button" className="cal-day" {...attrs} aria-label={[dayLabel(d), p.holiday?.(d)].filter(Boolean).join(' · ')}
-              aria-pressed={p.selected === d} onClick={() => p.onDay!(d)}>
+            <button key={d} type="button" className="cal-day" {...attrs} aria-label={[dayLabel(d), p.holiday?.(d), off].filter(Boolean).join(' · ')}
+              aria-pressed={p.picked ? inPick : p.selected === d} onClick={() => p.onDay!(d)}>
               {n}
             </button>
           )
@@ -81,6 +93,7 @@ export function MonthCalendar(p: Props) {
           <span className="cal-month">{fmtDay(`${m}-01`, { month: 'long' })}</span>{' '}
           <span className="cal-year">{m.slice(0, 4)}</span>
         </p>
+        {p.tools}
         <button type="button" className="icon-btn" aria-label="previous month" disabled={!p.onPrev} onClick={p.onPrev}>
           <Icon name="back" />
         </button>

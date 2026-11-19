@@ -59,3 +59,22 @@ button.cal-day:hover .cal-n { background: color-mix(in srgb, var(--ink) 6%, tran
 /* a trip's code, in the top corner of the first day of each stretch of it */
 .cal-flag { position: absolute; top: 3px; left: 6px; z-index: 2; display: inline-flex; line-height: 1; pointer-events: none; }
 .cal-flag .flag { height: 13px; min-width: 0; padding: 0 2px; font-size: 8px; background: var(--card); color: var(--ink-2); }
+
+/* your own holidays: the day hatched, with a clear spot round its number so it still reads */
+.cal-off {
+  position: absolute; inset: 0; background: var(--hatch); pointer-events: none;
+  -webkit-mask: radial-gradient(circle 12px at 50% 50%, transparent 98%, #000 100%);
+  mask: radial-gradient(circle 12px at 50% 50%, transparent 98%, #000 100%);
+}
+/* "mark days": a grey word before the arrows, underlined while it's on */
+.cal-mark {
+  min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--ink-2); font-size: 14px; white-space: nowrap; cursor: pointer;
+}
+.cal-mark:hover:not(:disabled) { color: var(--ink); }
+.cal-mark[aria-pressed="true"] { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.cal-mark:disabled { opacity: .5; cursor: default; }
+/* the days being marked: one ink outline round the stretch, row by row */
+.cal-pick { position: absolute; inset: 0; z-index: 2; border-block: 1.5px solid var(--ink); pointer-events: none; }
+.cal-day[data-picked*="l"] .cal-pick { border-left: 1.5px solid var(--ink); }
+.cal-day[data-picked*="r"] .cal-pick { border-right: 1.5px solid var(--ink); }
+.cal .cal-day[data-picked] .cal-n { background: none; color: var(--ink); font-weight: 700; }

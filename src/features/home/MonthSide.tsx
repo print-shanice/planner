@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Stop, Trip } from '../../lib/types'
+import type { DayOff, Stop, Trip } from '../../lib/types'
 import type { Holiday } from '../../lib/holidays'
 import { addDays, byStart, dayLabel, fmtDay, fmtRange } from '../../lib/dates'
 import { tint } from '../../components/MonthCalendar'
 import { TripMark } from '../../components/TripMark'
 import { CountryFlag } from '../../components/CountryFlag'
 import { Pill } from '../../components/Pill'
+import { Sheet } from '../../components/Sheet'
+import { offBetween } from '../../lib/daysOff'
+import { DayOffForm } from './DayOffForm'
 
-// beside the month on home: what's on in it and what's still to do in it (two tabs: bookings to make and to-dos), then its public holidays.
+// beside the month on home: what's on in it and what's still to do in it (two tabs: bookings to make and to-dos), then its holidays:
+// your own (hatched, like their days) and the public ones (an amber rule, like theirs), in one list by date.
 // both tabs share one space sized to the taller, so switching never moves the holidays below
 type Props = {
   month: string
@@ -16,6 +20,7 @@ type Props = {
   stops: Stop[]
   flagsOf: (t: Trip) => string[]
   holidays: (from: string, to: string) => (Holiday & { trip: Trip })[]
+  daysOff?: DayOff[]
 }
 
 const lastDay = (month: string) => {
@@ -25,7 +30,7 @@ const lastDay = (month: string) => {
 // the hidden tab can't be tabbed into or read out (react 18 doesn't know `inert` yet, so it goes on as a plain attribute)
 const away = (hidden: boolean) => (hidden ? ({ inert: '' } as object) : {})
 
-export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
+export function MonthSide({ month, trips, stops, flagsOf, holidays, daysOff = [] }: Props) {
   const [tab, setTab] = useState<'on' | 'todo'>('on')
   const from = `${month}-01`
   const to = lastDay(month)
@@ -36,7 +41,12 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
     .sort((a, b) => a.day!.localeCompare(b.day!) || (a.time ?? '99').localeCompare(b.time ?? '99'))
   const later = stops.filter((s) => s.status === 'to_book' && s.day && s.day > to).length
   const tripOf = (s: Stop) => trips.find((t) => t.id === s.trip_id)
-  const hols = holidays(from, to)
+  const [editing, setEditing] = useState<DayOff | null>(null)
+  type Row = { key: string; date: string; off?: DayOff; pub?: Holiday & { trip: Trip } }
+  const hols: Row[] = [
+    ...offBetween(daysOff, from, to).map((o) => ({ key: o.id, date: o.start_date, off: o })),
+    ...holidays(from, to).map((h) => ({ key: `${h.date}-${h.country}-${h.name}`, date: h.date, pub: h })),
+  ].sort((a, b) => a.date.localeCompare(b.date))
 
   return (
     <aside className="month-side" aria-label={`${name} at a glance`}>
@@ -82,17 +92,28 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays }: Props) {
         </div>
       </div>
       {hols.length > 0 && (
-        <section className="month-hols" aria-label={`public holidays in ${name}`}>
-          <h3 className="month-hols-h">public holidays in {name}</h3>
-          {hols.map((h) => (
-            <div key={`${h.date}-${h.country}-${h.name}`} className="hol-row">
-              <span className="num">{dayLabel(h.date)}</span>
-              <span className="hol-name">{h.name} <CountryFlag code={h.country} /></span>
-              <span className="hol-trip">{h.trip.name}</span>
+        <section className="month-hols" aria-label={`holidays in ${name}`}>
+          <h3 className="month-hols-h">holidays in {name}</h3>
+          {hols.map(({ key, off, pub }) => (off ? (
+            <div key={key} className="hol-row" data-testid="hol-row">
+              <span className="off-mark" aria-hidden="true" />
+              <span className="num">{off.start_date === off.end_date ? dayLabel(off.start_date) : fmtRange(off.start_date, off.end_date)}</span>
+              <span className="hol-name">{off.name}</span>
+              <button type="button" className="row-edit" aria-label={`edit ${off.name.toLowerCase()}`} onClick={() => setEditing(off)}>edit</button>
             </div>
-          ))}
+          ) : (
+            <div key={key} className="hol-row" data-testid="hol-row">
+              <span className="hol-rule" aria-hidden="true" />
+              <span className="num">{dayLabel(pub!.date)}</span>
+              <span className="hol-name">{pub!.name} <CountryFlag code={pub!.country} /></span>
+              <span className="hol-trip">{pub!.trip.name}</span>
+            </div>
+          )))}
         </section>
       )}
+      <Sheet page open={!!editing} title="holiday" onClose={() => setEditing(null)}>
+        {editing && <DayOffForm key={editing.id} off={editing} onDone={() => setEditing(null)} />}
+      </Sheet>
     </aside>
   )
 }

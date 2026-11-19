@@ -106,4 +106,9 @@ const members = [
 const reviews = [
   { id: 'r1', stop_id: stops[22].id, author_id: 'u-shanice', rating: 5, return_choice: 'yes', outcome: 'done', comments: 'best custard tart ever' },
 ]
-export const data = { trips, stops, costs, links, packing, files: [], members, reviews }
+// your own holidays: a school break and a free friday
+const days_off = [
+  { id: 'off1', name: 'carnival break', start_date: '2027-02-06', end_date: '2027-02-14' },
+  { id: 'off2', name: 'no classes', start_date: '2027-02-26', end_date: '2027-02-26' },
+]
+export const data = { trips, stops, costs, links, packing, files: [], members, reviews, days_off }

@@ -397,7 +397,16 @@
 .pane-empty, .pane-later { padding: 12px 0; font-size: 14px; color: var(--ink-2); }
 .month-hols { display: grid; }
 .month-hols h3 { margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--ink); font-family: var(--f-head); font-size: 20px; font-weight: 400; line-height: 1.25; letter-spacing: -0.01em; }
-.hol-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.hol-row { display: grid; grid-template-columns: 11px 92px minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+/* each row starts with the mark its days wear on the month: hatched for yours, the amber rule for public ones */
+.hol-row > .off-mark, .hol-row > .hol-rule { align-self: center; }
+.hol-rule { width: 11px; height: 2px; background: var(--warn); }
+.hol-row > .row-edit { margin: -12px 0; }
+/* under the month while marking: the picked days, then the line that names them */
+.mark-line { display: grid; gap: 2px; padding: 10px 0 4px; }
+.mark-line-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; font-size: 12px; color: var(--ink-2); }
+.mark-line-top .mark-stop { width: 36px; height: 36px; margin-right: -8px; font-size: 15px; }
+.mark-line .jot { margin-top: 0; }
 .hol-row > .num { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
 .hol-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
 .hol-trip { font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); }

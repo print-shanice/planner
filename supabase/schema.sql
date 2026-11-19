@@ -141,6 +141,18 @@ create table if not exists public.files (
   updated_at timestamptz not null default now()
 );
 
+-- your own holidays (a school break, a free day): days the public holiday service doesn't know. shared by both of you
+create table if not exists public.days_off (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default '',
+  start_date date not null,
+  end_date date not null,
+  created_by uuid default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (end_date >= start_date)
+);
+
 create index if not exists stops_trip on public.stops(trip_id);
 create index if not exists costs_trip on public.costs(trip_id);
 create index if not exists trips_parent on public.trips(parent_id);
@@ -153,7 +165,7 @@ create policy members_select on public.members for select to authenticated using
 do $$
 declare t text;
 begin
-  foreach t in array array['trips', 'stops', 'costs', 'links', 'packing', 'files'] loop
+  foreach t in array array['trips', 'stops', 'costs', 'links', 'packing', 'files', 'days_off'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists %I on public.%I', t || '_select', t);
     execute format('drop policy if exists %I on public.%I', t || '_insert', t);
@@ -170,8 +182,8 @@ end $$;
 
 revoke all on public.members from anon, authenticated;
 grant select on public.members to authenticated;
-grant select, insert, update, delete on public.trips, public.stops, public.costs, public.links, public.packing, public.files to authenticated;
-revoke all on public.trips, public.stops, public.costs, public.links, public.packing, public.files from anon;
+grant select, insert, update, delete on public.trips, public.stops, public.costs, public.links, public.packing, public.files, public.days_off to authenticated;
+revoke all on public.trips, public.stops, public.costs, public.links, public.packing, public.files, public.days_off from anon;
 grant execute on function public.is_member() to authenticated;
 grant execute on function public.claim_member() to authenticated;
 
@@ -186,7 +198,7 @@ create policy files_members on storage.objects for all to authenticated
 do $$
 declare t text;
 begin
-  foreach t in array array['trips', 'stops', 'costs', 'links', 'packing', 'files'] loop
+  foreach t in array array['trips', 'stops', 'costs', 'links', 'packing', 'files', 'days_off'] loop
     if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
       execute format('alter publication supabase_realtime add table public.%I', t);
     end if;

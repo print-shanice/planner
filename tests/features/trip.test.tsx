@@ -16,6 +16,7 @@ vi.mock('../../src/lib/queries', () => ({
   useMembers: () => ({ data: [{ email: 'shanice@x.com', user_id: 'u1', name: 'shanice', color: 0 }] }),
   useRates: () => ({ data: null }),
   useReviews: () => ({ data: [] }),
+  useDaysOff: () => ({ data: [] }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
   useRemove: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))

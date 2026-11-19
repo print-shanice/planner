@@ -12,6 +12,7 @@ const db = vi.hoisted(() => ({
   links: [] as unknown[],
   members: [] as unknown[],
   reviews: [] as unknown[],
+  daysOff: [] as unknown[],
   packing: [] as unknown[],
   globe: null as null | { pins: { code: string }[]; routes?: { line: [number, number][]; mode: string | null }[]; focus?: { code: string; n: number } | null },
   save: vi.fn((r: unknown) => Promise.resolve(r)),
@@ -23,6 +24,7 @@ vi.mock('../../src/lib/queries', () => ({
   useLinks: () => ({ data: db.links }),
   useMembers: () => ({ data: db.members }),
   useReviews: () => ({ data: db.reviews }),
+  useDaysOff: () => ({ data: db.daysOff }),
   usePacking: () => ({ data: db.packing }),
   useRates: () => ({ data: null }),
   useSave: () => ({ mutateAsync: db.save, mutate: db.save, isPending: false }),
@@ -73,7 +75,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-11-05T10:00:00'))
   localStorage.clear()
-  db.trips = []; db.stops = []; db.links = []; db.reviews = []; db.packing = []; db.save.mockClear(); db.remove.mockClear()
+  db.trips = []; db.stops = []; db.links = []; db.reviews = []; db.daysOff = []; db.packing = []; db.save.mockClear(); db.remove.mockClear()
   db.globe = null; env.online = true
   keyApi.has.mockReset().mockResolvedValue(false); keyApi.make.mockReset().mockResolvedValue('a1'.repeat(32))
   db.members = []; env.signOut.mockReset().mockResolvedValue(undefined); env.forget.mockReset().mockResolvedValue(undefined)
@@ -984,5 +986,87 @@ describe('packing, one trip at a time from home', () => {
     db.trips = []
     show('/?view=packing')
     expect(screen.getByText('no trips yet')).toBeInTheDocument()
+  })
+})
+
+describe('your own holidays on the month', () => {
+  const exchange = () => [trip({ id: 'ex', name: 'exchange', start_date: '2027-04-01', end_date: '2027-07-13', base: place({ country: 'NL' }) })] as Trip[]
+
+  it('"mark days" picks a first and last day instead of opening trips, and the line under the month names them', async () => {
+    const user = userEvent.setup()
+    db.trips = exchange()
+    asMonth()
+    show()
+    const cal = screen.getByTestId('calendar')
+    const mark = within(cal).getByRole('button', { name: 'mark days' })
+    expect(mark).toHaveAttribute('aria-pressed', 'false')
+    await user.click(mark)
+    expect(mark).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(cal).getByRole('button', { name: /^fri 30 apr/ }))
+    await user.click(within(cal).getByRole('button', { name: /^sat 24 apr/ }))
+    expect(screen.queryByText('opened trip')).toBeNull()
+    expect(cal.querySelector('[data-day="2027-04-24"]')).toHaveAttribute('data-picked')
+    expect(cal.querySelector('[data-day="2027-04-30"]')).toHaveAttribute('data-picked')
+    expect(cal.querySelector('[data-day="2027-04-23"]')).not.toHaveAttribute('data-picked')
+    expect(screen.getByText('sat 24 – fri 30 apr · 7 days')).toBeInTheDocument()
+    const add = screen.getByRole('button', { name: 'add holiday' })
+    expect(add).toBeDisabled()
+    await user.type(screen.getByRole('textbox', { name: 'name these days' }), 'Spring break{Enter}')
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Spring break', start_date: '2027-04-24', end_date: '2027-04-30' }))
+    // done: marking stops and trip days open their trip again
+    expect(mark).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('textbox', { name: 'name these days' })).toBeNull()
+  })
+
+  it('✕ stops marking without saving', async () => {
+    const user = userEvent.setup()
+    db.trips = exchange()
+    asMonth()
+    show()
+    const cal = screen.getByTestId('calendar')
+    await user.click(within(cal).getByRole('button', { name: 'mark days' }))
+    await user.click(within(cal).getByRole('button', { name: /^fri 9 apr/ }))
+    await user.click(within(cal).getByRole('button', { name: /^fri 9 apr/ }))
+    expect(screen.getByText('fri 9 apr · 1 day')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'stop marking' }))
+    expect(screen.queryByText('fri 9 apr · 1 day')).toBeNull()
+    expect(db.save).not.toHaveBeenCalled()
+  })
+
+  it('your holidays are hatched on the month and listed beside it with the public ones, by date', async () => {
+    db.trips = exchange()
+    db.daysOff = [
+      { id: 'sb', name: 'spring break', start_date: '2027-04-24', end_date: '2027-04-30' },
+      { id: 'nc', name: 'no classes', start_date: '2027-04-09', end_date: '2027-04-09' },
+    ]
+    localStorage.setItem('holidays:NL:2027', JSON.stringify({ at: Date.now(), value: [{ date: '2027-04-27', name: "King's Day", local: 'Koningsdag', country: 'NL' }] }))
+    asMonth()
+    show()
+    const cal = screen.getByTestId('calendar')
+    expect(cal.querySelector('[data-day="2027-04-09"]')).toHaveAttribute('data-off')
+    expect(cal.querySelector('[data-day="2027-04-27"]')).toHaveAttribute('data-off')
+    expect(cal.querySelector('[data-day="2027-04-10"]')).not.toHaveAttribute('data-off')
+    expect(within(cal).getByRole('button', { name: /^sat 24 apr/ })).toHaveAccessibleName(/spring break/)
+    const list = await screen.findByRole('region', { name: 'holidays in april' })
+    await waitFor(() => expect(within(list).getAllByTestId('hol-row')).toHaveLength(3))
+    expect(within(list).getAllByTestId('hol-row').map((r) => r.textContent)).toEqual([
+      expect.stringContaining('no classes'), expect.stringContaining('spring break'), expect.stringMatching(/king's day/i),
+    ])
+    expect(within(list).getAllByRole('button', { name: /^edit/ })).toHaveLength(2)
+  })
+
+  it('"edit" opens the holiday to rename, move or delete', async () => {
+    const user = userEvent.setup()
+    db.trips = exchange()
+    db.daysOff = [{ id: 'sb', name: 'spring break', start_date: '2027-04-24', end_date: '2027-04-30' }]
+    asMonth()
+    show()
+    await user.click(screen.getByRole('button', { name: 'edit spring break' }))
+    const form = screen.getByRole('dialog', { name: 'holiday' })
+    const name = within(form).getByRole('textbox', { name: 'name' })
+    await user.clear(name)
+    await user.type(name, 'may break')
+    await user.click(within(form).getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'sb', name: 'may break', start_date: '2027-04-24', end_date: '2027-04-30' }))
   })
 })
