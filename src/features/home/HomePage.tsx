@@ -177,7 +177,7 @@ export function HomePage() {
               {upcoming.length > 0 && shownAs === 'list' && byMonth(upcoming).map(([label, group]) => (
                 <div key={label} className="month-group">
                   <p className="month-h">{label}</p>
-                  <TripFamilies tops={group} trips={trips} flagsOf={flagsOf} today={today} hrefOf={(t) => (t.id === lead?.id ? leadHref : `/trip/${t.id}`)} />
+                  <TripFamilies tops={group} trips={trips} flagsOf={flagsOf} today={today} daysOff={daysOff} hrefOf={(t) => (t.id === lead?.id ? leadHref : `/trip/${t.id}`)} />
                 </div>
               ))}
             </section>

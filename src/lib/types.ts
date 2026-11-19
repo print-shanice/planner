@@ -147,6 +147,8 @@ export type DayOff = {
   name: string
   start_date: string
   end_date: string
+  // a day you can't travel (exams), not a holiday
+  busy?: boolean
   created_at?: string
 }
 

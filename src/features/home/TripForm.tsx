@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type FormEvent } from 'react'
-import { useRates, useSave, useTrips } from '../../lib/queries'
+import { useDaysOff, useRates, useSave, useTrips } from '../../lib/queries'
+import { busyIn, clashOf, clashWords, offOn } from '../../lib/daysOff'
 import { useUndoRemove } from '../../lib/undo'
 import { currencyList } from '../../lib/rates'
 import { descendants } from '../../lib/countries'
@@ -50,6 +51,12 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
 
   const hasChildren = !!trip && trips.some((t) => t.parent_id === trip.id)
 
+  // days you can't travel: struck through in the date picker, and an amber line once the dates land on one
+  const daysOff = useDaysOff().data
+  const busy = useMemo(() => busyIn(daysOff ?? []), [daysOff])
+  const struck = (d: string) => offOn(busy, d)?.name.toLowerCase()
+  const clash = start ? clashOf({ ...(trip as Trip), id, start_date: start, end_date: end || start, parent_id: parent }, trips, busy) : null
+
   function submit(e: FormEvent) {
     e.preventDefault()
     const p = !name.trim() ? 'add a name' : start && end && end < start ? 'ends before it starts' : null
@@ -76,9 +83,10 @@ export function TripForm({ trip, parentId = null, onDone, onDeleted }: Props) {
     <form id={formId} className="stack page-form" onSubmit={submit} noValidate>
       <input className="title-input" aria-label="name" placeholder="name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!trip} />
       <div className="when">
-        <div className="when-row"><span className="when-label">starts</span><Pick type="date" label="starts" value={start} onChange={setStart} /></div>
-        <div className="when-row"><span className="when-label">ends</span><Pick type="date" label="ends" value={end} min={start || undefined} onChange={setEnd} /></div>
+        <div className="when-row"><span className="when-label">starts</span><Pick type="date" label="starts" value={start} onChange={setStart} struck={struck} /></div>
+        <div className="when-row"><span className="when-label">ends</span><Pick type="date" label="ends" value={end} min={start || undefined} onChange={setEnd} struck={struck} /></div>
       </div>
+      {clash && <p className="trip-clash clash-words" role="status"><span className="busy-rule" aria-hidden="true" />{clashWords(clash)}</p>}
       <PlaceField id={`base-${id}`} label="home base" value={base} onChange={setBase} />
       <div className="field colour-field"><span className="label" aria-hidden="true">colour</span>
         <div className="swatches" role="radiogroup" aria-label="colour">

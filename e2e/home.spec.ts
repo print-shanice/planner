@@ -150,6 +150,23 @@ test.describe('public holidays and the month at a glance', () => {
     await expect(page.getByTestId('itin-2027-02-03')).toContainText('exam week · day 2 of 3')
   })
 
+  test("days you can't travel: marked from the month, struck through and listed on their own", async ({ page }) => {
+    await open(page)
+    await page.getByRole('button', { name: 'month', exact: true }).click()
+    const month = page.getByTestId('calendar')
+    for (let i = 0; i < 12 && !(await month.getByText('june').isVisible()); i++) await page.getByRole('button', { name: 'next month' }).click()
+    await expect(page.locator('[data-day="2027-06-15"]')).toHaveAttribute('data-busy', '')
+    await expect(page.getByRole('region', { name: "can't travel in june" })).toContainText('exams')
+    await page.getByRole('button', { name: 'add a holiday' }).click()
+    await page.getByRole('button', { name: /^tue 1 jun/ }).click()
+    await page.getByRole('button', { name: /^wed 2 jun/ }).click()
+    await page.getByRole('button', { name: "can't travel", exact: true }).click()
+    await page.getByRole('textbox', { name: 'name these days' }).fill('thesis deadline')
+    await page.getByRole('button', { name: "add days you can't travel" }).click()
+    await expect(page.locator('[data-day="2027-06-02"]')).toHaveAttribute('data-busy', '')
+    await expect(page.getByRole('region', { name: "can't travel in june" })).toContainText('thesis deadline')
+  })
+
   test('a holiday opens its day in the plan, and the day strip marks it', async ({ page }) => {
     await open(page, '/trip/eu?day=2027-04-27')
     const line = page.getByTestId('holiday')

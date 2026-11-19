@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import type { Trip } from '../../lib/types'
+import type { DayOff, Trip } from '../../lib/types'
+import { clashOf, clashWords } from '../../lib/daysOff'
 import { TripMark } from '../../components/TripMark'
 import { byStart, countdown, fmtDay, fmtRange, nightsWord } from '../../lib/dates'
 import { count } from '../../lib/words'
@@ -58,19 +59,22 @@ export function HomeStamp({ trips, today, flagsOf }: { trips: Trip[]; today: str
 // a side trip's own side trips are named on it
 const none = () => [] as string[]
 
-type FamilyProps = { flagsOf?: (t: Trip) => string[]; today: string; hrefOf?: (t: Trip) => string }
+// daysOff: a trip away that lands on days you can't travel says so in amber under its row
+type FamilyProps = { flagsOf?: (t: Trip) => string[]; today: string; hrefOf?: (t: Trip) => string; daysOff?: DayOff[] }
 
 export function TripFamilies({ tops, trips, keepEnded = false, ...rest }: { tops: Trip[]; trips: Trip[]; keepEnded?: boolean } & FamilyProps) {
   const kidsOf = (id: string) => trips.filter((c) => c.parent_id === id && (keepEnded || countdown(c, rest.today).kind !== 'done')).sort(byStart)
   return (
     <ul className="trip-families">
-      {tops.map((t, i) => <Family key={t.id} trip={t} sides={kidsOf(t.id)} kidsOf={kidsOf} i={i} {...rest} />)}
+      {tops.map((t, i) => <Family key={t.id} trip={t} trips={trips} sides={kidsOf(t.id)} kidsOf={kidsOf} i={i} {...rest} />)}
     </ul>
   )
 }
 
-function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, hrefOf }: { trip: Trip; sides: Trip[]; kidsOf: (id: string) => Trip[]; i: number } & FamilyProps) {
+function Family({ trip: t, trips, sides, kidsOf, today, i, flagsOf = none, hrefOf, daysOff = [] }: { trip: Trip; trips: Trip[]; sides: Trip[]; kidsOf: (id: string) => Trip[]; i: number } & FamilyProps) {
   const meta = [nightsWord(t.start_date, t.end_date), when(t, today)].filter(Boolean).join(' · ')
+  const clash = (x: Trip) => { const c = clashOf(x, trips, daysOff); return c ? clashWords(c) : null }
+  const own = clash(t)
   return (
     <li className="family" data-testid="trip-family" style={{ ...tint(t.color), '--i': Math.min(i, 12) } as CSSProperties}>
       <Link to={hrefOf?.(t) ?? `/trip/${t.id}`} className="trip-item family-head" data-testid="trip-item" data-depth={0}>
@@ -80,6 +84,7 @@ function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, hrefOf }: { 
         <span className="fam-when num">{fmtRange(t.start_date, t.end_date) || 'no dates yet'}</span>
         <TripMark codes={flagsOf(t)} max={1} />
         {meta && <span className="fam-meta num">{meta}</span>}
+        {own && <span className="fam-clash clash-words">{own}</span>}
       </Link>
       {sides.length > 0 && (
         <div className="family-band">
@@ -87,6 +92,7 @@ function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, hrefOf }: { 
           <ul className="family-sides">
             {sides.map((c) => {
               const grand = kidsOf(c.id)
+              const theirs = clash(c)
               return (
                 <li key={c.id}>
                   <Link to={`/trip/${c.id}`} className="side-item" data-testid="side-item" style={tint(c.color)}>
@@ -95,6 +101,7 @@ function Family({ trip: t, sides, kidsOf, today, i, flagsOf = none, hrefOf }: { 
                     {/* read out as "paris 19 – 23 feb", then its country; drawn with the country beside the name */}
                     <span className="side-when num">{fmtRange(c.start_date, c.end_date) || 'no dates yet'}</span>
                     <TripMark codes={flagsOf(c)} />
+                    {theirs && <span className="side-clash clash-words">{theirs}</span>}
                     {grand.length > 0 && <span className="side-grand">+ {grand.length > 2 ? `${grand.length} side trips` : grand.map((g) => g.name).join(', ')}</span>}
                   </Link>
                 </li>

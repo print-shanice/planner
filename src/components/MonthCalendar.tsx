@@ -30,6 +30,8 @@ type Props = {
   holiday?: (d: string) => string | null | undefined
   // one of your own holidays that day: the same amber rule as a public one, and its name read out
   off?: (d: string) => string | null | undefined
+  // a day you can't travel (exams): its number struck through, and its name read out
+  busy?: (d: string) => string | null | undefined
   // days being marked: the first and (once tapped) the last, outlined as one stretch
   picked?: [string, string | null] | null
   // words before the month's arrows ("add a holiday")
@@ -56,14 +58,17 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         const inPick = !!from && (to ? d >= from && d <= to : d === from)
         const pickEdge = inPick ? `${i === 0 || d === from ? 'l' : ''}${i === 6 || d === (to ?? from) ? 'r' : ''}` : ''
         const off = p.off?.(d)
+        const busy = p.busy?.(d)
+        const words = [p.holiday?.(d), off, busy && `${busy} · can't travel`].filter(Boolean)
         const attrs = {
           'data-day': d, 'data-ribbon': ribbon, 'data-edge': edge || undefined, 'data-past': d < p.today || undefined,
           'aria-current': d === p.today ? ('date' as const) : undefined,
           'data-planned': p.marked?.(d) || undefined,
           'data-holiday': p.holiday?.(d) ? '' : undefined,
           'data-off': off ? '' : undefined,
+          'data-busy': busy ? '' : undefined,
           'data-picked': inPick ? pickEdge || '-' : undefined,
-          title: [p.holiday?.(d), off].filter(Boolean).join(' · ') || undefined,
+          title: words.join(' · ') || undefined,
           style: { gridColumn: i + 1, ...(t ? tint(t.color) : {}) },
         }
         const code = t && edge.includes('l') ? p.flag?.(t) : null
@@ -71,7 +76,7 @@ function Week({ week, p }: { week: (string | null)[]; p: Props }) {
         const pickable = p.canPick?.(d) ?? true
         if (p.onDay && pickable) {
           return (
-            <button key={d} type="button" className="cal-day" {...attrs} aria-label={[dayLabel(d), p.holiday?.(d), off].filter(Boolean).join(' · ')}
+            <button key={d} type="button" className="cal-day" {...attrs} aria-label={[dayLabel(d), ...words].join(' · ')}
               aria-pressed={p.picked ? inPick : p.selected === d} onClick={() => p.onDay!(d)}>
               {n}
             </button>

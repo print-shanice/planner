@@ -126,6 +126,10 @@ it('your own holidays: members share them, strangers see none, and one can\'t en
   await d.q("insert into days_off(name, start_date, end_date) values ('spring break', '2027-04-24', '2027-04-30')")
   await expect(d.q("insert into days_off(name, start_date, end_date) values ('x', '2027-04-30', '2027-04-24')")).rejects.toThrow(/check/)
   expect((await d.q('select * from days_off')).rows).toHaveLength(1)
+  // a holiday unless it's marked as days you can't travel
+  expect((await d.q('select busy from days_off')).rows[0].busy).toBe(false)
+  await d.q("insert into days_off(name, start_date, end_date, busy) values ('exams', '2027-06-14', '2027-06-25', true)")
+  await d.q("delete from days_off where name = 'exams'")
   await d.as('stranger@x.com')
   expect((await d.q('select * from days_off')).rows).toHaveLength(0)
   await expect(d.q("insert into days_off(name, start_date, end_date) values ('x', '2027-04-01', '2027-04-01')")).rejects.toThrow(/row-level security/)

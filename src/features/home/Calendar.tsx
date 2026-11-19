@@ -4,7 +4,7 @@ import type { DayOff, Trip } from '../../lib/types'
 import { innermostDay, openingMonth, shiftMonth, tripSpan, type Span } from '../../lib/calendar'
 import { MonthCalendar } from '../../components/MonthCalendar'
 import { ancestors } from '../../lib/countries'
-import { offOn, pickDays, type Picked } from '../../lib/daysOff'
+import { busyIn, holidaysIn, offOn, pickDays, type Picked } from '../../lib/daysOff'
 import { useCanEdit } from '../../lib/offline'
 import { MarkLine } from './MarkLine'
 
@@ -16,7 +16,8 @@ const none = () => [] as string[]
 
 type Props = {
   trips: Trip[]; flagsOf?: (t: Trip) => string[]; today: string; holiday?: (d: string) => string | null; aside?: (month: string) => ReactNode
-  // your own holidays: the amber rule on the month like public ones; "add a holiday" adds one
+  // your own holidays: the amber rule on the month like public ones; days you can't travel are struck through.
+  // "add a holiday" adds either
   daysOff?: DayOff[]
 }
 
@@ -35,14 +36,17 @@ export function Calendar({ trips, flagsOf = none, today, holiday, aside, daysOff
   const [marking, setMarking] = useState(false)
   const [picked, setPicked] = useState<Picked>(null)
   const stopMarking = () => { setMarking(false); setPicked(null) }
-  const off = (d: string) => offOn(daysOff, d)?.name.toLowerCase() ?? null
+  const free = useMemo(() => holidaysIn(daysOff), [daysOff])
+  const busy = useMemo(() => busyIn(daysOff), [daysOff])
+  const off = (d: string) => offOn(free, d)?.name.toLowerCase() ?? null
+  const struck = (d: string) => offOn(busy, d)?.name.toLowerCase() ?? null
   if (!m) return null
   // the month on the left; beside it, whatever home shows for that month
   return (
     <div className="home-month">
       <div className="home-cal">
         <MonthCalendar month={m} onPrev={() => setMonth(shiftMonth(m, -1))} onNext={() => setMonth(shiftMonth(m, 1))}
-          today={today} ribbon={(d) => innermostDay(d, all, depth)} flag={flag} holiday={holiday} off={off} picked={marking ? picked : null}
+          today={today} ribbon={(d) => innermostDay(d, all, depth)} flag={flag} holiday={holiday} off={off} busy={struck} picked={marking ? picked : null}
           tools={<button type="button" className="cal-mark" aria-pressed={marking} disabled={!canEdit && !marking}
             onClick={() => (marking ? stopMarking() : setMarking(true))}>add a holiday</button>}
           canPick={(d) => marking || !!owner(d)}

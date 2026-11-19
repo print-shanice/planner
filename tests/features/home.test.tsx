@@ -1072,3 +1072,117 @@ describe('your own holidays on the month', () => {
     expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'sb', name: 'may break', start_date: '2027-04-24', end_date: '2027-04-30' }))
   })
 })
+
+describe("days you can't travel", () => {
+  const june = () => [
+    trip({ id: 'nl', name: 'exchange', start_date: '2027-06-01', end_date: '2027-07-13', base: place({ country: 'NL' }) }),
+    trip({ id: 'be', parent_id: 'nl', name: 'berlin', start_date: '2027-06-11', end_date: '2027-06-14', color: 3 }),
+    trip({ id: 'po', parent_id: 'nl', name: 'porto', start_date: '2027-06-26', end_date: '2027-06-29', color: 5 }),
+  ] as Trip[]
+  const exams = { id: 'ex', name: 'exams', start_date: '2027-06-14', end_date: '2027-06-25', busy: true }
+
+  it('"add a holiday" asks which: a holiday, or days you can\'t travel', async () => {
+    const user = userEvent.setup()
+    db.trips = june()
+    asMonth()
+    show()
+    const cal = screen.getByTestId('calendar')
+    await user.click(within(cal).getByRole('button', { name: 'add a holiday' }))
+    await user.click(within(cal).getByRole('button', { name: /^mon 14 jun/ }))
+    await user.click(within(cal).getByRole('button', { name: /^fri 25 jun/ }))
+    const holiday = screen.getByRole('button', { name: 'holiday' })
+    const busy = screen.getByRole('button', { name: "can't travel" })
+    expect(holiday).toHaveAttribute('aria-pressed', 'true')
+    await user.click(busy)
+    expect(busy).toHaveAttribute('aria-pressed', 'true')
+    expect(holiday).toHaveAttribute('aria-pressed', 'false')
+    await user.type(screen.getByRole('textbox', { name: 'name these days' }), 'Exams{Enter}')
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Exams', start_date: '2027-06-14', end_date: '2027-06-25', busy: true }))
+  })
+
+  it('a holiday is saved as a holiday', async () => {
+    const user = userEvent.setup()
+    db.trips = june()
+    asMonth()
+    show()
+    const cal = screen.getByTestId('calendar')
+    await user.click(within(cal).getByRole('button', { name: 'add a holiday' }))
+    await user.click(within(cal).getByRole('button', { name: /^fri 4 jun/ }))
+    await user.click(within(cal).getByRole('button', { name: /^fri 4 jun/ }))
+    await user.type(screen.getByRole('textbox', { name: 'name these days' }), 'no classes{Enter}')
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'no classes', busy: false }))
+  })
+
+  it('their days are struck through on the month and listed beside it on their own, apart from holidays', async () => {
+    db.trips = june()
+    db.daysOff = [exams, { id: 'nc', name: 'no classes', start_date: '2027-06-04', end_date: '2027-06-04' }]
+    asMonth()
+    show()
+    const cal = screen.getByTestId('calendar')
+    expect(cal.querySelector('[data-day="2027-06-15"]')).toHaveAttribute('data-busy')
+    expect(cal.querySelector('[data-day="2027-06-15"]')).not.toHaveAttribute('data-off')
+    expect(cal.querySelector('[data-day="2027-06-04"]')).toHaveAttribute('data-off')
+    expect(cal.querySelector('[data-day="2027-06-04"]')).not.toHaveAttribute('data-busy')
+    expect(within(cal).getByRole('button', { name: /^tue 15 jun/ })).toHaveAccessibleName(/exams · can't travel/)
+    const busy = screen.getByRole('region', { name: "can't travel in june" })
+    expect(within(busy).getAllByTestId('busy-row')).toHaveLength(1)
+    expect(within(busy).getByTestId('busy-row')).toHaveTextContent('exams')
+    expect(within(busy).getByTestId('busy-row').querySelector('.busy-rule')).not.toBeNull()
+    const hols = screen.getByRole('region', { name: 'holidays in june' })
+    expect(within(hols).getAllByTestId('hol-row')).toHaveLength(1)
+    expect(hols).not.toHaveTextContent('exams')
+  })
+
+  it('a trip away that lands on them says so in amber beside the month; the exchange itself never does', async () => {
+    db.trips = june()
+    db.daysOff = [exams]
+    asMonth()
+    show()
+    const on = screen.getByRole('tabpanel', { name: /on in june/ })
+    const rows = within(on).getAllByRole('link')
+    const berlin = rows.find((r) => r.textContent?.includes('berlin'))!
+    expect(berlin.querySelector('.clash-words')).toHaveTextContent("can't travel mon 14 jun · exams")
+    expect(rows.filter((r) => r.querySelector('.clash-words'))).toHaveLength(1)
+  })
+
+  it('the trips list says it on the side trip', () => {
+    db.trips = june()
+    db.daysOff = [exams]
+    show()
+    const side = screen.getAllByTestId('side-item').find((r) => r.textContent?.includes('berlin'))!
+    expect(side.querySelector('.clash-words')).toHaveTextContent("can't travel mon 14 jun · exams")
+    expect(screen.getAllByTestId('trip-item')[0].querySelector('.clash-words')).toBeNull()
+  })
+
+  it('"edit" on one opens it as can\'t travel, and it can become a holiday', async () => {
+    const user = userEvent.setup()
+    db.trips = june()
+    db.daysOff = [exams]
+    asMonth()
+    show()
+    await user.click(screen.getByRole('button', { name: 'edit exams' }))
+    const form = screen.getByRole('dialog', { name: "can't travel" })
+    expect(within(form).getByRole('button', { name: "can't travel" })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(form).getByRole('button', { name: 'holiday' }))
+    await user.click(within(form).getByRole('button', { name: 'save' }))
+    expect(db.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'ex', busy: false }))
+  })
+})
+
+it("the trip form strikes the days you can't travel in its date picker and says when the trip lands on one", async () => {
+  db.trips = [
+    trip({ id: 'nl', name: 'exchange', start_date: '2027-06-01', end_date: '2027-07-13' }),
+    trip({ id: 'be', parent_id: 'nl', name: 'berlin', start_date: '2027-06-11', end_date: '2027-06-13' }),
+  ]
+  db.daysOff = [{ id: 'ex', name: 'exams', start_date: '2027-06-14', end_date: '2027-06-25', busy: true }]
+  render(<MemoryRouter><TripForm trip={db.trips[1] as Trip} onDone={() => {}} /></MemoryRouter>)
+  expect(document.querySelector('.clash-words')).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: /^choose ends/ }))
+  const picker = screen.getByRole('dialog', { name: 'ends' })
+  const day = within(picker).getByRole('button', { name: /^mon 14 jun/ })
+  expect(day).toHaveAttribute('data-busy')
+  expect(day).toHaveAccessibleName(/can't travel/)
+  expect(within(picker).getByRole('button', { name: /^thu 10 jun/ })).not.toHaveAttribute('data-busy')
+  await userEvent.click(day)
+  expect(document.querySelector('.clash-words')).toHaveTextContent("can't travel mon 14 jun · exams")
+})

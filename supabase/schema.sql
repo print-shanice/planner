@@ -152,6 +152,8 @@ create table if not exists public.days_off (
   updated_at timestamptz not null default now(),
   check (end_date >= start_date)
 );
+-- days you can't travel (exams) rather than a holiday
+alter table public.days_off add column if not exists busy boolean not null default false;
 
 create index if not exists stops_trip on public.stops(trip_id);
 create index if not exists costs_trip on public.costs(trip_id);

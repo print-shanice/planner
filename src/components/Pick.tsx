@@ -9,6 +9,8 @@ type Props = {
   type: 'date' | 'time'; label: string; value: string; onChange: (v: string) => void; min?: string
   // a date with nothing chosen opens on this day's month (the trip's), and the trip's days are marked
   around?: string | null; span?: [string, string] | null
+  // days you can't travel (exams): struck through, still pickable, their name read out
+  struck?: (d: string) => string | null | undefined
 }
 
 const WEEKDAYS = ['m', 't', 'w', 't', 'f', 's', 's']
@@ -20,7 +22,7 @@ const sixWeeks = (month: string) => {
 
 // dates open the app's calendar; times accept the same typed formats as the plan.
 // Native time inputs can silently return an empty value until AM/PM is filled in.
-export function Pick({ type, label, value, onChange, min, around, span }: Props) {
+export function Pick({ type, label, value, onChange, min, around, span, struck }: Props) {
   const [open, setOpen] = useState(false)
   const opensOn = () => (value || min || around || todayISO()).slice(0, 7)
   const [month, setMonth] = useState(opensOn)
@@ -52,7 +54,8 @@ export function Pick({ type, label, value, onChange, min, around, span }: Props)
           <div className="datepick-grid">
             {WEEKDAYS.map((w, i) => <span key={`w${i}`} className="datepick-wd">{w}</span>)}
             {sixWeeks(month).map((d, i) => d
-              ? <button key={d} type="button" className="datepick-day num" aria-label={dayLabel(d)} aria-pressed={d === value}
+              ? <button key={d} type="button" className="datepick-day num" aria-label={[dayLabel(d), struck?.(d) && `${struck(d)} · can't travel`].filter(Boolean).join(' · ')} aria-pressed={d === value}
+                  data-busy={struck?.(d) ? '' : undefined}
                   data-span={min && value && d > min && d < value ? '' : undefined} data-from={d === min ? '' : undefined}
                   data-trip={span && d >= span[0] && d <= span[1] ? '' : undefined}
                   aria-current={d === todayISO() ? 'date' : undefined} disabled={!!min && d < min} onClick={() => pick(d)}>{+d.slice(8)}</button>

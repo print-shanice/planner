@@ -434,3 +434,14 @@ body.carrying, body.carrying * { cursor: grabbing !important; user-select: none;
 /* an inline currency: the same underlined word, in the sentence's own size */
 .cur-menu.choice-menu { min-height: 32px; padding: 0 2px; font: inherit; font-weight: 500; color: var(--ink); }
 .jot .cur-menu.choice-menu { min-height: 44px; flex: none; }
+
+/* days you can't travel (exams): the number struck through on the month, the strip and the date picker; in words,
+   a short ink rule (amber when a trip away lands on one) */
+.busy-rule { flex: none; display: inline-block; width: 11px; height: 1.5px; background: currentColor; }
+.busy-tag { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); }
+.clash-words, .busy-tag.clash { color: var(--warn); }
+.cal-day[data-busy] .cal-n, .strip-day[data-busy] .strip-n, .datepick-day[data-busy] {
+  text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: var(--ink);
+}
+.strip-day[data-busy][aria-current="true"] .strip-n { text-decoration-color: var(--card); }
+.cal .cal-day[data-busy][aria-pressed="true"] .cal-n { text-decoration-color: var(--card); }

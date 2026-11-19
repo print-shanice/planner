@@ -412,3 +412,15 @@
 
 /* packing, one trip at a time (its own styles are in tabs.css) */
 .home-packing-view { max-width: 640px; min-width: 0; }
+
+/* days you can't travel: their rows lead with the short ink rule; a trip away landing on them says so in amber */
+.hol-row > .busy-rule { align-self: center; color: var(--ink); }
+.clash-words { font-family: var(--f-mono); font-size: 11px; }
+.fam-clash { order: 4; flex-basis: 100%; margin-left: 24px; }
+.side-clash { order: 3; flex-basis: 100%; padding-left: 21px; }
+.mark-kind { padding: 2px 0; }
+.trip-clash { display: flex; align-items: center; gap: 8px; margin: 0; padding: 4px 0 6px; font-size: 12px; }
+@media (min-width: 1024px) {
+  .family-head .fam-clash { grid-row: 2; grid-column: 3 / -1; margin: 4px 0 0; }
+  .side-clash { margin-left: 0; }
+}

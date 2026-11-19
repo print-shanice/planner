@@ -2,16 +2,18 @@ import { useState, type FormEvent } from 'react'
 import { useSave } from '../../lib/queries'
 import { spanWords } from '../../lib/daysOff'
 
-// under the month while marking: the picked days in words, then a name for them. adding saves them as one holiday
+// under the month while marking: the picked days in words, which kind they are (a holiday, or days you can't travel),
+// then a name for them. adding saves them as one row
 export function MarkLine({ from, to, onDone }: { from: string; to: string; onDone: () => void }) {
   const save = useSave('days_off')
   const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
 
   function add(e: FormEvent) {
     e.preventDefault()
     const text = name.trim()
     if (!text) return
-    save.mutateAsync({ name: text, start_date: from, end_date: to }).catch(() => { /* comes back out; the month shows it isn't saved */ })
+    save.mutateAsync({ name: text, start_date: from, end_date: to, busy }).catch(() => { /* comes back out; the month shows it isn't saved */ })
     onDone()
   }
 
@@ -21,11 +23,22 @@ export function MarkLine({ from, to, onDone }: { from: string; to: string; onDon
         <span>{spanWords(from, to)}</span>
         <button type="button" className="icon-btn mark-stop" aria-label="stop marking" onClick={onDone}>✕</button>
       </p>
+      <OffKind busy={busy} onPick={setBusy} />
       <form className="jot" onSubmit={add}>
         <input type="text" aria-label="name these days" placeholder="name these days…" value={name} autoComplete="off" autoFocus enterKeyHint="done"
           onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') onDone() }} />
-        <button type="submit" className="btn small line-go" aria-label="add holiday" disabled={!name.trim()}>add</button>
+        <button type="submit" className="btn small line-go" aria-label={busy ? "add days you can't travel" : 'add holiday'} disabled={!name.trim()}>add</button>
       </form>
+    </div>
+  )
+}
+
+// a holiday, or days you can't travel: plain words, the picked one ink and bold
+export function OffKind({ busy, onPick }: { busy: boolean; onPick: (busy: boolean) => void }) {
+  return (
+    <div className="segmented mark-kind" role="group" aria-label="which">
+      <button type="button" aria-pressed={!busy} onClick={() => onPick(false)}>holiday</button>
+      <button type="button" aria-pressed={busy} onClick={() => onPick(true)}>can't travel</button>
     </div>
   )
 }

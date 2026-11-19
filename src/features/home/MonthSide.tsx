@@ -8,11 +8,12 @@ import { TripMark } from '../../components/TripMark'
 import { CountryFlag } from '../../components/CountryFlag'
 import { Pill } from '../../components/Pill'
 import { Sheet } from '../../components/Sheet'
-import { offBetween } from '../../lib/daysOff'
+import { busyIn, clashOf, clashWords, holidaysIn, offBetween } from '../../lib/daysOff'
 import { DayOffForm } from './DayOffForm'
 
 // beside the month on home: what's on in it and what's still to do in it (two tabs: bookings to make and to-dos), then its holidays:
-// your own and the public ones, each with the amber rule its days wear, in one list by date.
+// your own and the public ones, each with the amber rule its days wear, in one list by date. days you can't travel
+// (exams) have a list of their own above it, and a trip away that lands on them says so in amber on its row.
 // both tabs share one space sized to the taller, so switching never moves the holidays below
 type Props = {
   month: string
@@ -42,9 +43,11 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays, daysOff = []
   const later = stops.filter((s) => s.status === 'to_book' && s.day && s.day > to).length
   const tripOf = (s: Stop) => trips.find((t) => t.id === s.trip_id)
   const [editing, setEditing] = useState<DayOff | null>(null)
+  const busy = busyIn(daysOff)
+  const struck = offBetween(busy, from, to)
   type Row = { key: string; date: string; off?: DayOff; pub?: Holiday & { trip: Trip } }
   const hols: Row[] = [
-    ...offBetween(daysOff, from, to).map((o) => ({ key: o.id, date: o.start_date, off: o })),
+    ...offBetween(holidaysIn(daysOff), from, to).map((o) => ({ key: o.id, date: o.start_date, off: o })),
     ...holidays(from, to).map((h) => ({ key: `${h.date}-${h.country}-${h.name}`, date: h.date, pub: h })),
   ].sort((a, b) => a.date.localeCompare(b.date))
 
@@ -64,6 +67,7 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays, daysOff = []
           {on.map((t) => {
             const all = t.start_date! <= from && (t.end_date ?? t.start_date!) >= to
             const parent = parentOf(t)
+            const clash = clashOf(t, trips, busy)
             return (
               <Link key={t.id} to={`/trip/${t.id}`} className="side-row" style={tint(t.color)}>
                 <span className="swatch-sq" aria-hidden="true" />
@@ -73,6 +77,7 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays, daysOff = []
                 </span>
                 <span className="side-row-when num">{all ? `all ${name}` : fmtRange(t.start_date, t.end_date)}</span>
                 {parent && <span className="side-row-of">side trip of {parent.name}</span>}
+                {clash && <span className="side-row-of clash-words">{clashWords(clash)}</span>}
               </Link>
             )
           })}
@@ -91,6 +96,19 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays, daysOff = []
           {later > 0 && <p className="pane-later">+ {later} more to do after {name}</p>}
         </div>
       </div>
+      {struck.length > 0 && (
+        <section className="month-hols" aria-label={`can't travel in ${name}`}>
+          <h3 className="month-hols-h">can't travel in {name}</h3>
+          {struck.map((o) => (
+            <div key={o.id} className="hol-row" data-testid="busy-row">
+              <span className="busy-rule" aria-hidden="true" />
+              <span className="num">{o.start_date === o.end_date ? dayLabel(o.start_date) : fmtRange(o.start_date, o.end_date)}</span>
+              <span className="hol-name">{o.name}</span>
+              <button type="button" className="row-edit" aria-label={`edit ${o.name.toLowerCase()}`} onClick={() => setEditing(o)}>edit</button>
+            </div>
+          ))}
+        </section>
+      )}
       {hols.length > 0 && (
         <section className="month-hols" aria-label={`holidays in ${name}`}>
           <h3 className="month-hols-h">holidays in {name}</h3>
@@ -111,7 +129,7 @@ export function MonthSide({ month, trips, stops, flagsOf, holidays, daysOff = []
           )))}
         </section>
       )}
-      <Sheet page open={!!editing} title="holiday" onClose={() => setEditing(null)}>
+      <Sheet page open={!!editing} title={editing?.busy ? "can't travel" : 'holiday'} onClose={() => setEditing(null)}>
         {editing && <DayOffForm key={editing.id} off={editing} onDone={() => setEditing(null)} />}
       </Sheet>
     </aside>

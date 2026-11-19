@@ -110,5 +110,7 @@ const reviews = [
 const days_off = [
   { id: 'off1', name: 'carnival break', start_date: '2027-02-06', end_date: '2027-02-14' },
   { id: 'off2', name: 'no classes', start_date: '2027-02-26', end_date: '2027-02-26' },
+  // days you can't travel
+  { id: 'off3', name: 'exams', start_date: '2027-06-14', end_date: '2027-06-25', busy: true },
 ]
 export const data = { trips, stops, costs, links, packing, files: [], members, reviews, days_off }

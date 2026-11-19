@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -641,4 +641,27 @@ it('a day in one of your own holidays says so under its heading, and its day in 
   expect(strip().getByRole('button', { name: /thursday 18 september/ })).toHaveAttribute('data-off')
   expect(strip().getByRole('button', { name: /thursday 18 september/ })).toHaveAccessibleName(/autumn break/)
   expect(strip().getByRole('button', { name: /saturday 20 september/ })).not.toHaveAttribute('data-off')
+})
+
+it("a day you can't travel says so under its heading, amber on a side trip's day; its strip day is struck through", () => {
+  const ex = trip({ id: 'nl', name: 'exchange', start_date: '2027-06-01', end_date: '2027-07-13' })
+  const berlin = trip({ id: 'be', parent_id: 'nl', name: 'berlin', start_date: '2027-06-11', end_date: '2027-06-14', color: 3 })
+  db.trips = [ex, berlin]
+  db.stops = [
+    stop({ id: 'gal', trip_id: 'be', day: '2027-06-14', time: '10:00', title: 'east side gallery' }),
+    stop({ id: 'exam', trip_id: 'nl', day: '2027-06-15', time: '09:00', title: 'exam: linear algebra' }),
+  ]
+  db.daysOff = [{ id: 'ex', name: 'Exams', start_date: '2027-06-14', end_date: '2027-06-25', busy: true }]
+  show(ex, '/trip/nl?tab=itinerary&day=2027-06-15')
+  expect(meta('2027-06-15')).toHaveTextContent('exams · day 2 of 12')
+  expect(meta('2027-06-15').querySelector('.busy-tag')).not.toHaveClass('clash')
+  expect(meta('2027-06-15').querySelector('.off-tag')).toBeNull()
+  expect(strip().getByRole('button', { name: /tuesday 15 june/ })).toHaveAttribute('data-busy')
+  expect(strip().getByRole('button', { name: /tuesday 15 june/ })).toHaveAccessibleName(/exams/)
+  expect(strip().getByRole('button', { name: /tuesday 15 june/ })).not.toHaveAttribute('data-off')
+  cleanup()
+  // berlin's last day is away: amber
+  show(berlin, '/trip/be?tab=itinerary')
+  expect(meta('2027-06-14').querySelector('.busy-tag.clash')).toHaveTextContent("can't travel · exams")
+  expect(screen.getByTestId('itin-2027-06-13').querySelector('.busy-tag')).toBeNull()
 })
