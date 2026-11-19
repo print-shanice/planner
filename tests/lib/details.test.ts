@@ -29,14 +29,24 @@ describe('google place details, kept to one request', () => {
 })
 
 describe('hours on a day', () => {
-  it('picks the day\'s line, drops the day name and lowercases it', () => {
-    expect(hoursOn(weekdays, '2027-02-06')).toBe('sat · 10:00 am – 2:00 pm')
-    expect(hoursOn(weekdays, '2027-02-10')).toBe('wed · closed')
-    expect(hoursOn(weekdays, '2027-02-07')).toBe('sun · open 24 hours')
+  it('picks the day\'s line, drops the day name and reads it in 24-hour time like the plan', () => {
+    expect(hoursOn(weekdays, '2027-02-06')).toBe('sat 10:00–14:00')
+    expect(hoursOn(weekdays, '2027-02-10')).toBe('wed closed')
+    expect(hoursOn(weekdays, '2027-02-07')).toBe('sun open 24 hours')
   })
   it('with no day, today; with no hours, nothing', () => {
-    expect(hoursOn(weekdays, null, '2027-02-08')).toBe('mon · 9:00 am – 5:00 pm')
+    expect(hoursOn(weekdays, null, '2027-02-08')).toBe('mon 09:00–17:00')
     expect(hoursOn(null, '2027-02-08')).toBeNull()
     expect(hoursOn([], '2027-02-08')).toBeNull()
+  })
+  it('reads split days, google\'s thin spaces, midnight, noon and late nights', () => {
+    const day = (words: string) => hoursOn([`Monday: ${words}`], '2027-02-08')
+    expect(day('8:30 AM – 12:00 PM, 1:00 – 5:30 PM')).toBe('mon 08:30–12:00, 13:00–17:30')
+    expect(day('9:00\u202fAM\u2009–\u20095:00\u202fPM')).toBe('mon 09:00–17:00')
+    expect(day('12:00 AM – 12:00 PM')).toBe('mon 00:00–12:00')
+    expect(day('6:00 PM – 2:00 AM')).toBe('mon 18:00–02:00')
+  })
+  it('words it can\'t read stay as google wrote them', () => {
+    expect(hoursOn(['Monday: By appointment'], '2027-02-08')).toBe('mon by appointment')
   })
 })

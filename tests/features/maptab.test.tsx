@@ -1,4 +1,6 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render as rtl, screen, within } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, useLocation } from 'react-router-dom'
 import { trip, stop, place } from '../factories'
@@ -33,6 +35,10 @@ import { MapTab } from '../../src/features/map/MapTab'
 import { DragProvider } from '../../src/features/itinerary/drag'
 import { ReadingDayProvider, useReadingDay } from '../../src/features/trip/readingDay'
 import { choose } from '../choose'
+
+// the place card asks google about a place through the query cache, as in the app
+const Queries = ({ children }: { children: ReactNode }) => <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+const render = (ui: JSX.Element) => rtl(ui, { wrapper: Queries })
 
 const lap = trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' })
 

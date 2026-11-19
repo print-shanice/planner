@@ -256,10 +256,6 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .gpin-focus { background: var(--ink); color: var(--card); border-color: var(--card); width: 30px; height: 30px; }
 .gpin.lit { transform: scale(1.25); z-index: 2; box-shadow: 0 0 0 4px color-mix(in srgb, var(--pin, var(--ink)) 30%, transparent), 0 1px 4px rgba(0, 0, 0, .3); }
 .gpin:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.place-card-head { align-items: center; gap: 10px; }
-.place-card-head .cat { margin-top: 0; }
-.place-card-words { flex: 1; min-width: 0; }
-.place-card-actions { flex-wrap: wrap; }
 
 /* the phone map's one choice: which day, the whole trip or the ideas */
 .map-scope {
@@ -277,8 +273,6 @@ body:has(.split-handle.dragging) .trip-map { pointer-events: none; }
 .places-handle { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: auto; min-height: 52px; padding: 0; }
 .places-title { padding: 0; font-size: 22px; font-weight: 400; }
 .trip-phone .places-sheet { border-top: 1px solid var(--line); box-shadow: none; }
-.place-card-head > .cat { flex: none; }
-.place-card-head .text-link { flex: none; }
 
 /* totoro, wherever something is loading: in the middle of the space it will fill */
 .totoro { display: grid; place-items: center; padding: 24px 16px; }

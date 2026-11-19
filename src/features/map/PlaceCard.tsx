@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type HTMLAttributes, type PointerEvent, type ReactElement } from 'react'
 import type { Place, Stop, Trip } from '../../lib/types'
 import { useCosts } from '../../lib/queries'
 import { dayEntries } from '../../lib/agenda'
@@ -18,18 +18,20 @@ import { useCanEdit } from '../../lib/offline'
 import { dayLabel, tripDays } from '../../lib/dates'
 import { gmapsUrl } from '../../lib/gmaps'
 import { categoryOf } from '../../lib/categories'
-import { Button } from '../../components/Button'
 import { Pending } from '../../components/Pending'
 import { useStopSheet } from '../stops/StopSheet'
 import { stopSub, stopTitle } from '../plan/stopText'
 import { Chip } from '../itinerary/ItinLine'
 import { saveError } from '../../lib/errors'
-import { PlaceDetails } from '../stops/PlaceDetails'
+import { hoursOn, useDetails } from '../../lib/google/details'
+import { count } from '../../lib/words'
+import { Tooltip } from '../../components/Tooltip'
+import googleMark from '../../assets/google-g.svg'
 
 // looking: a tap on the map is still being turned into a place name
 type Props = { trip: Trip; place: Place; stop?: Stop; day?: string | null; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
 
-// a picked pin or a found place: what it is, and the three things you'd do with it: look, plan it, go there
+// a picked pin or a found place: google's photo, what it is, then plan it (time · day · add) or open it, and go there
 export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking, onClose, onDone }: Props) {
   const stops = useStops().data ?? []
   const trips = useTrips().data ?? []
@@ -75,13 +77,34 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
     // a day picked: straight on to its time (an idea has no time, so on to the button)
     setTimeout(() => (d ? timeBox.current : go.current)?.focus(), 0)
   }
-  const label = !day ? (stop ? 'pick a day' : 'save as an idea') : `add to ${dayLabel(day)}${at ? ` at ${at}` : ''}`
+  // the line it would be added as, for the card's own label and for google's view of it
+  const label = !day ? (stop ? 'add to a day' : 'save as an idea') : `add to ${dayLabel(day)}${at ? ` at ${at}` : ''}`
   const title = stop ? stopTitle(stop) : place.name || 'dropped pin'
   const maps = gmapsUrl(stop ?? ({ kind: 'place', place } as Stop))
   const fake = { kind: 'place', category: stop?.category ?? place.category ?? null } as Stop
+  // what google says: a photo across the top, its word for what it is, reviews, the day's hours and the website
+  const google = useDetails(looking ? null : place.gid)
+  const d = google.data
+  const asking = google.enabled && google.isPending
+  const photo = d?.photo ?? null
+  const ours = categoryOf(fake) === 'place' ? '' : categoryOf(fake)
   const sub = stop
     ? [stop.day ? dayLabel(stop.day) : 'idea', stopSub(stop)].filter(Boolean).join(' · ')
-    : [categoryOf(fake) === 'place' ? '' : categoryOf(fake), place.address].filter(Boolean).join(' · ')
+    : [d?.kind ?? ours, place.address].filter(Boolean).join(' · ')
+  const rating = d?.rating != null ? [`★ ${d.rating.toFixed(1)}`, d.ratings != null ? count(d.ratings, 'review') : null].filter(Boolean).join(' · ') : null
+  const hours = hoursOn(d?.weekdays, stop?.day || day || opened || null)
+  const planning = canEdit && (!stop || idea)
+  // on a laptop the photo and the name are what you carry into the plan
+  const carry = wide && drag && planning ? (e: PointerEvent<HTMLElement>) => {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button, a, input')) return
+    e.preventDefault()
+    const r = row()
+    drag.begin(stop ? { kind: 'line', stop: r, label: stopTitle(r).toLowerCase() } : { kind: 'new', stop: r, label: r.title.toLowerCase() }, e)
+  } : undefined
+  const handle = (el: ReactElement<HTMLAttributes<HTMLElement>>) => carry ? <Tooltip text="drag into the plan">{el}</Tooltip> : el
+  const close = <button type="button" className="icon-btn place-card-x" aria-label="close" onClick={onClose}><Icon name="close" size={18} /></button>
+  const top = !looking && (photo || asking)
+  const details = stop && (() => sheet?.openStop(stop.id, opened))
 
   async function run(fn: () => Promise<unknown>) {
     setProblem(null)
@@ -92,42 +115,44 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
     save.mutateAsync({ ...newPlaceStop(place, trip.id, null, fresh.current), day: d, position: nextPosition(stops, trip.id, d), saved: !d }))
 
   return (
-    <section className="place-card" aria-label={looking ? 'finding the place' : title}>
+    <section className={`place-card${top ? ' has-photo' : ''}`} aria-label={looking ? 'finding the place' : title}>
+      {top && (
+        <div className={`place-card-photo${photo ? '' : ' waiting'}`}>
+          {photo && handle(<img src={photo} alt={title} className={carry ? 'grab' : undefined} onPointerDown={carry} draggable={false} />)}
+          {close}
+        </div>
+      )}
       <div className="place-card-head">
         {stop && <Chip stop={stop} quiet={idea} />}
-        <div className="stack-xs place-card-words">
-          {looking ? <h3 className="head"><Pending label="finding the place" /></h3> : <h3 className="head">{title}</h3>}
-          {sub && <p className="muted">{sub}</p>}
-          {!looking && place.gid && <PlaceDetails place={place} day={opened ?? stop?.day ?? null} compact />}
-        </div>
-        <button type="button" className="icon-btn place-card-x" aria-label="close" onClick={onClose}><Icon name="close" size={18} /></button>
+        {handle(
+          <div className={`place-card-words${carry ? ' grab' : ''}`} onPointerDown={carry}>
+            {looking ? <h3 className="head"><Pending label="finding the place" /></h3> : <h3 className="head">{title}</h3>}
+            {sub && <p className="place-card-sub">{sub}</p>}
+            {asking && <p className="place-card-fact"><Pending label="asking google" /></p>}
+            {rating && <p className="place-card-fact rating">{rating}</p>}
+            {hours && <p className="place-card-fact">{hours}</p>}
+          </div>,
+        )}
+        {!top && close}
       </div>
-      {!looking && (
-        <div className="place-card-actions">
-          {stop && <Button variant={idea ? 'ghost' : 'primary'} onClick={() => sheet?.openStop(stop.id, opened)}>details</Button>}
-          {canEdit && (!stop || idea) && (
-            <div className="place-card-plan">
-              <div className="place-card-when">
-                <DayMenu days={choices} value={day} onPick={pickDay} />
-                {day && <input ref={timeBox} className="input place-card-time" type="text" inputMode="decimal" autoComplete="off" aria-label="time" placeholder="any" value={time}
-                  onChange={(e) => { if (couldBeTime(e.target.value)) setTime(e.target.value) }}
-                  onBlur={() => { const t = readTime(time); if (t) setTime(t) }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }} />}
-              </div>
-              <button ref={go} type="button" className="btn primary" disabled={!day && !!stop} onClick={add}>{label}</button>
-              {wide && drag && (
-                <div className="place-card-drag" onPointerDown={(e) => {
-                  if (e.button !== 0) return
-                  e.preventDefault()
-                  const r = row()
-                  drag.begin(stop ? { kind: 'line', stop: r, label: stopTitle(r).toLowerCase() } : { kind: 'new', stop: r, label: r.title.toLowerCase() }, e)
-                }}>
-                  <Icon name="more" size={16} /><span>or drag it into the plan, where it goes</span>
-                </div>
-              )}
-            </div>
-          )}
-          {maps && <a className="text-link" href={maps} target="_blank" rel="noopener noreferrer">google maps</a>}
+      {!looking && stop && !idea && (
+        <div className="place-card-act"><button type="button" className="btn primary" onClick={details || undefined}>details</button></div>
+      )}
+      {!looking && planning && (
+        <div className="place-card-plan">
+          <input ref={timeBox} className="input place-card-time" type="text" inputMode="decimal" autoComplete="off" aria-label="time" placeholder="any" value={time} disabled={!day}
+            onChange={(e) => { if (couldBeTime(e.target.value)) setTime(e.target.value) }}
+            onBlur={() => { const t = readTime(time); if (t) setTime(t) }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }} />
+          <DayMenu days={choices} value={day} onPick={pickDay} />
+          <button ref={go} type="button" className="btn primary place-card-go" aria-label={label} disabled={!day && !!stop} onClick={add}>{!day && !stop ? 'save' : 'add'}</button>
+        </div>
+      )}
+      {!looking && (idea || maps || d?.website) && (
+        <div className="place-card-links">
+          {idea && <button type="button" className="btn place-card-link" onClick={details || undefined}>details</button>}
+          {maps && <a className="place-card-link" href={maps} target="_blank" rel="noopener noreferrer"><img src={googleMark} alt="" width={16} height={16} /><span>google maps</span></a>}
+          {d?.website && <a className="place-card-link" href={d.website} target="_blank" rel="noopener noreferrer"><Icon name="globe" size={16} /><span>website</span></a>}
         </div>
       )}
       {problem && <p className="warn-line">{problem}</p>}

@@ -52,16 +52,35 @@
 .chip-pill .dot { width: 8px; height: 8px; }
 
 .map-bottom { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; }
+/* a place on the map (shanice, 19 nov): google's photo edge to edge, the name, what and where, reviews, the day's hours,
+   then a hairline and the day line (time · day · add, like the plan) or "details", then google maps and the website */
 .place-card {
-  display: grid; gap: 12px; padding: 16px; border-radius: var(--radius); background: var(--card);
-  box-shadow: var(--float); max-width: 520px; margin: 0 auto;
+  display: grid; gap: 12px; padding: 16px 16px 6px; border-radius: var(--radius); background: var(--card);
+  box-shadow: var(--float); max-width: 520px; margin: 0 auto; overflow: hidden;
 }
-.place-card-head { display: flex; align-items: flex-start; gap: 8px; }
-.place-card-head > :first-child { flex: 1; min-width: 0; }
-.place-card h3 { font-family: var(--f-head); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; }
-.place-card .muted { font-size: 14px; }
-.place-card-actions { display: flex; align-items: center; gap: 8px; }
-.place-card-actions .icon-btn[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.place-card.has-photo { padding-top: 0; }
+.place-card-photo { position: relative; margin: 0 -16px; aspect-ratio: 2 / 1; background: var(--soft); }
+.place-card-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.place-card-photo.waiting { animation: photo-wait 1.4s ease-in-out infinite; }
+@keyframes photo-wait { 50% { background: var(--line); } }
+.place-card-photo .place-card-x { position: absolute; top: 8px; right: 8px; margin: 0; border-radius: 8px; background: var(--card); box-shadow: var(--float); }
+.place-card-photo .place-card-x:hover { background: var(--card); filter: brightness(.95); }
+.place-card-head { display: flex; align-items: flex-start; gap: 10px; }
+.place-card-head > .cat { flex: none; margin-top: 4px; }
+.place-card-words { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.place-card h3 { font-family: var(--f-head); font-size: 24px; font-weight: 400; line-height: 1.2; letter-spacing: -0.01em; }
+.place-card-sub { color: var(--ink-2); font-size: 14px; }
+.place-card-fact { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-2); }
+.place-card-fact.rating { color: var(--ink); }
+.place-card-x { flex: none; margin: -10px -10px 0 0; }
+.place-card .grab { cursor: grab; user-select: none; -webkit-user-select: none; }
+.place-card-act { display: flex; align-items: center; min-height: 50px; border-top: 1px solid var(--line); }
+.place-card-links { display: grid; justify-items: start; margin-top: -6px; font-size: 14px; }
+.place-card-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--ink-2); font-size: 14px; text-decoration: none; }
+.place-card-link span { text-decoration: underline; text-underline-offset: 3px; }
+.place-card-link:hover { color: var(--ink); }
+.place-card-link img, .place-card-link .icon { flex: none; width: 16px; height: 16px; }
+@media (prefers-reduced-motion: reduce) { .place-card-photo.waiting { animation: none; } }
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
 /* laptops: the map follows the plan's day; this zooms out to every place */
 .whole-trip { position: absolute; left: 12px; bottom: 12px; z-index: 2; color: var(--ink-2); }
@@ -81,18 +100,21 @@
 .side-name { color: var(--ink); }
 .side-dates { color: var(--ink-2); font-family: var(--f-mono); font-size: 11px; }
 
-/* planning a place from its card: which day (a dropdown), a time, one button that says what it will do */
-.place-card-plan { display: grid; gap: 8px; flex: 1 1 100%; }
-.place-card-when { display: flex; gap: 8px; }
-.place-card-when { align-items: center; }
+/* planning a place from its card, on one line like the plan's: a time, which day (a dropdown), then "add" */
+.place-card-plan { display: flex; align-items: center; gap: 14px; min-height: 50px; border-top: 1px solid var(--line); }
+.place-card-go { margin-left: auto; }
 /* the day reads like every other dropdown: an underlined word that opens the planner's own list (shanice, 18 nov) */
 .day-menu {
   flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; border: 0; background: none; color: var(--ink);
   font: inherit; font-size: 15px; font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
 .day-menu:active { filter: brightness(.85); }
-.place-card-time { width: 72px; flex: none; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; background: none; font-family: var(--f-mono); }
-.place-card-time:focus { outline: none; border-bottom: 1px solid var(--ink); }
+/* the time reads like the plan's time column: grey mono "any", underlined in ink only while typing */
+.place-card-time { width: 52px; flex: none; min-height: 24px; padding: 0; border: 0; border-radius: 0; background: none; color: var(--ink-2); font-family: var(--f-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.place-card-time::placeholder { color: var(--ink-3); }
+.place-card-time:focus, .place-card-time:focus-visible { outline: none; box-shadow: inset 0 -1px 0 var(--ink); }
+/* no day yet: the time keeps its place, faded, so the day never jumps sideways */
+.place-card-time:disabled { opacity: .45; }
 .day-list {
   z-index: 80; max-height: 340px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
   background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
@@ -103,8 +125,6 @@
 .day-option[aria-selected="true"] { font-weight: 600; }
 .day-sub { font-size: 12.5px; font-weight: 400; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .day-month { padding: 10px 12px 4px; }
-.place-card-drag { display: flex; align-items: center; gap: 8px; min-height: 40px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 13px; cursor: grab; user-select: none; touch-action: none; }
-.place-card-drag:hover { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .day-list { animation: none; } }
 
 /* finding a line's place: the line's words looked up, in the search's own box */
@@ -116,4 +136,3 @@
 .find-foot .text-link { min-height: 36px; }
 /* while something is carried off the map, its search and card step back so the plan can take the drop */
 body.carrying .map-top, body.carrying .map-bottom { opacity: .35; pointer-events: none; transition: opacity .15s; }
-.place-card-x { flex: none; margin: -10px -10px 0 0; }

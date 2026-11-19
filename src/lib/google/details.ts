@@ -51,7 +51,29 @@ export function toDetails(f: Fields): Details {
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
-// the hours on the plan's day (else today): "sat · 10:00 am – 2:00 pm"
+// one of google's times ("9:00 am", "1:00" before a "pm") in the plan's 24-hour form
+function clock(t: string, half: string | undefined): string | null {
+  const m = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/.exec(t)
+  const ap = m?.[3] ?? half
+  if (!m || !ap) return null
+  const h = (Number(m[1]) % 12) + (ap === 'pm' ? 12 : 0)
+  if (h > 23) return null
+  return `${String(h).padStart(2, '0')}:${m[2] ?? '00'}`
+}
+
+// "8:30 am – 12:00 pm, 1:00 – 5:30 pm" → "08:30–12:00, 13:00–17:30"; words it can't read stay as they are
+function hours24(words: string): string {
+  const ranges = words.split(/\s*,\s*/).map((r) => {
+    const ends = r.split(/\s*[–-]\s*/)
+    if (ends.length !== 2) return null
+    const end = /(am|pm)$/.exec(ends[1])?.[1]
+    const a = clock(ends[0], end), b = clock(ends[1], undefined)
+    return a && b ? `${a}–${b}` : null
+  })
+  return ranges.every(Boolean) ? ranges.join(', ') : words
+}
+
+// the hours on the plan's day (else today), in the plan's time: "sat 10:00–14:00"
 export function hoursOn(weekdays: string[] | null | undefined, day: string | null, today = new Date().toISOString().slice(0, 10)): string | null {
   if (!weekdays?.length) return null
   const d = day || today
@@ -60,8 +82,9 @@ export function hoursOn(weekdays: string[] | null | undefined, day: string | nul
   const i = (date.getUTCDay() + 6) % 7 // google's week starts on monday
   const line = weekdays[i]
   if (!line) return null
-  const words = line.replace(/^[^:]+:\s*/, '').toLowerCase().trim()
-  return words ? `${DAYS[i]} · ${words}` : null
+  // google puts thin and narrow spaces around its times
+  const words = line.replace(/^[^:]+:\s*/, '').replace(/\s+/g, ' ').toLowerCase().trim()
+  return words ? `${DAYS[i]} ${hours24(words)}` : null
 }
 
 type PlacesLib = { Place: new (o: { id: string }) => { fetchFields(o: { fields: string[] }): Promise<{ place: Fields }> } }
