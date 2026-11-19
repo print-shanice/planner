@@ -31,13 +31,13 @@ it('a numbered marker opens the map at its place on a phone', async () => {
   show(stop({ id: 'k', title: 'kyle', day: '2025-09-21', place: place() }), 3)
   await userEvent.tab()
   await userEvent.keyboard('{Enter}')
-  expect(Object.fromEntries(loc())).toEqual({ tab: 'map', day: '2025-09-21', pin: 'k' })
+  await vi.waitFor(() => expect(Object.fromEntries(loc())).toEqual({ tab: 'map', day: '2025-09-21', pin: 'k' }))
 })
 
 it('a place not found yet offers to find it on the map, beside the plan on a laptop', async () => {
   show(stop({ id: 't', title: 'trefac style koenji', day: '2025-09-21', place: null }))
   await userEvent.click(screen.getByRole('button', { name: 'find trefac style koenji on the map' }))
-  expect(loc().get('find')).toBe('t')
+  await vi.waitFor(() => expect(loc().get('find')).toBe('t'))
   expect(loc().get('tab')).toBe('plan')
 })
 
@@ -45,7 +45,7 @@ it('on a phone, finding it opens the map at that day', async () => {
   db.wide = false
   show(stop({ id: 't', title: 'trefac', day: '2025-09-21', place: null }))
   await userEvent.click(screen.getByRole('button', { name: 'find trefac on the map' }))
-  expect(Object.fromEntries(loc())).toEqual({ tab: 'map', day: '2025-09-21', find: 't' })
+  await vi.waitFor(() => expect(Object.fromEntries(loc())).toEqual({ tab: 'map', day: '2025-09-21', find: 't' }))
 })
 
 it('getting around opens a menu that changes what the line is', async () => {
@@ -55,7 +55,7 @@ it('getting around opens a menu that changes what the line is', async () => {
   expect(menu).toHaveTextContent('a place')
   await userEvent.click(screen.getByRole('button', { name: /a place/ }))
   expect(db.save).toHaveBeenCalledWith({ id: 'z', kind: 'place', mode: null })
-  expect(loc().get('find')).toBe('z')
+  await vi.waitFor(() => expect(loc().get('find')).toBe('z'))
 })
 
 it('a note can become getting around, taking its mode from its words', async () => {

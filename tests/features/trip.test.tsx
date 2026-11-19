@@ -332,7 +332,8 @@ it('after adding, the plan moves to the day the new stop is on', async () => {
   await userEvent.click(within(screen.getByRole('dialog', { name: 'day' })).getByRole('button', { name: 'wed 30 jun' }))
   await userEvent.click(screen.getByRole('button', { name: 'save' }))
   expect(db.save).toHaveBeenLastCalledWith(expect.objectContaining({ day: '2027-06-30', title: 'kotisaari' }))
-  expect(loc().searchParams.get('day')).toBe('2027-06-30')
+  // react-router 7 moves in a transition, so the address follows a moment later
+  await vi.waitFor(() => expect(loc().searchParams.get('day')).toBe('2027-06-30'))
 })
 
 async function addPlace(path: string) {
