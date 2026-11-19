@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
+import { cspPlugin } from '../../src/lib/csp'
 
 // serves the real src/ with supabase swapped for the in-memory stand-in and a pretend google key,
 // so the planner can be opened (and tested) without an account or any keys
@@ -9,7 +10,8 @@ const src = path.resolve(__dirname, '../../src')
 export default defineConfig({
   root: __dirname,
   publicDir: path.resolve(__dirname, '../../public'),
-  plugins: [react(), {
+  // the built test app runs under the same content security policy as the live site
+  plugins: [react(), cspPlugin(undefined), {
     name: 'fake-supabase', enforce: 'pre',
     resolveId(id, importer) {
       if (importer && /\/supabase$/.test(id) && importer.startsWith(src)) return path.resolve(__dirname, 'fake-supabase.ts')

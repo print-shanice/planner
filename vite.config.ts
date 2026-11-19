@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { configProblem } from './src/lib/config'
+import { cspPlugin } from './src/lib/csp'
 
 // the build's settings: ci's environment, else .env.local (loadEnv reads both, the environment winning)
 const env = loadEnv('production', process.cwd(), 'VITE_')
@@ -21,6 +22,7 @@ export default defineConfig({
   build: { chunkSizeWarningLimit: 1000 },
   plugins: [
     react(),
+    cspPlugin(url),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png', 'countries-110m.geojson'],
