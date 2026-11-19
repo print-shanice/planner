@@ -60,6 +60,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['tests/setup.ts'],
+    // vitest always serves tests from "/", so the app's own base is given back to them
+    env: { BASE_URL: '/planner/' },
     include: ['tests/**/*.test.{ts,tsx}'],
   },
 })
