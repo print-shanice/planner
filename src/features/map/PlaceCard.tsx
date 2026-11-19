@@ -24,6 +24,7 @@ import { stopSub, stopTitle } from '../plan/stopText'
 import { Chip } from '../itinerary/ItinLine'
 import { saveError } from '../../lib/errors'
 import { hoursOn, useDetails } from '../../lib/google/details'
+import { usePlacePhoto } from '../../lib/placePhoto'
 import { count } from '../../lib/words'
 import { Tooltip } from '../../components/Tooltip'
 import googleMark from '../../assets/google-g.svg'
@@ -31,7 +32,7 @@ import googleMark from '../../assets/google-g.svg'
 // looking: a tap on the map is still being turned into a place name
 type Props = { trip: Trip; place: Place; stop?: Stop; day?: string | null; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
 
-// a picked pin or a found place: google's photo, what it is, then plan it (time · day · add) or open it, and go there
+// a picked pin or a found place: a photo (google's, else wikipedia's), what it is, then plan it (time · day · add) or open it, and go there
 export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking, onClose, onDone }: Props) {
   const stops = useStops().data ?? []
   const trips = useTrips().data ?? []
@@ -86,7 +87,9 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   const google = useDetails(looking ? null : place.gid)
   const d = google.data
   const asking = google.enabled && google.isPending
-  const photo = d?.photo ?? null
+  // google's photo, else wikipedia's with its credit
+  const shot = usePlacePhoto(looking ? null : place)
+  const photo = shot.src
   const ours = categoryOf(fake) === 'place' ? '' : categoryOf(fake)
   const sub = stop
     ? [stop.day ? dayLabel(stop.day) : 'idea', stopSub(stop)].filter(Boolean).join(' · ')
@@ -103,7 +106,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   } : undefined
   const handle = (el: ReactElement<HTMLAttributes<HTMLElement>>) => carry ? <Tooltip text="drag into the plan">{el}</Tooltip> : el
   const close = <button type="button" className="icon-btn place-card-x" aria-label="close" onClick={onClose}><Icon name="close" size={18} /></button>
-  const top = !looking && (photo || asking)
+  const top = !looking && (photo || shot.waiting)
   const details = stop && (() => sheet?.openStop(stop.id, opened))
 
   async function run(fn: () => Promise<unknown>) {
@@ -122,6 +125,7 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
           {close}
         </div>
       )}
+      {top && shot.credit && <a className="place-card-credit" href={shot.credit.href} target="_blank" rel="noopener noreferrer">photo · {shot.credit.label}</a>}
       <div className="place-card-head">
         {stop && <Chip stop={stop} quiet={idea} />}
         {handle(

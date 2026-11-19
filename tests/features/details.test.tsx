@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-const g = vi.hoisted(() => ({ fetch: vi.fn(), online: true }))
+const g = vi.hoisted(() => ({ fetch: vi.fn(), wiki: vi.fn(), online: true }))
 vi.mock('../../src/lib/google/loader', () => ({
   lib: async () => ({ Place: class { constructor(public o: { id: string }) {} fetchFields(o: { fields: string[] }) { return g.fetch(this.o.id, o.fields) } } }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useOnline: () => g.online }))
+vi.mock('../../src/lib/wiki', () => ({ wikiPhoto: g.wiki }))
 
 import { PlaceDetails } from '../../src/features/stops/PlaceDetails'
 
@@ -17,7 +18,7 @@ const fields = {
 }
 const show = (el: JSX.Element) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{el}</QueryClientProvider>)
 
-beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k'); g.online = true; g.fetch.mockReset().mockResolvedValue({ place: fields }) })
+beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k'); g.online = true; g.fetch.mockReset().mockResolvedValue({ place: fields }); g.wiki.mockReset().mockResolvedValue(null) })
 
 it('says it is asking, then shows the photo, the rating, what it is, the day\'s hours and the website', async () => {
   show(<PlaceDetails place={place} day="2027-02-06" />)
@@ -56,4 +57,12 @@ it('a place google knows little about shows what there is, and a refusal shows n
   await screen.findByRole('status')
   await vi.waitFor(() => expect(screen.queryByRole('status')).toBeNull())
   expect(container).toBeEmptyDOMElement()
+})
+
+it('with no photo from google, the full card shows wikipedia\'s, credited', async () => {
+  g.fetch.mockResolvedValue({ place: { ...fields, photos: [] } })
+  g.wiki.mockResolvedValue({ src: 'https://upload.wikimedia.org/hop.jpg', page: 'https://en.wikipedia.org/wiki/File:Hop.jpg' })
+  show(<PlaceDetails place={place} day={null} />)
+  expect(await screen.findByRole('img', { name: 'Hop Inn' })).toHaveAttribute('src', 'https://upload.wikimedia.org/hop.jpg')
+  expect(screen.getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/File:Hop.jpg')
 })

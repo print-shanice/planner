@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
 
-const g = vi.hoisted(() => ({ fetch: vi.fn(), stops: [] as unknown[], trips: [] as unknown[], save: vi.fn(), move: vi.fn() }))
+const g = vi.hoisted(() => ({ fetch: vi.fn(), wiki: vi.fn(), stops: [] as unknown[], trips: [] as unknown[], save: vi.fn(), move: vi.fn() }))
 vi.mock('../../src/lib/google/loader', () => ({
   lib: async () => ({ Place: class { constructor(public o: { id: string }) {} fetchFields(o: { fields: string[] }) { return g.fetch(this.o.id, o.fields) } } }),
 }))
@@ -15,6 +15,7 @@ vi.mock('../../src/lib/queries', () => ({
   useSave: () => ({ mutateAsync: g.save, mutate: g.save, isPending: false }),
 }))
 vi.mock('../../src/features/itinerary/useMove', () => ({ useMove: () => g.move }))
+vi.mock('../../src/lib/wiki', () => ({ wikiPhoto: g.wiki }))
 
 import { PlaceCard } from '../../src/features/map/PlaceCard'
 
@@ -40,6 +41,7 @@ beforeEach(() => {
   g.save.mockReset().mockResolvedValue({})
   g.move.mockReset()
   g.fetch.mockReset().mockResolvedValue({ place: google })
+  g.wiki.mockReset().mockResolvedValue(null)
 })
 
 it('a found place: photo on top, what and where, then reviews and the day\'s hours on lines of their own', async () => {
@@ -128,4 +130,42 @@ it('an idea: "add" waits for a day', () => {
   const card = screen.getByRole('region', { name: 'eiffel tower' })
   expect(within(card).getByRole('button', { name: 'add to a day' })).toBeDisabled()
   expect(within(card).getByRole('button', { name: 'details' })).toBeInTheDocument()
+})
+
+describe('when google has no photo, wikipedia\'s', () => {
+  const wiki = { src: 'https://upload.wikimedia.org/eiffel.jpg', page: 'https://en.wikipedia.org/wiki/File:Eiffel.jpg' }
+
+  it('shows across the top with a small credit linking to the photo\'s page', async () => {
+    g.fetch.mockResolvedValue({ place: { ...google, photos: [] } })
+    g.wiki.mockResolvedValue(wiki)
+    show()
+    const card = screen.getByRole('region', { name: 'Eiffel Tower' })
+    expect(await within(card).findByRole('img', { name: 'Eiffel Tower' })).toHaveAttribute('src', wiki.src)
+    expect(within(card).getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', wiki.page)
+    expect(g.wiki).toHaveBeenCalledWith(expect.objectContaining({ name: 'Eiffel Tower', lat: 48.86, lng: 2.29 }))
+  })
+
+  it('is never asked for when google has a photo', async () => {
+    show()
+    await within(screen.getByRole('region', { name: 'Eiffel Tower' })).findByRole('img', { name: 'Eiffel Tower' })
+    expect(g.wiki).not.toHaveBeenCalled()
+    expect(screen.queryByRole('link', { name: /wikimedia/ })).toBeNull()
+  })
+
+  it('works without google at all, for a place with a spot', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_KEY', '')
+    g.wiki.mockResolvedValue(wiki)
+    show({ place: { ...eiffel, gid: undefined } })
+    expect(await screen.findByRole('img', { name: 'Eiffel Tower' })).toHaveAttribute('src', wiki.src)
+    expect(g.fetch).not.toHaveBeenCalled()
+  })
+
+  it('nothing found: the card closes up, the ✕ beside the name', async () => {
+    g.fetch.mockResolvedValue({ place: { ...google, photos: [] } })
+    show()
+    const card = screen.getByRole('region', { name: 'Eiffel Tower' })
+    await vi.waitFor(() => expect(g.wiki).toHaveBeenCalled())
+    await vi.waitFor(() => expect(within(card).getByRole('button', { name: 'close' }).closest('.place-card-head')).not.toBeNull())
+    expect(within(card).queryByRole('img')).toBeNull()
+  })
 })

@@ -50,6 +50,8 @@
 /* what google says about the place: a photo, then its rating, what it is and its hours */
 .place-details { display: grid; gap: 10px; }
 .place-photo { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 0; background: var(--soft); }
+.place-photo-credit { justify-self: end; margin-top: -6px; color: var(--ink-3); font-family: var(--f-mono); font-size: 11px; text-decoration: none; }
+.place-photo-credit:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }
 .place-details-words { display: grid; gap: 2px; font-size: 14px; }
 .place-rating { font-weight: 500; }
 .place-details .text-link { justify-self: start; margin-top: 4px; }

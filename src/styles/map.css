@@ -65,6 +65,9 @@
 @keyframes photo-wait { 50% { background: var(--line); } }
 .place-card-photo .place-card-x { position: absolute; top: 8px; right: 8px; margin: 0; border-radius: 8px; background: var(--card); box-shadow: var(--float); }
 .place-card-photo .place-card-x:hover { background: var(--card); filter: brightness(.95); }
+/* a borrowed photo's credit, quiet under its right edge */
+.place-card-credit { justify-self: end; margin: -8px 0 -4px; color: var(--ink-3); font-family: var(--f-mono); font-size: 11px; text-decoration: none; }
+.place-card-credit:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }
 .place-card-head { display: flex; align-items: flex-start; gap: 10px; }
 .place-card-head > .cat { flex: none; margin-top: 4px; }
 .place-card-words { flex: 1; min-width: 0; display: grid; gap: 3px; }

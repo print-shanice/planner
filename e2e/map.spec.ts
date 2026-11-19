@@ -41,6 +41,19 @@ test.describe('the map', () => {
     await expect(full.getByRole('img', { name: 'hop inn kyoto shijo omiya' })).toBeVisible()
   })
 
+  test('a place google has no photo of shows wikipedia\'s, credited', async ({ page }) => {
+    await open(page, phone(page) ? '/trip/par?tab=map' : '/trip/par?day=2027-02-20')
+    if (phone(page)) {
+      await page.getByRole('button', { name: 'places list' }).click()
+      await page.getByRole('region', { name: 'places' }).getByRole('button', { name: /musée d’orsay/ }).click()
+    } else {
+      await page.getByRole('complementary', { name: 'map' }).getByRole('button', { name: /musée d’orsay/ }).first().dispatchEvent('click')
+    }
+    const card = page.getByRole('region', { name: 'musée d’orsay' })
+    await expect(card.getByRole('img', { name: 'musée d’orsay' })).toBeVisible()
+    await expect(card.getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/File:Musee_d_Orsay.jpg')
+  })
+
   test('searching the map finds a place; it can be saved as an idea or put on a day', async ({ page }) => {
     await open(page, phone(page) ? '/trip/par?tab=map' : '/trip/par')
     await page.getByRole('searchbox', { name: 'search' }).fill('eiffel')
