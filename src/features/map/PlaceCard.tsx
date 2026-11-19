@@ -32,7 +32,7 @@ import googleMark from '../../assets/google-g.svg'
 // looking: a tap on the map is still being turned into a place name
 type Props = { trip: Trip; place: Place; stop?: Stop; day?: string | null; defaultDay?: string | null; looking?: boolean; onClose: () => void; onDone?: () => void }
 
-// a picked pin or a found place: a photo (google's, else wikipedia's), what it is, then plan it (time · day · add) or open it, and go there
+// a picked pin or a found place: a free photo (wikipedia, else openverse), what it is, then plan it (time · day · add) or open it, and go there
 export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking, onClose, onDone }: Props) {
   const stops = useStops().data ?? []
   const trips = useTrips().data ?? []
@@ -83,11 +83,11 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   const title = stop ? stopTitle(stop) : place.name || 'dropped pin'
   const maps = gmapsUrl(stop ?? ({ kind: 'place', place } as Stop))
   const fake = { kind: 'place', category: stop?.category ?? place.category ?? null } as Stop
-  // what google says: a photo across the top, its word for what it is, reviews, the day's hours and the website
+  // what google says: its word for what it is, reviews, the day's hours and the website
   const google = useDetails(looking ? null : place.gid)
   const d = google.data
   const asking = google.enabled && google.isPending
-  // google's photo, else wikipedia's with its credit
+  // a free photo: wikipedia's, else openverse's (mostly flickr), with its credit; never google's
   const shot = usePlacePhoto(looking ? null : place)
   const photo = shot.src
   const ours = categoryOf(fake) === 'place' ? '' : categoryOf(fake)
@@ -119,10 +119,11 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
 
   return (
     <section className={`place-card${top ? ' has-photo' : ''}`} aria-label={looking ? 'finding the place' : title}>
+      {/* one ✕, always in the card's corner (on the photo when there is one), so it never moves while a photo is looked for */}
+      {close}
       {top && (
         <div className={`place-card-photo${photo ? '' : ' waiting'}`}>
           {photo && handle(<img src={photo} alt={title} className={carry ? 'grab' : undefined} onPointerDown={carry} draggable={false} />)}
-          {close}
         </div>
       )}
       {top && shot.credit && <a className="place-card-credit" href={shot.credit.href} target="_blank" rel="noopener noreferrer">photo · {shot.credit.label}</a>}
@@ -137,7 +138,6 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
             {hours && <p className="place-card-fact">{hours}</p>}
           </div>,
         )}
-        {!top && close}
       </div>
       {!looking && stop && !idea && (
         <div className="place-card-act"><button type="button" className="btn primary" onClick={details || undefined}>details</button></div>

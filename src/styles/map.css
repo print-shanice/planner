@@ -56,15 +56,15 @@
    then a hairline and the day line (time · day · add, like the plan) or "details", then google maps and the website */
 .place-card {
   display: grid; gap: 12px; padding: 16px 16px 6px; border-radius: var(--radius); background: var(--card);
-  box-shadow: var(--float); max-width: 520px; margin: 0 auto; overflow: hidden;
+  box-shadow: var(--float); max-width: 520px; margin: 0 auto; overflow: hidden; position: relative;
 }
 .place-card.has-photo { padding-top: 0; }
 .place-card-photo { position: relative; margin: 0 -16px; aspect-ratio: 2 / 1; background: var(--soft); }
 .place-card-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .place-card-photo.waiting { animation: photo-wait 1.4s ease-in-out infinite; }
 @keyframes photo-wait { 50% { background: var(--line); } }
-.place-card-photo .place-card-x { position: absolute; top: 8px; right: 8px; margin: 0; border-radius: 8px; background: var(--card); box-shadow: var(--float); }
-.place-card-photo .place-card-x:hover { background: var(--card); filter: brightness(.95); }
+.place-card.has-photo .place-card-x { background: var(--card); box-shadow: var(--float); }
+.place-card.has-photo .place-card-x:hover { background: var(--card); filter: brightness(.95); }
 /* a borrowed photo's credit, quiet under its right edge */
 .place-card-credit { justify-self: end; margin: -8px 0 -4px; color: var(--ink-3); font-family: var(--f-mono); font-size: 11px; text-decoration: none; }
 .place-card-credit:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }
@@ -75,7 +75,9 @@
 .place-card-sub { color: var(--ink-2); font-size: 14px; }
 .place-card-fact { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-2); }
 .place-card-fact.rating { color: var(--ink); }
-.place-card-x { flex: none; margin: -10px -10px 0 0; }
+.place-card-x { position: absolute; top: 6px; right: 6px; z-index: 1; border-radius: 8px; }
+/* the name keeps clear of the ✕ when there's no photo above it */
+.place-card:not(.has-photo) .place-card-head { padding-right: 34px; }
 .place-card .grab { cursor: grab; user-select: none; -webkit-user-select: none; }
 .place-card-act { display: flex; align-items: center; min-height: 50px; border-top: 1px solid var(--line); }
 .place-card-links { display: grid; justify-items: start; margin-top: -6px; font-size: 14px; }

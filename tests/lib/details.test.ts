@@ -7,24 +7,25 @@ const weekdays = [
 ]
 
 describe('google place details, kept to one request', () => {
-  it('reads the rating, how many rated it, what it is, its photo, hours and website', () => {
+  it('reads the rating, how many rated it, what it is, hours and website', () => {
     const d = toDetails({
       rating: 4.2, userRatingCount: 244, primaryTypeDisplayName: 'Hotel',
-      photos: [{ getURI: ({ maxWidth }: { maxWidth?: number }) => `https://img/${maxWidth}` }],
       regularOpeningHours: { weekdayDescriptions: weekdays }, websiteURI: 'https://hopinn.example/', googleMapsURI: 'https://maps.google.com/?cid=1',
     })
-    expect(d).toEqual({ rating: 4.2, ratings: 244, kind: 'hotel', photo: 'https://img/800', weekdays, website: 'https://hopinn.example/', maps: 'https://maps.google.com/?cid=1' })
+    expect(d).toEqual({ rating: 4.2, ratings: 244, kind: 'hotel', weekdays, website: 'https://hopinn.example/', maps: 'https://maps.google.com/?cid=1' })
   })
 
   it('a place google knows little about still maps cleanly', () => {
-    expect(toDetails({})).toEqual({ rating: null, ratings: null, kind: null, photo: null, weekdays: null, website: null, maps: null })
-    expect(toDetails({ photos: [], primaryTypeDisplayName: null, rating: 0 })).toMatchObject({ photo: null, kind: null, rating: null })
+    expect(toDetails({})).toEqual({ rating: null, ratings: null, kind: null, weekdays: null, website: null, maps: null })
+    expect(toDetails({ primaryTypeDisplayName: null, rating: 0 })).toMatchObject({ kind: null, rating: null })
   })
 
   it('never asks for google\'s reviews or atmosphere, which cost more', () => {
     expect(DETAIL_PLUS).not.toContain('reviews')
     expect(DETAIL_PLUS).not.toContain('editorialSummary')
     expect(DETAIL_PLUS).toContain('rating')
+    // photos come from wikipedia and openverse, never google
+    expect(DETAIL_PLUS).not.toContain('photos')
   })
 })
 

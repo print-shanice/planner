@@ -11,38 +11,33 @@ export type Details = {
   ratings: number | null
   // what google calls it ("hotel", "coffee shop"), lowercased
   kind: string | null
-  photo: string | null
   // opening hours, one line per weekday from monday, as google words them
   weekdays: string[] | null
   website: string | null
   maps: string | null
 }
 
-export const DETAIL_PLUS = ['rating', 'userRatingCount', 'primaryTypeDisplayName', 'photos', 'regularOpeningHours', 'websiteURI', 'googleMapsURI'] as const
+// no photos: those come from wikipedia and openverse (lib/placePhoto.ts), never google
+export const DETAIL_PLUS = ['rating', 'userRatingCount', 'primaryTypeDisplayName', 'regularOpeningHours', 'websiteURI', 'googleMapsURI'] as const
 
-type Photo = { getURI?: (o: { maxWidth?: number; maxHeight?: number }) => string }
 type Fields = {
   rating?: number | null
   userRatingCount?: number | null
   primaryTypeDisplayName?: string | null
-  photos?: Photo[] | null
   regularOpeningHours?: { weekdayDescriptions?: string[] | null } | null
   websiteURI?: string | null
   googleMapsURI?: string | null
 }
 
-const PHOTO_WIDTH = 800
 // google lets its answers be kept this long
 const KEEP = 30 * 24 * 60 * 60 * 1000
 
 export function toDetails(f: Fields): Details {
-  const photo = f.photos?.[0]?.getURI?.({ maxWidth: PHOTO_WIDTH }) ?? null
   const weekdays = f.regularOpeningHours?.weekdayDescriptions?.length ? f.regularOpeningHours.weekdayDescriptions : null
   return {
     rating: f.rating ? f.rating : null,
     ratings: f.userRatingCount ?? null,
     kind: f.primaryTypeDisplayName ? f.primaryTypeDisplayName.toLowerCase() : null,
-    photo: photo || null,
     weekdays,
     website: f.websiteURI || null,
     maps: f.googleMapsURI || null,

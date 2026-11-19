@@ -1,12 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-const g = vi.hoisted(() => ({ fetch: vi.fn(), wiki: vi.fn(), online: true }))
+const g = vi.hoisted(() => ({ fetch: vi.fn(), wiki: vi.fn(), verse: vi.fn(), online: true }))
 vi.mock('../../src/lib/google/loader', () => ({
   lib: async () => ({ Place: class { constructor(public o: { id: string }) {} fetchFields(o: { fields: string[] }) { return g.fetch(this.o.id, o.fields) } } }),
 }))
 vi.mock('../../src/lib/offline', () => ({ useOnline: () => g.online }))
 vi.mock('../../src/lib/wiki', () => ({ wikiPhoto: g.wiki }))
+vi.mock('../../src/lib/openverse', () => ({ openversePhoto: g.verse }))
 
 import { PlaceDetails } from '../../src/features/stops/PlaceDetails'
 
@@ -18,16 +19,19 @@ const fields = {
 }
 const show = (el: JSX.Element) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{el}</QueryClientProvider>)
 
-beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k'); g.online = true; g.fetch.mockReset().mockResolvedValue({ place: fields }); g.wiki.mockReset().mockResolvedValue(null) })
+beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k'); g.online = true; g.fetch.mockReset().mockResolvedValue({ place: fields }); g.wiki.mockReset().mockResolvedValue(null); g.verse.mockReset().mockResolvedValue(null) })
 
 it('says it is asking, then shows the photo, the rating, what it is, the day\'s hours and the website', async () => {
+  g.verse.mockResolvedValue({ src: 'https://api.openverse.org/v1/images/hop/thumb/', page: 'https://www.flickr.com/photos/x/hop', source: 'flickr' })
   show(<PlaceDetails place={place} day="2027-02-06" />)
   expect(screen.getByRole('status')).toHaveTextContent('asking google')
   expect(await screen.findByText('★ 4.2 · 244 reviews · hotel')).toBeInTheDocument()
   expect(screen.getByText('sat 10:00–14:00')).toBeInTheDocument()
-  expect(screen.getByRole('img', { name: 'Hop Inn' })).toHaveAttribute('src', 'https://img/hop.jpg')
+  expect(await screen.findByRole('img', { name: 'Hop Inn' })).toHaveAttribute('src', 'https://api.openverse.org/v1/images/hop/thumb/')
+  expect(screen.getByRole('link', { name: 'photo · flickr' })).toHaveAttribute('href', 'https://www.flickr.com/photos/x/hop')
   expect(screen.getByRole('link', { name: 'website' })).toHaveAttribute('href', 'https://hopinn.example/')
-  expect(g.fetch).toHaveBeenCalledWith('g1', expect.arrayContaining(['rating', 'photos']))
+  expect(g.fetch).toHaveBeenCalledWith('g1', expect.arrayContaining(['rating']))
+  expect(g.fetch.mock.calls[0][1]).not.toContain('photos')
 })
 
 it('asks nothing without google, offline, or for a place google did not find', () => {
@@ -59,8 +63,7 @@ it('a place google knows little about shows what there is, and a refusal shows n
   expect(container).toBeEmptyDOMElement()
 })
 
-it('with no photo from google, the full card shows wikipedia\'s, credited', async () => {
-  g.fetch.mockResolvedValue({ place: { ...fields, photos: [] } })
+it('the full card shows wikipedia\'s photo first, credited', async () => {
   g.wiki.mockResolvedValue({ src: 'https://upload.wikimedia.org/hop.jpg', page: 'https://en.wikipedia.org/wiki/File:Hop.jpg' })
   show(<PlaceDetails place={place} day={null} />)
   expect(await screen.findByRole('img', { name: 'Hop Inn' })).toHaveAttribute('src', 'https://upload.wikimedia.org/hop.jpg')

@@ -30,18 +30,17 @@ test.describe('the map', () => {
       await map.getByRole('button', { name: "tonight's bed" }).dispatchEvent('click')
     }
     const card = page.getByRole('region', { name: 'hop inn kyoto shijo omiya' })
-    // the photo across the top, reviews on their own line, the website under google maps
+    // reviews on their own line, the website under google maps; no free photo of this hotel, so none (never google's)
     await expect(card).toContainText('★ 4.2 · 244 reviews')
-    await expect(card.getByRole('img', { name: 'hop inn kyoto shijo omiya' })).toBeVisible()
     await expect(card.getByRole('link', { name: 'website' })).toHaveAttribute('href', 'https://hopinn.example/')
     await card.getByRole('button', { name: 'details' }).click()
     const full = page.getByRole('dialog', { name: 'hop inn kyoto shijo omiya' })
     await expect(full).toContainText('★ 4.2 · 244 reviews · hotel')
     await expect(full.getByRole('link', { name: 'website' })).toHaveAttribute('href', 'https://hopinn.example/')
-    await expect(full.getByRole('img', { name: 'hop inn kyoto shijo omiya' })).toBeVisible()
+    await expect(full.getByRole('img', { name: 'hop inn kyoto shijo omiya' })).toHaveCount(0)
   })
 
-  test('a place google has no photo of shows wikipedia\'s, credited', async ({ page }) => {
+  test('a sight shows wikipedia\'s photo, credited', async ({ page }) => {
     await open(page, phone(page) ? '/trip/par?tab=map' : '/trip/par?day=2027-02-20')
     if (phone(page)) {
       await page.getByRole('button', { name: 'places list' }).click()
@@ -52,6 +51,19 @@ test.describe('the map', () => {
     const card = page.getByRole('region', { name: 'musée d’orsay' })
     await expect(card.getByRole('img', { name: 'musée d’orsay' })).toBeVisible()
     await expect(card.getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/File:Musee_d_Orsay.jpg')
+  })
+
+  test('a bakery wikipedia has no page for shows a flickr photo from openverse, credited', async ({ page }) => {
+    await open(page, phone(page) ? '/trip/par?tab=map' : '/trip/par?day=2027-02-20')
+    if (phone(page)) {
+      await page.getByRole('button', { name: 'places list' }).click()
+      await page.getByRole('region', { name: 'places' }).getByRole('button', { name: /du pain et des idées/ }).click()
+    } else {
+      await page.getByRole('complementary', { name: 'map' }).getByRole('button', { name: /du pain et des idées/ }).first().dispatchEvent('click')
+    }
+    const card = page.getByRole('region', { name: 'du pain et des idées' })
+    await expect(card.getByRole('img', { name: 'du pain et des idées' })).toBeVisible()
+    await expect(card.getByRole('link', { name: 'photo · flickr' })).toHaveAttribute('href', 'https://www.flickr.com/photos/x/du-pain')
   })
 
   test('searching the map finds a place; it can be saved as an idea or put on a day', async ({ page }) => {

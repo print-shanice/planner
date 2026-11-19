@@ -14,6 +14,8 @@ globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
   if (url.includes('date.nager.at')) return Promise.resolve(new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }))
   // nor wikipedia: no photo unless a test serves one itself
   if (url.includes('wikipedia.org')) return Promise.resolve(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }))
+  // nor openverse
+  if (url.includes('api.openverse.org')) return Promise.resolve(new Response('{"results":[]}', { status: 200, headers: { 'content-type': 'application/json' } }))
   if (url.includes('open-meteo.com')) return Promise.resolve(new Response(JSON.stringify({ daily: { temperature_2m_max: [12, 14], temperature_2m_min: [4, 6] } }), { status: 200, headers: { 'content-type': 'application/json' } }))
   return realFetch ? realFetch(input, init) : Promise.reject(new Error('no network in tests'))
 }) as typeof fetch

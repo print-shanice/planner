@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
 
-const g = vi.hoisted(() => ({ fetch: vi.fn(), wiki: vi.fn(), stops: [] as unknown[], trips: [] as unknown[], save: vi.fn(), move: vi.fn() }))
+const g = vi.hoisted(() => ({ fetch: vi.fn(), wiki: vi.fn(), verse: vi.fn(), stops: [] as unknown[], trips: [] as unknown[], save: vi.fn(), move: vi.fn() }))
 vi.mock('../../src/lib/google/loader', () => ({
   lib: async () => ({ Place: class { constructor(public o: { id: string }) {} fetchFields(o: { fields: string[] }) { return g.fetch(this.o.id, o.fields) } } }),
 }))
@@ -16,14 +16,15 @@ vi.mock('../../src/lib/queries', () => ({
 }))
 vi.mock('../../src/features/itinerary/useMove', () => ({ useMove: () => g.move }))
 vi.mock('../../src/lib/wiki', () => ({ wikiPhoto: g.wiki }))
+vi.mock('../../src/lib/openverse', () => ({ openversePhoto: g.verse }))
 
 import { PlaceCard } from '../../src/features/map/PlaceCard'
 
 const paris = trip({ id: 'par', name: 'paris', start_date: '2027-02-19', end_date: '2027-02-23' })
-const eiffel = place({ name: 'Eiffel Tower', address: 'Av. Gustave Eiffel, Paris', lat: 48.86, lng: 2.29, gid: 'g-eiffel', category: 'sight' })
+const eiffel = place({ name: 'Eiffel Tower', address: 'Av. Gustave Eiffel, Paris', city: 'Paris', lat: 48.86, lng: 2.29, gid: 'g-eiffel', category: 'sight' })
 const HOURS = ['Monday: 9:00 AM – 6:00 PM', 'Tuesday: 9:00 AM – 6:00 PM', 'Wednesday: 9:00 AM – 6:00 PM', 'Thursday: 9:00 AM – 9:45 PM', 'Friday: 9:00 AM – 6:00 PM', 'Saturday: 9:00 AM – 6:00 PM', 'Sunday: Closed']
 const google = {
-  rating: 4.7, userRatingCount: 420_000, primaryTypeDisplayName: 'Historical landmark', photos: [{ getURI: () => 'https://img/eiffel.jpg' }],
+  rating: 4.7, userRatingCount: 420_000, primaryTypeDisplayName: 'Historical landmark',
   regularOpeningHours: { weekdayDescriptions: HOURS }, websiteURI: 'https://www.toureiffel.paris/',
 }
 
@@ -42,14 +43,19 @@ beforeEach(() => {
   g.move.mockReset()
   g.fetch.mockReset().mockResolvedValue({ place: google })
   g.wiki.mockReset().mockResolvedValue(null)
+  g.verse.mockReset().mockResolvedValue(null)
 })
 
+const wiki = { src: 'https://upload.wikimedia.org/eiffel.jpg', page: 'https://en.wikipedia.org/wiki/File:Eiffel.jpg' }
+const verse = { src: 'https://api.openverse.org/v1/images/dp1/thumb/', page: 'https://www.flickr.com/photos/x/dp1', source: 'flickr' }
+
 it('a found place: photo on top, what and where, then reviews and the day\'s hours on lines of their own', async () => {
+  g.wiki.mockResolvedValue(wiki)
   show()
   const card = screen.getByRole('region', { name: 'Eiffel Tower' })
   expect(within(card).getByRole('status')).toHaveTextContent('asking google')
   const photo = await within(card).findByRole('img', { name: 'Eiffel Tower' })
-  expect(photo).toHaveAttribute('src', 'https://img/eiffel.jpg')
+  expect(photo).toHaveAttribute('src', wiki.src)
   // google's word for what it is, said once, replacing ours
   expect(within(card).getByText('historical landmark · Av. Gustave Eiffel, Paris')).toBeInTheDocument()
   expect(within(card).queryByText(/sight/)).toBeNull()
@@ -94,7 +100,7 @@ it('google maps with google\'s mark, and the website with a globe on a line of i
   expect(before(maps, site)).toBe(true)
 })
 
-it('a line google has nothing for is left out, and with no photo the ✕ sits beside the name', async () => {
+it('a line google has nothing for is left out, and with no photo the card closes up', async () => {
   g.fetch.mockResolvedValue({ place: { rating: null, primaryTypeDisplayName: 'Bakery' } })
   show()
   const card = screen.getByRole('region', { name: 'Eiffel Tower' })
@@ -102,15 +108,18 @@ it('a line google has nothing for is left out, and with no photo the ✕ sits be
   expect(within(card).queryByRole('img')).toBeNull()
   expect(within(card).queryByText(/reviews/)).toBeNull()
   expect(within(card).queryByRole('link', { name: 'website' })).toBeNull()
-  const close = within(card).getByRole('button', { name: 'close' })
-  expect(close.closest('.place-card-head')).not.toBeNull()
+  await vi.waitFor(() => expect(g.verse).toHaveBeenCalled())
+  await vi.waitFor(() => expect(card).not.toHaveClass('has-photo'))
+  expect(within(card).getByRole('button', { name: 'close' })).toBeInTheDocument()
 })
 
-it('with a photo the ✕ sits on its corner', async () => {
+it('with a photo it sits across the top, under the one ✕', async () => {
+  g.wiki.mockResolvedValue(wiki)
   show()
   const card = screen.getByRole('region', { name: 'Eiffel Tower' })
   await within(card).findByRole('img', { name: 'Eiffel Tower' })
-  expect(within(card).getByRole('button', { name: 'close' }).closest('.place-card-photo')).not.toBeNull()
+  expect(card).toHaveClass('has-photo')
+  expect(within(card).getAllByRole('button', { name: 'close' })).toHaveLength(1)
 })
 
 it('a pin already in the plan: "details" takes the day line\'s place', async () => {
@@ -132,24 +141,34 @@ it('an idea: "add" waits for a day', () => {
   expect(within(card).getByRole('button', { name: 'details' })).toBeInTheDocument()
 })
 
-describe('when google has no photo, wikipedia\'s', () => {
-  const wiki = { src: 'https://upload.wikimedia.org/eiffel.jpg', page: 'https://en.wikipedia.org/wiki/File:Eiffel.jpg' }
-
-  it('shows across the top with a small credit linking to the photo\'s page', async () => {
-    g.fetch.mockResolvedValue({ place: { ...google, photos: [] } })
+describe('photos: wikipedia first, then openverse, never google', () => {
+  it('wikipedia\'s, with a small credit linking to the photo\'s page; openverse isn\'t asked', async () => {
     g.wiki.mockResolvedValue(wiki)
     show()
     const card = screen.getByRole('region', { name: 'Eiffel Tower' })
     expect(await within(card).findByRole('img', { name: 'Eiffel Tower' })).toHaveAttribute('src', wiki.src)
     expect(within(card).getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', wiki.page)
     expect(g.wiki).toHaveBeenCalledWith(expect.objectContaining({ name: 'Eiffel Tower', lat: 48.86, lng: 2.29 }))
+    expect(g.verse).not.toHaveBeenCalled()
   })
 
-  it('is never asked for when google has a photo', async () => {
+  it('no wikipedia page: openverse\'s, credited to where it\'s from', async () => {
+    g.verse.mockResolvedValue(verse)
     show()
-    await within(screen.getByRole('region', { name: 'Eiffel Tower' })).findByRole('img', { name: 'Eiffel Tower' })
-    expect(g.wiki).not.toHaveBeenCalled()
-    expect(screen.queryByRole('link', { name: /wikimedia/ })).toBeNull()
+    const card = screen.getByRole('region', { name: 'Eiffel Tower' })
+    expect(await within(card).findByRole('img', { name: 'Eiffel Tower' })).toHaveAttribute('src', verse.src)
+    expect(within(card).getByRole('link', { name: 'photo · flickr' })).toHaveAttribute('href', verse.page)
+    expect(g.verse).toHaveBeenCalledWith(expect.objectContaining({ name: 'Eiffel Tower', city: 'Paris' }))
+  })
+
+  it('google is never asked for photos, and any it sends are not shown', async () => {
+    g.fetch.mockResolvedValue({ place: { ...google, photos: [{ getURI: () => 'https://img/eiffel.jpg' }] } })
+    show()
+    const card = screen.getByRole('region', { name: 'Eiffel Tower' })
+    await within(card).findByText('★ 4.7 · 420,000 reviews')
+    await vi.waitFor(() => expect(g.verse).toHaveBeenCalled())
+    expect(g.fetch.mock.calls[0][1]).not.toContain('photos')
+    expect(within(card).queryByRole('img')).toBeNull()
   })
 
   it('works without google at all, for a place with a spot', async () => {
@@ -160,12 +179,11 @@ describe('when google has no photo, wikipedia\'s', () => {
     expect(g.fetch).not.toHaveBeenCalled()
   })
 
-  it('nothing found: the card closes up, the ✕ beside the name', async () => {
-    g.fetch.mockResolvedValue({ place: { ...google, photos: [] } })
+  it('nothing found: the card closes up', async () => {
     show()
     const card = screen.getByRole('region', { name: 'Eiffel Tower' })
-    await vi.waitFor(() => expect(g.wiki).toHaveBeenCalled())
-    await vi.waitFor(() => expect(within(card).getByRole('button', { name: 'close' }).closest('.place-card-head')).not.toBeNull())
+    await vi.waitFor(() => expect(g.verse).toHaveBeenCalled())
+    await vi.waitFor(() => expect(card).not.toHaveClass('has-photo'))
     expect(within(card).queryByRole('img')).toBeNull()
   })
 })
