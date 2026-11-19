@@ -788,6 +788,28 @@ it('a first ticket that fails to upload says so', async () => {
   expect(await within(d).findByText("couldn't upload, try again")).toBeInTheDocument()
 })
 
+it('a pdf that arrives without a type still uploads as a pdf', async () => {
+  const { supabase } = await import('../../src/lib/supabase') as any
+  const upload = vi.fn(async () => ({ error: null }))
+  supabase.storage.from = () => ({ remove: db.storageRemove, upload })
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  await userEvent.setup({ applyAccept: false }).upload(within(screen.getByRole('dialog')).getByLabelText('add file'), new File(['x'], 'Pass.PDF', { type: '' }))
+  await vi.waitFor(() => expect(upload).toHaveBeenCalledWith(expect.stringContaining('Pass.PDF'), expect.anything(), { contentType: 'application/pdf' }))
+})
+
+it('a file that isn\'t a pdf or a photo isn\'t uploaded, and says what can be', async () => {
+  const { supabase } = await import('../../src/lib/supabase') as any
+  const upload = vi.fn(async () => ({ error: null }))
+  supabase.storage.from = () => ({ remove: db.storageRemove, upload })
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const d = screen.getByRole('dialog')
+  await userEvent.setup({ applyAccept: false }).upload(within(d).getByLabelText('add file'), new File(['<svg/>'], 'pass.svg', { type: 'image/svg+xml' }))
+  expect(await within(d).findByText('only pdfs and photos')).toHaveClass('warn-line')
+  expect(upload).not.toHaveBeenCalled()
+})
+
 describe('forms are calm full pages', () => {
   async function newStay() {
     show(<Opener kind="stay" />)

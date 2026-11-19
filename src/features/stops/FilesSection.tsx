@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { Icon } from '../../components/Icon'
 import { Sheet } from '../../components/Sheet'
 import { Pending } from '../../components/Pending'
-import { keepTickets, openTicket, ticketType } from '../../lib/ticketCache'
+import { keepTickets, openTicket, ticketType, uploadType } from '../../lib/ticketCache'
 
 const MAX = 20 * 1024 * 1024
 
@@ -46,11 +46,13 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
     try {
       for (const file of Array.from(list)) {
         if (file.size > MAX) { setProblem('files must be under 20 mb'); continue }
+        const type = uploadType(file)
+        if (type === 'application/octet-stream') { setProblem('only pdfs and photos'); continue }
         const safe = file.name.replace(/[^\w.-]+/g, '-').slice(-80)
         const path = `${stop.trip_id}/${stop.id}/${newId()}-${safe}`
-        const { error } = await supabase.storage.from('files').upload(path, file, { contentType: file.type || undefined })
+        const { error } = await supabase.storage.from('files').upload(path, file, { contentType: type })
         if (error) throw error
-        await save.mutateAsync({ stop_id: stop.id, path, name: file.name, mime: file.type })
+        await save.mutateAsync({ stop_id: stop.id, path, name: file.name, mime: type })
       }
     } catch {
       setProblem("couldn't upload, try again")

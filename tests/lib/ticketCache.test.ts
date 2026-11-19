@@ -1,7 +1,7 @@
 const sb = vi.hoisted(() => ({ download: vi.fn() }))
 vi.mock('../../src/lib/supabase', () => ({ supabase: { storage: { from: () => ({ download: sb.download }) } } }))
 
-import { getTicket, putTicket, openTicket, clearTickets, ticketType } from '../../src/lib/ticketCache'
+import { getTicket, putTicket, openTicket, clearTickets, ticketType, uploadType } from '../../src/lib/ticketCache'
 
 const file = (id: string) => ({ id, stop_id: 's1', path: `t/s1/${id}.pdf`, name: `${id}.pdf`, mime: 'application/pdf' })
 const setOnline = (v: boolean) => Object.defineProperty(navigator, 'onLine', { value: v, configurable: true })
@@ -73,4 +73,13 @@ describe('only pdfs and plain photos open as themselves', () => {
     expect((made.mock.calls[2][0] as Blob).type).toBe('application/pdf')
     made.mockRestore()
   })
+})
+
+it('a file without a type takes it from its name; anything else is left to be refused', () => {
+  expect(uploadType({ name: 'pass.pdf', type: 'application/pdf' })).toBe('application/pdf')
+  expect(uploadType({ name: 'Pass.PDF', type: '' })).toBe('application/pdf')
+  expect(uploadType({ name: 'qr.JPG', type: '' })).toBe('image/jpeg')
+  expect(uploadType({ name: 'IMG_1.heic', type: '' })).toBe('image/heic')
+  expect(uploadType({ name: 'pass.svg', type: 'image/svg+xml' })).toBe('application/octet-stream')
+  expect(uploadType({ name: 'notes', type: '' })).toBe('application/octet-stream')
 })

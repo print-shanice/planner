@@ -46,6 +46,17 @@ export function ticketType(mime: string | null | undefined): string {
   return SHOWN.has(t) ? t : 'application/octet-stream'
 }
 
+// what a file is uploaded as: its own type when it's a pdf or a photo, else from its name (some phones send none);
+// anything else is octet-stream, which the bucket refuses
+const BY_NAME: Record<string, string> = {
+  pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+  avif: 'image/avif', heic: 'image/heic', heif: 'image/heif', bmp: 'image/bmp',
+}
+export function uploadType(file: { name: string; type: string }): string {
+  if (file.type) return ticketType(file.type)
+  return BY_NAME[file.name.split('.').pop()?.toLowerCase() ?? ''] ?? 'application/octet-stream'
+}
+
 export async function openTicket(file: FileRow): Promise<string> {
   const online = typeof navigator === 'undefined' || navigator.onLine
   const blob = (online ? await download(file) : null) ?? (await getTicket(file.id))
