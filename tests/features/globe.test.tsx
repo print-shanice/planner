@@ -16,9 +16,14 @@ const mk = vi.hoisted(() => {
     sources: Record<string, { setData: ReturnType<typeof vi.fn> }> = {}
     touchZoomRotate = { disableRotation: vi.fn() }
     transform = { isLocationOccluded: vi.fn((_: { lng: number; lat: number }) => false) }
+    // maplibre 6 keeps the camera's transform here
+    _camera = { transform: this.transform }
     setPaintProperty = vi.fn()
     setFilter = vi.fn()
     addImage = vi.fn()
+    // maplibre 6 asks this for an image the style needs and lacks (its styleimagemissing event only tells)
+    resolver: ((id: string) => void) | null = null
+    setMissingStyleImageResolver = vi.fn((r: (id: string) => void) => { this.resolver = r; return this })
     hasImage = vi.fn(() => false)
     zoomIn = vi.fn()
     zoomOut = vi.fn()
@@ -58,7 +63,7 @@ const mk = vi.hoisted(() => {
   }
   return { maps, markers, FakeMap, FakeMarker }
 })
-vi.mock('maplibre-gl', () => ({ default: { Map: mk.FakeMap, Marker: mk.FakeMarker } }))
+vi.mock('maplibre-gl', () => ({ Map: mk.FakeMap, Marker: mk.FakeMarker, setWorkerUrl: vi.fn() }))
 
 // animation frames run only when a test calls tick() or play()
 const frames = new Map<number, FrameRequestCallback>()
@@ -379,7 +384,7 @@ describe('names', () => {
 
   it('draws the dot beside a city name itself: round, solid in the middle, clear at the corners', () => {
     const { m } = show()
-    act(() => m.fire('styleimagemissing', { id: 'city-dot' }))
+    act(() => { m.resolver!('city-dot') })
     expect(m.addImage).toHaveBeenCalledTimes(1)
     const [id, img, opts] = m.addImage.mock.calls[0]
     expect(id).toBe('city-dot')
@@ -388,7 +393,7 @@ describe('names', () => {
     const mid = Math.floor(img.width / 2)
     expect(alpha(mid, mid)).toBe(255)
     expect(alpha(0, 0)).toBe(0)
-    act(() => m.fire('styleimagemissing', { id: 'someone-elses-icon' }))
+    act(() => { m.resolver!('someone-elses-icon') })
     expect(m.addImage).toHaveBeenCalledTimes(1)
   })
 
@@ -396,7 +401,7 @@ describe('names', () => {
     document.documentElement.style.setProperty('--card', '#fff')
     document.documentElement.style.setProperty('--ink', '#1c1c1c')
     const { m } = show()
-    act(() => m.fire('styleimagemissing', { id: 'city-dot' }))
+    act(() => { m.resolver!('city-dot') })
     const [, img] = m.addImage.mock.calls[0]
     const px = (x: number, y: number) => Array.from(img.data.slice((y * img.width + x) * 4, (y * img.width + x) * 4 + 4))
     const mid = Math.floor(img.width / 2)
@@ -408,7 +413,7 @@ describe('names', () => {
     document.documentElement.style.removeProperty('--ink')
   })
 
-  it('never shows maplibre\'s attribution box, and draws only the planner\'s own files (the box is where maplibre 5 can be fed script)', () => {
+  it('never shows maplibre\'s attribution box, and draws only the planner\'s own files (the box is where maplibre up to 6.4.0 could be fed script)', () => {
     const { m } = show()
     expect(m.opts.attributionControl).toBe(false)
     for (const src of Object.values(m.opts.style.sources) as any[]) {

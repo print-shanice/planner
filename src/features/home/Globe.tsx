@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import maplibregl, { type ExpressionSpecification, type GeoJSONSource, type LayerSpecification, type StyleSpecification } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
+import type { ExpressionSpecification, GeoJSONSource, LayerSpecification, StyleSpecification } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import type { GlobePin } from '../../lib/countries'
 import { arc, type GlobeRoute, type LngLat } from '../../lib/travels'
 import { iconSvg } from '../../components/Icon'
@@ -37,6 +39,16 @@ const SPIN = 4
 const RESUME_MS = 3000
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+// maplibre 6 draws in a worker it looks for beside its own script; bundled, that file lives elsewhere, so it's told
+maplibregl.setWorkerUrl(workerUrl)
+
+// whether a spot is round the back of the globe. maplibre has no public way to ask, and 6 keeps the camera's
+// transform on map._camera (5 had it on the map itself)
+function occluded(m: maplibregl.Map, at: maplibregl.LngLat): boolean {
+  const camera = (m as unknown as { _camera?: { transform?: { isLocationOccluded: (at: maplibregl.LngLat) => boolean } } })._camera
+  return camera?.transform?.isLocationOccluded(at) ?? false
+}
+
 const globeFile = (name: string) => `${import.meta.env.BASE_URL}globe/${name}`
 
 // a glyph for how you went, sitting on the middle of its route: a plane, a train, a bus, a ferry
@@ -159,7 +171,7 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
     const near = Math.max(0, Math.min(1, (m.getZoom() - NAMES_FROM) / FADE))
     let at: { x: number; y: number } | null = null
     for (const { pin, marker, el } of placed.current) {
-      const hidden = near === 0 || m.transform.isLocationOccluded(marker.getLngLat())
+      const hidden = near === 0 || occluded(m, marker.getLngLat())
       el.style.visibility = hidden ? 'hidden' : ''
       el.style.opacity = near < 1 ? String(near) : ''
       if (pin.code === open.current && !hidden) {
@@ -172,7 +184,7 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
     if (!at) open.current = null
     setTip(at && open.current ? { code: open.current, x: at.x, y: at.y } : null)
     // a glyph round the back of the globe hides too
-    for (const g of glyphs.current) g.getElement().style.visibility = m.transform.isLocationOccluded(g.getLngLat()) ? 'hidden' : ''
+    for (const g of glyphs.current) g.getElement().style.visibility = occluded(m, g.getLngLat()) ? 'hidden' : ''
   }
 
   function show(code: string) { open.current = code; place() }
@@ -184,7 +196,7 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
     const hit = placed.current.find((x) => x.pin.code === code)
     const m = map.current
     if (!touch.current || !hit || open.current === code) { latest.current.onCountry(code); return }
-    if (m && m.transform.isLocationOccluded(hit.marker.getLngLat())) {
+    if (m && occluded(m, hit.marker.getLngLat())) {
       m.once('moveend', () => show(code))
       m.easeTo({ center: hit.marker.getLngLat(), duration: reduced() ? 0 : 400 })
       return
@@ -278,8 +290,9 @@ export function Globe({ status, pins, onCountry, routes = [], focus = null }: Pr
       m.getSource<GeoJSONSource>('country-names')?.setData(globeFile('country-names.json'))
       m.getSource<GeoJSONSource>('cities')?.setData(globeFile('cities.json'))
     })
-    m.on('styleimagemissing', (e: { id: string }) => {
-      if (DOTS[e.id] && !m.hasImage(e.id)) m.addImage(e.id, dot(DOTS[e.id]), { pixelRatio: 2 })
+    // the dot beside a city's name is drawn here when the style first needs it
+    m.setMissingStyleImageResolver((id) => {
+      if (DOTS[id] && !m.hasImage(id)) m.addImage(id, dot(DOTS[id]), { pixelRatio: 2 })
     })
 
     return () => {

@@ -45,7 +45,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: 'index.html',
-        globPatterns: ['**/*.{js,css,html,svg,png,gif,woff2,geojson,webmanifest}'],
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,gif,woff2,geojson,webmanifest}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // google maps (the trip map, search, routes) is never cached by the planner: it needs a connection,
         // and google's terms don't allow keeping its tiles or answers
