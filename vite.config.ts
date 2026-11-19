@@ -1,12 +1,14 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { configProblem } from './src/lib/config'
 
+// the build's settings: ci's environment, else .env.local (loadEnv reads both, the environment winning)
+const env = loadEnv('production', process.cwd(), 'VITE_')
 // refuse to build a public site around a secret key or a key pasted into the url field
-const url = process.env.VITE_SUPABASE_URL
-const key = process.env.VITE_SUPABASE_ANON_KEY
+const url = env.VITE_SUPABASE_URL
+const key = env.VITE_SUPABASE_ANON_KEY
 const problem = url || key ? configProblem(url, key) : null
 if (problem === 'secret') throw new Error('VITE_SUPABASE_ANON_KEY is a secret key. Use the publishable key.')
 if (problem === 'url') throw new Error('VITE_SUPABASE_URL is not the project URL (https://<ref>.supabase.co).')
