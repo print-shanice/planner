@@ -1,7 +1,7 @@
 const sb = vi.hoisted(() => ({ download: vi.fn() }))
 vi.mock('../../src/lib/supabase', () => ({ supabase: { storage: { from: () => ({ download: sb.download }) } } }))
 
-import { getTicket, putTicket, openTicket, clearTickets } from '../../src/lib/ticketCache'
+import { getTicket, putTicket, openTicket, clearTickets, ticketType } from '../../src/lib/ticketCache'
 
 const file = (id: string) => ({ id, stop_id: 's1', path: `t/s1/${id}.pdf`, name: `${id}.pdf`, mime: 'application/pdf' })
 const setOnline = (v: boolean) => Object.defineProperty(navigator, 'onLine', { value: v, configurable: true })
@@ -50,4 +50,27 @@ it('clearTickets forgets every saved ticket', async () => {
   await putTicket('f9', new Blob(['x'], { type: 'text/plain' }))
   await clearTickets()
   expect(await getTicket('f9')).toBeNull()
+})
+
+describe('only pdfs and plain photos open as themselves', () => {
+  it('keeps pdfs and photos, and turns anything that could run code into a plain download', () => {
+    for (const t of ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'IMAGE/JPEG; charset=x'])
+      expect(ticketType(t)).not.toBe('application/octet-stream')
+    for (const t of ['image/svg+xml', 'text/html', 'application/xhtml+xml', 'text/xml', 'application/javascript', '', undefined])
+      expect(ticketType(t)).toBe('application/octet-stream')
+  })
+
+  it('a ticket saved as an svg or a web page opens as a download, whatever the server or row says it is', async () => {
+    const made = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:x')
+    sb.download.mockResolvedValue({ data: new Blob(['<svg onload="alert(1)"/>'], { type: 'image/svg+xml' }), error: null })
+    await openTicket({ ...file('s1'), name: 'pass.svg', mime: 'image/svg+xml' })
+    expect((made.mock.calls[0][0] as Blob).type).toBe('application/octet-stream')
+    sb.download.mockResolvedValue({ data: new Blob(['<script>'], { type: 'text/html' }), error: null })
+    await openTicket(file('s2'))
+    expect((made.mock.calls[1][0] as Blob).type).toBe('application/octet-stream')
+    sb.download.mockResolvedValue({ data: new Blob(['%PDF'], { type: 'application/pdf' }), error: null })
+    await openTicket(file('s3'))
+    expect((made.mock.calls[2][0] as Blob).type).toBe('application/pdf')
+    made.mockRestore()
+  })
 })

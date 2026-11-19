@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { Icon } from '../../components/Icon'
 import { Sheet } from '../../components/Sheet'
 import { Pending } from '../../components/Pending'
-import { keepTickets, openTicket } from '../../lib/ticketCache'
+import { keepTickets, openTicket, ticketType } from '../../lib/ticketCache'
 
 const MAX = 20 * 1024 * 1024
 
@@ -83,9 +83,9 @@ export function FilesSection({ stop, canEdit, pickerRef }: { stop: Stop; canEdit
       <Sheet open={!!viewing} title={viewing?.file.name ?? ''} onClose={() => setViewing(null)}>
         {viewing && (
           <div className="ticket">
-            {viewing.file.mime.startsWith('image/')
-              ? <img src={viewing.url} alt={viewing.file.name} />
-              : <iframe src={viewing.url} title={viewing.file.name} />}
+            {/* only pdfs and photos show here; anything else is only offered to open (it downloads) */}
+            {ticketType(viewing.file.mime).startsWith('image/') && <img src={viewing.url} alt={viewing.file.name} />}
+            {ticketType(viewing.file.mime) === 'application/pdf' && <iframe src={viewing.url} title={viewing.file.name} />}
             <a className="btn ghost block" href={viewing.url} download={viewing.file.name} target="_blank" rel="noopener noreferrer"><Icon name="ext" size={18} /><span>open</span></a>
           </div>
         )}

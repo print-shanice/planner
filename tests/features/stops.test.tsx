@@ -28,7 +28,7 @@ vi.mock('../../src/lib/id', () => ({ newId: () => 'new-id' }))
 const photon = vi.hoisted(() => ({ search: vi.fn(() => Promise.resolve([] as unknown[])) }))
 vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import('../../src/lib/photon')>()), searchPlaces: photon.search }))
 const tickets = vi.hoisted(() => ({ open: vi.fn(), keep: vi.fn(() => Promise.resolve()) }))
-vi.mock('../../src/lib/ticketCache', () => ({ openTicket: tickets.open, keepTickets: tickets.keep }))
+vi.mock('../../src/lib/ticketCache', async (orig) => ({ ...(await orig<typeof import('../../src/lib/ticketCache')>()), openTicket: tickets.open, keepTickets: tickets.keep }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => db.canEdit }))
 const photos = vi.hoisted(() => ({ wiki: vi.fn() }))
 vi.mock('../../src/lib/wiki', () => ({ wikiPhoto: photos.wiki }))
@@ -307,6 +307,21 @@ it('opening a ticket shows it from the device copy', async () => {
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'qr.png' }))
   expect(await screen.findByRole('img', { name: 'qr.png' })).toHaveAttribute('src', 'blob:qr')
   expect(tickets.keep).toHaveBeenCalled()
+})
+
+it('a ticket that could run code (an svg, a web page) isn\'t shown inside the planner, only offered to open', async () => {
+  for (const [name, mime] of [['pass.svg', 'image/svg+xml'], ['pass.html', 'text/html']]) {
+    cleanup()
+    db.files = [{ id: 'f1', stop_id: 's1', path: `lap/s1/c-${name}`, name, mime }]
+    tickets.open.mockResolvedValueOnce('blob:bad')
+    show(<Opener id="s1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'open' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name }))
+    const sheet = await screen.findByRole('dialog', { name })
+    expect(within(sheet).getByRole('link', { name: 'open' })).toHaveAttribute('download', name)
+    expect(within(sheet).queryByRole('img', { name })).toBeNull()
+    expect(sheet.querySelector('iframe')).toBeNull()
+  }
 })
 
 function Editor({ id }: { id: string }) {

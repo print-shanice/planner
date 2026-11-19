@@ -38,11 +38,19 @@ async function download(file: FileRow): Promise<Blob | null> {
   }
 }
 
+// a ticket opens on the planner's own address, so only things that can't run code open as themselves: an svg or a web
+// page saved as a "ticket" could otherwise read the signed-in session. anything else opens as a plain download
+const SHOWN = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic', 'image/heif', 'image/bmp'])
+export function ticketType(mime: string | null | undefined): string {
+  const t = (mime ?? '').split(';')[0].trim().toLowerCase()
+  return SHOWN.has(t) ? t : 'application/octet-stream'
+}
+
 export async function openTicket(file: FileRow): Promise<string> {
   const online = typeof navigator === 'undefined' || navigator.onLine
   const blob = (online ? await download(file) : null) ?? (await getTicket(file.id))
   if (!blob) throw new Error('not saved offline')
-  return URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: file.mime || undefined }))
+  return URL.createObjectURL(new Blob([blob], { type: ticketType(blob.type || file.mime) }))
 }
 
 // keep a copy of every ticket on a stop that has been looked at
