@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trip, stop, place } from '../factories'
@@ -53,7 +53,7 @@ it('a found place: photo on top, what and where, then reviews and the day\'s hou
   g.wiki.mockResolvedValue(wiki)
   show()
   const card = screen.getByRole('region', { name: 'Eiffel Tower' })
-  expect(within(card).getByRole('status')).toHaveTextContent('asking google')
+  expect(within(card).getByText('asking google')).toBeInTheDocument()
   const photo = await within(card).findByRole('img', { name: 'Eiffel Tower' })
   expect(photo).toHaveAttribute('src', wiki.src)
   // google's word for what it is, said once, replacing ours
@@ -146,7 +146,9 @@ describe('photos: wikipedia first, then openverse, never google', () => {
     g.wiki.mockResolvedValue(wiki)
     show()
     const card = screen.getByRole('region', { name: 'Eiffel Tower' })
-    expect(await within(card).findByRole('img', { name: 'Eiffel Tower' })).toHaveAttribute('src', wiki.src)
+    const img = await within(card).findByRole('img', { name: 'Eiffel Tower' })
+    expect(img).toHaveAttribute('src', wiki.src)
+    fireEvent.load(img)
     expect(within(card).getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', wiki.page)
     expect(g.wiki).toHaveBeenCalledWith(expect.objectContaining({ name: 'Eiffel Tower', lat: 48.86, lng: 2.29 }))
     expect(g.verse).not.toHaveBeenCalled()
@@ -156,7 +158,9 @@ describe('photos: wikipedia first, then openverse, never google', () => {
     g.verse.mockResolvedValue(verse)
     show()
     const card = screen.getByRole('region', { name: 'Eiffel Tower' })
-    expect(await within(card).findByRole('img', { name: 'Eiffel Tower' })).toHaveAttribute('src', verse.src)
+    const img = await within(card).findByRole('img', { name: 'Eiffel Tower' })
+    expect(img).toHaveAttribute('src', verse.src)
+    fireEvent.load(img)
     expect(within(card).getByRole('link', { name: 'photo · flickr' })).toHaveAttribute('href', verse.page)
     expect(g.verse).toHaveBeenCalledWith(expect.objectContaining({ name: 'Eiffel Tower', city: 'Paris' }))
   })
@@ -185,5 +189,32 @@ describe('photos: wikipedia first, then openverse, never google', () => {
     await vi.waitFor(() => expect(g.verse).toHaveBeenCalled())
     await vi.waitFor(() => expect(card).not.toHaveClass('has-photo'))
     expect(within(card).queryByRole('img')).toBeNull()
+  })
+})
+
+describe('while the photo is coming, totoro (the planner\'s one loading look)', () => {
+  it('holds its place while it is looked for and while it loads, then steps aside; the credit comes with the photo', async () => {
+    let found: (v: unknown) => void = () => {}
+    g.wiki.mockReturnValue(new Promise((r) => { found = r }))
+    show()
+    const card = screen.getByRole('region', { name: 'Eiffel Tower' })
+    expect(await within(card).findByRole('status', { name: 'loading photo' })).toBeInTheDocument()
+    found(wiki)
+    const img = await within(card).findByRole('img', { name: 'Eiffel Tower' })
+    expect(within(card).getByRole('status', { name: 'loading photo' })).toBeInTheDocument()
+    expect(within(card).queryByRole('link', { name: /photo ·/ })).toBeNull()
+    fireEvent.load(img)
+    expect(within(card).queryByRole('status', { name: 'loading photo' })).toBeNull()
+    expect(within(card).getByRole('link', { name: 'photo · wikimedia' })).toBeInTheDocument()
+  })
+
+  it('a photo that won\'t load is dropped and the card closes up', async () => {
+    g.wiki.mockResolvedValue(wiki)
+    show()
+    const card = screen.getByRole('region', { name: 'Eiffel Tower' })
+    fireEvent.error(await within(card).findByRole('img', { name: 'Eiffel Tower' }))
+    expect(within(card).queryByRole('img', { name: 'Eiffel Tower' })).toBeNull()
+    expect(within(card).queryByRole('status', { name: 'loading photo' })).toBeNull()
+    expect(card).not.toHaveClass('has-photo')
   })
 })

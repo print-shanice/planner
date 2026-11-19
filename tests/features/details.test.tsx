@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const g = vi.hoisted(() => ({ fetch: vi.fn(), wiki: vi.fn(), verse: vi.fn(), online: true }))
@@ -24,10 +24,12 @@ beforeEach(() => { vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k'); g.online = true; g.f
 it('says it is asking, then shows the photo, the rating, what it is, the day\'s hours and the website', async () => {
   g.verse.mockResolvedValue({ src: 'https://api.openverse.org/v1/images/hop/thumb/', page: 'https://www.flickr.com/photos/x/hop', source: 'flickr' })
   show(<PlaceDetails place={place} day="2027-02-06" />)
-  expect(screen.getByRole('status')).toHaveTextContent('asking google')
+  expect(screen.getByText('asking google')).toBeInTheDocument()
   expect(await screen.findByText('★ 4.2 · 244 reviews · hotel')).toBeInTheDocument()
   expect(screen.getByText('sat 10:00–14:00')).toBeInTheDocument()
-  expect(await screen.findByRole('img', { name: 'Hop Inn' })).toHaveAttribute('src', 'https://api.openverse.org/v1/images/hop/thumb/')
+  const img = await screen.findByRole('img', { name: 'Hop Inn' })
+  expect(img).toHaveAttribute('src', 'https://api.openverse.org/v1/images/hop/thumb/')
+  fireEvent.load(img)
   expect(screen.getByRole('link', { name: 'photo · flickr' })).toHaveAttribute('href', 'https://www.flickr.com/photos/x/hop')
   expect(screen.getByRole('link', { name: 'website' })).toHaveAttribute('href', 'https://hopinn.example/')
   expect(g.fetch).toHaveBeenCalledWith('g1', expect.arrayContaining(['rating']))
@@ -37,16 +39,16 @@ it('says it is asking, then shows the photo, the rating, what it is, the day\'s 
 it('asks nothing without google, offline, or for a place google did not find', () => {
   vi.stubEnv('VITE_GOOGLE_MAPS_KEY', '')
   const { unmount } = show(<PlaceDetails place={place} day={null} />)
-  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.queryByText('asking google')).toBeNull()
   unmount()
   vi.stubEnv('VITE_GOOGLE_MAPS_KEY', 'k')
   g.online = false
   const second = show(<PlaceDetails place={place} day={null} />)
-  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.queryByText('asking google')).toBeNull()
   second.unmount()
   g.online = true
   show(<PlaceDetails place={{ name: 'park', lat: 1, lng: 1 }} day={null} />)
-  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.queryByText('asking google')).toBeNull()
   expect(g.fetch).not.toHaveBeenCalled()
 })
 
@@ -58,14 +60,20 @@ it('a place google knows little about shows what there is, and a refusal shows n
   unmount()
   g.fetch.mockRejectedValue(new Error('no'))
   const { container } = show(<PlaceDetails place={{ ...place, gid: 'g2' }} day={null} />)
-  await screen.findByRole('status')
-  await vi.waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+  await screen.findByText('asking google')
+  await vi.waitFor(() => expect(screen.queryByText('asking google')).toBeNull())
+  // and no free photo either, once that's been looked for
+  await vi.waitFor(() => expect(screen.queryByRole('status', { name: 'loading photo' })).toBeNull())
   expect(container).toBeEmptyDOMElement()
 })
 
 it('the full card shows wikipedia\'s photo first, credited', async () => {
   g.wiki.mockResolvedValue({ src: 'https://upload.wikimedia.org/hop.jpg', page: 'https://en.wikipedia.org/wiki/File:Hop.jpg' })
   show(<PlaceDetails place={place} day={null} />)
-  expect(await screen.findByRole('img', { name: 'Hop Inn' })).toHaveAttribute('src', 'https://upload.wikimedia.org/hop.jpg')
+  const img = await screen.findByRole('img', { name: 'Hop Inn' })
+  expect(img).toHaveAttribute('src', 'https://upload.wikimedia.org/hop.jpg')
+  expect(screen.getByRole('status', { name: 'loading photo' })).toBeInTheDocument()
+  fireEvent.load(img)
+  expect(screen.queryByRole('status', { name: 'loading photo' })).toBeNull()
   expect(screen.getByRole('link', { name: 'photo · wikimedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/File:Hop.jpg')
 })

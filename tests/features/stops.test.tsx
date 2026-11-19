@@ -30,6 +30,8 @@ vi.mock('../../src/lib/photon', async (orig) => ({ ...(await orig<typeof import(
 const tickets = vi.hoisted(() => ({ open: vi.fn(), keep: vi.fn(() => Promise.resolve()) }))
 vi.mock('../../src/lib/ticketCache', () => ({ openTicket: tickets.open, keepTickets: tickets.keep }))
 vi.mock('../../src/lib/offline', () => ({ useCanEdit: () => db.canEdit, useOnline: () => db.canEdit }))
+const photos = vi.hoisted(() => ({ wiki: vi.fn() }))
+vi.mock('../../src/lib/wiki', () => ({ wikiPhoto: photos.wiki }))
 vi.mock('../../src/lib/supabase', () => ({
   supabase: { functions: { invoke: (...a: unknown[]) => db.invoke(...a) }, storage: { from: () => ({ remove: db.storageRemove, createSignedUrls: () => Promise.resolve({ data: [], error: null }), upload: vi.fn() }) } },
 }))
@@ -59,10 +61,24 @@ beforeEach(() => {
   db.trips = [trip({ id: 'lap', name: 'lapland', start_date: '2027-02-07', end_date: '2027-02-11' }), trip({ id: 'par', name: 'paris' })]
   db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: place({ name: 'Arktikum', address: 'Pohjoisranta 4' }), ref: 'AB12' })]
   db.costs = []; db.files = []; db.calls = []; db.canEdit = true
+  photos.wiki.mockReset().mockResolvedValue(null)
   db.invoke.mockReset().mockResolvedValue({ data: { error: 'not_found' }, error: null })
   db.save.mockReset().mockImplementation((t: string, r: any) => { db.calls.push(`save:${t}`); return Promise.resolve(r) })
   db.remove.mockReset().mockImplementation((t: string) => { db.calls.push(`remove:${t}`); return Promise.resolve() })
   db.storageRemove.mockReset().mockImplementation(() => { db.calls.push('storage'); return Promise.resolve({ error: null }) })
+})
+
+it('a place google doesn\'t know still shows its free photo on the full card, totoro holding its place till it arrives', async () => {
+  photos.wiki.mockResolvedValue({ src: 'https://upload.wikimedia.org/arktikum.jpg', page: 'https://en.wikipedia.org/wiki/File:Arktikum.jpg' })
+  db.stops = [stop({ id: 's1', trip_id: 'lap', title: 'arktikum', day: '2027-02-08', place: place({ name: 'Arktikum', lat: 66.51, lng: 25.73 }) })]
+  show(<Opener id="s1" />)
+  await userEvent.click(screen.getByRole('button', { name: 'open' }))
+  const card = screen.getByRole('dialog')
+  const img = await within(card).findByRole('img', { name: 'Arktikum' })
+  expect(within(card).getByRole('status', { name: 'loading photo' })).toBeInTheDocument()
+  fireEvent.load(img)
+  expect(within(card).queryByRole('status', { name: 'loading photo' })).toBeNull()
+  expect(within(card).getByRole('link', { name: 'photo · wikimedia' })).toBeInTheDocument()
 })
 
 async function openEdit() {

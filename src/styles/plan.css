@@ -49,7 +49,13 @@
 .stop-view { gap: 18px; }
 /* what google says about the place: a photo, then its rating, what it is and its hours */
 .place-details { display: grid; gap: 10px; }
-.place-photo { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 0; background: var(--soft); }
+/* the full card's photo: totoro on white until it arrives, then it fades in */
+/* never taller than a phone's frame, so a wide side panel doesn't leave totoro alone in a tall white box */
+.place-photo-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 320px; background: var(--card); }
+.place-photo-frame .totoro { position: absolute; inset: 0; padding: 0; }
+.place-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 0; opacity: 0; transition: opacity .2s; }
+.place-photo.in { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .place-photo { transition: none; } }
 .place-photo-credit { justify-self: end; margin-top: -6px; color: var(--ink-3); font-family: var(--f-mono); font-size: 11px; text-decoration: none; }
 .place-photo-credit:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }
 .place-details-words { display: grid; gap: 2px; font-size: 14px; }

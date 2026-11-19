@@ -24,7 +24,8 @@ import { stopSub, stopTitle } from '../plan/stopText'
 import { Chip } from '../itinerary/ItinLine'
 import { saveError } from '../../lib/errors'
 import { hoursOn, useDetails } from '../../lib/google/details'
-import { usePlacePhoto } from '../../lib/placePhoto'
+import { usePhotoLoad, usePlacePhoto } from '../../lib/placePhoto'
+import { Loading } from '../../components/Loading'
 import { count } from '../../lib/words'
 import { Tooltip } from '../../components/Tooltip'
 import googleMark from '../../assets/google-g.svg'
@@ -89,7 +90,8 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
   const asking = google.enabled && google.isPending
   // a free photo: wikipedia's, else openverse's (mostly flickr), with its credit; never google's
   const shot = usePlacePhoto(looking ? null : place)
-  const photo = shot.src
+  const img = usePhotoLoad(shot.src)
+  const photo = img.src
   const ours = categoryOf(fake) === 'place' ? '' : categoryOf(fake)
   const sub = stop
     ? [stop.day ? dayLabel(stop.day) : 'idea', stopSub(stop)].filter(Boolean).join(' · ')
@@ -122,11 +124,13 @@ export function PlaceCard({ trip, place, stop, day: opened, defaultDay, looking,
       {/* one ✕, always in the card's corner (on the photo when there is one), so it never moves while a photo is looked for */}
       {close}
       {top && (
-        <div className={`place-card-photo${photo ? '' : ' waiting'}`}>
-          {photo && handle(<img src={photo} alt={title} className={carry ? 'grab' : undefined} onPointerDown={carry} draggable={false} />)}
+        <div className="place-card-photo">
+          {/* totoro, the planner's one loading look, until the photo is found and has arrived */}
+          {!img.loaded && <Loading size="small" label="loading photo" />}
+          {photo && handle(<img src={photo} alt={title} className={`${img.loaded ? 'in' : ''}${carry ? ' grab' : ''}`.trim() || undefined} onPointerDown={carry} onLoad={img.onLoad} onError={img.onError} draggable={false} />)}
         </div>
       )}
-      {top && shot.credit && <a className="place-card-credit" href={shot.credit.href} target="_blank" rel="noopener noreferrer">photo · {shot.credit.label}</a>}
+      {img.loaded && shot.credit && <a className="place-card-credit" href={shot.credit.href} target="_blank" rel="noopener noreferrer">photo · {shot.credit.label}</a>}
       <div className="place-card-head">
         {stop && <Chip stop={stop} quiet={idea} />}
         {handle(

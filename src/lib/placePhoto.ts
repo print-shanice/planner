@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Place } from './types'
 import { useOnline } from './offline'
@@ -33,4 +34,16 @@ export function usePlacePhoto(place: Place | null | undefined): PlacePhoto {
   if (named && wiki.data) return { src: wiki.data.src, credit: { label: 'wikimedia', href: wiki.data.page }, waiting: false }
   if (named && verse.data) return { src: verse.data.src, credit: { label: verse.data.source, href: verse.data.page }, waiting: false }
   return { src: null, credit: null, waiting: named && (wiki.isLoading || verse.isLoading) }
+}
+
+// the photo's own download: totoro holds its place until it has arrived; one that won't load is dropped
+export function usePhotoLoad(src: string | null) {
+  const [done, setDone] = useState<{ src: string; ok: boolean } | null>(null)
+  const broken = !!src && done?.src === src && !done.ok
+  return {
+    src: broken ? null : src,
+    loaded: !!src && done?.src === src && done.ok,
+    onLoad: () => { if (src) setDone({ src, ok: true }) },
+    onError: () => { if (src) setDone({ src, ok: false }) },
+  }
 }

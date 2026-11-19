@@ -1,6 +1,7 @@
 import type { Place } from '../../lib/types'
 import { hoursOn, useDetails } from '../../lib/google/details'
-import { usePlacePhoto } from '../../lib/placePhoto'
+import { usePhotoLoad, usePlacePhoto } from '../../lib/placePhoto'
+import { Loading } from '../../components/Loading'
 import { Pending } from '../../components/Pending'
 import { count } from '../../lib/words'
 
@@ -10,9 +11,14 @@ export function PlaceDetails({ place, day }: { place: Place; day: string | null 
   const q = useDetails(place.gid)
   // a free photo: wikipedia's, else openverse's (mostly flickr), with its credit; never google's
   const shot = usePlacePhoto(place)
-  const photo = shot.src && <>
-    <img className="place-photo" src={shot.src} alt={place.name} loading="lazy" />
-    {shot.credit && <a className="place-photo-credit" href={shot.credit.href} target="_blank" rel="noopener noreferrer">photo · {shot.credit.label}</a>}
+  const img = usePhotoLoad(shot.src)
+  // totoro, the planner's one loading look, holds the photo's place until it is found and has arrived
+  const photo = (img.src || shot.waiting) && <>
+    <div className="place-photo-frame">
+      {!img.loaded && <Loading size="small" label="loading photo" />}
+      {img.src && <img className={`place-photo${img.loaded ? ' in' : ''}`} src={img.src} alt={place.name} loading="lazy" onLoad={img.onLoad} onError={img.onError} />}
+    </div>
+    {img.loaded && shot.credit && <a className="place-photo-credit" href={shot.credit.href} target="_blank" rel="noopener noreferrer">photo · {shot.credit.label}</a>}
   </>
   if (!q.enabled && !q.data) return photo ? <div className="place-details">{photo}</div> : null
   if (q.isPending) return <p className="place-details"><Pending label="asking google" /></p>

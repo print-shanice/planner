@@ -154,7 +154,8 @@ export function StopView({ stop, onEdit, onClose }: Props) {
   return (
     <div className="stack stop-view card">
       <p className="card-kicker mono-label fact">{kicker}{word && <> · <span className={word.warn ? 'warn-line' : undefined}>{word.text}</span></>}</p>
-      {stop.place?.gid && <PlaceDetails place={stop.place} day={stop.day} />}
+      {/* a free photo for any named place; what google says only for places it knows */}
+      {stop.place?.name?.trim() && <PlaceDetails place={stop.place} day={stop.day} />}
       <CardTimes stop={stop} canEdit={canEdit} put={put} />
 
       <div className="card-actions" role="group" aria-label="actions">

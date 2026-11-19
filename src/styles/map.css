@@ -59,10 +59,12 @@
   box-shadow: var(--float); max-width: 520px; margin: 0 auto; overflow: hidden; position: relative;
 }
 .place-card.has-photo { padding-top: 0; }
-.place-card-photo { position: relative; margin: 0 -16px; aspect-ratio: 2 / 1; background: var(--soft); }
-.place-card-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.place-card-photo.waiting { animation: photo-wait 1.4s ease-in-out infinite; }
-@keyframes photo-wait { 50% { background: var(--line); } }
+/* white behind the photo, so totoro (multiplied onto it) never sits in a grey box; the photo fades in over it */
+.place-card-photo { position: relative; margin: 0 -16px; aspect-ratio: 2 / 1; background: var(--card); }
+/* (more specific than the map's own loading rule, which would cover the card's ✕) */
+.place-card .place-card-photo .totoro { position: absolute; inset: 0; z-index: 0; padding: 0; background: none; }
+.place-card-photo img:not(.totoro img) { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; }
+.place-card-photo img.in { opacity: 1; }
 .place-card.has-photo .place-card-x { background: var(--card); box-shadow: var(--float); }
 .place-card.has-photo .place-card-x:hover { background: var(--card); filter: brightness(.95); }
 /* a borrowed photo's credit, quiet under its right edge */
@@ -75,7 +77,7 @@
 .place-card-sub { color: var(--ink-2); font-size: 14px; }
 .place-card-fact { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-2); }
 .place-card-fact.rating { color: var(--ink); }
-.place-card-x { position: absolute; top: 6px; right: 6px; z-index: 1; border-radius: 8px; }
+.place-card-x { position: absolute; top: 6px; right: 6px; z-index: 3; border-radius: 8px; }
 /* the name keeps clear of the ✕ when there's no photo above it */
 .place-card:not(.has-photo) .place-card-head { padding-right: 34px; }
 .place-card .grab { cursor: grab; user-select: none; -webkit-user-select: none; }
@@ -85,7 +87,7 @@
 .place-card-link span { text-decoration: underline; text-underline-offset: 3px; }
 .place-card-link:hover { color: var(--ink); }
 .place-card-link img, .place-card-link .icon { flex: none; width: 16px; height: 16px; }
-@media (prefers-reduced-motion: reduce) { .place-card-photo.waiting { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .place-card-photo img { transition: none; } }
 .chip-pill.quiet { justify-self: start; color: var(--ink-2); }
 /* laptops: the map follows the plan's day; this zooms out to every place */
 .whole-trip { position: absolute; left: 12px; bottom: 12px; z-index: 2; color: var(--ink-2); }
