@@ -408,6 +408,17 @@ describe('names', () => {
     document.documentElement.style.removeProperty('--ink')
   })
 
+  it('never shows maplibre\'s attribution box, and draws only the planner\'s own files (the box is where maplibre 5 can be fed script)', () => {
+    const { m } = show()
+    expect(m.opts.attributionControl).toBe(false)
+    for (const src of Object.values(m.opts.style.sources) as any[]) {
+      expect(src.type).toBe('geojson')
+      expect(src.attribution).toBeUndefined()
+      if (typeof src.data === 'string') expect(src.data.startsWith('/planner/')).toBe(true)
+    }
+    expect(m.opts.style.glyphs.startsWith('/planner/')).toBe(true)
+  })
+
   it('fetches nothing extra while zoomed out', () => {
     const { m } = show(undefined, OUT)
     expect(m.opts.style.sources['cities'].data.features).toEqual([])
